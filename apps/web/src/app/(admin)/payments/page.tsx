@@ -1,0 +1,201 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Eye } from 'lucide-react';
+import { api } from '@/lib/api';
+import { DataTable } from '@/components/ui/DataTable';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import type { DataTableColumn } from '@/components/ui/DataTable';
+import { useRouter } from 'next/navigation';
+
+interface PaymentRow {
+  _id: string;
+  tenant?: { user?: { name: string }; room?: { roomNumber: string } };
+  amount: number;
+  method: string;
+  type: string;
+  status: string;
+  notes?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+export default function PaymentsPage() {
+  const router = useRouter();
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [modeFilter, setModeFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [error, setError] = useState('');
+
+  const fetchPayments = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(perPage));
+      if (modeFilter) params.set('mode', modeFilter);
+      if (categoryFilter) params.set('category', categoryFilter);
+
+      const res = await api.get(`payments?${params.toString()}`).json<{
+        success: boolean;
+        data: PaymentRow[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>();
+      setPayments(res.data);
+      setTotal(res.meta.total);
+    } catch {
+      setError('Failed to load payments');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, perPage, modeFilter, categoryFilter]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  const columns: DataTableColumn<PaymentRow>[] = [
+    {
+      header: 'Tenant',
+      accessor: (row) => (
+        <span className="text-surface-900 font-semibold">{row.tenant?.user?.name ?? 'N/A'}</span>
+      ),
+    },
+    {
+      header: 'Room',
+      accessor: (row) => row.tenant?.room?.roomNumber ?? 'N/A',
+    },
+    {
+      header: 'Amount',
+      accessor: (row) => (
+        <span className="text-surface-900 font-semibold">₹{row.amount.toLocaleString()}</span>
+      ),
+    },
+    {
+      header: 'Mode',
+      accessor: (row) => (
+        <span className="capitalize">
+          {row.method ? row.method.replace(/_/g, ' ') : 'N/A'}
+        </span>
+      ),
+    },
+    {
+      header: 'Category',
+      accessor: (row) => <span className="capitalize">{row.type ?? 'N/A'}</span>,
+    },
+    {
+      header: 'Status',
+      accessor: (row) => (
+        <StatusBadge
+          variant={statusToVariant(row.status)}
+          label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+        />
+      ),
+    },
+    {
+      header: 'Date',
+      accessor: (row) =>
+        new Date(row.paidAt || row.createdAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+    },
+    {
+      header: 'Actions',
+      accessor: (row) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/payments/${row._id}`);
+          }}
+          className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors duration-[var(--transition-duration)]"
+        >
+          <Eye className="h-3 w-3" />
+          View
+        </button>
+      ),
+      className: 'w-[80px]',
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Payments</h2>
+          <p className="text-surface-500 mt-0.5 text-sm">Track all rent and service payments</p>
+        </div>
+        <Button onClick={() => router.push('/payments/new')}>
+          <Plus className="h-4 w-4" />
+          Record Payment
+        </Button>
+      </div>
+
+      {error && (
+        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Select
+          options={[
+            { value: '', label: 'All Modes' },
+            { value: 'cash', label: 'Cash' },
+            { value: 'upi', label: 'UPI' },
+            { value: 'bank_transfer', label: 'Bank Transfer' },
+          ]}
+          value={modeFilter}
+          onChange={(e) => {
+            setModeFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[180px]"
+        />
+        <Select
+          options={[
+            { value: '', label: 'All Categories' },
+            { value: 'rent', label: 'Rent' },
+            { value: 'deposit', label: 'Deposit' },
+            { value: 'electricity', label: 'Electricity' },
+            { value: 'maintenance', label: 'Maintenance' },
+            { value: 'laundry', label: 'Laundry' },
+            { value: 'other', label: 'Other' },
+          ]}
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[200px]"
+        />
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={payments}
+        keyExtractor={(row: PaymentRow) => row._id}
+        isLoading={isLoading}
+        onRowClick={(row) => router.push(`/payments/${row._id}`)}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: (p) => setPage(p),
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
+      />
+    </div>
+  );
+}

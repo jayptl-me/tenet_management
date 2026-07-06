@@ -1,0 +1,12 @@
+[install]
+exact = true
+production = false
+save = true
+
+[serve]
+# Dev server defaults
+port = 3000
+
+# Map mongoose to mock for local development
+[macros]
+mongoose = "./src/mock/mongoose.ts"

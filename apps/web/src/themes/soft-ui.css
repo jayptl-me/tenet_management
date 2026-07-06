@@ -1,0 +1,116 @@
+/* ═════════════════════════════════════════════════════════
+   GLASSMORPHIC / SOFT UI THEME (Light & Dark)
+   Design ref: Halfaccessible "Glassmorphism Design Guide" (2024)
+   Philosophy: Ethereal, translucent, luminous. Frosted glass with soft shadows.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Glassmorphic Light ─────────────────────────────────── */
+[data-theme='soft-ui']:not([data-mode='dark']) {
+  /* Brand — Vibrant Teal (luminous, saturated) */
+  --color-brand-50: #ecfeff;
+  --color-brand-100: #cffafe;
+  --color-brand-200: #a5f3fc;
+  --color-brand-300: #67e8f9;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+  --color-brand-700: #0e7490;
+  --color-brand-800: #155e75;
+  --color-brand-900: #164e63;
+  --color-brand-950: #083344;
+
+  /* Surface — Cool Slate with blue undertone */
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+
+  /* Borders — Thin, semi-transparent white */
+  --bw-default: 1px;
+  --bw-strong: 1px;
+  --border-color: rgba(255, 255, 255, 0.3);
+
+  /* Radii — Smooth, rounded */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows — Multi-layer soft, far-reaching */
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-button: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-button-pressed: 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.16), 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Glass special tokens */
+  --backdrop-blur: 16px;
+  --backdrop-saturate: 180%;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-hover: rgba(255, 255, 255, 0.85);
+
+  /* Typography — Modern geometric */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Transition — Smooth, Material-like */
+  --transition-duration: 250ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout — Moderate width */
+  --sidebar-width: 272px;
+  --header-height: 60px;
+
+  /* Behaviors — Float upward on hover */
+  --hover-lift: translateY(-2px);
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 0px;
+}
+
+/* ── Glassmorphic Dark ──────────────────────────────────── */
+[data-theme='soft-ui-dark'],
+[data-theme='soft-ui'][data-mode='dark'] {
+  /* Surface — Dark slate (glass effect diminished in dark mode) */
+  --color-surface-50: #020617;
+  --color-surface-100: #0f172a;
+  --color-surface-200: #1e293b;
+  --color-surface-300: #334155;
+  --color-surface-400: #475569;
+  --color-surface-500: #64748b;
+  --color-surface-600: #94a3b8;
+  --color-surface-700: #cbd5e1;
+  --color-surface-800: #e2e8f0;
+  --color-surface-900: #f1f5f9;
+  --color-surface-950: #f8fafc;
+
+  /* Brand shifts lighter for contrast on dark glass */
+  --color-brand-500: #22d3ee;
+
+  /* Border — Muted instead of bright white */
+  --border-color: rgba(100, 116, 139, 0.3);
+
+  /* Shadows — Deeper, darker (replaces diminished glass effect) */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-button-pressed: 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
+
+  /* Glass — Dark translucent (not true glass but dark tint overlay) */
+  --backdrop-blur: 12px;
+  --backdrop-saturate: 120%;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-bg-hover: rgba(15, 23, 42, 0.85);
+}

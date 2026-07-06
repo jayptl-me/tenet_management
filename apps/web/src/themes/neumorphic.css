@@ -1,0 +1,114 @@
+/* ═════════════════════════════════════════════════════════
+   NEUMORPHIC THEME (Light & Dark)
+   Design ref: Boundev.ai (2024) + StudioLimb (2024)
+   Philosophy: Soft, extruded, tactile. Duotone shadows, 0px borders.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Neumorphic Light ───────────────────────────────────── */
+[data-theme='neumorphic']:not([data-mode='dark']) {
+  /* Brand — Soft Blue-Purple (used sparingly, accents only) */
+  --color-brand-50: #f0f1ff;
+  --color-brand-100: #dde0ff;
+  --color-brand-200: #bcc1ff;
+  --color-brand-300: #9ba2ff;
+  --color-brand-400: #7c8aff;
+  --color-brand-500: #5c6bff;
+  --color-brand-600: #4956cc;
+  --color-brand-700: #374199;
+  --color-brand-800: #252c66;
+  --color-brand-900: #1a1f4d;
+  --color-brand-950: #3b2f6e;
+
+  /* Surface — Pale Lavender Gray (background matches element bg) */
+  --color-surface-50: #edeef2;
+  --color-surface-100: #e4e5ea;
+  --color-surface-200: #d1d3d9;
+  --color-surface-300: #b8bac2;
+  --color-surface-400: #9a9ca6;
+  --color-surface-500: #7d7f8a;
+  --color-surface-600: #636570;
+  --color-surface-700: #4a4c55;
+  --color-surface-800: #33343d;
+  --color-surface-900: #2a2a3d;
+  --color-surface-950: #1a1a2e;
+
+  /* Borders — 0px (borderless; extrusion from paired shadows) */
+  --bw-default: 0px;
+  --bw-strong: 0px;
+  --border-color: transparent;
+
+  /* Radii — Large, pillowy */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows — Duotone pairs (raised: dark bottom-right + light top-left) */
+  --shadow-card: 8px 8px 16px #d1d3d9, -8px -8px 16px #ffffff;
+  --shadow-card-hover: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
+  --shadow-button: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
+  --shadow-button-pressed: inset 4px 4px 8px #d1d3d9, inset -4px -4px 8px #ffffff;
+  --shadow-dropdown: 12px 12px 24px #d1d3d9, -12px -12px 24px #ffffff;
+  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.15), -10px -10px 20px rgba(255, 255, 255, 0.8);
+  --shadow-input: inset 4px 4px 8px #d1d3d9, inset -4px -4px 8px #ffffff;
+
+  /* Typography — Rounded geometric */
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+
+  /* Transition — Slower, smoother */
+  --transition-duration: 300ms;
+  --transition-easing: ease-in-out;
+
+  /* Layout — Wider, airier */
+  --sidebar-width: 280px;
+  --header-height: 60px;
+
+  /* Behaviors — Shadow swap (no translate) */
+  --hover-lift: none;
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 0px;
+
+  /* Accessibility — StudioLimb mitigation for WCAG */
+  --focus-ring-color: rgba(124, 111, 255, 0.4);
+  --focus-ring-width: 2px;
+  --interactive-border: 1px solid rgba(0, 0, 0, 0.08);
+  --disabled-opacity: 0.4;
+}
+
+/* ── Neumorphic Dark ────────────────────────────────────── */
+[data-theme='neumorphic-dark'],
+[data-theme='neumorphic'][data-mode='dark'] {
+  /* Surface — Mid-tone dark (StudioLimb: NOT pure black, need room for shadow pair) */
+  --color-surface-50: #1a1e28;
+  --color-surface-100: #1e2430;
+  --color-surface-200: #242b38;
+  --color-surface-300: #2a3242;
+  --color-surface-400: #384254;
+  --color-surface-500: #505a6e;
+  --color-surface-600: #6e788c;
+  --color-surface-700: #929cae;
+  --color-surface-800: #b8bfcc;
+  --color-surface-900: #dce0e8;
+  --color-surface-950: #f0f2f5;
+
+  /* Brand shifts lighter by 1 step for contrast against dark surfaces */
+  --color-brand-500: #7c8aff;
+
+  /* Shadows — Dark mode duotone pairs (bg darkened ~15% / lightened ~10%) */
+  --shadow-card: 8px 8px 16px #10131a, -8px -8px 16px #2a3040;
+  --shadow-card-hover: 6px 6px 12px #10131a, -6px -6px 12px #2a3040;
+  --shadow-button: 6px 6px 12px #10131a, -6px -6px 12px #2a3040;
+  --shadow-button-pressed: inset 4px 4px 8px #10131a, inset -4px -4px 8px #2a3040;
+  --shadow-dropdown: 12px 12px 24px #10131a, -12px -12px 24px #2a3040;
+  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.3), -10px -10px 20px rgba(255, 255, 255, 0.1);
+  --shadow-input: inset 4px 4px 8px #10131a, inset -4px -4px 8px #2a3040;
+
+  /* Accessibility — Dark mode adjustments */
+  --focus-ring-color: rgba(156, 141, 255, 0.6);
+  --interactive-border: 1px solid rgba(255, 255, 255, 0.08);
+  --disabled-opacity: 0.35;
+}

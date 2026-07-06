@@ -1,0 +1,105 @@
+/* ═════════════════════════════════════════════════════════
+   NEO-BRUTALIST THEME (Light & Dark)
+   Design ref: Alex Mayhew "Neo-Brutalism: A Developer's Guide" (2026)
+   Philosophy: Raw, honest, bold. 3px black borders, hard shadows, no blur.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Brutalist Light (default) ──────────────────────────── */
+[data-theme='brutalist'],
+:root[data-theme='brutalist']:not([data-mode='dark']),
+:root:not([data-theme]) {
+  /* Brand — Warm Amber */
+  --color-brand-50: #fffbeb;
+  --color-brand-100: #fef3c7;
+  --color-brand-200: #fde68a;
+  --color-brand-300: #fcd34d;
+  --color-brand-400: #fbbf24;
+  --color-brand-500: #f59e0b;
+  --color-brand-600: #d97706;
+  --color-brand-700: #b45309;
+  --color-brand-800: #92400e;
+  --color-brand-900: #78350f;
+  --color-brand-950: #451a03;
+
+  /* Surface — Warm Stone */
+  --color-surface-50: #fafaf9;
+  --color-surface-100: #f5f5f4;
+  --color-surface-200: #e7e5e4;
+  --color-surface-300: #d6d3d1;
+  --color-surface-400: #a8a29e;
+  --color-surface-500: #78716c;
+  --color-surface-600: #57534e;
+  --color-surface-700: #44403c;
+  --color-surface-800: #292524;
+  --color-surface-900: #1c1917;
+  --color-surface-950: #0c0a09;
+
+  /* Borders — 3px solid black */
+  --bw-default: 2px;
+  --bw-strong: 3px;
+  --border-color: #000000;
+
+  /* Radii — Sharp (neo-brutalism rejects rounding) */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows — Hard offset, ZERO blur */
+  --shadow-card: 4px 4px 0 0 #000000;
+  --shadow-card-hover: 2px 2px 0 0 #000000;
+  --shadow-button: 2px 2px 0 0 #000000;
+  --shadow-button-pressed: none;
+  --shadow-dropdown: 3px 3px 0 0 #000000;
+  --shadow-modal: 6px 6px 0 0 rgba(0, 0, 0, 0.5);
+
+  /* Typography — Bold, chunky, uppercase monospace labels */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transition — Fast, snappy */
+  --transition-duration: 150ms;
+  --transition-easing: ease-out;
+
+  /* Layout */
+  --sidebar-width: 256px;
+  --header-height: 60px;
+
+  /* Behaviors — Press-down effect */
+  --hover-lift: translateX(1px) translateY(1px);
+  --active-press-scale: 0.97;
+  --active-press-x: 1px;
+  --active-press-y: 1px;
+}
+
+/* ── Brutalist Dark ─────────────────────────────────────── */
+[data-theme='brutalist-dark'],
+[data-theme='brutalist'][data-mode='dark'] {
+  /* Surface flips to dark */
+  --color-surface-50: #0c0a09;
+  --color-surface-100: #1c1917;
+  --color-surface-200: #292524;
+  --color-surface-300: #44403c;
+  --color-surface-400: #57534e;
+  --color-surface-500: #78716c;
+  --color-surface-600: #a8a29e;
+  --color-surface-700: #d6d3d1;
+  --color-surface-800: #e7e5e4;
+  --color-surface-900: #f5f5f4;
+  --color-surface-950: #fafaf9;
+
+  /* Borders flip to white (maintains visible-grid principle) */
+  --border-color: #ffffff;
+
+  /* Shadows flip to white */
+  --shadow-card: 4px 4px 0 0 #ffffff;
+  --shadow-card-hover: 2px 2px 0 0 #ffffff;
+  --shadow-button: 2px 2px 0 0 #ffffff;
+  --shadow-button-pressed: none;
+  --shadow-dropdown: 3px 3px 0 0 #ffffff;
+  --shadow-modal: 6px 6px 0 0 rgba(255, 255, 255, 0.5);
+
+  /* Brand stays same (amber pops on dark) */
+}
