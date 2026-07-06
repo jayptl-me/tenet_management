@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /tenants
+Disallow: /rooms
+Disallow: /floors
+Disallow: /payments
+Disallow: /invoices
+Disallow: /electricity
+Disallow: /complaints
+Disallow: /enquiries
+Disallow: /meals
+Disallow: /menus
+Disallow: /services
+Disallow: /notifications
+Disallow: /notices
+Disallow: /visitors
+Disallow: /guardians
+Disallow: /assets
+Disallow: /leaves
+Disallow: /attendance
+
+Sitemap: https://tenetpg.com/sitemap.xml

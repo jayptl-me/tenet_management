@@ -1,0 +1,262 @@
+/* ── Fonts (all 8 families, display:swap for all themes) ──── */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@import 'tailwindcss';
+
+/* ── Theme CSS Files ────────────────────────────────────── */
+@import '../themes/brutalist.css';
+@import '../themes/neumorphic.css';
+@import '../themes/soft-ui.css';
+@import '../themes/saas.css';
+
+/* ═════════════════════════════════════════════════════════
+   DEFAULT TOKEN VALUES (fallback — brutalist light mode)
+   ═════════════════════════════════════════════════════════ */
+:root {
+  /* Colors */
+  --color-brand-50: #fffbeb;
+  --color-brand-100: #fef3c7;
+  --color-brand-200: #fde68a;
+  --color-brand-300: #fcd34d;
+  --color-brand-400: #fbbf24;
+  --color-brand-500: #f59e0b;
+  --color-brand-600: #d97706;
+  --color-brand-700: #b45309;
+  --color-brand-800: #92400e;
+  --color-brand-900: #78350f;
+  --color-brand-950: #451a03;
+
+  --color-surface-50: #fafaf9;
+  --color-surface-100: #f5f5f4;
+  --color-surface-200: #e7e5e4;
+  --color-surface-300: #d6d3d1;
+  --color-surface-400: #a8a29e;
+  --color-surface-500: #78716c;
+  --color-surface-600: #57534e;
+  --color-surface-700: #44403c;
+  --color-surface-800: #292524;
+  --color-surface-900: #1c1917;
+  --color-surface-950: #0c0a09;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* Borders */
+  --bw-default: 2px;
+  --bw-strong: 3px;
+  --border-color: #000;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 4px 4px 0 0 #000;
+  --shadow-card-hover: 2px 2px 0 0 #000;
+  --shadow-button: 2px 2px 0 0 #000;
+  --shadow-button-pressed: none;
+  --shadow-dropdown: 3px 3px 0 0 #000;
+  --shadow-modal: 6px 6px 0 0 rgba(0, 0, 0, 0.5);
+
+  /* Typography */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transition */
+  --transition-duration: 150ms;
+  --transition-easing: ease-out;
+
+  /* Layout */
+  --sidebar-width: 256px;
+  --header-height: 60px;
+
+  /* Behaviors */
+  --hover-lift: translateX(1px) translateY(1px);
+  --active-press-scale: 0.97;
+  --active-press-x: 1px;
+  --active-press-y: 1px;
+}
+
+/* ═════════════════════════════════════════════════════════
+   THEME-ABLE TOKENS — @theme (NON-inline)
+   MUST use @theme, NOT @theme inline.
+   @theme inline bakes hex values into utilities.
+   @theme emits var(--token) → CSS cascade can override.
+   ═════════════════════════════════════════════════════════ */
+@theme {
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-900: var(--color-brand-900);
+  --color-brand-950: var(--color-brand-950);
+
+  --color-surface-50: var(--color-surface-50);
+  --color-surface-100: var(--color-surface-100);
+  --color-surface-200: var(--color-surface-200);
+  --color-surface-300: var(--color-surface-300);
+  --color-surface-400: var(--color-surface-400);
+  --color-surface-500: var(--color-surface-500);
+  --color-surface-600: var(--color-surface-600);
+  --color-surface-700: var(--color-surface-700);
+  --color-surface-800: var(--color-surface-800);
+  --color-surface-900: var(--color-surface-900);
+  --color-surface-950: var(--color-surface-950);
+
+  --color-danger-50: var(--color-danger-50);
+  --color-danger-100: var(--color-danger-100);
+  --color-danger-200: var(--color-danger-200);
+  --color-danger-300: var(--color-danger-300);
+  --color-danger-400: var(--color-danger-400);
+  --color-danger-500: var(--color-danger-500);
+  --color-danger-600: var(--color-danger-600);
+  --color-danger-700: var(--color-danger-700);
+  --color-danger-800: var(--color-danger-800);
+  --color-danger-900: var(--color-danger-900);
+
+  --color-success-50: var(--color-success-50);
+  --color-success-100: var(--color-success-100);
+  --color-success-200: var(--color-success-200);
+  --color-success-300: var(--color-success-300);
+  --color-success-400: var(--color-success-400);
+  --color-success-500: var(--color-success-500);
+  --color-success-600: var(--color-success-600);
+  --color-success-700: var(--color-success-700);
+  --color-success-800: var(--color-success-800);
+  --color-success-900: var(--color-success-900);
+
+  --color-warning-50: var(--color-warning-50);
+  --color-warning-100: var(--color-warning-100);
+  --color-warning-200: var(--color-warning-200);
+  --color-warning-300: var(--color-warning-300);
+  --color-warning-400: var(--color-warning-400);
+  --color-warning-500: var(--color-warning-500);
+  --color-warning-600: var(--color-warning-600);
+  --color-warning-700: var(--color-warning-700);
+  --color-warning-800: var(--color-warning-800);
+  --color-warning-900: var(--color-warning-900);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+}
+
+/* ═════════════════════════════════════════════════════════
+   STATIC TOKENS — @theme inline only for animation keyframes
+   These never change across themes, so inline is safe.
+   ═════════════════════════════════════════════════════════ */
+@theme inline {
+  --animate-fade-in-up: fade-in-up 400ms ease-out both;
+  --animate-shimmer: shimmer 2s infinite;
+  --animate-slide-in-left: slide-in-left 250ms ease-out both;
+  --animate-slide-in-right: slide-in-right 250ms ease-out both;
+}
+
+/* ── Keyframes ──────────────────────────────────────────── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ── Base ───────────────────────────────────────────────── */
+body {
+  font-family: var(--font-body);
+  background: var(--color-surface-50);
+  color: var(--color-surface-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Theme-Compatible Utilities (replaces .shadow-brutal, .shadow-brutal-sm, .border-3) ── */
+/* Components that used .shadow-brutal should use shadow-[var(--shadow-card)]              */
+/* Components that used .shadow-brutal-sm should use shadow-[var(--shadow-button)]         */
+/* Components that used .border-3 should use border-[length:var(--bw-strong)]              */
+/* These old classes are kept temporarily for backward compatibility during migration.     */
+/* They will be removed once all components are tokenized.                                  */
+.shadow-brutal {
+  box-shadow: var(--shadow-card);
+}
+.shadow-brutal-sm {
+  box-shadow: var(--shadow-button);
+}
+.border-3 {
+  border-width: var(--bw-strong);
+}

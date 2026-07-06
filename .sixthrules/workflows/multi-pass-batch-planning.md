@@ -1,0 +1,107 @@
+# multi-pass-batch-planning.md
+
+> Task decomposition guidelines for complex feature additions.
+
+Complex tasks that cross multiple package boundaries (e.g. types, API, and web) must be broken down into structured passes. Each pass must yield a compile-safe state before moving to the next.
+
+## Pass-Based Execution Model
+
+For full-stack features in this monorepo, execute changes in the following sequence:
+
+```
+   +---------------------------------------+
+   |            PASS 1: Types              |  <-- Define shared types in packages/types/src
+   +---------------------------------------+
+                       |
+                       v
+   +---------------------------------------+
+   |           PASS 2: Database            |  <-- Update models in apps/api/src/models
+   +---------------------------------------+
+                       |
+                       v
+   +---------------------------------------+
+   |             PASS 3: API               |  <-- Create Hono routes & services in apps/api
+   +---------------------------------------+
+                       |
+                       v
+   +---------------------------------------+
+   |            PASS 4: Frontend           |  <-- Build UI components & hooks in apps/web
+   +---------------------------------------+
+                       |
+                       v
+   +---------------------------------------+
+   |          PASS 5: Integration          |  <-- Wire pages, navigation, and API calls
+   +---------------------------------------+
+                       |
+                       v
+   +---------------------------------------+
+   |         PASS 6: Verification          |  <-- Run E2E tests, typechecks, and builds
+   +---------------------------------------+
+```
+
+### Pass Sizing
+
+- Keep each pass focused on a single logical domain.
+- Limit changes to a manageable number of files (typically fewer than 8).
+- Ensure each pass compiles and passes `bun run typecheck` before starting the next.
+
+## Batch Strategies
+
+- **Sequential Batches:** Used for core dependencies (e.g. Types must always be defined and verified before the database schema can use them).
+- **Parallel Batches:** Used for independent features (e.g. creating two frontend page forms that call different endpoints can be done in parallel or delegated to sub-agents).
+
+## Example Decomposition (Actual Tech Stack)
+
+Task: "Add a Room Booking Feature with Laundry Slot reservation."
+
+### Pass 1: Shared Types
+
+- Create `packages/types/src/booking.ts`.
+- Export from `packages/types/src/index.ts`.
+- Verify: Run `bun --filter '@pg/types' typecheck`.
+
+### Pass 2: Database Models
+
+- Create `apps/api/src/models/booking.ts` and import types from `@pg/types`.
+- Reference inside `apps/api/src/models/index.ts`.
+- Verify: Run `bun --filter '@pg/api' typecheck`.
+
+### Pass 3: API Logic
+
+- Create Hono routes `apps/api/src/routes/bookings.ts`.
+- Register route in server entry point `apps/api/src/index.ts`.
+- Write unit tests in `apps/api/src/__tests__/bookings.test.ts`.
+- Verify: Run `bun run test` (Vitest).
+
+### Pass 4: Frontend Logic
+
+- Create hooks in `apps/web/src/hooks/useBookings.ts`.
+- Create components in `apps/web/src/components/bookings/`.
+- Verify: Run `bun --filter '@pg/web' typecheck`.
+
+### Pass 5: Integration
+
+- Build layout/page `apps/web/src/app/bookings/page.tsx` and wire forms.
+- Add page to navigation dashboard.
+- Verify: Run `bun run dev` and test in browser.
+
+### Pass 6: Final Verification
+
+- Run `bun run build`.
+- Run E2E tests `bun run test:e2e` (Playwright).
+
+## Re-Plan Triggers
+
+Stop and revise the plan under these conditions:
+
+1. A new dependency is discovered during Phase 3 that requires modifying packages/types.
+2. The current design violates package encapsulation rules.
+3. Verification fails 3 consecutive times in a single pass.
+4. The user updates the feature scope.
+
+## Emergency Brake Conditions
+
+Immediately halt work and query the user if:
+
+- A major structural conflict is discovered (e.g. database schema change breaks existing models and requires data migration that wasn't planned).
+- A severe security vulnerability is detected in a required package.

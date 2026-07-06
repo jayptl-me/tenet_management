@@ -1,0 +1,102 @@
+/* ═════════════════════════════════════════════════════════
+   SAAS / ENTERPRISE THEME (Light & Dark)
+   Design ref: TheFrontKit "SaaS Design Tokens" (2026) + getcolors.dev (2026)
+   Philosophy: Professional, clean, efficient. Function over form.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── SaaS Light ─────────────────────────────────────────── */
+[data-theme='saas']:not([data-mode='dark']) {
+  /* Brand — Professional Indigo */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Surface — Neutral cool gray (professional, no warmth) */
+  --color-surface-50: #fafafa;
+  --color-surface-100: #f5f5f5;
+  --color-surface-200: #e5e5e5;
+  --color-surface-300: #d4d4d4;
+  --color-surface-400: #a3a3a3;
+  --color-surface-500: #737373;
+  --color-surface-600: #525252;
+  --color-surface-700: #404040;
+  --color-surface-800: #262626;
+  --color-surface-900: #171717;
+  --color-surface-950: #0a0a0a;
+
+  /* Borders — Thin, neutral, professional */
+  --bw-default: 1px;
+  --bw-strong: 1px;
+  --border-color: #e5e7eb;
+
+  /* Radii — Tight, professional (TheFrontKit token scale) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-full: 9999px;
+
+  /* Shadows — Tight, close, subtle */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-button-pressed: none;
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Typography — Inter ONLY (system-grade, no decorative fonts) */
+  --font-display: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transition — Moderate, standard */
+  --transition-duration: 200ms;
+  --transition-easing: ease;
+
+  /* Layout — Compact, dense (information density focus) */
+  --sidebar-width: 240px;
+  --header-height: 60px;
+
+  /* Behaviors — No animation, background color shift only */
+  --hover-lift: none;
+  --active-press-scale: 1;
+  --active-press-x: 0px;
+  --active-press-y: 0px;
+}
+
+/* ── SaaS Dark ──────────────────────────────────────── */
+[data-theme='saas-dark'],
+[data-theme='saas'][data-mode='dark'] {
+  /* Surface — Slightly warm dark bg (getcolors.dev: #0a0a0a, not clinical #000) */
+  --color-surface-50: #0a0a0a;
+  --color-surface-100: #171717;
+  --color-surface-200: #262626;
+  --color-surface-300: #404040;
+  --color-surface-400: #525252;
+  --color-surface-500: #737373;
+  --color-surface-600: #a3a3a3;
+  --color-surface-700: #d4d4d4;
+  --color-surface-800: #e5e5e5;
+  --color-surface-900: #f5f5f5;
+  --color-surface-950: #fafafa;
+
+  /* Brand stays SAME — indigo #6366f1 contrasts well on dark */
+  /* Border — Subtle dark borders (getcolors.dev pattern) */
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  /* Shadows — Dark-adapted (same tight pattern, darker values) */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-button: none;
+  --shadow-button-pressed: none;
+  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
