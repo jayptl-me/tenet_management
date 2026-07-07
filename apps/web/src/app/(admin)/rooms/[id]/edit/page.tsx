@@ -28,34 +28,45 @@ const SHARING_OPTIONS = [
   { value: '4', label: '4 Sharing' },
 ];
 
+interface FloorOption {
+  _id: string;
+  label: string;
+  floorNumber: number;
+}
+
 export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [fetchError, setFetchError] = useState('');
+  const [floors, setFloors] = useState<FloorOption[]>([]);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   useEffect(() => {
     if (!roomId) return;
-    api
-      .get(`rooms/${roomId}`)
-      .json<{ success: boolean; data: FormData }>()
-      .then((res) => {
-        reset(res.data);
+    Promise.all([
+      api.get(`rooms/${roomId}`).json<{ success: boolean; data: any }>(),
+      api.get('floors').json<{ success: boolean; data: FloorOption[] }>(),
+    ])
+      .then(([roomRes, floorsRes]) => {
+        setFloors(floorsRes.data);
+        const d = roomRes.data;
+        reset({
+          roomNumber: d.roomNumber ?? '',
+          floorId: d.floor?._id ?? d.floorId ?? '',
+          sharingType: d.sharingType ?? 2,
+          monthlyRent: d.monthlyRent ?? 0,
+          isActive: d.isActive ?? true,
+          description: d.description ?? '',
+        });
         setIsLoading(false);
       })
       .catch(() => {
-        setFetchError('Failed to load room data');
+        setSubmitError('Failed to load room data');
         setIsLoading(false);
       });
   }, [roomId, reset]);
@@ -70,53 +81,36 @@ export default function EditRoomPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
-  if (fetchError) {
-    return (
-      <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{fetchError}</div>
-      </div>
-    );
-  }
+  const floorOptions = floors.map((f) => ({
+    value: f._id,
+    label: `${f.label} (Floor ${f.floorNumber})`,
+  }));
 
   return (
     <div className="animate-fade-in-up space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
+        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
         <div>
           <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Room</h2>
           <p className="text-surface-500 mt-0.5 text-sm">Update room details</p>
         </div>
       </div>
-
-      {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>
-      )}
-
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
-      >
+      {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Room Number" placeholder="e.g. 101" error={errors.roomNumber?.message} {...register('roomNumber')} />
-            <Input label="Floor ID" placeholder="Floor ID" error={errors.floorId?.message} {...register('floorId')} />
+            <Select label="Floor" options={floorOptions} error={errors.floorId?.message} {...register('floorId')} />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select label="Sharing Type" options={SHARING_OPTIONS} error={errors.sharingType?.message} {...register('sharingType')} />
             <Input label="Monthly Rent (₹)" type="number" error={errors.monthlyRent?.message} {...register('monthlyRent')} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-surface-800 font-display text-sm font-semibold">Description</label>
+            <textarea rows={2} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Optional description..." {...register('description')} />
           </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('isActive')} className="text-brand-500 h-5 w-5 rounded border-[length:var(--bw-default)]" />
