@@ -134,8 +134,6 @@ export default function LandingPage() {
 
   return (
     <div className="bg-surface-50 font-[family:var(--font-body)] text-surface-900 min-h-screen transition-colors duration-[var(--transition-duration)]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(customJsonLd) }} />
-
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
@@ -349,7 +347,7 @@ export default function LandingPage() {
               <a href="#about" className="transition-colors duration-[var(--transition-duration)] hover:text-white">About</a>
               <a href="#testimonials" className="transition-colors duration-[var(--transition-duration)] hover:text-white">Reviews</a>
             </div>
-            <p className="text-surface-400 font-body text-xs">&copy; {new Date().getFullYear()} {pgName}. All rights reserved.</p>
+            <p className="text-surface-400 font-body text-xs">&copy; 2026 {pgName}. All rights reserved.</p>
           </div>
           {social && (
             <div className="text-surface-400 border-surface-800 mt-4 flex justify-center gap-4 border-t pt-4">

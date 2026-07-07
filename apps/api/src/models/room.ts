@@ -138,7 +138,6 @@ const roomSchema: any = new Schema(
 );
 
 // ── Indexes ─────────────────────────────────────────────
-roomSchema.index({ roomNumber: 1 }, { unique: true });
 roomSchema.index({ floorId: 1 });
 roomSchema.index({ sharingType: 1 });
 roomSchema.index({ isActive: 1 });

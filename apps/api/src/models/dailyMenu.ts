@@ -58,8 +58,6 @@ const dailyMenuSchema = new Schema<IDailyMenuDocument>(
   },
 );
 
-dailyMenuSchema.index({ date: 1 }, { unique: true });
-
 export const DailyMenu: Model<IDailyMenuDocument> = model<IDailyMenuDocument>(
   'DailyMenu',
   dailyMenuSchema,

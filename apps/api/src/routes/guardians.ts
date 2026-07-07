@@ -240,7 +240,7 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
   const body = c.req.valid('json');
 
   const guardian = await Guardian.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
     .populate({
@@ -266,7 +266,7 @@ guardians.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid guardian ID');
 
-  const guardian = await Guardian.findByIdAndUpdate(id, { isActive: false }, { new: true }).lean();
+  const guardian = await Guardian.findByIdAndUpdate(id, { isActive: false }, { returnDocument: 'after' }).lean();
 
   if (!guardian) return notFound(c, 'Guardian');
 

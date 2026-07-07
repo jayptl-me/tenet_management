@@ -287,7 +287,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
   const body = c.req.valid('json');
-  const tenant = await Tenant.findByIdAndUpdate(id, body, { new: true, runValidators: true })
+  const tenant = await Tenant.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true })
     .populate('user')
     .populate('room')
     .lean();

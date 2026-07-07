@@ -112,9 +112,6 @@ const electricityBillSchema = new Schema<IElectricityBillDocument>(
   },
 );
 
-// ── Index ──────────────────────────────────────────────
-electricityBillSchema.index({ month: 1 }, { unique: true });
-
 // ── Pre-save: derive unitsConsumed and amount ──────────
 electricityBillSchema.pre('save', function (this: IElectricityBillDocument) {
   for (const entry of this.roomEntries) {

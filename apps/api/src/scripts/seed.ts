@@ -15,6 +15,7 @@ import { NoticePost } from '../models/noticePost.js';
 import { AppConfig } from '../models/appConfig.js';
 import { Asset } from '../models/asset.js';
 import { Guardian } from '../models/guardian.js';
+import { LaundrySlot } from '../models/laundrySlot.js';
 import { env } from '../lib/env.js';
 import { logger } from '../lib/logger.js';
 
@@ -449,6 +450,44 @@ async function seedSampleData(adminId: string): Promise<void> {
     relation: 'mother',
   } as any);
   logger.info('Guardians seeded');
+
+  // ── Laundry Slots ──────────────────────────────────
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const tomorrowDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
+  await LaundrySlot.insertMany([
+    {
+      tenantId: tenantPairs[0].tenantId,
+      slotDate: todayDate,
+      slotTime: '08:00-10:00',
+      items: 5,
+      status: 'completed',
+      notes: 'Regular wash completed',
+    },
+    {
+      tenantId: tenantPairs[1].tenantId,
+      slotDate: todayDate,
+      slotTime: '10:00-12:00',
+      items: 3,
+      status: 'booked',
+    },
+    {
+      tenantId: tenantPairs[2].tenantId,
+      slotDate: tomorrowDate,
+      slotTime: '08:00-10:00',
+      items: 7,
+      status: 'booked',
+      notes: 'Includes bedsheets',
+    },
+    {
+      tenantId: tenantPairs[3].tenantId,
+      slotDate: tomorrowDate,
+      slotTime: '14:00-16:00',
+      items: 4,
+      status: 'confirmed',
+    },
+  ] as any[]);
+  logger.info('Laundry slots seeded');
 }
 
 async function seed(): Promise<void> {
