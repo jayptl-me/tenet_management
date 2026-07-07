@@ -2,18 +2,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 
 const schema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  roomId: z.string().min(1, 'Room ID is required'),
-  bedId: z.string().min(1, 'Bed ID is required'),
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().min(10, 'Phone must be at least 10 digits'),
+  roomId: z.string().min(1, 'Room is required'),
+  bedId: z.string().min(1, 'Bed is required'),
   moveInDate: z.string().min(1, 'Move-in date is required'),
   depositPaid: z.coerce.number().min(0, 'Must be >= 0'),
   monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
@@ -27,6 +30,7 @@ export default function NewTenantPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -64,51 +68,36 @@ export default function NewTenantPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
+        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
-          <Input
-            label="User ID"
-            placeholder="Enter user ID"
-            error={errors.userId?.message}
-            {...register('userId')}
-          />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Room ID"
-              placeholder="Enter room ID"
-              error={errors.roomId?.message}
-              {...register('roomId')}
-            />
-            <Input
-              label="Bed ID"
-              placeholder="e.g. A, B, C, D"
-              error={errors.bedId?.message}
-              {...register('bedId')}
-            />
+            <Input label="Full Name" placeholder="Tenant name" error={errors.name?.message} {...register('name')} />
+            <Input label="Email" type="email" placeholder="tenant@email.com" error={errors.email?.message} {...register('email')} />
           </div>
+          <Input label="Phone" placeholder="+919876543210" error={errors.phone?.message} {...register('phone')} />
+          <Controller
+            name="roomId"
+            control={control}
+            render={({ field }) => (
+              <ResourceSelect
+                label="Room"
+                endpoint="rooms"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Select room..."
+                error={errors.roomId?.message}
+              />
+            )}
+          />
+          <Input label="Bed ID" placeholder="A, B, C, or D" error={errors.bedId?.message} {...register('bedId')} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              label="Move-in Date"
-              type="date"
-              error={errors.moveInDate?.message}
-              {...register('moveInDate')}
-            />
-            <Input
-              label="Deposit Paid (₹)"
-              type="number"
-              error={errors.depositPaid?.message}
-              {...register('depositPaid')}
-            />
-            <Input
-              label="Monthly Rent (₹)"
-              type="number"
-              error={errors.monthlyRent?.message}
-              {...register('monthlyRent')}
-            />
+            <Input label="Move-in Date" type="date" error={errors.moveInDate?.message} {...register('moveInDate')} />
+            <Input label="Deposit Paid (₹)" type="number" error={errors.depositPaid?.message} {...register('depositPaid')} />
+            <Input label="Monthly Rent (₹)" type="number" error={errors.monthlyRent?.message} {...register('monthlyRent')} />
           </div>
         </div>
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>

@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { Sidebar } from '@/components/admin/Sidebar';
 import { NotificationBell } from '@/components/admin/NotificationBell';
+import { DarkModeToggle } from '@/components/admin/DarkModeToggle';
+import { EmergencyAlertButton } from '@/components/admin/EmergencyAlertButton';
 import type { IUser } from '@pg/types';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -60,13 +62,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] bg-white px-6 py-3">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-6 py-3">
           <div className="w-8 md:hidden" />
           {/* spacer for mobile hamburger */}
           <h1 className="font-display text-surface-900 truncate text-lg font-bold">
             {user?.name ? `Welcome, ${user.name}` : 'Dashboard'}
           </h1>
           <div className="flex items-center gap-3">
+            <EmergencyAlertButton />
+            <DarkModeToggle />
             <NotificationBell />
           </div>
         </header>

@@ -50,6 +50,15 @@ menus.get('/', authGuard, async (c) => {
   return c.json({ success: true, data });
 });
 
+
+// ── GET /menus/:id ──────────────────────────────────────────
+menus.get('/:id', authGuard, async (c) => {
+  const id = c.req.param('id');
+  const menu = await DailyMenu.findById(id).lean();
+  if (!menu) return notFound(c, 'Daily menu');
+  return c.json({ success: true, data: menu });
+});
+
 // ── PUT /menus/:date ────────────────────────────────────
 menus.put('/:date', authGuard, adminOnly, zValidator('json', menuDaySchema), async (c) => {
   const date = c.req.param('date');
@@ -64,10 +73,29 @@ menus.put('/:date', authGuard, adminOnly, zValidator('json', menuDaySchema), asy
   return c.json({ success: true, data: menu });
 });
 
+
+// ── PUT /menus/:id ────────────────────────────────────────
+menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async (c) => {
+  const id = c.req.param('id');
+  const body = c.req.valid('json');
+  const menu = await DailyMenu.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
+  if (!menu) return notFound(c, 'Daily menu');
+  return c.json({ success: true, data: menu });
+});
+
 // ── DELETE /menus/:date ─────────────────────────────────
 menus.delete('/:date', authGuard, adminOnly, async (c) => {
   const date = c.req.param('date');
   const menu = await DailyMenu.findOneAndDelete({ date });
+  if (!menu) return notFound(c, 'Daily menu');
+  return c.json({ success: true, data: { message: 'Daily menu deleted' } });
+});
+
+
+// ── DELETE /menus/:id ─────────────────────────────────────
+menus.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = c.req.param('id');
+  const menu = await DailyMenu.findByIdAndDelete(id);
   if (!menu) return notFound(c, 'Daily menu');
   return c.json({ success: true, data: { message: 'Daily menu deleted' } });
 });

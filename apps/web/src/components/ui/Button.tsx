@@ -11,7 +11,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary:
     'bg-brand-500 text-white border-[length:var(--bw-strong)] border-[color:var(--border-color)] hover:bg-brand-600 active:scale-[var(--active-press-scale)] active:translate-x-[var(--active-press-x)] active:translate-y-[var(--active-press-y)] active:shadow-[var(--shadow-button-pressed)] shadow-[var(--shadow-button)]',
   secondary:
-    'bg-white text-surface-900 border-[length:var(--bw-strong)] border-[color:var(--border-color)] hover:bg-surface-100 active:scale-[var(--active-press-scale)] active:translate-x-[var(--active-press-x)] active:translate-y-[var(--active-press-y)] active:shadow-[var(--shadow-button-pressed)] shadow-[var(--shadow-button)]',
+    'bg-[color:var(--color-surface-100)] text-surface-900 border-[length:var(--bw-strong)] border-[color:var(--border-color)] hover:bg-surface-100 active:scale-[var(--active-press-scale)] active:translate-x-[var(--active-press-x)] active:translate-y-[var(--active-press-y)] active:shadow-[var(--shadow-button-pressed)] shadow-[var(--shadow-button)]',
   danger:
     'bg-danger-500 text-white border-[length:var(--bw-strong)] border-[color:var(--border-color)] hover:bg-danger-600 active:scale-[var(--active-press-scale)] active:translate-x-[var(--active-press-x)] active:translate-y-[var(--active-press-y)] active:shadow-[var(--shadow-button-pressed)] shadow-[var(--shadow-button)]',
   ghost:

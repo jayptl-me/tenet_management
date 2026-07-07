@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Eye, Pencil, LayoutList, Columns3, Loader2 } from 'lucide-react';
+import { Plus, Eye, Pencil, LayoutList, Columns3, Loader2, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -61,7 +62,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-colors duration-[var(--transition-duration)] ${isOver ? 'ring-3 ring-brand-500 ring-offset-2' : ''}`}
+      className={`min-h-[200px] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-colors duration-[var(--transition-duration)] ${isOver ? 'ring-3 ring-brand-500 ring-offset-2' : ''}`}
     >
       <div
         className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}
@@ -70,7 +71,7 @@ function KanbanColumn({
           <h3 className="font-display text-surface-900 text-sm font-bold capitalize">
             {meta.label}
           </h3>
-          <span className="bg-surface-900 rounded-full px-2 py-0.5 font-mono text-xs font-bold text-white">
+          <span className="bg-surface-900 rounded-full px-2 py-0.5 font-mono text-xs font-bold text-[color:var(--color-surface-50)]">
             {complaints.length}
           </span>
         </div>
@@ -153,6 +154,8 @@ export default function ComplaintsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ComplaintRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -211,6 +214,24 @@ export default function ComplaintsPage() {
       fetchComplaints();
     }
   }, [viewMode, fetchAllForKanban, fetchComplaints]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`complaints/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      if (viewMode === 'kanban') {
+        fetchAllForKanban();
+      } else {
+        fetchComplaints();
+      }
+    } catch {
+      setError('Failed to delete complaint');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const kanbanColumns = useMemo(() => {
     const grouped: Record<string, ComplaintRow[]> = {};
@@ -322,9 +343,19 @@ export default function ComplaintsPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -343,7 +374,7 @@ export default function ComplaintsPage() {
               className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
                 viewMode === 'table'
                   ? 'bg-surface-900 text-white'
-                  : 'text-surface-600 hover:bg-surface-100 bg-white'
+                  : 'text-surface-600 hover:bg-surface-100 bg-[color:var(--color-surface-100)]'
               }`}
             >
               <LayoutList className="mr-1 inline h-3.5 w-3.5" />
@@ -354,7 +385,7 @@ export default function ComplaintsPage() {
               className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
                 viewMode === 'kanban'
                   ? 'bg-surface-900 text-white'
-                  : 'text-surface-600 hover:bg-surface-100 bg-white'
+                  : 'text-surface-600 hover:bg-surface-100 bg-[color:var(--color-surface-100)]'
               }`}
             >
               <Columns3 className="mr-1 inline h-3.5 w-3.5" />
@@ -451,6 +482,15 @@ export default function ComplaintsPage() {
           )}
         </>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Complaint"
+        message={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

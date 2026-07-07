@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Phone, Calendar, Home, CreditCard, FileText } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, Home, CreditCard, FileText, LogOut, MessageCircle, Copy } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TenantActivityTimeline } from '@/components/ui/TenantActivityTimeline';
+import { ServiceStatusIndicator } from '@/components/ui/ServiceStatusIndicator';
+import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 
 interface TenantDetail {
   _id: string;
   user?: { name: string; email: string; phone: string };
-  room?: { _id: string; roomNumber: string };
-  floor?: { _id: string; floorName: string };
+  room?: { _id: string; roomNumber: string; floor?: { _id: string; label: string } };
   bedId: string;
   monthlyRent: number;
   depositPaid: number;
@@ -94,7 +96,7 @@ export default function TenantDetailPage() {
       </div>
 
       {/* Personal Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Personal Info</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -119,7 +121,7 @@ export default function TenantDetailPage() {
       </div>
 
       {/* Room Details Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Details</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -135,13 +137,13 @@ export default function TenantDetailPage() {
           </div>
           <div>
             <p className="text-surface-800 font-display text-sm font-semibold">Floor</p>
-            <p className="text-surface-700 text-sm">{tenant.floor?.floorName ?? 'N/A'}</p>
+            <p className="text-surface-700 text-sm">{tenant.room?.floor?.label ?? 'N/A'}</p>
           </div>
         </div>
       </div>
 
       {/* Financial Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Financial</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -187,7 +189,7 @@ export default function TenantDetailPage() {
       </div>
 
       {/* Emergency Contact Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Emergency Contact</h3>
         {tenant.emergencyContact &&
         (tenant.emergencyContact.name || tenant.emergencyContact.phone) ? (
@@ -211,7 +213,7 @@ export default function TenantDetailPage() {
       </div>
 
       {/* Documents Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Documents</h3>
         {tenant.documents ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -255,6 +257,62 @@ export default function TenantDetailPage() {
         ) : (
           <p className="text-surface-500 text-sm">No documents on file</p>
         )}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const phone = tenant.user?.phone ?? '';
+              const name = tenant.user?.name ?? 'Tenant';
+              const url = generateWhatsAppUrl(phone, `Hi ${name}, regarding your stay at our PG...`);
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            disabled={!tenant.user?.phone}
+          >
+            <MessageCircle className="h-4 w-4" />
+            WhatsApp
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const text = `${tenant.user?.name ?? 'Tenant'} | ${tenant.user?.phone ?? ''} | Room ${tenant.room?.roomNumber ?? 'N/A'} | Bed ${tenant.bedId}`;
+              copyToClipboard(text);
+            }}
+          >
+            <Copy className="h-4 w-4" />
+            Copy Info
+          </Button>
+          {tenant.isActive && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={async () => {
+                if (!confirm(`Check out ${tenant.user?.name ?? 'this tenant'}?`)) return;
+                try {
+                  await api.post(`tenants/${tenant._id}/checkout`, { json: {} }).json();
+                  window.location.reload();
+                } catch {
+                  alert('Failed to checkout tenant');
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4" />
+              Check Out
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Activity Timeline */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Activity Timeline</h3>
+        <TenantActivityTimeline tenantId={tenant._id} />
       </div>
     </div>
   );

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Building, Users, CreditCard, Image } from 'lucide-react';
+import { ArrowLeft, Home, Building, Users, CreditCard } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
 
 interface BedDetail {
   bedId: string;
@@ -17,7 +18,7 @@ interface BedDetail {
 interface RoomDetail {
   _id: string;
   roomNumber: string;
-  floor?: { _id: string; floorName: string; floorNumber?: number };
+  floor?: { _id: string; label: string; floorNumber?: number };
   sharingType: number;
   monthlyRent: number;
   description?: string;
@@ -102,7 +103,7 @@ export default function RoomDetailPage() {
       </div>
 
       {/* Room Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Information</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -116,7 +117,7 @@ export default function RoomDetailPage() {
             <p className="text-surface-800 font-display text-sm font-semibold">Floor</p>
             <p className="text-surface-700 flex items-center gap-1 text-sm">
               <Building className="text-surface-400 h-3.5 w-3.5" />
-              {room.floor?.floorName ?? 'N/A'}
+              {room.floor?.label ?? 'N/A'}
               {room.floor?.floorNumber != null && ` (#${room.floor.floorNumber})`}
             </p>
           </div>
@@ -154,13 +155,13 @@ export default function RoomDetailPage() {
       </div>
 
       {/* Beds Table Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Beds</h3>
         {room.beds && room.beds.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-black">
+                <tr className="border-b-2 border-[color:var(--border-color)]">
                   <th className="text-surface-800 font-display px-3 py-2 text-left text-xs font-semibold">
                     Bed ID
                   </th>
@@ -174,7 +175,7 @@ export default function RoomDetailPage() {
               </thead>
               <tbody>
                 {room.beds.map((bed) => (
-                  <tr key={bed.bedId} className="border-surface-200 border-b last:border-b-0">
+                  <tr key={bed.bedId} className="border-[color:var(--color-surface-200)] border-b last:border-b-0">
                     <td className="text-surface-900 px-3 py-2 font-semibold">{bed.bedId}</td>
                     <td className="px-3 py-2">
                       <StatusBadge
@@ -197,7 +198,7 @@ export default function RoomDetailPage() {
 
       {/* Description Card */}
       {room.description && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Description</h3>
           <p className="text-surface-700 whitespace-pre-wrap text-sm">{room.description}</p>
         </div>
@@ -205,7 +206,7 @@ export default function RoomDetailPage() {
 
       {/* Photos Card */}
       {room.photos && room.photos.length > 0 && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Photos</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {room.photos.map((photo, index) => (

@@ -11,24 +11,28 @@ import {
   FileText,
   Receipt,
   Image,
+  CheckCircle,
+  XCircle,
+  MessageCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { generateWhatsAppUrl } from '@/lib/whatsapp';
 
 interface PaymentDetail {
   _id: string;
   tenant?: { _id: string; user?: { name: string }; room?: { _id: string; roomNumber: string } };
   amount: number;
-  mode: string;
-  category: string;
+  method: string;    // API sends 'method' not 'mode'
+  type: string;      // API sends 'type' not 'category'
   status: string;
   notes?: string;
-  transactionDate: string;
+  paidAt?: string;   // API sends 'paidAt' not 'transactionDate'
+  createdAt: string;
   invoiceId?: string;
   invoiceNumber?: string;
   screenshotUrl?: string;
-  createdAt: string;
 }
 
 export default function PaymentDetailPage() {
@@ -80,12 +84,12 @@ export default function PaymentDetailPage() {
     );
   }
 
-  const formatMode = (mode: string) => mode.replace(/_/g, ' ');
-  const formatCategory = (cat: string) => cat.charAt(0).toUpperCase() + cat.slice(1);
+  const formatMethod = (method: string) => method.replace(/_/g, ' ');
+  const formatType = (type: string) => type.charAt(0).toUpperCase() + type.slice(1);
   const formatStatus = (status: string) =>
     status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const formattedDate = payment.transactionDate || payment.createdAt;
+  const formattedDate = payment.paidAt || payment.createdAt;
 
   return (
     <div className="space-y-6">
@@ -118,7 +122,7 @@ export default function PaymentDetailPage() {
       </div>
 
       {/* Payment Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
           Payment Information
         </h3>
@@ -127,12 +131,12 @@ export default function PaymentDetailPage() {
             <p className="text-surface-800 font-display text-sm font-semibold">Mode</p>
             <p className="text-surface-700 flex items-center gap-1 text-sm">
               <CreditCard className="text-surface-400 h-3.5 w-3.5" />
-              <span className="capitalize">{formatMode(payment.mode)}</span>
+              <span className="capitalize">{formatMethod(payment.method)}</span>
             </p>
           </div>
           <div>
             <p className="text-surface-800 font-display text-sm font-semibold">Category</p>
-            <p className="text-surface-700 text-sm">{formatCategory(payment.category)}</p>
+            <p className="text-surface-700 text-sm">{formatType(payment.type)}</p>
           </div>
           <div>
             <p className="text-surface-800 font-display text-sm font-semibold">Status</p>
@@ -156,7 +160,7 @@ export default function PaymentDetailPage() {
       </div>
 
       {/* Tenant Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Tenant Information</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -178,7 +182,7 @@ export default function PaymentDetailPage() {
 
       {/* Invoice Reference Card */}
       {(payment.invoiceId || payment.invoiceNumber) && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
             Invoice Reference
           </h3>
@@ -206,7 +210,7 @@ export default function PaymentDetailPage() {
 
       {/* Notes Card */}
       {payment.notes && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Notes</h3>
           <p className="text-surface-700 flex items-start gap-1 text-sm">
             <FileText className="text-surface-400 mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -217,7 +221,7 @@ export default function PaymentDetailPage() {
 
       {/* Screenshot Card */}
       {payment.screenshotUrl && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Screenshot</h3>
           <a
             href={payment.screenshotUrl}
@@ -245,6 +249,54 @@ export default function PaymentDetailPage() {
           </a>
         </div>
       )}
+
+      {/* Actions Card */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          {payment.status === 'pending_verification' && (
+            <>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await api.post(`payments/${payment._id}/verify`, { json: { approved: true } }).json();
+                    window.location.reload();
+                  } catch { alert('Failed to verify payment'); }
+                }}
+              >
+                <CheckCircle className="h-4 w-4" /> Approve Payment
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await api.post(`payments/${payment._id}/verify`, { json: { approved: false } }).json();
+                    window.location.reload();
+                  } catch { alert('Failed to reject payment'); }
+                }}
+              >
+                <XCircle className="h-4 w-4" /> Reject Payment
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const phone = payment.tenant?.user?.name ? '' : '';
+              const text = `Payment of Rs.${payment.amount?.toLocaleString()} received. Status: ${formatStatus(payment.status)}`;
+              const url = generateWhatsAppUrl(phone, text);
+              if (phone) window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            disabled={!payment.tenant?.user?.name}
+          >
+            <MessageCircle className="h-4 w-4" /> Share via WhatsApp
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

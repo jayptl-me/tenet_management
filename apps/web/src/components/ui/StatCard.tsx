@@ -25,14 +25,14 @@ const variantAccents: Record<string, string> = {
 
 const trendColors: Record<string, Record<string, string>> = {
   up: {
-    default: 'text-success-600 bg-success-100 border-success-300',
-    success: 'text-success-800 bg-success-200 border-success-400',
-    warning: 'text-success-600 bg-success-100 border-success-300',
-    danger: 'text-danger-600 bg-danger-100 border-danger-300',
+    default: 'text-success-600 bg-success-100 border-[color:var(--color-success-300)]',
+    success: 'text-success-800 bg-success-200 border-[color:var(--color-success-400)]',
+    warning: 'text-success-600 bg-success-100 border-[color:var(--color-success-300)]',
+    danger: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
   },
   down: {
-    default: 'text-danger-600 bg-danger-100 border-danger-300',
-    success: 'text-danger-600 bg-danger-100 border-danger-300',
+    default: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
+    success: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
     warning: 'text-danger-600 bg-danger-100 border-danger-300',
     danger: 'text-danger-800 bg-danger-200 border-danger-400',
   },
@@ -51,7 +51,7 @@ export function StatCard({
     <div
       onClick={onClick}
       className={clsx(
-        'relative rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+        'relative rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
         variantAccents[variant],
         onClick &&
           'hover:translate-[var(--hover-lift)] cursor-pointer hover:shadow-[var(--shadow-card-hover)]',

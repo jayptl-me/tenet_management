@@ -101,7 +101,7 @@ export default function AssetDetailPage() {
       </div>
 
       {/* Main card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Identity Section */}
           <section className="space-y-4">
@@ -162,7 +162,7 @@ export default function AssetDetailPage() {
 
           {/* Status & Assignment Section */}
           <section className="space-y-4">
-            <h3 className="font-display text-surface-900 border-surface-200 border-b-2 pb-2 text-lg font-bold">
+            <h3 className="font-display text-surface-900 border-[color:var(--color-surface-200)] border-b-2 pb-2 text-lg font-bold">
               Status & Assignment
             </h3>
 
@@ -231,7 +231,7 @@ export default function AssetDetailPage() {
         </div>
 
         {/* Dates Section */}
-        <section className="border-surface-200 mt-6 border-t-2 pt-4">
+        <section className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
           <h3 className="font-display text-surface-900 mb-3 text-lg font-bold">Dates & Service</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="border-surface-200 bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] p-3">
@@ -292,7 +292,7 @@ export default function AssetDetailPage() {
 
         {/* Notes Section */}
         {asset.notes && (
-          <section className="border-surface-200 mt-6 border-t-2 pt-4">
+          <section className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
             <div className="flex items-start gap-3">
               <FileText className="text-surface-400 mt-0.5 h-5 w-5 shrink-0" />
               <div>

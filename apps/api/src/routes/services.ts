@@ -3,8 +3,55 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
+import { notFound, badRequest, parseId, safeFilter } from '../lib/routeUtils.js';
 import { ServiceStatus } from '../models/serviceStatus.js';
+import { Complaint } from '../models/complaint.js';
+import { Room } from '../models/room.js';
+
+// ── Helper: attach complaint counts per service per floor ──
+async function enrichWithComplaintCounts(
+  services_list: Array<{ floorId?: { _id: string } | string; serviceType: string; [key: string]: unknown }>,
+): Promise<Array<Record<string, unknown>>> {
+  if (services_list.length === 0) return services_list;
+
+  const serviceToCategory: Record<string, string[]> = {
+    wifi: ['wifi'],
+    electricity: ['electricity', 'lights'],
+    water_supply: ['water'],
+    washing_machine_1: ['washing_machine'],
+    washing_machine_2: ['washing_machine'],
+    fridge: ['fridge'],
+    geyser: ['water'],
+  };
+
+  const enriched = await Promise.all(
+    services_list.map(async (svc) => {
+      const floorId =
+        typeof svc.floorId === 'object' && svc.floorId?._id
+          ? String(svc.floorId._id)
+          : typeof svc.floorId === 'string'
+            ? svc.floorId
+            : null;
+
+      if (!floorId) {
+        return { ...svc, openComplaintCount: 0 };
+      }
+
+      const categories = serviceToCategory[svc.serviceType] ?? [svc.serviceType];
+
+      const roomIds = await Room.find({ floorId }).distinct('_id');
+      const floorComplaintCount = await Complaint.countDocuments({
+        status: { $in: ['open', 'in_progress'] },
+        category: { $in: categories },
+        roomId: { $in: roomIds },
+      });
+
+      return { ...svc, openComplaintCount: floorComplaintCount };
+    }),
+  );
+
+  return enriched;
+}
 
 const services = new Hono();
 
@@ -14,7 +61,26 @@ const updateServiceSchema = z.strictObject({
   note: z.string().max(500, 'Note cannot exceed 500 characters').optional(),
 });
 
-// ── PUT /services/:id ───────────────────────────────────
+// ── POST /services — create service status entry (admin) ──
+services.post('/', authGuard, adminOnly, zValidator('json', z.strictObject({
+  floorId: z.string().min(1, 'Floor is required'),
+  serviceType: z.string().min(1, 'Service type is required'),
+  status: z.enum(['operational', 'degraded', 'down']).default('operational'),
+  note: z.string().max(500).optional(),
+})), async (c) => {
+  const body = c.req.valid('json') as any;
+  const { Floor } = await import('../models/floor.js');
+  const floor = await Floor.findById(body.floorId).lean();
+  if (!floor) {
+    return c.json({ success: false, error: { code: 'FLOOR_NOT_FOUND', message: 'Floor not found' } }, 400);
+  }
+  const ServiceStatusMod = (await import('../models/serviceStatus.js')).ServiceStatus;
+  const service: any = await ServiceStatusMod.create(body);
+  const populated = await ServiceStatusMod.findById(String(service._id)).populate('floor').lean();
+  return c.json({ success: true, data: populated }, 201);
+});
+
+// ── PUT /services/:id — update service status (auth) ──
 services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid service ID');
@@ -25,7 +91,6 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   const service = await ServiceStatus.findById(id);
   if (!service) return notFound(c, 'ServiceStatus');
 
-  // Tenant (non-admin) can only set to degraded or down
   if (user.role !== 'admin') {
     if (body.status === 'operational') {
       return badRequest(
@@ -42,27 +107,36 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   if (body.note !== undefined) {
     service.note = body.note;
   }
-
   await service.save();
 
   return c.json({ success: true, data: service });
 });
 
-// ── GET /services/summary ───────────────────────────────
+// ── GET /services/:id — single service status with complaint count ──
+services.get('/:id', authGuard, async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+
+  const service = await ServiceStatus.findById(id).populate('floor').lean();
+  if (!service) return notFound(c, 'ServiceStatus');
+
+  const enriched = await enrichWithComplaintCounts([service as any]);
+  return c.json({ success: true, data: enriched[0] });
+});
+
+// ── GET /services/summary — count by status (admin) ──
 services.get('/summary', authGuard, adminOnly, async (_c) => {
   const results = await ServiceStatus.aggregate([
     { $group: { _id: '$status', count: { $sum: 1 } } },
   ]);
-
   const summary: Record<string, number> = { operational: 0, degraded: 0, down: 0 };
   for (const entry of results) {
     summary[entry._id as string] = entry.count;
   }
-
   return _c.json({ success: true, data: summary });
 });
 
-// ── GET /services ───────────────────────────────────────
+// ── GET /services — paginated list (auth) ──
 services.get('/', authGuard, async (c) => {
   const filter: Record<string, unknown> = {};
 
@@ -73,12 +147,14 @@ services.get('/', authGuard, async (c) => {
     filter.floorId = parsed;
   }
 
-  const pagination = parsePagination(c);
-  const { skip, limit, page } = pagination;
+  // Parse pagination manually since we need to return a different shape
+  const page = Math.max(1, Number(c.req.query('page')) || 1);
+  const limit = Math.min(100, Math.max(1, Number(c.req.query('limit')) || 50));
+  const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
     ServiceStatus.find(safeFilter(filter))
-      .sort({ floorId: 1, serviceType: 1 } as Record<string, 1>)
+      .sort({ serviceType: 1 } as Record<string, 1>)
       .skip(skip)
       .limit(limit)
       .populate('floor')
@@ -86,16 +162,61 @@ services.get('/', authGuard, async (c) => {
     ServiceStatus.countDocuments(safeFilter(filter)),
   ]);
 
+  // Attach complaint counts per service per floor
+  const enriched = await enrichWithComplaintCounts(data as any[]);
+
   return c.json({
     success: true,
-    data,
-    meta: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+    data: enriched,
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+// ── GET /services/floor/:floorId/with-complaints — service health + complaint counts ──
+services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
+  const floorId = parseId(c.req.param('floorId'));
+  if (!floorId) return badRequest(c, 'Invalid floor ID');
+
+  const services_list = await ServiceStatus.find(safeFilter({ floorId }))
+    .populate('floor')
+    .lean();
+
+  const enriched = await enrichWithComplaintCounts(services_list as any[]);
+
+  // Also fetch floor's room count for context
+  const totalRooms = await Room.countDocuments(safeFilter({ floorId, isActive: true }));
+
+  return c.json({
+    success: true,
+    data: {
+      services: enriched,
+      totalRooms,
     },
   });
+});
+
+// ── PUT /services/:id/full — full update (admin) ──
+services.put('/:id/full', authGuard, adminOnly, zValidator('json', z.strictObject({
+  serviceType: z.string().min(1).optional(),
+  status: z.enum(['operational', 'degraded', 'down']).optional(),
+  note: z.string().max(500).optional(),
+})), async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+  const body = c.req.valid('json') as any;
+  const service = await ServiceStatus.findByIdAndUpdate(id, body, { new: true, runValidators: true })
+    .populate('floor').lean() as any;
+  if (!service) return notFound(c, 'Service');
+  return c.json({ success: true, data: service });
+});
+
+// ── DELETE /services/:id — delete service (admin) ──
+services.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+  const service = await ServiceStatus.findByIdAndDelete(id);
+  if (!service) return notFound(c, 'Service');
+  return c.json({ success: true, data: { message: 'Service deleted' } });
 });
 
 export default services;

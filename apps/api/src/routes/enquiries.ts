@@ -109,4 +109,15 @@ enquiries.put(
   },
 );
 
+// ── DELETE /enquiries/:id ────────────────────────────────
+enquiries.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid enquiry ID');
+
+  const enquiry = await Enquiry.findByIdAndDelete(id);
+  if (!enquiry) return notFound(c, 'Enquiry');
+
+  return c.json({ success: true, data: { message: 'Enquiry deleted' } });
+});
+
 export default enquiries;

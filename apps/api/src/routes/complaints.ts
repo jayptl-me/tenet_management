@@ -220,4 +220,15 @@ complaints.put(
   },
 );
 
+// ── DELETE /complaints/:id ───────────────────────────────
+complaints.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid complaint ID');
+
+  const complaint = await Complaint.findByIdAndDelete(id);
+  if (!complaint) return notFound(c, 'Complaint');
+
+  return c.json({ success: true, data: { message: 'Complaint deleted' } });
+});
+
 export default complaints;

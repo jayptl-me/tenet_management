@@ -5,9 +5,9 @@ import { clsx } from 'clsx';
 type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 const variantStyles: Record<StatusVariant, string> = {
-  success: 'bg-success-100 text-success-800 border-success-300',
-  warning: 'bg-warning-100 text-warning-800 border-warning-300',
-  danger: 'bg-danger-100 text-danger-800 border-danger-300',
+  success: 'bg-success-100 text-success-800 border-[color:var(--color-success-300)]',
+  warning: 'bg-warning-100 text-warning-800 border-[color:var(--color-warning-300)]',
+  danger: 'bg-danger-100 text-danger-800 border-[color:var(--color-danger-300)]',
   info: 'bg-brand-100 text-brand-800 border-brand-300',
   neutral: 'bg-surface-100 text-surface-700 border-surface-300',
 };

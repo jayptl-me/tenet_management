@@ -151,4 +151,28 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
   });
 });
 
+
+// ── PUT /meals/:id ──────────────────────────────────────
+meals.put('/:id', authGuard, adminOnly, zValidator('json', z.strictObject({
+  rating: z.number().int().min(1).max(5).optional(),
+  comment: z.string().max(500).optional(),
+  status: z.string().optional(),
+})), async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
+  const body = c.req.valid('json');
+  const feedback = await MealFeedback.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
+  if (!feedback) return notFound(c, 'Meal feedback');
+  return c.json({ success: true, data: feedback });
+});
+
+// ── DELETE /meals/:id ───────────────────────────────────
+meals.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
+  const feedback = await MealFeedback.findByIdAndDelete(id);
+  if (!feedback) return notFound(c, 'Meal feedback');
+  return c.json({ success: true, data: { message: 'Meal feedback deleted' } });
+});
+
 export default meals;

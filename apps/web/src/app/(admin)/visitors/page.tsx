@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -16,8 +17,8 @@ interface VisitorRow {
   phone: string;
   purpose: string;
   tenant?: { user?: { name: string }; room?: { roomNumber: string } };
-  checkIn?: string;
-  checkOut?: string;
+  actualArrival?: string;
+  actualDeparture?: string;
   status: string;
   createdAt: string;
 }
@@ -31,6 +32,8 @@ export default function VisitorsPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<VisitorRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchVisitors = useCallback(async () => {
     setIsLoading(true);
@@ -59,6 +62,20 @@ export default function VisitorsPage() {
     fetchVisitors();
   }, [fetchVisitors]);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`visitors/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchVisitors();
+    } catch {
+      setError('Failed to delete visitor');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const columns: DataTableColumn<VisitorRow>[] = [
     {
       header: 'Visitor',
@@ -79,8 +96,8 @@ export default function VisitorsPage() {
     {
       header: 'Check In',
       accessor: (row) =>
-        row.checkIn
-          ? new Date(row.checkIn).toLocaleString('en-IN', {
+        row.actualArrival
+          ? new Date(row.actualArrival).toLocaleString('en-IN', {
               day: '2-digit',
               month: 'short',
               hour: '2-digit',
@@ -91,8 +108,8 @@ export default function VisitorsPage() {
     {
       header: 'Check Out',
       accessor: (row) =>
-        row.checkOut
-          ? new Date(row.checkOut).toLocaleString('en-IN', {
+        row.actualDeparture
+          ? new Date(row.actualDeparture).toLocaleString('en-IN', {
               day: '2-digit',
               month: 'short',
               hour: '2-digit',
@@ -102,12 +119,21 @@ export default function VisitorsPage() {
     },
     {
       header: 'Status',
-      accessor: (row) => (
-        <StatusBadge
-          variant={statusToVariant(row.status === 'checked_in' ? 'active' : 'completed')}
-          label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
-        />
-      ),
+      accessor: (row) => {
+        const statusMap: Record<string, string> = {
+          arrived: 'active',
+          departed: 'completed',
+          pending: 'pending',
+          expected: 'pending',
+          cancelled: 'dismissed',
+        };
+        return (
+          <StatusBadge
+            variant={statusToVariant(statusMap[row.status] ?? 'pending')}
+            label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+          />
+        );
+      },
     },
     {
       header: 'Actions',
@@ -133,9 +159,19 @@ export default function VisitorsPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -160,8 +196,8 @@ export default function VisitorsPage() {
         <Select
           options={[
             { value: '', label: 'All Statuses' },
-            { value: 'checked_in', label: 'Checked In' },
-            { value: 'checked_out', label: 'Checked Out' },
+            { value: 'arrived', label: 'Arrived' },
+            { value: 'departed', label: 'Departed' },
             { value: 'pending', label: 'Pending' },
           ]}
           value={statusFilter}
@@ -188,6 +224,14 @@ export default function VisitorsPage() {
             setPage(1);
           },
         }}
+      />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Visitor"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

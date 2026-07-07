@@ -115,7 +115,7 @@ export default function VisitorDetailPage() {
       {/* Visitor Info */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Visitor Details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
             Visitor Information
           </h3>
@@ -142,7 +142,7 @@ export default function VisitorDetailPage() {
         </div>
 
         {/* Tenant Info */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Visiting</h3>
           <div className="space-y-4">
             <div>
@@ -174,7 +174,7 @@ export default function VisitorDetailPage() {
       </div>
 
       {/* Timeline */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Timeline</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -210,7 +210,7 @@ export default function VisitorDetailPage() {
 
       {/* Notes */}
       {visitor.notes && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Notes</h3>
           <p className="text-surface-700 flex items-start gap-1 text-sm">
             <FileText className="text-surface-400 mt-0.5 h-3.5 w-3.5 shrink-0" />

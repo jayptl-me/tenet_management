@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -27,6 +28,8 @@ export default function MenusPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<MenuRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchMenus = useCallback(async () => {
     setIsLoading(true);
@@ -54,6 +57,20 @@ export default function MenusPage() {
   useEffect(() => {
     fetchMenus();
   }, [fetchMenus]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`menus/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchMenus();
+    } catch {
+      setError('Failed to delete menu');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<MenuRow>[] = [
     {
@@ -88,28 +105,23 @@ export default function MenusPage() {
       accessor: (row) => (
         <div className="flex items-center gap-1">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/menus/${row._id}`);
-            }}
+            onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}`); }}
             className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
+          ><Eye className="h-3 w-3" /></button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/menus/${row._id}/edit`);
-            }}
+            onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}/edit`); }}
             className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
+          ><Pencil className="h-3 w-3" /></button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          ><Trash2 className="h-3 w-3" /></button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -121,47 +133,15 @@ export default function MenusPage() {
           <p className="text-surface-500 mt-0.5 text-sm">Plan daily meals for tenants</p>
         </div>
         <Button onClick={() => router.push('/menus/new')}>
-          <Plus className="h-4 w-4" />
-          Create Menu
+          <Plus className="h-4 w-4" /> Create Menu
         </Button>
       </div>
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      {error && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{error}</div>}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Select
-          options={[
-            { value: '', label: 'All Status' },
-            { value: 'true', label: 'Active' },
-            { value: 'false', label: 'Draft' },
-          ]}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[160px]"
-        />
+        <Select options={[{ value: '', label: 'All Status' }, { value: 'true', label: 'Active' }, { value: 'false', label: 'Draft' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[160px]" />
       </div>
-      <DataTable
-        columns={columns}
-        data={menus}
-        keyExtractor={(row: MenuRow) => row._id}
-        isLoading={isLoading}
-        onRowClick={(row) => router.push(`/menus/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: setPage,
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
-      />
+      <DataTable columns={columns} data={menus} keyExtractor={(row: MenuRow) => row._id} isLoading={isLoading} onRowClick={(row) => router.push(`/menus/${row._id}`)} pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }} />
+      <ConfirmModal open={!!deleteTarget} title="Delete Menu" message={`Are you sure you want to delete this menu? This action cannot be undone.`} loading={deleting} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
     </div>
   );
 }

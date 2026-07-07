@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -10,9 +10,10 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 
 const schema = z.object({
-  tenantId: z.string().min(1, 'Tenant ID is required'),
+  tenantId: z.string().min(1, 'Tenant is required'),
   amount: z.coerce.number().min(1, 'Amount must be > 0'),
   type: z.enum(['rent', 'electricity', 'deposit', 'laundry', 'other']),
   method: z.enum(['upi', 'cash', 'bank_transfer', 'other']),
@@ -42,6 +43,7 @@ export default function NewPaymentPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -79,14 +81,22 @@ export default function NewPaymentPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
+        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
-          <Input
-            label="Tenant ID"
-            placeholder="Enter tenant ID"
-            error={errors.tenantId?.message}
-            {...register('tenantId')}
+          <Controller
+            name="tenantId"
+            control={control}
+            render={({ field }) => (
+              <ResourceSelect
+                label="Tenant"
+                endpoint="tenants"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Select tenant..."
+                error={errors.tenantId?.message}
+              />
+            )}
           />
           <Input
             label="Amount (₹)"
@@ -115,7 +125,7 @@ export default function NewPaymentPage() {
             <textarea
               id="notes"
               rows={3}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
+              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
               placeholder="Optional notes..."
               {...register('notes')}
             />

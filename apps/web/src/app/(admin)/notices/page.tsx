@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -28,6 +29,8 @@ export default function NoticesPage() {
   const [perPage, setPerPage] = useState(25);
   const [priorityFilter, setPriorityFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<NoticeRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchNotices = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +58,20 @@ export default function NoticesPage() {
   useEffect(() => {
     fetchNotices();
   }, [fetchNotices]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`notices/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchNotices();
+    } catch {
+      setError('Failed to delete notice');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<NoticeRow>[] = [
     {
@@ -117,9 +134,19 @@ export default function NoticesPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -173,6 +200,14 @@ export default function NoticesPage() {
             setPage(1);
           },
         }}
+      />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Notice"
+        message={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

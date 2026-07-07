@@ -102,7 +102,7 @@ export default function ElectricityBillDetailPage() {
       {/* Main detail cards */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Bill details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Bill Details
           </h3>
@@ -181,7 +181,7 @@ export default function ElectricityBillDetailPage() {
 
           {/* Meter readings */}
           {bill.meterReading && (
-            <div className="border-surface-200 mt-6 border-t-2 pt-4">
+            <div className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
               <p className="text-surface-500 mb-2 text-xs font-semibold uppercase tracking-wider">
                 Meter Readings
               </p>
@@ -235,7 +235,7 @@ export default function ElectricityBillDetailPage() {
 
       {/* Tenant info card */}
       {bill.tenant && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Tenant Information
           </h3>

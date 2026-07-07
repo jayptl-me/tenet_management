@@ -67,7 +67,7 @@ export default function EditLeavePage() {
         </div>
       </div>
       {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Start Date" type="date" error={errors.startDate?.message} {...register('startDate')} />
@@ -75,7 +75,7 @@ export default function EditLeavePage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-surface-800 font-display text-sm font-semibold">Reason</label>
-            <textarea rows={3} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter reason..." {...register('reason')} />
+            <textarea rows={3} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter reason..." {...register('reason')} />
           </div>
           <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
         </div>

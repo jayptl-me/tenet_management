@@ -163,7 +163,7 @@ export default function ComplaintDetailPage() {
       {/* Main detail cards */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Complaint details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Complaint Details
           </h3>
@@ -206,7 +206,7 @@ export default function ComplaintDetailPage() {
             </div>
           </div>
 
-          <div className="border-surface-200 mt-6 border-t-2 pt-4">
+          <div className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
             <p className="text-surface-500 mb-2 text-xs font-semibold uppercase tracking-wider">
               Description
             </p>
@@ -278,7 +278,7 @@ export default function ComplaintDetailPage() {
       </div>
 
       {/* Status update form */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">Update Status</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Select
@@ -297,7 +297,7 @@ export default function ComplaintDetailPage() {
             <textarea
               id="adminNotes"
               rows={4}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
+              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
               placeholder="Add internal notes about this complaint..."
               {...register('adminNotes')}
             />

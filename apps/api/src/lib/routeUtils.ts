@@ -17,7 +17,13 @@ export async function paginatedResponse<T>(
   filter: Record<string, unknown>,
   pagination: ReturnType<typeof parsePagination>,
   populate?: string | string[],
-) {
+): Promise<{
+  data: Record<string, unknown>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> {
   const { sort, order, skip, limit, page } = pagination;
 
   const [data, total] = await Promise.all([
@@ -32,7 +38,7 @@ export async function paginatedResponse<T>(
   ]);
 
   return {
-    data,
+    data: data as Record<string, unknown>[],
     total,
     page,
     limit,

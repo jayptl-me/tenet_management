@@ -78,7 +78,7 @@ export default function EditEnquiryPage() {
 
       {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Name" error={errors.name?.message} {...register('name')} />
           <Input label="Phone" error={errors.phone?.message} {...register('phone')} />
@@ -86,7 +86,7 @@ export default function EditEnquiryPage() {
           <Input label="Source" error={errors.source?.message} {...register('source')} />
           <div className="flex flex-col gap-1.5">
             <label className="text-surface-800 font-display text-sm font-semibold">Message</label>
-            <textarea rows={3} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter message..." {...register('message')} />
+            <textarea rows={3} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter message..." {...register('message')} />
           </div>
           <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
         </div>

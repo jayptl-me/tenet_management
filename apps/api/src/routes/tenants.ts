@@ -9,6 +9,8 @@ import { User } from '../models/user.js';
 import { Payment } from '../models/payment.js';
 import { Complaint } from '../models/complaint.js';
 import { Invoice } from '../models/invoice.js';
+import { Notification } from '../models/notification.js';
+import { LeaveApplication } from '../models/leaveApplication.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import {
@@ -365,12 +367,168 @@ router.get('/:id/complaints', authGuard, async (c) => {
   return c.json({ success: true, data: complaints });
 });
 
+// ── DELETE /:id — delete tenant (admin only)
+router.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const tenant = await Tenant.findById(id).session(session);
+      if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+
+      // Free the bed
+      const room = await Room.findById(tenant.roomId).session(session);
+      if (room) {
+        const bed = room.beds.find((b) => b.bedId === tenant.bedId);
+        if (bed) {
+          bed.isOccupied = false;
+          bed.tenantId = null;
+        }
+        room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
+        await room.save({ session });
+      }
+
+      // Deactivate user
+      await User.findByIdAndUpdate(tenant.userId, { isActive: false }, { session });
+
+      // Remove tenant record
+      await Tenant.findByIdAndDelete(id, { session });
+    });
+
+    return c.json({ success: true, data: { message: 'Tenant deleted' } });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return c.json(
+        { success: false, error: { code: err.code, message: err.message } },
+        err.status as 400 | 404,
+      );
+    }
+    throw err;
+  } finally {
+    session.endSession();
+  }
+});
+
 // ── GET /:id/invoices
 router.get('/:id/invoices', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
   const invoices = await Invoice.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: invoices });
+});
+
+// ── GET /:id/activity — aggregated tenant activity timeline
+router.get('/:id/activity', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const events: Array<Record<string, unknown>> = [];
+
+  // 1. Tenant move-in event
+  const tenant = await Tenant.findById(id).select('moveInDate createdAt isActive moveOutDate').lean();
+  if (tenant) {
+    events.push({
+      id: `movein-${String(tenant._id)}`,
+      type: 'move_in',
+      title: 'Moved in',
+      date: tenant.moveInDate || tenant.createdAt,
+    });
+
+    if (tenant.moveOutDate) {
+      events.push({
+        id: `checkout-${String(tenant._id)}`,
+        type: 'checkout',
+        title: 'Checked out',
+        date: tenant.moveOutDate,
+      });
+    }
+  }
+
+  // 2. Payments made
+  const payments = await Payment.find(safeFilter({ tenantId: id }))
+    .select('amount type status paidAt createdAt method')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  for (const p of payments) {
+    events.push({
+      id: `payment-${String(p._id)}`,
+      type: p.status === 'paid' ? 'payment_verified' : 'payment',
+      title: `Payment ${p.status === 'paid' ? 'verified' : 'received'}`,
+      subtitle: `Via ${p.method}`,
+      amount: p.amount,
+      date: p.paidAt || p.createdAt,
+      status: p.status,
+    });
+  }
+
+  // 3. Complaints filed
+  const complaints = await Complaint.find(safeFilter({ tenantId: id }))
+    .select('title status createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  for (const c of complaints) {
+    events.push({
+      id: `complaint-${String(c._id)}`,
+      type: c.status === 'resolved' ? 'complaint_resolved' : 'complaint_filed',
+      title: c.title || 'Complaint',
+      subtitle: c.status === 'resolved' ? 'Resolved' : c.status,
+      date: c.createdAt,
+      status: c.status,
+    });
+  }
+
+  // 4. Leaves taken (if attendance feature enabled)
+  const leaves = await LeaveApplication.find(safeFilter({ tenantId: id }))
+    .select('fromDate toDate status createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  for (const l of leaves) {
+    events.push({
+      id: `leave-${String(l._id)}`,
+      type: 'leave',
+      title: `Leave: ${l.fromDate} → ${l.toDate}`,
+      subtitle: l.status,
+      date: l.createdAt,
+      status: l.status,
+    });
+  }
+
+  // 5. Notifications received (notices/announcements targeted)
+  const notifications = await Notification.find({
+    $or: [
+      { targetType: 'all' },
+      { targetIds: id },
+    ],
+    type: { $in: ['announcement', 'welcome'] },
+  })
+    .select('title body sentAt type')
+    .sort({ sentAt: -1 })
+    .limit(20)
+    .lean();
+
+  for (const n of notifications) {
+    events.push({
+      id: `notice-${String(n._id)}`,
+      type: 'notice',
+      title: n.title || 'Notice',
+      subtitle: n.body?.slice(0, 80),
+      date: n.sentAt,
+    });
+  }
+
+  // Sort all events by date descending
+  events.sort((a, b) => {
+    const da = new Date(a.date as string).getTime();
+    const db = new Date(b.date as string).getTime();
+    return db - da;
+  });
+
+  return c.json({ success: true, data: events });
 });
 
 export default router;
