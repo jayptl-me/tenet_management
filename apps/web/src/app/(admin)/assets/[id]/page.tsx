@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Package, MapPin, Hash, Calendar, Wrench, User, FileText } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, Hash, Calendar, Wrench, User, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface AssetDetail {
   _id: string;
@@ -11,11 +15,7 @@ interface AssetDetail {
   category: string;
   serialNumber?: string;
   location?: string;
-  assignedTo?: {
-    _id: string;
-    user?: { _id: string; name: string };
-    room?: { _id: string; roomNumber: string };
-  };
+  assignedTo?: { _id: string; user?: { _id: string; name: string }; room?: { _id: string; roomNumber: string } };
   status: string;
   quantity: number;
   lowStockThreshold?: number;
@@ -29,343 +29,142 @@ interface AssetDetail {
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
+  try { return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; }
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '—';
-  }
-}
-
-function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '₹0';
-  try {
-    return '₹' + amount.toLocaleString('en-IN');
-  } catch {
-    return '₹' + String(amount);
-  }
-}
-
-function assetStatusBadge(status: string) {
-  const label = status.replace(/_/g, ' ');
-
-  if (status === 'available' || status === 'active') {
-    return (
-      <span className="inline-flex rounded-full border-2 border-emerald-400 bg-emerald-50 px-3 py-0.5 text-xs font-black text-emerald-700 shadow-[2px_2px_0px_0px_#a7f3d0]">
-        {label}
-      </span>
-    );
-  }
-  if (status === 'assigned' || status === 'in_use') {
-    return (
-      <span className="inline-flex rounded-full border-2 border-blue-300 bg-blue-50 px-3 py-0.5 text-xs font-black text-blue-700">
-        {label}
-      </span>
-    );
-  }
-  if (status === 'maintenance' || status === 'damaged' || status === 'lost') {
-    return (
-      <span className="inline-flex rounded-full border-2 border-red-400 bg-red-50 px-3 py-0.5 text-xs font-black text-red-700 shadow-[2px_2px_0px_0px_#fca5a5]">
-        {label}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex rounded-full border-2 border-gray-300 bg-gray-50 px-3 py-0.5 text-xs font-black text-gray-600">
-      {label}
-    </span>
-  );
+  try { return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return '—'; }
 }
 
 export default function AssetDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
-
   const [asset, setAsset] = useState<AssetDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`assets/${id}`)
-      .json<{ success: boolean; data: AssetDetail }>()
+    setIsLoading(true); setError('');
+    api.get(`assets/${id}`).json<{ success: boolean; data: AssetDetail }>()
       .then((res) => setAsset(res.data))
       .catch(() => setError('Failed to load asset details'))
       .finally(() => setIsLoading(false));
   }, [id]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-      </div>
-    );
+    return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" /></div>;
   }
 
-  if (error) {
+  if (error || !asset) {
     return (
       <div className="space-y-4">
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-semibold text-gray-900 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
-        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  if (!asset) {
-    return (
-      <div className="space-y-4">
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-semibold text-gray-900 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
-        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
-          Asset not found
+        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Asset not found'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6">
+
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-semibold text-gray-900 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
-        <div>
-          <h2 className="font-black text-2xl text-gray-900 tracking-tight">{asset.name}</h2>
-          <p className="text-sm text-gray-500">Asset Details</p>
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">{asset.name}</h2>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">Asset Details</p>
+          </div>
         </div>
-      </div>
+        <StatusBadge variant={statusToVariant(asset.status)} label={asset.status.replace(/_/g, ' ')} />
+      </motion.div>
 
-      {/* Main card */}
-      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Identity Section */}
-          <section className="space-y-4">
-            <h3 className="border-b-2 border-gray-200 pb-2 font-black text-lg text-gray-900">
-              Identification
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 shrink-0 text-gray-400" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Name
-                  </p>
-                  <p className="text-base font-black text-gray-900">
-                    {asset.name}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 shrink-0 text-gray-400" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Category
-                  </p>
-                  <p className="text-base font-black capitalize text-gray-900">
-                    {asset.category}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Hash className="h-5 w-5 shrink-0 text-gray-400" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Serial Number
-                  </p>
-                  <p className="text-base font-black text-gray-900">
-                    {asset.serialNumber ?? '—'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 shrink-0 text-gray-400" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Location
-                  </p>
-                  <p className="text-base font-black text-gray-900">
-                    {asset.location ?? '—'}
-                  </p>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Identification */}
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Identification</h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><Package className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{asset.name}</p>
             </div>
-          </section>
-
-          {/* Status & Assignment Section */}
-          <section className="space-y-4">
-            <h3 className="border-b-2 border-gray-200 pb-2 font-black text-lg text-gray-900">
-              Status & Assignment
-            </h3>
-
-            <div className="space-y-3">
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Status
-                </p>
-                {assetStatusBadge(asset.status)}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 shrink-0 text-gray-400" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Quantity
-                  </p>
-                  <p className="text-base font-black text-gray-900">
-                    {asset.quantity}
-                  </p>
-                </div>
-              </div>
-
-              {asset.lowStockThreshold != null && (
-                <div className="flex items-center gap-3">
-                  <Package className="h-5 w-5 shrink-0 text-gray-400" />
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      Low Stock Threshold
-                    </p>
-                    <p className="text-base font-black text-gray-900">
-                      {asset.lowStockThreshold}
-                    </p>
-                  </div>
-                </div>
-              )}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Category</p>
+              <p className="mt-0.5 text-[13px] font-semibold capitalize text-[color:var(--color-text-primary)]">{asset.category}</p>
             </div>
-
-            {asset.assignedTo && (
-              <div className="mt-3 rounded-md border-2 border-gray-200 bg-gray-50 p-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Assigned To
-                </p>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <p className="text-base font-black text-gray-900">
-                      {asset.assignedTo.user?.name ?? 'N/A'}
-                    </p>
-                  </div>
-                  {asset.assignedTo.room && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <p className="text-sm text-gray-500">
-                        Room {asset.assignedTo.room.roomNumber}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Dates Section */}
-        <section className="mt-6 border-t-2 border-gray-200 pt-4">
-          <h3 className="mb-3 font-black text-lg text-gray-900">Dates & Service</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-md border-2 border-gray-200 bg-gray-50 p-3">
-              <Calendar className="h-5 w-5 shrink-0 text-gray-400" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Purchase Date
-                </p>
-                <p className="text-sm font-black text-gray-900">
-                  {formatDate(asset.purchaseDate)}
-                </p>
-              </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Serial Number</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{asset.serialNumber ?? '—'}</p>
             </div>
-
-            <div className="flex items-center gap-3 rounded-md border-2 border-gray-200 bg-gray-50 p-3">
-              <Wrench className="h-5 w-5 shrink-0 text-gray-400" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Last Service
-                </p>
-                <p className="text-sm font-black text-gray-900">
-                  {formatDate(asset.lastServiceDate)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-md border-2 border-gray-200 bg-gray-50 p-3">
-              <Wrench className="h-5 w-5 shrink-0 text-gray-400" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Next Service
-                </p>
-                <p className="text-sm font-black text-gray-900">
-                  {formatDate(asset.nextServiceDate)}
-                </p>
-              </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Location</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{asset.location ?? '—'}</p>
             </div>
           </div>
-        </section>
+        </motion.div>
 
-        {/* Notes Section */}
-        {asset.notes && (
-          <section className="mt-6 border-t-2 border-gray-200 pt-4">
-            <div className="flex items-start gap-3">
-              <FileText className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Notes
-                </p>
-                <p className="text-sm leading-relaxed text-gray-600">
-                  {asset.notes}
-                </p>
-              </div>
+        {/* Status & Assignment */}
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Status & Assignment</h3>
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
+              <StatusBadge variant={statusToVariant(asset.status)} label={asset.status.replace(/_/g, ' ')} />
             </div>
-          </section>
-        )}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Quantity</p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">{asset.quantity}</p>
+            </div>
+            {asset.lowStockThreshold != null && (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Low Stock Threshold</p>
+                <p className="mt-0.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">{asset.lowStockThreshold}</p>
+              </div>
+            )}
+            {asset.assignedTo && (
+              <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Assigned To</p>
+                <p className="flex items-center gap-1 text-sm font-bold text-[color:var(--color-text-primary)]"><User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{asset.assignedTo.user?.name ?? 'N/A'}</p>
+                {asset.assignedTo.room && <p className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-[color:var(--color-text-muted)]"><MapPin className="h-3.5 w-3.5" />Room {asset.assignedTo.room.roomNumber}</p>}
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
 
-      {/* Metadata */}
-      <p className="text-right text-xs text-gray-400">
-        Created {formatDateTime(asset.createdAt)} • Updated {formatDateTime(asset.updatedAt)}
-      </p>
-    </div>
+      {/* Dates */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Dates & Service</h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Purchase Date</p>
+            <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDate(asset.purchaseDate)}</p>
+          </div>
+          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Last Service</p>
+            <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><Wrench className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDate(asset.lastServiceDate)}</p>
+          </div>
+          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Next Service</p>
+            <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"><Wrench className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDate(asset.nextServiceDate)}</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {asset.notes && (
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Notes</p>
+          <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]"><FileText className="mr-1 inline h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{asset.notes}</p>
+        </motion.div>
+      )}
+
+      <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">Created {formatDateTime(asset.createdAt)} · Updated {formatDateTime(asset.updatedAt)}</p>
+    </motion.div>
   );
 }

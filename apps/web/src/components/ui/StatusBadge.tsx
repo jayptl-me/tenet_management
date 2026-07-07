@@ -5,11 +5,11 @@ import { clsx } from 'clsx';
 type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 const variantStyles: Record<StatusVariant, string> = {
-  success: 'bg-success-100 text-success-800 border-[color:var(--color-success-300)]',
-  warning: 'bg-warning-100 text-warning-800 border-[color:var(--color-warning-300)]',
-  danger: 'bg-danger-100 text-danger-800 border-[color:var(--color-danger-300)]',
-  info: 'bg-brand-100 text-brand-800 border-brand-300',
-  neutral: 'bg-surface-100 text-surface-700 border-surface-300',
+  success: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)] border-[color:var(--color-success-300)]',
+  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-800)] border-[color:var(--color-warning-300)]',
+  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] border-[color:var(--color-danger-300)]',
+  info: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)] border-[color:var(--color-brand-300)]',
+  neutral: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-surface-700)] border-[color:var(--color-surface-300)]',
 };
 
 export interface StatusBadgeProps {

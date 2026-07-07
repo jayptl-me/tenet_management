@@ -1,6 +1,10 @@
 'use client';
 
 import { clsx } from 'clsx';
+import { motion } from 'motion/react';
+import { cardHover } from '@/lib/animations';
+
+// ── Types ──────────────────────────────────────────────
 
 export interface StatCardProps {
   title: string;
@@ -8,35 +12,46 @@ export interface StatCardProps {
   icon?: React.ReactNode;
   trend?: {
     value: string;
-    direction: 'up' | 'down';
-    label: string;
+    direction: 'up' | 'down' | 'neutral';
+    label?: string;
   };
-  variant?: 'default' | 'success' | 'warning' | 'danger';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'brand';
   className?: string;
   onClick?: () => void;
+  animate?: boolean;
 }
 
-const variantAccents: Record<string, string> = {
-  default: 'border-l-brand-500',
-  success: 'border-l-success-500',
-  warning: 'border-l-warning-500',
-  danger: 'border-l-danger-500',
+// ── Style Maps ─────────────────────────────────────────
+
+const accentBorders: Record<string, string> = {
+  default: 'border-l-[color:var(--color-surface-400)]',
+  success: 'border-l-[color:var(--color-success-500)]',
+  warning: 'border-l-[color:var(--color-warning-500)]',
+  danger: 'border-l-[color:var(--color-danger-500)]',
+  brand: 'border-l-[color:var(--color-brand-500)]',
 };
 
-const trendColors: Record<string, Record<string, string>> = {
+const trendStyles: Record<string, Record<string, string>> = {
   up: {
-    default: 'text-success-600 bg-success-100 border-[color:var(--color-success-300)]',
-    success: 'text-success-800 bg-success-200 border-[color:var(--color-success-400)]',
-    warning: 'text-success-600 bg-success-100 border-[color:var(--color-success-300)]',
-    danger: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
+    base: 'text-[color:var(--color-success-700)] bg-[color:var(--color-success-50)] border-[color:var(--color-success-200)]',
   },
   down: {
-    default: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
-    success: 'text-danger-600 bg-danger-100 border-[color:var(--color-danger-300)]',
-    warning: 'text-danger-600 bg-danger-100 border-danger-300',
-    danger: 'text-danger-800 bg-danger-200 border-danger-400',
+    base: 'text-[color:var(--color-danger-700)] bg-[color:var(--color-danger-50)] border-[color:var(--color-danger-200)]',
+  },
+  neutral: {
+    base: 'text-[color:var(--color-text-secondary)] bg-[color:var(--color-surface-100)] border-[color:var(--color-surface-200)]',
   },
 };
+
+const iconBgColors: Record<string, string> = {
+  default: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)]',
+  success: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-600)]',
+  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-600)]',
+  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-600)]',
+  brand: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]',
+};
+
+// ── Component ──────────────────────────────────────────
 
 export function StatCard({
   title,
@@ -46,46 +61,87 @@ export function StatCard({
   variant = 'default',
   className,
   onClick,
+  animate = true,
 }: StatCardProps) {
-  return (
+  const isInteractive = !!onClick;
+
+  const cardContent = (
     <div
-      onClick={onClick}
       className={clsx(
-        'relative rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-        variantAccents[variant],
-        onClick &&
-          'hover:translate-[var(--hover-lift)] cursor-pointer hover:shadow-[var(--shadow-card-hover)]',
+        'relative rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4 shadow-[var(--shadow-card)]',
+        'border-l-[3px]',
+        accentBorders[variant],
+        isInteractive && 'cursor-pointer',
         className,
       )}
     >
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-display text-surface-500 text-xs font-semibold uppercase tracking-wider">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
             {title}
           </p>
-          <p className="font-display text-surface-900 text-3xl font-extrabold tabular-nums">
+          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
             {value}
           </p>
         </div>
         {icon && (
-          <div className="bg-surface-100 text-surface-600 flex-shrink-0 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
+          <div
+            className={clsx(
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-[color:var(--border-color)] shadow-[var(--shadow-xs)]',
+              iconBgColors[variant],
+            )}
+          >
             {icon}
           </div>
         )}
       </div>
+
+      {/* Trend */}
       {trend && (
         <div className="mt-3 flex items-center gap-2">
           <span
             className={clsx(
-              'font-display inline-flex items-center rounded-full border-[length:var(--bw-default)] px-2 py-0.5 text-xs font-bold',
-              trendColors[trend.direction]?.[variant] ?? trendColors[trend.direction]?.default,
+              'inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[11px] font-bold',
+              trendStyles[trend.direction]?.base,
             )}
           >
-            {trend.direction === 'up' ? '↑' : '↓'} {trend.value}
+            {trend.direction === 'up' && '↑'}
+            {trend.direction === 'down' && '↓'}
+            {trend.direction === 'neutral' && '→'}
+            {trend.value}
           </span>
-          <span className="text-surface-400 text-xs">{trend.label}</span>
+          {trend.label && (
+            <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+              {trend.label}
+            </span>
+          )}
         </div>
       )}
     </div>
   );
+
+  if (animate && isInteractive) {
+    return (
+      <motion.div
+        variants={cardHover}
+        initial="rest"
+        whileHover="hover"
+        whileTap="tap"
+        onClick={onClick}
+      >
+        {cardContent}
+      </motion.div>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="w-full text-left">
+        {cardContent}
+      </button>
+    );
+  }
+
+  return cardContent;
 }

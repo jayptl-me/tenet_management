@@ -1,9 +1,13 @@
 'use client';
 
 import { clsx } from 'clsx';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import { fadeInUp, staggerContainer } from '@/lib/animations';
 import { Input } from './Input';
 import { Button } from './Button';
+
+// ── Types ──────────────────────────────────────────────
 
 export interface DataTableColumn<T> {
   header: string;
@@ -33,9 +37,29 @@ export interface DataTableProps<T> {
   emptyState?: React.ReactNode;
   onRowClick?: (row: T) => void;
   className?: string;
+  animate?: boolean;
 }
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
+// ── Skeleton Row ───────────────────────────────────────
+
+function SkeletonRow({ columns }: { columns: number }) {
+  return (
+    <tr>
+      {Array.from({ length: columns }).map((_, j) => (
+        <td
+          key={j}
+          className="border-b border-b-[color:var(--color-surface-200)] px-4 py-3"
+        >
+          <div className="h-4 w-3/4 animate-pulse rounded-md bg-[color:var(--shimmer-base)]" />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+// ── Component ──────────────────────────────────────────
 
 export function DataTable<T>({
   columns,
@@ -50,32 +74,35 @@ export function DataTable<T>({
   emptyState,
   onRowClick,
   className,
+  animate = true,
 }: DataTableProps<T>) {
   const pages = pagination ? Math.ceil(pagination.total / pagination.perPage) : 0;
 
-  return (
-    <div className={clsx('flex flex-col gap-4', className)}>
+  const tableContent = (
+    <>
+      {/* Search */}
       {searchable && onSearchChange && (
         <div className="relative max-w-sm">
-          <Search className="text-surface-400 absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
           <Input
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-9"
           />
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)]">
-        <table className="font-[family:var(--font-body)] w-full border-collapse bg-[color:var(--color-surface-100)]">
+      {/* Table */}
+      <div className="overflow-x-auto rounded-xl border border-[color:var(--border-color)] shadow-[var(--shadow-sm)]">
+        <table className="w-full border-collapse bg-[color:var(--color-surface-100)]">
           <thead>
-            <tr className="bg-surface-100">
+            <tr className="bg-[color:var(--color-surface-50)]">
               {columns.map((col, i) => (
                 <th
                   key={i}
                   className={clsx(
-                    'font-display text-surface-800 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 text-left text-sm font-bold uppercase tracking-wider',
+                    'border-b border-b-[color:var(--border-color)] px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]',
                     col.className,
                   )}
                 >
@@ -87,26 +114,17 @@ export function DataTable<T>({
           <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={`skeleton-${i}`}>
-                  {columns.map((_, j) => (
-                    <td
-                      key={j}
-                      className="border-b-[length:var(--bw-default)] border-b-[color:var(--color-surface-200)] px-4 py-3"
-                    >
-                      <div className="h-4 w-3/4 animate-pulse rounded bg-[color:var(--color-surface-200)]" />
-                    </td>
-                  ))}
-                </tr>
+                <SkeletonRow key={`skel-${i}`} columns={columns.length} />
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                <td colSpan={columns.length} className="px-4 py-16 text-center">
                   {emptyState ?? (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="font-display text-surface-500 text-lg font-semibold">
+                      <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
                         No data found
                       </p>
-                      <p className="text-surface-400 text-sm">
+                      <p className="text-[13px] text-[color:var(--color-text-muted)]">
                         Try adjusting your search or filters
                       </p>
                     </div>
@@ -119,15 +137,20 @@ export function DataTable<T>({
                   key={keyExtractor(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={clsx(
-                    'border-b-[length:var(--bw-default)] border-b-[color:var(--color-surface-200)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
-                    onRowClick && 'hover:bg-brand-50 cursor-pointer',
-                    rowIdx % 2 === 0 ? 'bg-[color:var(--color-surface-100)]' : 'bg-surface-50',
+                    'border-b border-b-[color:var(--color-surface-200)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
+                    onRowClick && 'cursor-pointer hover:bg-[color:var(--color-brand-50)]',
+                    rowIdx % 2 === 0
+                      ? 'bg-[color:var(--color-surface-100)]'
+                      : 'bg-[color:var(--color-surface-50)]',
                   )}
                 >
                   {columns.map((col, colIdx) => (
                     <td
                       key={colIdx}
-                      className={clsx('text-surface-700 px-4 py-3 text-sm', col.className)}
+                      className={clsx(
+                        'px-4 py-3 text-[13px] font-medium text-[color:var(--color-text-primary)]',
+                        col.className,
+                      )}
                     >
                       {typeof col.accessor === 'function'
                         ? col.accessor(row)
@@ -141,14 +164,17 @@ export function DataTable<T>({
         </table>
       </div>
 
+      {/* Pagination */}
       {pagination && pages > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-surface-500 text-sm">Rows per page:</span>
+            <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              Rows per page:
+            </span>
             <select
               value={pagination.perPage}
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
-              className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-2 py-1 text-sm font-semibold"
+              className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-2.5 py-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"
             >
               {PER_PAGE_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -157,31 +183,49 @@ export function DataTable<T>({
               ))}
             </select>
           </div>
+
           <div className="flex items-center gap-3">
-            <span className="text-surface-500 text-sm">
+            <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
               Page {pagination.page} of {pages} ({pagination.total} total)
             </span>
             <div className="flex gap-1">
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 disabled={pagination.page <= 1}
                 onClick={() => pagination.onPageChange(pagination.page - 1)}
+                aria-label="Previous page"
               >
-                Prev
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 disabled={pagination.page >= pages}
                 onClick={() => pagination.onPageChange(pagination.page + 1)}
+                aria-label="Next page"
               >
-                Next
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+
+  if (!animate) {
+    return <div className={clsx('flex flex-col gap-4', className)}>{tableContent}</div>;
+  }
+
+  return (
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className={clsx('flex flex-col gap-4', className)}
+    >
+      {tableContent}
+    </motion.div>
   );
 }

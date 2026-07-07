@@ -1,7 +1,11 @@
 'use client';
 
 import { AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { modalOverlay, modalContent } from '@/lib/animations';
 import { Button } from '@/components/ui/Button';
+
+// ── Types ──────────────────────────────────────────────
 
 interface ConfirmModalProps {
   open: boolean;
@@ -15,6 +19,22 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
+// ── Style Maps ─────────────────────────────────────────
+
+const iconStyles: Record<string, string> = {
+  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-600)]',
+  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-600)]',
+  info: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]',
+};
+
+const confirmVariant: Record<string, 'danger' | 'primary'> = {
+  danger: 'danger',
+  warning: 'danger',
+  info: 'primary',
+};
+
+// ── Component ──────────────────────────────────────────
+
 export function ConfirmModal({
   open,
   title,
@@ -26,48 +46,70 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  if (!open) return null;
-
-  const variantClasses = {
-    danger: 'bg-danger-500 hover:bg-danger-600',
-    warning: 'bg-warning-500 hover:bg-warning-600',
-    info: 'bg-brand-500 hover:bg-brand-600',
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-danger-100">
-              <AlertTriangle className="h-5 w-5 text-danger-600" />
-            </div>
-            <div>
-              <h3 className="font-display text-surface-900 text-lg font-bold">{title}</h3>
-              <p className="text-surface-500 mt-1 text-sm">{message}</p>
-            </div>
-          </div>
-          <button
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Overlay */}
+          <motion.div
+            variants={modalOverlay}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onCancel}
-            className="text-surface-400 hover:text-surface-600 -mt-1 -mr-1 rounded-md p-1 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          />
 
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <Button variant="outline" onClick={onCancel} disabled={loading}>
-            {cancelLabel}
-          </Button>
-          <Button
-            className={variantClasses[variant]}
-            onClick={onConfirm}
-            loading={loading}
+          {/* Panel */}
+          <motion.div
+            variants={modalContent}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="relative z-10 mx-4 w-full max-w-md rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-modal)]"
           >
-            {confirmLabel}
-          </Button>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${iconStyles[variant]}`}
+                >
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+                    {title}
+                  </h3>
+                  <p className="mt-1 text-[13px] text-[color:var(--color-text-secondary)] leading-relaxed">
+                    {message}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onCancel}
+                className="flex-shrink-0 rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] hover:text-[color:var(--color-text-secondary)] transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={onCancel} disabled={loading}>
+                {cancelLabel}
+              </Button>
+              <Button
+                variant={confirmVariant[variant]}
+                onClick={onConfirm}
+                loading={loading}
+              >
+                {confirmLabel}
+              </Button>
+            </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }
