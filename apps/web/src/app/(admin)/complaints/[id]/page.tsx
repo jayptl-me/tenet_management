@@ -5,9 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { toast } from 'sonner';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 const complaintUpdateSchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']),
@@ -42,29 +46,14 @@ const STATUS_OPTIONS = [
   { value: 'dismissed', label: 'Dismissed' },
 ];
 
-function getSeverityBadge(severity: string) {
+function getSeverityVariant(severity: string): 'danger' | 'warning' | 'info' {
   switch (severity) {
     case 'critical':
-      return { border: 'border-red-400', bg: 'bg-red-50', text: 'text-red-700', shadow: 'shadow-red-400' };
+      return 'danger';
     case 'high':
-      return { border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', shadow: 'shadow-amber-400' };
+      return 'warning';
     default:
-      return { border: 'border-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', shadow: 'shadow-blue-400' };
-  }
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'open':
-      return { border: 'border-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-700', shadow: 'shadow-emerald-400', dot: 'bg-emerald-500' };
-    case 'in_progress':
-      return { border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', shadow: 'shadow-amber-400', dot: 'bg-amber-500' };
-    case 'resolved':
-      return { border: 'border-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', shadow: 'shadow-blue-400', dot: 'bg-blue-500' };
-    case 'dismissed':
-      return { border: 'border-gray-400', bg: 'bg-gray-50', text: 'text-gray-600', shadow: 'shadow-gray-400', dot: 'bg-gray-400' };
-    default:
-      return { border: 'border-gray-300', bg: 'bg-gray-50', text: 'text-gray-600', shadow: 'shadow-gray-300', dot: 'bg-gray-400' };
+      return 'info';
   }
 }
 
@@ -160,183 +149,165 @@ export default function ComplaintDetailPage() {
     }
   };
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
+  // ── Error / Not Found State ──────────────────
   if (error || !complaint) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
-          {error || 'Complaint not found'}
+      <div className="space-y-4">
+        <Button variant="outline" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Complaint not found'}</p>
         </div>
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2 text-sm font-bold shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Go Back
-        </button>
       </div>
     );
   }
 
-  const severityBadge = getSeverityBadge(complaint.severity);
-  const statusBadge = getStatusBadge(complaint.status);
+  const severityVariant = getSeverityVariant(complaint.severity);
+  const statusVariant = statusToVariant(complaint.status);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-          >
-            <ArrowLeft className="h-4 w-4 text-gray-700" />
-          </button>
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div>
-            <h2 className="font-black text-2xl text-gray-900 tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
               {complaint.title}
             </h2>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
               Reported on {formatDate(complaint.createdAt)}
             </p>
           </div>
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-2 px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0px_0px_currentColor] ${statusBadge.border} ${statusBadge.bg} ${statusBadge.text}`}
-        >
-          <span className={`inline-block h-2 w-2 rounded-full ${statusBadge.dot}`} />
-          {complaint.status.replace(/_/g, ' ')}
-        </span>
-      </div>
+        <StatusBadge variant={statusVariant} label={complaint.status.replace(/_/g, ' ')} />
+      </motion.div>
 
-      {/* Main detail cards */}
+      {/* ── Main detail cards ──────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Complaint details */}
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db] lg:col-span-2">
-          <h3 className="font-black text-lg text-gray-900 mb-4">Complaint Details</h3>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Complaint Details</h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Category</p>
-              <p className="text-gray-900 mt-1 text-sm font-bold capitalize">{complaint.category}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Category</p>
+              <p className="mt-1 text-sm font-bold capitalize text-[color:var(--color-text-primary)]">{complaint.category}</p>
             </div>
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Severity</p>
-              <p className="mt-1">
-                <span
-                  className={`inline-flex items-center rounded-[var(--radius-md)] border-2 px-2.5 py-0.5 text-xs font-bold shadow-[2px_2px_0px_0px_currentColor] ${severityBadge.border} ${severityBadge.bg} ${severityBadge.text}`}
-                >
-                  {complaint.severity}
-                </span>
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Severity</p>
+              <div className="mt-1">
+                <StatusBadge variant={severityVariant} label={complaint.severity} />
+              </div>
             </div>
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Status</p>
-              <p className="mt-1">
-                <span
-                  className={`inline-flex items-center gap-1 rounded-[var(--radius-md)] border-2 px-2.5 py-0.5 text-xs font-bold shadow-[2px_2px_0px_0px_currentColor] ${statusBadge.border} ${statusBadge.bg} ${statusBadge.text}`}
-                >
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${statusBadge.dot}`} />
-                  {complaint.status.replace(/_/g, ' ')}
-                </span>
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
+              <div className="mt-1">
+                <StatusBadge variant={statusVariant} label={complaint.status.replace(/_/g, ' ')} />
+              </div>
             </div>
           </div>
 
-          <div className="border-t-2 border-gray-200 mt-5 pt-4">
-            <p className="text-gray-500 mb-2 text-xs font-bold uppercase tracking-wider">
+          <div className="mt-5 border-t border-[color:var(--border-color)] pt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
               Description
             </p>
-            <p className="text-gray-700 whitespace-pre-wrap text-sm font-medium">
+            <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-text-secondary)]">
               {complaint.description}
             </p>
           </div>
 
           {complaint.resolution && (
-            <div className="rounded-[var(--radius-md)] border-2 border-emerald-400 bg-emerald-50 p-4 mt-4 shadow-[2px_2px_0px_0px_#34d399]">
-              <p className="text-emerald-700 mb-1 text-xs font-bold uppercase tracking-wider">
+            <div className="mt-4 rounded-xl border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] p-4 shadow-[var(--shadow-sm)]">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-success-700)]">
                 Resolution
               </p>
-              <p className="text-emerald-800 whitespace-pre-wrap text-sm font-semibold">
+              <p className="whitespace-pre-wrap text-sm font-semibold text-[color:var(--color-success-800)]">
                 {complaint.resolution}
               </p>
               {complaint.resolvedAt && (
-                <p className="text-emerald-600 mt-2 text-xs font-semibold">
+                <p className="mt-2 text-xs font-semibold text-[color:var(--color-success-600)]">
                   Resolved on: {formatDate(complaint.resolvedAt)}
                 </p>
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Reporter info card */}
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 mb-4">Reported By</h3>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Reported By</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Name</p>
-              <p className="text-gray-900 mt-1 text-sm font-extrabold">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
+              <p className="mt-1 text-sm font-bold text-[color:var(--color-text-primary)]">
                 {complaint.tenant?.user?.name ?? 'N/A'}
               </p>
             </div>
             <div>
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Room</p>
-              <p className="text-gray-900 mt-1 text-sm font-extrabold">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Room</p>
+              <p className="mt-1 text-sm font-bold text-[color:var(--color-text-primary)]">
                 {complaint.tenant?.room?.roomNumber ?? 'N/A'}
               </p>
             </div>
             {complaint.tenant?.user?.email && (
               <div>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Email</p>
-                <p className="text-gray-700 mt-1 text-sm font-medium">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Email</p>
+                <p className="mt-1 text-sm font-medium text-[color:var(--color-text-secondary)]">
                   {complaint.tenant.user.email}
                 </p>
               </div>
             )}
             {complaint.tenant?.user?.phone && (
               <div>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Phone</p>
-                <p className="text-gray-700 mt-1 text-sm font-medium">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Phone</p>
+                <p className="mt-1 text-sm font-medium text-[color:var(--color-text-secondary)]">
                   {complaint.tenant.user.phone}
                 </p>
               </div>
             )}
             {complaint.tenant?.room?.floor?.name && (
               <div>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Floor</p>
-                <p className="text-gray-700 mt-1 text-sm font-semibold">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Floor</p>
+                <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-secondary)]">
                   {complaint.tenant.room.floor.name}
                 </p>
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Status update form */}
-      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
-        <h3 className="font-black text-lg text-gray-900 mb-4">Update Status</h3>
+      {/* ── Status update form ──────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Update Status</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Raw brutalist select */}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="status"
-              className="text-gray-800 text-sm font-bold"
+              className="text-sm font-bold text-[color:var(--color-text-primary)]"
             >
               Status
             </label>
             <select
               id="status"
-              className={`w-full rounded-[var(--radius-md)] border-2 px-4 py-2.5 text-base font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 transition-all ${
+              className={`w-full rounded-xl border px-4 py-2.5 text-base font-semibold text-[color:var(--color-text-primary)] bg-[color:var(--color-surface-50)] transition-all duration-[var(--transition-duration)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
                 errors.status
-                  ? 'border-red-400 shadow-[2px_2px_0px_0px_#f87171]'
-                  : 'border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db]'
+                  ? 'border-[color:var(--color-danger-300)] shadow-[var(--shadow-sm)]'
+                  : 'border-[color:var(--border-color)] shadow-[var(--shadow-sm)]'
               }`}
               {...register('status')}
             >
@@ -347,56 +318,53 @@ export default function ComplaintDetailPage() {
               ))}
             </select>
             {errors.status && (
-              <p className="text-red-600 text-sm font-semibold">{errors.status.message}</p>
+              <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">{errors.status.message}</p>
             )}
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="adminNotes"
-              className="text-gray-800 text-sm font-bold"
+              className="text-sm font-bold text-[color:var(--color-text-primary)]"
             >
               Admin Notes
             </label>
             <textarea
               id="adminNotes"
               rows={4}
-              className={`w-full rounded-[var(--radius-md)] border-2 px-4 py-2.5 text-base font-medium text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all ${
+              className={`w-full rounded-xl border px-4 py-2.5 text-base font-medium text-[color:var(--color-text-primary)] bg-[color:var(--color-surface-50)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-2 ${
                 errors.adminNotes
-                  ? 'border-red-400 shadow-[2px_2px_0px_0px_#f87171]'
-                  : 'border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db]'
+                  ? 'border-[color:var(--color-danger-300)] shadow-[var(--shadow-sm)]'
+                  : 'border-[color:var(--border-color)] shadow-[var(--shadow-sm)]'
               }`}
               placeholder="Add internal notes about this complaint..."
               {...register('adminNotes')}
             />
             {errors.adminNotes && (
-              <p className="text-red-600 text-sm font-semibold">{errors.adminNotes.message}</p>
+              <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">{errors.adminNotes.message}</p>
             )}
           </div>
 
           <div className="flex justify-end">
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-800 bg-gray-800 px-5 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0px_0px_#374151] transition-all hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[3px_3px_0px_0px_#374151] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
+              loading={isSaving}
             >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
+              <Save className="h-4 w-4" />
+              Save Changes
+            </Button>
           </div>
         </form>
-      </div>
+      </motion.div>
 
-      {/* Meta */}
+      {/* ── Meta ────────────────────────────────── */}
       {complaint.updatedAt && (
-        <p className="text-gray-400 text-right text-xs font-semibold">
+        <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
           Last updated: {formatDateTime(complaint.updatedAt)}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }

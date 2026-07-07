@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Zap } from 'lucide-react';
+import { ArrowLeft, Zap, Loader2, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface ElectricityBillDetail {
   _id: string;
@@ -52,24 +55,26 @@ export default function ElectricityBillDetailPage() {
     fetchBill();
   }, [params.id]);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
+  // ── Error / Not Found State ──────────────────
   if (error || !bill) {
     return (
-      <div className="space-y-6">
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error || 'Electricity bill not found'}
-        </div>
+      <div className="space-y-4">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Go Back
+          <ArrowLeft className="h-4 w-4" /> Back
         </Button>
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Electricity bill not found'}</p>
+        </div>
       </div>
     );
   }
@@ -78,83 +83,83 @@ export default function ElectricityBillDetailPage() {
   const roomNumber = bill.tenant?.room?.roomNumber ?? 'N/A';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
-            Back
           </Button>
           <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
               Electricity Bill
             </h2>
-            <p className="text-surface-500 mt-0.5 text-sm">{bill.billingMonth}</p>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">{bill.billingMonth}</p>
           </div>
         </div>
         <StatusBadge
           variant={statusToVariant(bill.status)}
           label={bill.status.replace(/_/g, ' ')}
         />
-      </div>
+      </motion.div>
 
-      {/* Main detail cards */}
+      {/* ── Main detail cards ──────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Bill details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
             Bill Details
           </h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Billing Month
               </p>
-              <p className="text-surface-900 mt-1 text-base font-semibold">{bill.billingMonth}</p>
+              <p className="mt-1 text-base font-semibold text-[color:var(--color-text-primary)]">{bill.billingMonth}</p>
             </div>
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Units Consumed
               </p>
-              <p className="text-surface-900 mt-1 text-base font-bold">
+              <p className="mt-1 text-base font-bold text-[color:var(--color-text-primary)]">
                 {bill.unitsConsumed}{' '}
-                <span className="text-surface-500 text-sm font-normal">kWh</span>
+                <span className="text-sm font-normal text-[color:var(--color-text-muted)]">kWh</span>
               </p>
             </div>
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Rate Per Unit
               </p>
-              <p className="text-surface-900 mt-1 text-base font-semibold">
+              <p className="mt-1 text-base font-semibold text-[color:var(--color-text-primary)]">
                 ₹{bill.ratePerUnit.toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Total Amount
               </p>
-              <p className="text-surface-900 mt-1 text-base font-extrabold">
+              <p className="mt-1 text-base font-bold text-[color:var(--color-text-primary)]">
                 ₹{bill.totalAmount.toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Status
               </p>
-              <p className="mt-1">
+              <div className="mt-1">
                 <StatusBadge
                   variant={statusToVariant(bill.status)}
                   label={bill.status.replace(/_/g, ' ')}
                 />
-              </p>
+              </div>
             </div>
             {bill.dueDate && (
               <div>
-                <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                   Due Date
                 </p>
-                <p className="text-surface-900 mt-1 text-sm font-semibold">
+                <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-primary)]">
                   {new Date(bill.dueDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
                     month: 'short',
@@ -165,10 +170,10 @@ export default function ElectricityBillDetailPage() {
             )}
             {bill.paidDate && (
               <div>
-                <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                   Paid Date
                 </p>
-                <p className="text-success-700 mt-1 text-sm font-semibold">
+                <p className="mt-1 text-sm font-semibold text-[color:var(--color-success-700)]">
                   {new Date(bill.paidDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
                     month: 'short',
@@ -181,23 +186,23 @@ export default function ElectricityBillDetailPage() {
 
           {/* Meter readings */}
           {bill.meterReading && (
-            <div className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
-              <p className="text-surface-500 mb-2 text-xs font-semibold uppercase tracking-wider">
+            <div className="mt-6 border-t border-[color:var(--color-surface-200)] pt-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Meter Readings
               </p>
               <div className="flex gap-8">
                 {bill.meterReading.previous !== undefined && (
                   <div>
-                    <span className="text-surface-500 text-sm">Previous:</span>{' '}
-                    <span className="text-surface-900 font-semibold">
+                    <span className="text-sm text-[color:var(--color-text-muted)]">Previous:</span>{' '}
+                    <span className="font-semibold text-[color:var(--color-text-primary)]">
                       {bill.meterReading.previous} kWh
                     </span>
                   </div>
                 )}
                 {bill.meterReading.current !== undefined && (
                   <div>
-                    <span className="text-surface-500 text-sm">Current:</span>{' '}
-                    <span className="text-surface-900 font-semibold">
+                    <span className="text-sm text-[color:var(--color-text-muted)]">Current:</span>{' '}
+                    <span className="font-semibold text-[color:var(--color-text-primary)]">
                       {bill.meterReading.current} kWh
                     </span>
                   </div>
@@ -205,95 +210,95 @@ export default function ElectricityBillDetailPage() {
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Usage summary card */}
-        <div className="bg-warning-50 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)]">
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-warning-50)] p-6 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center gap-2">
-            <Zap className="text-warning-600 h-5 w-5" />
-            <h3 className="font-display text-surface-900 text-lg font-extrabold">Usage Summary</h3>
+            <Zap className="h-5 w-5 text-[color:var(--color-warning-500)]" />
+            <h3 className="text-lg font-bold text-[color:var(--color-text-primary)]">Usage Summary</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Units
               </p>
-              <p className="text-surface-900 mt-1 text-3xl font-extrabold">{bill.unitsConsumed}</p>
-              <p className="text-surface-500 text-sm">kilowatt-hours</p>
+              <p className="mt-1 text-3xl font-bold text-[color:var(--color-text-primary)]">{bill.unitsConsumed}</p>
+              <p className="text-sm text-[color:var(--color-text-muted)]">kilowatt-hours</p>
             </div>
-            <div className="border-warning-200 border-t-2 pt-3">
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="border-t border-[color:var(--color-warning-200)] pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Total Bill
               </p>
-              <p className="text-surface-900 mt-1 text-2xl font-extrabold">
+              <p className="mt-1 text-2xl font-bold text-[color:var(--color-text-primary)]">
                 ₹{bill.totalAmount.toLocaleString()}
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Tenant info card */}
+      {/* ── Tenant info card ────────────────────── */}
       {bill.tenant && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
             Tenant Information
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Name
               </p>
-              <p className="text-surface-900 mt-1 text-sm font-semibold">{tenantName}</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-primary)]">{tenantName}</p>
             </div>
             <div>
-              <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                 Room
               </p>
-              <p className="text-surface-900 mt-1 text-sm font-semibold">{roomNumber}</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-primary)]">{roomNumber}</p>
             </div>
             {bill.tenant.user?.email && (
               <div>
-                <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                   Email
                 </p>
-                <p className="text-surface-700 mt-1 text-sm">{bill.tenant.user.email}</p>
+                <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">{bill.tenant.user.email}</p>
               </div>
             )}
             {bill.tenant.user?.phone && (
               <div>
-                <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                   Phone
                 </p>
-                <p className="text-surface-700 mt-1 text-sm">{bill.tenant.user.phone}</p>
+                <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">{bill.tenant.user.phone}</p>
               </div>
             )}
             {bill.tenant.room?.floor?.name && (
               <div>
-                <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                   Floor
                 </p>
-                <p className="text-surface-700 mt-1 text-sm">{bill.tenant.room.floor.name}</p>
+                <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">{bill.tenant.room.floor.name}</p>
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Notes */}
+      {/* ── Notes ──────────────────────────────── */}
       {bill.notes && (
-        <div className="bg-surface-50 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-2 text-lg font-extrabold">Notes</h3>
-          <p className="text-surface-700 text-sm">{bill.notes}</p>
-        </div>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-2 text-lg font-bold text-[color:var(--color-text-primary)]">Notes</h3>
+          <p className="text-sm text-[color:var(--color-text-secondary)]">{bill.notes}</p>
+        </motion.div>
       )}
 
-      {/* Meta */}
+      {/* ── Meta ────────────────────────────────── */}
       {bill.updatedAt && (
-        <p className="text-surface-400 text-right text-xs">
+        <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
           Last updated: {new Date(bill.updatedAt).toLocaleString('en-IN')}
         </p>
       )}
-    </div>
+    </motion.div>
   );
 }

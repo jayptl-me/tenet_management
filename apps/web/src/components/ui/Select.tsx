@@ -2,6 +2,9 @@
 
 import { forwardRef } from 'react';
 import { clsx } from 'clsx';
+import { ChevronDown } from 'lucide-react';
+
+// ── Types ──────────────────────────────────────────────
 
 export interface SelectOption {
   value: string;
@@ -15,46 +18,78 @@ export interface SelectProps extends Omit<
   label?: string;
   error?: string;
   helperText?: string;
+  hint?: string;
   options: SelectOption[];
   placeholder?: string;
 }
 
+// ── Component ──────────────────────────────────────────
+
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, options, placeholder, className, id, ...props }, ref) => {
+  ({ label, error, helperText, hint, options, placeholder, className, id, ...props }, ref) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
+
     return (
       <div className="flex flex-col gap-1.5">
+        {/* Label + hint */}
         {label && (
-          <label htmlFor={selectId} className="text-surface-800 font-display text-sm font-semibold">
-            {label}
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label
+              htmlFor={selectId}
+              className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+            >
+              {label}
+            </label>
+            {hint && (
+              <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                {hint}
+              </span>
+            )}
+          </div>
         )}
-        <select
-          ref={ref}
-          id={selectId}
-          className={clsx(
-            'text-surface-900 font-[family:var(--font-body)] w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base',
-            'focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-[color:var(--color-brand-500)] focus:ring-offset-2',
-            'disabled:cursor-not-allowed disabled:bg-[color:var(--color-surface-100)] disabled:opacity-60',
-            error &&
-              'border-[color:var(--color-danger-500)] focus:ring-[color:var(--color-danger-500)]',
-            className,
-          )}
-          {...props}
-        >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        {error && <p className="text-danger-600 text-sm font-medium">{error}</p>}
-        {helperText && !error && <p className="text-surface-500 text-sm">{helperText}</p>}
+
+        {/* Select wrapper */}
+        <div className="relative">
+          <select
+            ref={ref}
+            id={selectId}
+            className={clsx(
+              'w-full appearance-none rounded-lg border bg-[color:var(--color-surface-50)] py-2 pl-3.5 pr-9 text-sm font-medium text-[color:var(--color-text-primary)]',
+              'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+              'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:border-[color:var(--color-brand-500)]',
+              'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
+              error
+                ? 'border-[color:var(--color-danger-400)] focus:ring-[color:var(--color-danger-400)]'
+                : 'border-[color:var(--border-color)] hover:border-[color:var(--color-surface-300)]',
+              className,
+            )}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Chevron */}
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--color-text-muted)]" />
+        </div>
+
+        {/* Error / helper */}
+        {error && (
+          <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">{error}</p>
+        )}
+        {helperText && !error && (
+          <p className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
+            {helperText}
+          </p>
+        )}
       </div>
     );
   },

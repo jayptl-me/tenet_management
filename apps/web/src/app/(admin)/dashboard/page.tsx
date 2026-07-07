@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, BedDouble, CreditCard, AlertTriangle, PhoneCall, TrendingUp, Wifi, Zap, Droplets } from 'lucide-react';
+import { BedDouble, CreditCard, AlertTriangle, PhoneCall, TrendingUp, Wifi } from 'lucide-react';
+import { motion } from 'motion/react';
 import { api } from '@/lib/api';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
-import { BarChart, DonutChart, Sparkline, type ChartDataPoint } from '@/components/ui/ThemeChart';
+import { BarChart, DonutChart, type ChartDataPoint } from '@/components/ui/ThemeChart';
+import { Button } from '@/components/ui/Button';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
+
+// ── Types ──────────────────────────────────────────────
 
 interface RevenueHistoryPoint {
   month: string;
@@ -46,14 +52,7 @@ interface DashboardStats {
   mealFeedbackTrend: MealFeedbackTrendPoint[];
 }
 
-function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '₹0';
-  try {
-    return '₹' + amount.toLocaleString('en-IN');
-  } catch {
-    return '₹' + amount;
-  }
-}
+// ── Helpers ────────────────────────────────────────────
 
 function formatDate(dateStr: string | null | undefined): string {
   if (dateStr == null) return 'N/A';
@@ -64,21 +63,7 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
-function getBrutalistStatusClass(status: string): string {
-  const variant = statusToVariant(status);
-  switch (variant) {
-    case 'success':
-      return 'border-emerald-400 bg-emerald-50 text-emerald-700';
-    case 'warning':
-      return 'border-amber-300 bg-amber-50 text-amber-700';
-    case 'danger':
-      return 'border-red-400 bg-red-50 text-red-700';
-    case 'info':
-      return 'border-blue-400 bg-blue-50 text-blue-700';
-    default:
-      return 'border-gray-300 bg-gray-50 text-gray-700';
-  }
-}
+// ── Dashboard Page ─────────────────────────────────────
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -94,127 +79,179 @@ export default function DashboardPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
+  // ── Error State ──────────────────────────────
   if (!stats) {
     return (
-      <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-6 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444] text-center">
-        <p className="font-black text-lg">
+      <motion.div
+        variants={fadeScaleIn}
+        initial="hidden"
+        animate="visible"
+        className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-8 text-center shadow-[var(--shadow-md)]"
+      >
+        <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+        <p className="mt-3 text-[15px] font-bold text-[color:var(--color-danger-700)]">
           {error || 'Failed to load dashboard'}
         </p>
-        <button
+        <Button
+          variant="outline"
+          className="mt-4"
           onClick={() => window.location.reload()}
-          className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-800 bg-gray-900 px-5 py-2.5 font-black text-sm text-white shadow-[4px_4px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
         >
           Retry
-        </button>
-      </div>
+        </Button>
+      </motion.div>
     );
   }
 
-  // Prepare chart data
+  // ── Chart Data ───────────────────────────────
   const revenueChartData: ChartDataPoint[] = stats.revenueHistory.map((r) => ({
     label: r.month,
     value: r.collected,
     secondaryValue: r.expected,
   }));
 
-  // Meal feedback weekly averages
   const mealAvg = {
-    breakfast: stats.mealFeedbackTrend.length > 0
-      ? Math.round(stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) / stats.mealFeedbackTrend.length * 10) / 10
-      : 0,
-    lunch: stats.mealFeedbackTrend.length > 0
-      ? Math.round(stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) / stats.mealFeedbackTrend.length * 10) / 10
-      : 0,
-    dinner: stats.mealFeedbackTrend.length > 0
-      ? Math.round(stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) / stats.mealFeedbackTrend.length * 10) / 10
-      : 0,
+    breakfast:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
+    lunch:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
+    dinner:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
   };
 
-  const complaintTotal = stats.complaints.open + stats.complaints.inProgress + stats.complaints.resolved + stats.complaints.dismissed;
-  const serviceTotal = stats.services.operational + stats.services.degraded + stats.services.down;
+  const serviceTotal =
+    stats.services.operational + stats.services.degraded + stats.services.down;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h2 className="font-black text-2xl text-gray-900 tracking-tight">Dashboard</h2>
-        <p className="text-gray-500 mt-0.5 text-sm font-semibold">
-          Overview for {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+    <motion.div
+      variants={staggerContainerFast}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn}>
+        <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          Dashboard
+        </h2>
+        <p className="mt-1 text-[13px] font-medium text-[color:var(--color-text-muted)]">
+          Overview for{' '}
+          {new Date().toLocaleDateString('en-IN', {
+            month: 'long',
+            year: 'numeric',
+          })}
         </p>
-      </div>
+      </motion.div>
 
-      {/* Stat Cards */}
+      {/* ── Stat Cards ─────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Occupancy"
-          value={`${stats.occupancy.occupiedBeds}/${stats.occupancy.totalRooms}`}
-          icon={<BedDouble className="h-5 w-5" />}
-          trend={{
-            value: `${stats.occupancy.vacancyRate}%`,
-            direction: 'up',
-            label: 'vacancy rate',
-          }}
-          variant="default"
-        />
+        <motion.div variants={fadeScaleIn}>
+          <StatCard
+            title="Occupancy"
+            value={`${stats.occupancy.occupiedBeds}/${stats.occupancy.totalRooms}`}
+            icon={<BedDouble className="h-5 w-5" />}
+            trend={{
+              value: `${stats.occupancy.vacancyRate}%`,
+              direction: 'neutral',
+              label: 'vacancy rate',
+            }}
+            variant="default"
+          />
+        </motion.div>
 
-        <StatCard
-          title="Revenue Collected"
-          value={`₹${stats.revenue.collected.toLocaleString()}`}
-          icon={<CreditCard className="h-5 w-5" />}
-          trend={{
-            value: `${Math.round((stats.revenue.collected / (stats.revenue.expected || 1)) * 100)}%`,
-            direction: stats.revenue.collected >= stats.revenue.expected * 0.8 ? 'up' : 'down',
-            label: 'of expected',
-          }}
-          variant="success"
-        />
+        <motion.div variants={fadeScaleIn}>
+          <StatCard
+            title="Revenue Collected"
+            value={`₹${stats.revenue.collected.toLocaleString()}`}
+            icon={<CreditCard className="h-5 w-5" />}
+            trend={{
+              value: `${Math.round(
+                (stats.revenue.collected / (stats.revenue.expected || 1)) * 100,
+              )}%`,
+              direction:
+                stats.revenue.collected >= stats.revenue.expected * 0.8 ? 'up' : 'down',
+              label: 'of expected',
+            }}
+            variant="success"
+          />
+        </motion.div>
 
-        <StatCard
-          title="Pending Enquiries"
-          value={stats.enquiries.pending}
-          icon={<PhoneCall className="h-5 w-5" />}
-          variant={stats.enquiries.pending > 5 ? 'warning' : 'default'}
-        />
+        <motion.div variants={fadeScaleIn}>
+          <StatCard
+            title="Pending Enquiries"
+            value={stats.enquiries.pending}
+            icon={<PhoneCall className="h-5 w-5" />}
+            variant={stats.enquiries.pending > 5 ? 'warning' : 'default'}
+          />
+        </motion.div>
 
-        <StatCard
-          title="Open Complaints"
-          value={stats.complaints.open + stats.complaints.inProgress}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          trend={{
-            value: String(stats.complaints.resolved),
-            direction: 'up',
-            label: 'resolved',
-          }}
-          variant={stats.complaints.open > 3 ? 'danger' : 'warning'}
-        />
+        <motion.div variants={fadeScaleIn}>
+          <StatCard
+            title="Open Complaints"
+            value={stats.complaints.open + stats.complaints.inProgress}
+            icon={<AlertTriangle className="h-5 w-5" />}
+            trend={{
+              value: String(stats.complaints.resolved),
+              direction: 'up',
+              label: 'resolved',
+            }}
+            variant={stats.complaints.open > 3 ? 'danger' : 'warning'}
+          />
+        </motion.div>
 
-        <StatCard
-          title="Services Up"
-          value={`${stats.services.operational}/${serviceTotal}`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          variant={
-            stats.services.down > 0 ? 'danger' : stats.services.degraded > 0 ? 'warning' : 'success'
-          }
-        />
+        <motion.div variants={fadeScaleIn}>
+          <StatCard
+            title="Services Up"
+            value={`${stats.services.operational}/${serviceTotal}`}
+            icon={<TrendingUp className="h-5 w-5" />}
+            variant={
+              stats.services.down > 0
+                ? 'danger'
+                : stats.services.degraded > 0
+                  ? 'warning'
+                  : 'success'
+            }
+          />
+        </motion.div>
       </div>
 
-      {/* Charts Row */}
+      {/* ── Charts Row ─────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Revenue Bar Chart */}
-        <section className="lg:col-span-2 rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 mb-4">
+        <motion.section
+          variants={fadeScaleIn}
+          className="lg:col-span-2 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
+        >
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
             Revenue — Last 6 Months
           </h3>
           {stats.revenueHistory.length === 0 ? (
-            <p className="text-gray-400 py-4 text-center text-sm font-semibold">No revenue data available</p>
+            <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              No revenue data available
+            </p>
           ) : (
             <BarChart
               data={revenueChartData}
@@ -225,34 +262,49 @@ export default function DashboardPage() {
               showGrid
             />
           )}
-        </section>
+        </motion.section>
 
-        {/* Service Health Donuts */}
-        <section className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 mb-4">
+        {/* Service Health */}
+        <motion.section
+          variants={fadeScaleIn}
+          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
+        >
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
             Service Health
           </h3>
           {serviceTotal === 0 ? (
-            <p className="text-gray-400 py-4 text-center text-sm font-semibold">No services configured</p>
+            <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              No services configured
+            </p>
           ) : (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <Wifi className="text-gray-700 h-5 w-5" />
+                <Wifi className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-black text-sm text-gray-800">Services</p>
-                  <div className="bg-gray-200 mt-1 h-2 rounded-full overflow-hidden border border-gray-300">
+                  <p className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
+                    Services
+                  </p>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-surface-200)]">
                     <div
-                      className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${(stats.services.operational / serviceTotal) * 100}%` }}
+                      className="h-full rounded-full bg-[color:var(--color-success-500)] transition-all duration-[var(--transition-duration-slow)] ease-[var(--transition-easing)]"
+                      style={{
+                        width: `${(stats.services.operational / serviceTotal) * 100}%`,
+                      }}
                     />
                   </div>
-                  <div className="mt-1 flex items-center gap-3 text-xs">
-                    <span className="text-emerald-700 font-black">{stats.services.operational} Up</span>
+                  <div className="mt-1 flex items-center gap-3 text-[11px]">
+                    <span className="font-bold text-[color:var(--color-success-700)]">
+                      {stats.services.operational} Up
+                    </span>
                     {stats.services.degraded > 0 && (
-                      <span className="text-amber-700 font-black">{stats.services.degraded} Degraded</span>
+                      <span className="font-bold text-[color:var(--color-warning-700)]">
+                        {stats.services.degraded} Degraded
+                      </span>
                     )}
                     {stats.services.down > 0 && (
-                      <span className="text-red-700 font-black">{stats.services.down} Down</span>
+                      <span className="font-bold text-[color:var(--color-danger-700)]">
+                        {stats.services.down} Down
+                      </span>
                     )}
                   </div>
                 </div>
@@ -278,113 +330,124 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-        </section>
+        </motion.section>
       </div>
 
-      {/* Meal Feedback Summary */}
+      {/* ── Meal Feedback ──────────────────────── */}
       {stats.mealFeedbackTrend.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db] text-center">
-            <p className="text-gray-500 font-black text-xs uppercase tracking-wider">Breakfast</p>
-            <p className="font-black text-3xl text-gray-900 mt-2">{mealAvg.breakfast}</p>
-            <p className="text-gray-400 text-xs mt-1 font-semibold">out of 5</p>
-            <div className="mt-3 flex justify-center">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} className={`h-4 w-4 ${i < Math.round(mealAvg.breakfast) ? 'text-amber-400' : 'text-gray-200'}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db] text-center">
-            <p className="text-gray-500 font-black text-xs uppercase tracking-wider">Lunch</p>
-            <p className="font-black text-3xl text-gray-900 mt-2">{mealAvg.lunch}</p>
-            <p className="text-gray-400 text-xs mt-1 font-semibold">out of 5</p>
-            <div className="mt-3 flex justify-center">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} className={`h-4 w-4 ${i < Math.round(mealAvg.lunch) ? 'text-amber-400' : 'text-gray-200'}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db] text-center">
-            <p className="text-gray-500 font-black text-xs uppercase tracking-wider">Dinner</p>
-            <p className="font-black text-3xl text-gray-900 mt-2">{mealAvg.dinner}</p>
-            <p className="text-gray-400 text-xs mt-1 font-semibold">out of 5</p>
-            <div className="mt-3 flex justify-center">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg key={i} className={`h-4 w-4 ${i < Math.round(mealAvg.dinner) ? 'text-amber-400' : 'text-gray-200'}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-          </div>
+          {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => (
+            <motion.div
+              key={meal}
+              variants={fadeScaleIn}
+              className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-card)]"
+            >
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                {meal}
+              </p>
+              <p className="mt-2 text-3xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                {mealAvg[meal]}
+              </p>
+              <p className="mt-1 text-[12px] font-medium text-[color:var(--color-text-muted)]">
+                out of 5
+              </p>
+              <div className="mt-3 flex justify-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <svg
+                    key={i}
+                    className={`h-4 w-4 ${
+                      i < Math.round(mealAvg[meal])
+                        ? 'text-[color:var(--color-warning-500)]'
+                        : 'text-[color:var(--color-surface-200)]'
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </motion.div>
+          ))}
         </div>
       )}
 
-      {/* Recent Activity */}
+      {/* ── Recent Activity ────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Recent Complaints */}
-        <section className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 mb-4">
+        <motion.section
+          variants={fadeScaleIn}
+          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
+        >
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
             Recent Complaints
           </h3>
           {stats.recent.complaints.length === 0 ? (
-            <p className="text-gray-400 py-4 text-center text-sm font-semibold">No recent complaints</p>
+            <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              No recent complaints
+            </p>
           ) : (
             <div className="space-y-3">
               {stats.recent.complaints.map((c) => (
                 <div
                   key={c._id}
-                  className="flex items-center justify-between border-b-2 border-gray-200 py-2 last:border-b-0"
+                  className="flex items-center justify-between border-b border-b-[color:var(--color-surface-200)] py-2.5 last:border-b-0"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-gray-800 truncate text-sm font-bold">{c.title}</p>
-                    <p className="text-gray-400 text-xs font-semibold">
+                    <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                      {c.title}
+                    </p>
+                    <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
                       {c.tenantId?.userId?.name ?? 'N/A'} | {formatDate(c.createdAt)}
                     </p>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border-2 px-2.5 py-0.5 text-xs font-black ${getBrutalistStatusClass(c.status)}`}
-                  >
-                    {c.status.replace(/_/g, ' ')}
-                  </span>
+                  <StatusBadge
+                    variant={statusToVariant(c.status)}
+                    label={c.status.replace(/_/g, ' ')}
+                  />
                 </div>
               ))}
             </div>
           )}
-        </section>
+        </motion.section>
 
         {/* Recent Enquiries */}
-        <section className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 mb-4">Recent Enquiries</h3>
+        <motion.section
+          variants={fadeScaleIn}
+          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
+        >
+          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">
+            Recent Enquiries
+          </h3>
           {stats.recent.enquiries.length === 0 ? (
-            <p className="text-gray-400 py-4 text-center text-sm font-semibold">No recent enquiries</p>
+            <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              No recent enquiries
+            </p>
           ) : (
             <div className="space-y-3">
               {stats.recent.enquiries.map((e) => (
                 <div
                   key={e._id}
-                  className="flex items-center justify-between border-b-2 border-gray-200 py-2 last:border-b-0"
+                  className="flex items-center justify-between border-b border-b-[color:var(--color-surface-200)] py-2.5 last:border-b-0"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-gray-800 truncate text-sm font-bold">{e.name}</p>
-                    <p className="text-gray-400 text-xs font-semibold">
+                    <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                      {e.name}
+                    </p>
+                    <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
                       {e.phone} | {formatDate(e.createdAt)}
                     </p>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border-2 px-2.5 py-0.5 text-xs font-black ${getBrutalistStatusClass(e.status)}`}
-                  >
-                    {e.status.replace(/_/g, ' ')}
-                  </span>
+                  <StatusBadge
+                    variant={statusToVariant(e.status)}
+                    label={e.status.replace(/_/g, ' ')}
+                  />
                 </div>
               ))}
             </div>
           )}
-        </section>
+        </motion.section>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,13 +1,13 @@
 /* ═════════════════════════════════════════════════════════
-   SAAS / ENTERPRISE THEME v2 (Light & Dark)
-   Design ref: Linear, Vercel, Stripe (2026 modern SaaS)
-   Philosophy: Professional, clean, refined. Subtle polish
-              without decoration. Speed & clarity first.
+   SAAS / ENTERPRISE THEME v3 (Light & Dark)
+   Design ref: Linear, Vercel, Stripe, Notion (2026 modern SaaS)
+   Philosophy: Calm, confident, polished. Speed & clarity
+              without decoration. Every element earns its place.
    ═════════════════════════════════════════════════════════ */
 
 /* ── SaaS Light ─────────────────────────────────────────── */
 [data-theme='saas']:not([data-mode='dark']) {
-  /* Brand — Vibrant Indigo (Linear-inspired energy) */
+  /* Brand — Indigo 500 (Linear/Vercel energy, not overly saturated) */
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
   --color-brand-200: #c7d2fe;
@@ -20,7 +20,7 @@
   --color-brand-900: #312e81;
   --color-brand-950: #1e1b4b;
 
-  /* Semantic colors — Full scales for all StatusBadge variants and DataTable row colors */
+  /* Semantic — Full scales */
   --color-success-50: #ecfdf5;
   --color-success-100: #dcfce7;
   --color-success-200: #bbf7d0;
@@ -52,7 +52,7 @@
   --color-danger-800: #991b1b;
   --color-danger-900: #7f1d1d;
 
-  /* Surface — Warm-neutral modern gray (Stripe/Vercel influence) */
+  /* Surface — Neutral zinc, warm enough to feel considered */
   --color-surface-50: #fafafa;
   --color-surface-100: #f4f4f5;
   --color-surface-200: #e4e4e7;
@@ -65,49 +65,121 @@
   --color-surface-900: #18181b;
   --color-surface-950: #09090b;
 
-  /* Borders — Refined, slightly softer */
+  /* Borders — Crisp but not harsh */
   --bw-default: 1px;
   --bw-strong: 1.5px;
   --border-color: #e4e4e7;
 
-  /* Radii — Modern SaaS (slightly more open than legacy 4px) */
+  /* ── Refined Radii (Linear 2026 scale) ────────────────── */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
+  --radius-2xl: 20px;
   --radius-full: 9999px;
 
-  /* Shadows — Layered depth with brand tint (Linear-style) */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(99, 102, 241, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
+  /* ── Refined Shadows (layered depth with brand tint) ──── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.12), 0 6px 24px rgba(0, 0, 0, 0.06);
 
-  /* Typography — Inter system stack (Vercel-grade) */
-  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
-  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  /* Component-specific shadows (backwards compat + fine-tuned) */
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: 0 4px 16px rgba(99, 102, 241, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-button: var(--shadow-xs);
+  --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  /* ── Typography Scale (Linear-inspired) ───────────────── */
+  --font-display: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
-  /* Transition — Smooth, polished micro-interactions */
-  --transition-duration: 150ms;
-  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Font sizes — rational scale */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.8125rem;  /* 13px — slightly larger for readability */
+  --text-base: 0.9375rem;/* 15px */
+  --text-lg: 1.0625rem;  /* 17px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
 
-  /* Layout — Modern proportions */
+  /* Letter spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* Transition — polished micro-interactions */
+  --transition-duration: 150ms;
+  --transition-duration-slow: 250ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layout */
   --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
   --header-height: 56px;
 
-  /* Behaviors — Subtle polish, never distracting */
+  /* ── Behaviors — Subtle, never distracting ────────────── */
   --hover-lift: translateY(-1px);
   --active-press-scale: 0.98;
   --active-press-x: 0px;
   --active-press-y: 1px;
+
+  /* ── Glass Morphism Tokens ────────────────────────────── */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-border: rgba(0, 0, 0, 0.06);
+
+  /* ── Tooltip Tokens ───────────────────────────────────── */
+  --tooltip-bg: var(--color-surface-900);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* ── Cross-cutting tokens ─────────────────────────────── */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --color-text-inverted: var(--color-surface-50);
+
+  --shimmer-base: var(--color-surface-200);
+  --shimmer-shine: var(--color-surface-100);
+
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  --disabled-opacity: 0.5;
+  --disabled-bg: var(--color-surface-200);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 }
 
-/* ── SaaS Dark (Linear/Vercel-inspired deep mode) ───── */
+/* ── SaaS Dark (Linear/Vercel-inspired deep mode) ───────── */
 [data-theme='saas'][data-mode='dark'] {
-  /* Surface — Deep zinc/neutral dark (Linear-grade contrast) */
+  /* Surface — True dark (not washed out) */
   --color-surface-50: #09090b;
   --color-surface-100: #18181b;
   --color-surface-200: #27272a;
@@ -120,7 +192,7 @@
   --color-surface-900: #f4f4f5;
   --color-surface-950: #fafafa;
 
-  /* Semantic colors — Full scale for StatusBadge, DataTable rows, alerts */
+  /* Semantic — Dark-adjusted scales */
   --color-success-50: #022c22;
   --color-success-100: #022c22;
   --color-success-200: #03582f;
@@ -152,27 +224,51 @@
   --color-danger-800: #fecaca;
   --color-danger-900: #fee2e2;
 
-  /* Border — Crisp, higher contrast on dark */
+  /* Border — Subtle, not invisible */
   --bw-default: 1px;
   --bw-strong: 1.5px;
-  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.08);
 
-  /* Shadows — Deeper, more atmospheric */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
-  --shadow-card-hover: 0 4px 16px rgba(99, 102, 241, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.3);
+  /* Shadows — Deeper, atmospheric */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: 0 4px 16px rgba(99, 102, 241, 0.15), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-button: var(--shadow-xs);
   --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-tooltip: 0 4px 16px rgba(0, 0, 0, 0.5);
 
-  /* Cross-cutting dark tokens */
+  /* Glass — dark mode glass */
+  --glass-bg: rgba(24, 24, 27, 0.72);
+  --glass-bg-strong: rgba(24, 24, 27, 0.88);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-border: rgba(255, 255, 255, 0.06);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-800);
+  --tooltip-text: var(--color-surface-50);
+
+  /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-400);
+  --color-text-inverted: var(--color-surface-950);
+
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
+
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
-  --disabled-opacity: 0.5;
+  --focus-ring-offset: 2px;
+
+  --disabled-opacity: 0.4;
   --disabled-bg: var(--color-surface-300);
 }

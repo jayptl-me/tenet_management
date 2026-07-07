@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Building, Hash, DoorOpen, Pencil, MapPin } from 'lucide-react';
+import { ArrowLeft, Building, Hash, DoorOpen, Pencil, MapPin, Loader2, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface FloorDetail {
   _id: string;
@@ -60,93 +64,63 @@ export default function FloorDetailPage() {
       });
   }, [id]);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
+  // ── Error / Not Found State ──────────────────
   if (error || !floor) {
     return (
-      <div className="space-y-6">
-        <button
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-bold text-gray-700 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm">Back</span>
-        </button>
-        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
-          {error || 'Floor not found'}
+      <div className="space-y-4">
+        <Button variant="outline" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Button>
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Floor not found'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-bold text-gray-700 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-          >
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Button>
           <div>
-            <h2 className="font-black text-2xl text-gray-900 tracking-tight">
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
               {floor.label}
             </h2>
-            <p className="text-gray-500 text-sm">Floor ID: {floor._id}</p>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">Floor ID: {floor._id}</p>
           </div>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2.5 font-black text-gray-900 shadow-[4px_4px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all text-sm">
+        <Button variant="outline" onClick={() => router.push(`/floors/${floor._id}/edit`)}>
           <Pencil className="h-4 w-4" />
           Edit Floor
-        </button>
-      </div>
+        </Button>
+      </motion.div>
 
-      {/* Stat Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <div className="flex items-center gap-2 mb-2">
-            <Building className="h-5 w-5 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Label</p>
-          </div>
-          <p className="text-2xl font-black text-gray-900">{floor.label}</p>
-        </div>
+      {/* ── Stats Grid ─────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Label" value={floor.label} icon={<Building className="h-4 w-4" />} variant="default" />
+        <StatCard title="Floor Number" value={floor.floorNumber.toString()} icon={<Hash className="h-4 w-4" />} variant="default" />
+        <StatCard title="Total Rooms" value={floor.totalRooms.toString()} icon={<DoorOpen className="h-4 w-4" />} variant="default" />
+        <StatCard title="Created" value={formatDate(floor.createdAt)} icon={<MapPin className="h-4 w-4" />} variant="default" />
+      </motion.div>
 
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <div className="flex items-center gap-2 mb-2">
-            <Hash className="h-5 w-5 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Floor Number</p>
-          </div>
-          <p className="text-2xl font-black text-gray-900">{floor.floorNumber}</p>
-        </div>
-
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <div className="flex items-center gap-2 mb-2">
-            <DoorOpen className="h-5 w-5 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Total Rooms</p>
-          </div>
-          <p className="text-2xl font-black text-gray-900">{floor.totalRooms}</p>
-        </div>
-
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <div className="flex items-center gap-2 mb-2">
-            <MapPin className="h-5 w-5 text-gray-500" />
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Created</p>
-          </div>
-          <p className="text-2xl font-black text-gray-900">{formatDate(floor.createdAt)}</p>
-        </div>
-      </div>
-
-      {/* Service Health Card */}
-      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-        <h3 className="font-black text-lg text-gray-900 tracking-tight mb-4">Service Health</h3>
+      {/* ── Service Health ─────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">Service Health</h3>
         <FloorServiceGrid
           floorId={floor._id}
           floorLabel={floor.label}
@@ -156,12 +130,12 @@ export default function FloorDetailPage() {
             );
           }}
         />
-      </div>
+      </motion.div>
 
-      {/* Amenities Card */}
+      {/* ── Amenities ──────────────────────────── */}
       {floor.amenityCounts && floor.amenityCounts.length > 0 && (
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 tracking-tight mb-4">Amenities</h3>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">Amenities</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {floor.amenityCounts.map((ac: { amenityKey: string; count: number }) => {
               const label = ac.amenityKey
@@ -170,26 +144,26 @@ export default function FloorDetailPage() {
               return (
                 <div
                   key={ac.amenityKey}
-                  className="flex items-center gap-3 rounded-[var(--radius-md)] border-2 border-gray-300 bg-gray-50 p-4 shadow-[2px_2px_0px_0px_#d1d5db]"
+                  className="flex items-center gap-3 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4 shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
                 >
-                  <div className="text-2xl font-black text-gray-900">{ac.count}</div>
+                  <div className="text-2xl font-bold text-[color:var(--color-text-primary)]">{ac.count}</div>
                   <div>
-                    <p className="font-bold text-sm text-gray-800">{label}</p>
+                    <p className="text-sm font-bold text-[color:var(--color-text-primary)]">{label}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Description Card */}
+      {/* ── Description ─────────────────────────── */}
       {floor.description && (
-        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
-          <h3 className="font-black text-lg text-gray-900 tracking-tight mb-4">Description</h3>
-          <p className="text-gray-700 whitespace-pre-wrap text-sm">{floor.description}</p>
-        </div>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">Description</h3>
+          <p className="whitespace-pre-wrap text-sm text-[color:var(--color-text-secondary)]">{floor.description}</p>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
