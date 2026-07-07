@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -13,7 +14,7 @@ import { useRouter } from 'next/navigation';
 
 interface TenantRow {
   _id: string;
-  user?: { name: string; email: string; phone: string };
+  user?: { name: string; email: string; phone: string; _id: string };
   room?: { roomNumber: string };
   bedId: string;
   monthlyRent: number;
@@ -32,6 +33,8 @@ export default function TenantsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchTenants = useCallback(async () => {
     setIsLoading(true);
@@ -60,6 +63,21 @@ export default function TenantsPage() {
   useEffect(() => {
     fetchTenants();
   }, [fetchTenants]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`tenants/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchTenants();
+    } catch {
+      setError('Failed to delete tenant');
+      setDeleting(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<TenantRow>[] = [
     {
@@ -99,28 +117,29 @@ export default function TenantsPage() {
       accessor: (row) => (
         <div className="flex items-center gap-1">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/tenants/${row._id}`);
-            }}
+            onClick={(e) => { e.stopPropagation(); router.push(`/tenants/${row._id}`); }}
             className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
           >
             <Eye className="h-3 w-3" />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/tenants/${row._id}/edit`);
-            }}
+            onClick={(e) => { e.stopPropagation(); router.push(`/tenants/${row._id}/edit`); }}
             className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[120px]',
     },
   ];
 
@@ -138,34 +157,12 @@ export default function TenantsPage() {
       </div>
 
       {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
+        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{error}</div>
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          placeholder="Search by name..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-xs"
-        />
-        <Select
-          options={[
-            { value: '', label: 'All Status' },
-            { value: 'true', label: 'Active' },
-            { value: 'false', label: 'Checked Out' },
-          ]}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[180px]"
-        />
+        <Input placeholder="Search by name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="max-w-xs" />
+        <Select options={[{ value: '', label: 'All Status' }, { value: 'true', label: 'Active' }, { value: 'false', label: 'Checked Out' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[180px]" />
       </div>
 
       <DataTable
@@ -174,16 +171,16 @@ export default function TenantsPage() {
         keyExtractor={(row: TenantRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/tenants/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: (p) => setPage(p),
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
+        pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Tenant"
+        message={deleteTarget?.user?.name ? `Are you sure you want to delete "${deleteTarget.user.name}"? This action cannot be undone.` : 'Are you sure you want to delete this tenant? This action cannot be undone.'}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
