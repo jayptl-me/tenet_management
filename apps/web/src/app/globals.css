@@ -107,6 +107,7 @@
 
   /* Layout */
   --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
   --header-height: 56px;
 
   /* Behaviors */
@@ -115,11 +116,35 @@
   --active-press-x: 0px;
   --active-press-y: 1px;
 
+  /* ── Extended shadow scale ──────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.12), 0 6px 24px rgba(0, 0, 0, 0.06);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  /* ── Extended radii scale ───────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-2xl: 20px;
+
+  /* ── Transition durations ────────────────────────────────── */
+  --transition-duration-slow: 250ms;
+
+  /* ── Glass morphism tokens ──────────────────────────────── */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-border: rgba(0, 0, 0, 0.06);
+
   /* ── Cross-cutting tokens ──────────────────────────────── */
   /* Text roles — derived from surface scale */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-400);
+  --color-text-inverted: var(--color-surface-50);
 
   /* Loading / Shimmer */
   --shimmer-base: var(--color-surface-200);
@@ -128,10 +153,45 @@
   /* Focus ring */
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 
   /* Disabled */
   --disabled-opacity: 0.5;
   --disabled-bg: var(--color-surface-200);
+
+  /* ── Spacing scale ──────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Tooltip ────────────────────────────────────────────── */
+  --tooltip-bg: var(--color-surface-900);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* ── Font sizes (rational scale) ─────────────────────────── */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* ── Letter spacing ──────────────────────────────────────── */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
 }
 
 /* ═════════════════════════════════════════════════════════
