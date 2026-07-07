@@ -1,16 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ToastProvider, useGlobalToastListener } from '@/components/ui/Toast';
 
 function ToastListener() {
-  const cleanup = useGlobalToastListener();
-  useEffect(() => {
-    return () => {
-      if (cleanup) cleanup();
-    };
-  }, [cleanup]);
+  useGlobalToastListener();
   return null;
 }
 

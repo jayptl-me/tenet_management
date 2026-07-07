@@ -89,6 +89,19 @@ const verifyUtrSchema = z.strictObject({
   notes: z.string().max(500).optional(),
 });
 
+const updatePaymentSchema = z.strictObject({
+  amount: z.number().min(0.01, 'Amount must be greater than 0').optional(),
+  method: z.enum(['upi', 'cash', 'bank_transfer', 'other']).optional(),
+  type: z.enum(['rent', 'electricity', 'deposit', 'laundry', 'other']).optional(),
+  status: z.enum(['pending', 'pending_verification', 'paid', 'overdue', 'cancelled']).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+const verifyPaymentSchema = z.strictObject({
+  approved: z.boolean(),
+  notes: z.string().max(500).optional(),
+});
+
 // ── GET /payments ───────────────────────────────────────
 payments.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit, sort, order, skip } = parsePagination(c);
@@ -445,6 +458,121 @@ payments.get('/:id/receipt', authGuard, async (c) => {
 
   return c.json({ success: true, data: payment });
 });
+
+// ── GET /payments/:id ─────────────────────────────────
+payments.get('/:id', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid payment ID');
+
+  const paymentRaw = await (Payment.findById(id)
+    .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+    .populate('invoiceId')
+    .lean() as unknown);
+
+  if (!paymentRaw) return notFound(c, 'Payment');
+
+  const payment = paymentRaw as Record<string, unknown>;
+  const user = c.get('user');
+
+  if (user.role === 'tenant') {
+    const tenantInfo = payment.tenantId as Record<string, unknown> | null;
+    const tenantUserId = tenantInfo?.userId as Record<string, unknown> | null;
+    if (tenantUserId?._id?.toString() !== user.sub) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+  }
+
+  return c.json({ success: true, data: payment });
+});
+
+// ── PUT /payments/:id ──────────────────────────────────
+payments.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator('json', updatePaymentSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid payment ID');
+
+    const body = c.req.valid('json');
+    if (Object.keys(body).length === 0) return badRequest(c, 'No fields to update');
+
+    const updateData: Record<string, unknown> = {};
+    if (body.amount !== undefined) updateData.amount = body.amount;
+    if (body.method !== undefined) updateData.method = body.method;
+    if (body.type !== undefined) updateData.type = body.type;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+
+    const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
+      returnDocument: 'after',
+    }).lean() as unknown);
+    if (!paymentRaw) return notFound(c, 'Payment');
+
+    const payment = paymentRaw as Record<string, unknown>;
+    await updateInvoicePaymentStatus(String(payment.invoiceId));
+
+    logger.info({ paymentId: id, fields: Object.keys(updateData) }, 'Payment updated');
+
+    return c.json({ success: true, data: payment });
+  },
+);
+
+// ── POST /payments/:id/verify ──────────────────────────
+payments.post(
+  '/:id/verify',
+  authGuard,
+  adminOnly,
+  zValidator('json', verifyPaymentSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid payment ID');
+
+    const body = c.req.valid('json');
+    const adminId = c.get('user').sub;
+
+    const updateData: Record<string, unknown> = {
+      verifiedBy: new mongoose.Types.ObjectId(adminId),
+    };
+
+    if (body.notes) {
+      const existing = (await Payment.findById(id).lean()) as unknown as Record<
+        string,
+        unknown
+      > | null;
+      if (existing) {
+        const existingNotes = (existing.notes as string) ?? '';
+        updateData.notes = existingNotes
+          ? `${existingNotes} | Admin: ${body.notes}`
+          : `Admin: ${body.notes}`;
+      }
+    }
+
+    if (body.approved) {
+      updateData.status = 'paid';
+      updateData.paidAt = new Date();
+    } else {
+      updateData.status = 'pending';
+      updateData.utrNumber = undefined;
+    }
+
+    const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
+      returnDocument: 'after',
+    }).lean() as unknown);
+    if (!paymentRaw) return notFound(c, 'Payment');
+
+    const payment = paymentRaw as Record<string, unknown>;
+    await updateInvoicePaymentStatus(String(payment.invoiceId));
+
+    logger.info({ paymentId: id, approved: body.approved, adminId }, 'Payment verified');
+
+    return c.json({ success: true, data: payment });
+  },
+);
 
 // ── DELETE /payments/:id ────────────────────────────────
 payments.delete('/:id', authGuard, adminOnly, async (c) => {

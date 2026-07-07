@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User, Phone, Home, Calendar, Clock, FileText, CheckCircle } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 
 interface VisitorDetail {
   _id: string;
@@ -27,6 +25,51 @@ interface VisitorDetail {
   approverRelation?: string;
   notes?: string;
   createdAt: string;
+}
+
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function visitorStatusBadge(status: string) {
+  const label = status.replace(/_/g, ' ');
+
+  if (status === 'checked_in' || status === 'active' || status === 'approved') {
+    return (
+      <span className="inline-flex rounded-full border-2 border-emerald-400 bg-emerald-50 px-3 py-0.5 text-xs font-black text-emerald-700 shadow-[2px_2px_0px_0px_#a7f3d0]">
+        {label}
+      </span>
+    );
+  }
+  if (status === 'pending' || status === 'expected') {
+    return (
+      <span className="inline-flex rounded-full border-2 border-amber-300 bg-amber-50 px-3 py-0.5 text-xs font-black text-amber-700 shadow-[2px_2px_0px_0px_#fcd34d]">
+        {label}
+      </span>
+    );
+  }
+  if (status === 'checked_out' || status === 'departed' || status === 'rejected' || status === 'cancelled') {
+    return (
+      <span className="inline-flex rounded-full border-2 border-red-400 bg-red-50 px-3 py-0.5 text-xs font-black text-red-700 shadow-[2px_2px_0px_0px_#fca5a5]">
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex rounded-full border-2 border-gray-300 bg-gray-50 px-3 py-0.5 text-xs font-black text-gray-600">
+      {label}
+    </span>
+  );
 }
 
 export default function VisitorDetailPage() {
@@ -59,7 +102,7 @@ export default function VisitorDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
       </div>
     );
   }
@@ -67,103 +110,94 @@ export default function VisitorDetailPage() {
   if (error || !visitor) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-semibold text-gray-900 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        </button>
+        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
           {error || 'Visitor not found'}
         </div>
       </div>
     );
   }
 
-  const formatDate = (d?: string) =>
-    d
-      ? new Date(d).toLocaleString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '—';
-
-  const statusLabel = visitor.status.replace(/_/g, ' ');
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
+          <button
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 font-semibold text-gray-900 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back
-          </Button>
+          </button>
           <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            <h2 className="font-black text-2xl text-gray-900 tracking-tight">
               {visitor.name}
             </h2>
-            <p className="text-surface-500 text-sm">Visitor ID: {visitor._id}</p>
+            <p className="text-sm text-gray-500">Visitor ID: {visitor._id}</p>
           </div>
         </div>
-        <StatusBadge
-          variant={statusToVariant(visitor.status === 'checked_in' ? 'active' : visitor.status)}
-          label={statusLabel}
-        />
+        {visitorStatusBadge(visitor.status)}
       </div>
 
       {/* Visitor Info */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Visitor Details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="mb-4 font-black text-lg text-gray-900">
             Visitor Information
           </h3>
           <div className="space-y-4">
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Name</p>
-              <p className="text-surface-700 flex items-center gap-1 text-sm">
-                <User className="text-surface-400 h-3.5 w-3.5" />
+              <p className="text-sm font-semibold text-gray-700">Name</p>
+              <p className="flex items-center gap-1 text-sm text-gray-700">
+                <User className="h-3.5 w-3.5 text-gray-400" />
                 {visitor.name}
               </p>
             </div>
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Phone</p>
-              <p className="text-surface-700 flex items-center gap-1 text-sm">
-                <Phone className="text-surface-400 h-3.5 w-3.5" />
+              <p className="text-sm font-semibold text-gray-700">Phone</p>
+              <p className="flex items-center gap-1 text-sm text-gray-700">
+                <Phone className="h-3.5 w-3.5 text-gray-400" />
                 {visitor.phone}
               </p>
             </div>
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Purpose</p>
-              <p className="text-surface-700 text-sm capitalize">{visitor.purpose}</p>
+              <p className="text-sm font-semibold text-gray-700">Purpose</p>
+              <p className="text-sm capitalize text-gray-700">{visitor.purpose}</p>
             </div>
           </div>
         </div>
 
         {/* Tenant Info */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Visiting</h3>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="mb-4 font-black text-lg text-gray-900">Visiting</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Tenant</p>
-              <p className="text-surface-700 flex items-center gap-1 text-sm">
-                <User className="text-surface-400 h-3.5 w-3.5" />
+              <p className="text-sm font-semibold text-gray-700">Tenant</p>
+              <p className="flex items-center gap-1 text-sm text-gray-700">
+                <User className="h-3.5 w-3.5 text-gray-400" />
                 {visitor.tenant?.user?.name ?? 'N/A'}
               </p>
             </div>
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Room</p>
-              <p className="text-surface-700 flex items-center gap-1 text-sm">
-                <Home className="text-surface-400 h-3.5 w-3.5" />
+              <p className="text-sm font-semibold text-gray-700">Room</p>
+              <p className="flex items-center gap-1 text-sm text-gray-700">
+                <Home className="h-3.5 w-3.5 text-gray-400" />
                 {visitor.tenant?.room?.roomNumber ?? 'N/A'}
               </p>
             </div>
             {visitor.approverName && (
               <div>
-                <p className="text-surface-800 font-display text-sm font-semibold">Approved By</p>
-                <p className="text-surface-700 flex items-center gap-1 text-sm">
-                  <CheckCircle className="text-surface-400 h-3.5 w-3.5" />
+                <p className="text-sm font-semibold text-gray-700">Approved By</p>
+                <p className="flex items-center gap-1 text-sm text-gray-700">
+                  <CheckCircle className="h-3.5 w-3.5 text-gray-400" />
                   {visitor.approverName}
                   {visitor.approverRelation && ` (${visitor.approverRelation})`}
                 </p>
@@ -174,46 +208,43 @@ export default function VisitorDetailPage() {
       </div>
 
       {/* Timeline */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Timeline</h3>
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="mb-4 font-black text-lg text-gray-900">Timeline</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Expected Arrival</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Calendar className="text-surface-400 h-3.5 w-3.5" />
-              {formatDate(visitor.expectedArrival)}
+            <p className="text-sm font-semibold text-gray-700">Expected Arrival</p>
+            <p className="flex items-center gap-1 text-sm text-gray-700">
+              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+              {formatDateTime(visitor.expectedArrival)}
             </p>
           </div>
           <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Check In</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Clock className="text-surface-400 h-3.5 w-3.5" />
-              {formatDate(visitor.checkIn || visitor.actualArrival)}
+            <p className="text-sm font-semibold text-gray-700">Check In</p>
+            <p className="flex items-center gap-1 text-sm text-gray-700">
+              <Clock className="h-3.5 w-3.5 text-gray-400" />
+              {formatDateTime(visitor.checkIn || visitor.actualArrival)}
             </p>
           </div>
           <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Check Out</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Clock className="text-surface-400 h-3.5 w-3.5" />
-              {formatDate(visitor.checkOut || visitor.departure)}
+            <p className="text-sm font-semibold text-gray-700">Check Out</p>
+            <p className="flex items-center gap-1 text-sm text-gray-700">
+              <Clock className="h-3.5 w-3.5 text-gray-400" />
+              {formatDateTime(visitor.checkOut || visitor.departure)}
             </p>
           </div>
           <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Status</p>
-            <StatusBadge
-              variant={statusToVariant(visitor.status === 'checked_in' ? 'active' : visitor.status)}
-              label={statusLabel}
-            />
+            <p className="text-sm font-semibold text-gray-700">Status</p>
+            <div className="mt-1">{visitorStatusBadge(visitor.status)}</div>
           </div>
         </div>
       </div>
 
       {/* Notes */}
       {visitor.notes && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Notes</h3>
-          <p className="text-surface-700 flex items-start gap-1 text-sm">
-            <FileText className="text-surface-400 mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="mb-4 font-black text-lg text-gray-900">Notes</h3>
+          <p className="flex items-start gap-1 text-sm text-gray-700">
+            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
             <span className="whitespace-pre-wrap">{visitor.notes}</span>
           </p>
         </div>

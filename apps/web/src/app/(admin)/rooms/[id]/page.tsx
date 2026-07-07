@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Building, Users, CreditCard } from 'lucide-react';
+import {
+  ArrowLeft,
+  Home,
+  Building,
+  Users,
+  Banknote,
+  Bed,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
-import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
-import type { IAppConfig } from '@pg/types';
 
 interface BedDetail {
   bedId: string;
@@ -31,9 +37,17 @@ interface RoomDetail {
   isActive: boolean;
   photos?: string[];
   beds?: BedDetail[];
-  occupancyCount?: number;
   roomAmenities?: RoomAmenityStatusDoc[];
   createdAt: string;
+}
+
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '₹0';
+  try {
+    return `₹${amount.toLocaleString('en-IN')}`;
+  } catch {
+    return `₹${amount}`;
+  }
 }
 
 export default function RoomDetailPage() {
@@ -52,21 +66,15 @@ export default function RoomDetailPage() {
     api
       .get(`rooms/${id}`)
       .json<{ success: boolean; data: RoomDetail }>()
-      .then((res) => {
-        setRoom(res.data);
-      })
-      .catch(() => {
-        setError('Failed to load room details');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .then((res) => setRoom(res.data))
+      .catch(() => setError('Failed to load room details'))
+      .finally(() => setIsLoading(false));
   }, [id]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="border-t-brand-600 h-10 w-10 animate-spin rounded-full border-[3px] border-gray-200" />
       </div>
     );
   }
@@ -74,159 +82,179 @@ export default function RoomDetailPage() {
   if (error || !room) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <button
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2 text-sm font-bold shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
           {error || 'Room not found'}
         </div>
       </div>
     );
   }
 
-  const statusLabel = room.isActive ? 'Active' : 'Inactive';
   const totalBeds = room.beds?.length ?? 0;
   const occupiedBeds = room.beds?.filter((b) => b.isOccupied).length ?? 0;
   const availableBeds = totalBeds - occupiedBeds;
+  const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+          <button
+            onClick={() => router.back()}
+            className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+          >
+            <ArrowLeft className="h-4 w-4 text-gray-700" />
+          </button>
           <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            <h2 className="font-black text-2xl text-gray-900 tracking-tight">
               Room {room.roomNumber}
             </h2>
-            <p className="text-surface-500 text-sm">Room ID: {room._id}</p>
+            <p className="text-gray-500 text-sm mt-0.5">
+              {room.floor?.label ?? 'No floor'} • {room.sharingType} Sharing
+            </p>
           </div>
         </div>
-        <StatusBadge variant={statusToVariant(statusLabel)} label={statusLabel} />
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-2 px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0px_0px_currentColor] ${room.isActive ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-emerald-400' : 'border-red-300 bg-red-50 text-red-600 shadow-red-300'}`}>
+            <span className={`inline-block h-2 w-2 rounded-full ${room.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
+            {room.isActive ? 'Active' : 'Inactive'}
+          </span>
+          <button
+            onClick={() => router.push(`/rooms/${id}/edit`)}
+            className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-gray-600 hover:text-gray-900"
+            title="Edit room"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Room Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Information</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Room Number</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Home className="text-surface-400 h-3.5 w-3.5" />
-              {room.roomNumber}
-            </p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">
+            <Banknote className="h-3.5 w-3.5" /> Monthly Rent
           </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Floor</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Building className="text-surface-400 h-3.5 w-3.5" />
-              {room.floor?.label ?? 'N/A'}
-              {room.floor?.floorNumber != null && ` (#${room.floor.floorNumber})`}
-            </p>
+          <p className="text-2xl font-black text-gray-900">{formatCurrency(room.monthlyRent)}</p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">
+            <Bed className="h-3.5 w-3.5" /> Total Beds
           </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Sharing Type</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Users className="text-surface-400 h-3.5 w-3.5" />
-              {room.sharingType} Sharing
-            </p>
+          <p className="text-2xl font-black text-gray-900">{totalBeds}</p>
+        </div>
+        <div className={`rounded-[var(--radius-lg)] border-2 p-5 shadow-[4px_4px_0px_0px_currentColor] ${availableBeds > 0 ? 'border-emerald-400 bg-emerald-50 shadow-emerald-400' : 'border-orange-400 bg-orange-50 shadow-orange-400'}`}>
+          <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-2 ${availableBeds > 0 ? 'text-emerald-700' : 'text-orange-700'}`}>
+            <Users className="h-3.5 w-3.5" /> Available
           </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Monthly Rent</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <CreditCard className="text-surface-400 h-3.5 w-3.5" />₹
-              {room.monthlyRent?.toLocaleString()}
-            </p>
+          <p className={`text-2xl font-black ${availableBeds > 0 ? 'text-emerald-800' : 'text-orange-800'}`}>
+            {availableBeds}
+          </p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-blue-400 bg-blue-50 p-5 shadow-[4px_4px_0px_0px_#60a5fa]">
+          <div className="flex items-center gap-2 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+            <Home className="h-3.5 w-3.5" /> Occupancy
           </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Occupancy</p>
-            <p className="text-surface-700 text-sm">
-              {occupiedBeds}/{totalBeds} beds occupied ({availableBeds} available)
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Created</p>
-            <p className="text-surface-700 text-sm">
-              {new Date(room.createdAt).toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </p>
+          <p className="text-2xl font-black text-blue-800">{occupancyPct}%</p>
+          <div className="mt-2 h-2 w-full rounded-full bg-blue-200 overflow-hidden border border-blue-300">
+            <div
+              className="h-full rounded-full bg-blue-500 transition-all"
+              style={{ width: `${occupancyPct}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Beds Table Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Beds</h3>
+      {/* Beds Section */}
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+          <Bed className="h-5 w-5 text-amber-500" />
+          Bed Allocations
+        </h3>
         {room.beds && room.beds.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-[color:var(--border-color)]">
-                  <th className="text-surface-800 font-display px-3 py-2 text-left text-xs font-semibold">
-                    Bed ID
-                  </th>
-                  <th className="text-surface-800 font-display px-3 py-2 text-left text-xs font-semibold">
-                    Status
-                  </th>
-                  <th className="text-surface-800 font-display px-3 py-2 text-left text-xs font-semibold">
-                    Tenant
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {room.beds.map((bed) => (
-                  <tr key={bed.bedId} className="border-[color:var(--color-surface-200)] border-b last:border-b-0">
-                    <td className="text-surface-900 px-3 py-2 font-semibold">{bed.bedId}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge
-                        variant={statusToVariant(bed.isOccupied ? 'occupied' : 'available')}
-                        label={bed.isOccupied ? 'Occupied' : 'Available'}
-                      />
-                    </td>
-                    <td className="text-surface-700 px-3 py-2">
-                      {bed.isOccupied ? (bed.tenantName ?? 'Occupied') : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {room.beds.map((bed) => (
+              <div
+                key={bed.bedId}
+                className={`rounded-[var(--radius-md)] border-2 p-4 transition-all ${
+                  bed.isOccupied
+                    ? 'border-gray-300 bg-gray-50 shadow-[2px_2px_0px_0px_#d1d5db]'
+                    : 'border-emerald-300 bg-emerald-50 shadow-[2px_2px_0px_0px_#6ee7b7]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-black text-gray-900 text-sm">{bed.bedId}</span>
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold border ${
+                      bed.isOccupied
+                        ? 'border-amber-300 bg-amber-100 text-amber-700'
+                        : 'border-emerald-300 bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {bed.isOccupied ? 'Occupied' : 'Available'}
+                  </span>
+                </div>
+                {bed.isOccupied && (
+                  <p className="text-gray-600 text-xs font-semibold truncate">
+                    {bed.tenantName ?? 'Occupied'}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-surface-500 text-sm">No bed information available</p>
+          <p className="text-gray-400 font-semibold text-sm">No bed information available</p>
         )}
       </div>
 
-      {/* Room Amenities Status */}
+      {/* Floor Info */}
+      {room.floor && (
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-3 flex items-center gap-2">
+            <Building className="h-5 w-5 text-blue-500" />
+            Floor Details
+          </h3>
+          <div className="flex gap-4">
+            <div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Label</p>
+              <p className="text-gray-900 font-extrabold text-lg">{room.floor.label}</p>
+            </div>
+            {room.floor.floorNumber != null && (
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Floor #</p>
+                <p className="text-gray-900 font-extrabold text-lg">{room.floor.floorNumber}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Room Amenities */}
       {room.roomAmenities && room.roomAmenities.length > 0 && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Amenities</h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4">Room Amenities Status</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {room.roomAmenities.map((a) => {
-              const statusVariant =
-                a.status === 'operational' ? 'success' :
-                a.status === 'degraded' ? 'warning' : 'danger';
-              const statusLabel =
-                a.status === 'operational' ? 'Operational' :
-                a.status === 'degraded' ? 'Degraded' : 'Down';
-              const label = a.amenityKey
-                .replace(/_/g, ' ')
-                .replace(/\b\w/g, (c) => c.toUpperCase());
+              const colorMap: Record<string, string> = {
+                operational: 'border-emerald-300 bg-emerald-50 text-emerald-700 shadow-emerald-300',
+                degraded: 'border-amber-300 bg-amber-50 text-amber-700 shadow-amber-300',
+                down: 'border-red-300 bg-red-50 text-red-700 shadow-red-300',
+              };
               return (
                 <div
                   key={a.amenityKey}
-                  className="bg-surface-50 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-3"
+                  className={`rounded-[var(--radius-md)] border-2 p-3 shadow-[2px_2px_0px_0px_currentColor] ${colorMap[a.status] ?? colorMap.operational}`}
                 >
-                  <p className="text-surface-800 font-display text-sm font-semibold">{label}</p>
-                  <div className="mt-1">
-                    <StatusBadge variant={statusVariant as 'success' | 'warning' | 'danger'} label={statusLabel} />
-                  </div>
+                  <p className="font-black text-sm capitalize">
+                    {a.amenityKey.replace(/_/g, ' ')}
+                  </p>
+                  <p className="text-xs font-bold uppercase mt-0.5 opacity-75">{a.status}</p>
                 </div>
               );
             })}
@@ -234,37 +262,38 @@ export default function RoomDetailPage() {
         </div>
       )}
 
-      {/* Description Card */}
+      {/* Description */}
       {room.description && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Description</h3>
-          <p className="text-surface-700 whitespace-pre-wrap text-sm">{room.description}</p>
+        <div className="rounded-[var(--radius-lg)] border-2 border-amber-300 bg-amber-50 p-5 shadow-[4px_4px_0px_0px_#fcd34d]">
+          <p className="text-amber-700 text-xs font-bold uppercase tracking-wider mb-1">Notes</p>
+          <p className="text-amber-900 font-semibold">{room.description}</p>
         </div>
       )}
 
-      {/* Photos Card */}
+      {/* Photos */}
       {room.photos && room.photos.length > 0 && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Photos</h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4">Photos</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {room.photos.map((photo, index) => (
               <a
                 key={index}
                 href={photo}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-surface-100 block aspect-square overflow-hidden rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] ring-[color:var(--color-brand-500)] transition-shadow hover:ring-[length:var(--bw-default)]"
+                className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border-2 border-gray-300 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
               >
                 <img
                   src={photo}
                   alt={`Room ${room.roomNumber} photo ${index + 1}`}
                   className="h-full w-full object-cover"
                   onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    target.parentElement!.classList.add('flex', 'items-center', 'justify-center');
-                    target.parentElement!.innerHTML =
-                      '<span class="text-surface-400"><svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>';
+                    const t = e.currentTarget;
+                    t.style.display = 'none';
+                    if (t.parentElement) {
+                      t.parentElement.classList.add('flex', 'items-center', 'justify-center', 'bg-gray-100');
+                      t.parentElement.innerHTML = '<svg class="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                    }
                   }}
                 />
               </a>

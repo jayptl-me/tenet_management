@@ -55,6 +55,60 @@ const STATUS_COLORS: Record<string, { dot: string; bg: string }> = {
   },
 };
 
+// ── Module-level caches (shared across ALL instances) ──
+let cachedDefinitions: AmenityDefinition[] | null = null;
+let definitionsPromise: Promise<AmenityDefinition[]> | null = null;
+const floorServicesCache = new Map<string, ServiceInfo[]>();
+const floorServicesPromises = new Map<string, Promise<ServiceInfo[]>>();
+
+function fetchDefinitionsOnce(): Promise<AmenityDefinition[]> {
+  if (cachedDefinitions) return Promise.resolve(cachedDefinitions);
+  if (definitionsPromise) return definitionsPromise;
+
+  definitionsPromise = api
+    .get('app-config')
+    .json<{ success: boolean; data: { amenityDefinitions?: AmenityDefinition[] } }>()
+    .then((res) => {
+      cachedDefinitions = res.data?.amenityDefinitions ?? [];
+      return cachedDefinitions;
+    })
+    .catch(() => {
+      cachedDefinitions = [];
+      return cachedDefinitions;
+    });
+
+  return definitionsPromise;
+}
+
+function fetchFloorServicesOnce(floorId: string): Promise<ServiceInfo[]> {
+  const cached = floorServicesCache.get(floorId);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = floorServicesPromises.get(floorId);
+  if (pending) return pending;
+
+  const params = new URLSearchParams({ floorId, limit: '50' });
+  const promise = api
+    .get(`services?${params}`)
+    .json<{ success: boolean; data: ServiceInfo[] }>()
+    .then((res) => {
+      const data = res.data ?? [];
+      floorServicesCache.set(floorId, data);
+      return data;
+    })
+    .catch(() => {
+      const data: ServiceInfo[] = [];
+      floorServicesCache.set(floorId, data);
+      return data;
+    })
+    .finally(() => {
+      floorServicesPromises.delete(floorId);
+    });
+
+  floorServicesPromises.set(floorId, promise);
+  return promise;
+}
+
 // ── Types ──
 interface ServiceInfo {
   serviceType: string;
@@ -79,20 +133,12 @@ export function ServiceStatusIndicator({
   const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch amenity definitions
+  // Fetch amenity definitions (shared cache — only one request across all instances)
   useEffect(() => {
-    api
-      .get('app-config')
-      .json<{ success: boolean; data: { amenityDefinitions?: AmenityDefinition[] } }>()
-      .then((res) => {
-        setDefinitions(res.data?.amenityDefinitions ?? []);
-      })
-      .catch(() => {
-        // Silently fail
-      });
+    fetchDefinitionsOnce().then(setDefinitions);
   }, []);
 
-  // Fetch floor services
+  // Fetch floor services (shared cache per floorId)
   useEffect(() => {
     if (!floorId) {
       setLoading(false);
@@ -100,17 +146,8 @@ export function ServiceStatusIndicator({
     }
 
     setLoading(true);
-
-    const params = new URLSearchParams({ floorId, limit: '50' });
-    api
-      .get(`services?${params}`)
-      .json<{ success: boolean; data: ServiceInfo[] }>()
-      .then((res) => {
-        setServices(res.data ?? []);
-      })
-      .catch(() => {
-        // Silently fail
-      })
+    fetchFloorServicesOnce(floorId)
+      .then(setServices)
       .finally(() => setLoading(false));
   }, [floorId]);
 

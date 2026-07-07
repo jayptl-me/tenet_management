@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from 'react';
@@ -64,7 +65,12 @@ const BG_COLORS: Record<ToastType, string> = {
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -84,7 +90,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      {typeof window !== 'undefined' &&
+      {mounted &&
         createPortal(
           <div
             className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col-reverse gap-2"
@@ -142,15 +148,17 @@ export function toastError(message: string) {
 export function useGlobalToastListener() {
   const { addToast } = useToast();
 
-  if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  const handler = (e: Event) => {
-    const detail = (e as CustomEvent).detail as { type: ToastType; message: string };
-    if (detail?.type && detail?.message) {
-      addToast(detail.type, detail.message);
-    }
-  };
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { type: ToastType; message: string };
+      if (detail?.type && detail?.message) {
+        addToast(detail.type, detail.message);
+      }
+    };
 
-  window.addEventListener('pg-toast', handler);
-  return () => window.removeEventListener('pg-toast', handler);
+    window.addEventListener('pg-toast', handler);
+    return () => window.removeEventListener('pg-toast', handler);
+  }, [addToast]);
 }
