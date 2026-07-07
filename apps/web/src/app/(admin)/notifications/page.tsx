@@ -1,7 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, Search, Send, Users, Building2, DoorOpen, User, Filter } from 'lucide-react';
+import {
+  Bell,
+  Search,
+  Send,
+  Users,
+  Building2,
+  DoorOpen,
+  User,
+  Filter,
+  Megaphone,
+  AlertTriangle,
+  CreditCard,
+  Check,
+  MessageSquare,
+  Wrench,
+  Zap,
+  Waves,
+  Utensils,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import type { INotification, INotificationType } from '@pg/types';
@@ -26,16 +44,28 @@ const emptyForm: NotificationForm = {
   sendPush: true,
 };
 
-const typeOptions: { value: INotificationType; label: string; icon: string }[] = [
-  { value: 'announcement', label: 'Announcement', icon: '📢' },
-  { value: 'emergency', label: 'Emergency', icon: '🚨' },
-  { value: 'payment_reminder', label: 'Payment Reminder', icon: '💰' },
-  { value: 'payment_verified', label: 'Payment Verified', icon: '✅' },
-  { value: 'complaint_update', label: 'Complaint Update', icon: '📋' },
-  { value: 'service_update', label: 'Service Update', icon: '🔧' },
-  { value: 'electricity_bill', label: 'Electricity Bill', icon: '⚡' },
-  { value: 'welcome', label: 'Welcome', icon: '👋' },
-  { value: 'meal_feedback', label: 'Meal Feedback', icon: '🍽️' },
+const typeIconsMap: Record<INotificationType, React.ReactNode> = {
+  announcement: <Megaphone className="h-4 w-4" />,
+  emergency: <AlertTriangle className="h-4 w-4 text-danger-500" />,
+  payment_reminder: <CreditCard className="h-4 w-4 text-warning-500" />,
+  payment_verified: <Check className="h-4 w-4 text-success-500" />,
+  complaint_update: <MessageSquare className="h-4 w-4" />,
+  service_update: <Wrench className="h-4 w-4" />,
+  electricity_bill: <Zap className="h-4 w-4" />,
+  welcome: <Waves className="h-4 w-4" />,
+  meal_feedback: <Utensils className="h-4 w-4" />,
+};
+
+const typeOptions: { value: INotificationType; label: string }[] = [
+  { value: 'announcement', label: 'Announcement' },
+  { value: 'emergency', label: 'Emergency' },
+  { value: 'payment_reminder', label: 'Payment Reminder' },
+  { value: 'payment_verified', label: 'Payment Verified' },
+  { value: 'complaint_update', label: 'Complaint Update' },
+  { value: 'service_update', label: 'Service Update' },
+  { value: 'electricity_bill', label: 'Electricity Bill' },
+  { value: 'welcome', label: 'Welcome' },
+  { value: 'meal_feedback', label: 'Meal Feedback' },
 ];
 
 const typeColors: Record<string, string> = {
@@ -228,7 +258,7 @@ export default function NotificationsPage() {
                         : 'text-surface-600 hover:bg-surface-50 bg-white'
                     }`}
                   >
-                    <span>{opt.icon}</span>
+                    {typeIconsMap[opt.value]}
                     {opt.label}
                   </button>
                 ))}
@@ -296,7 +326,7 @@ export default function NotificationsPage() {
                 </>
               ) : sendSuccess ? (
                 <>
-                  <span>✅</span>
+                  <Check className="h-4 w-4 text-success-500" />
                   Sent successfully!
                 </>
               ) : (
@@ -327,7 +357,7 @@ export default function NotificationsPage() {
               <option value="">All Types</option>
               {typeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.icon} {opt.label}
+                  {opt.label}
                 </option>
               ))}
             </select>
@@ -351,8 +381,8 @@ export default function NotificationsPage() {
             <div className="divide-surface-100 divide-y">
               {notifications.map((notif) => (
                 <div key={notif.id} className="hover:bg-surface-50 flex items-start gap-4 p-4">
-                  <span className="mt-0.5 text-xl">
-                    {typeOptions.find((t) => t.value === notif.type)?.icon ?? '🔔'}
+                  <span className="mt-0.5 flex-shrink-0">
+                    {typeIconsMap[notif.type as INotificationType] ?? <Bell className="h-4 w-4 text-surface-400" />}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import type { IAppConfigPublic } from '@pg/types';
 
 export const DEFAULT_CONFIG: Partial<IAppConfigPublic> = {
-  pgName: 'Tenet PG',
+  pgName: 'Apex PG',
   tagline: 'Your home, your space.',
   amenities: [
     'High-Speed WiFi',

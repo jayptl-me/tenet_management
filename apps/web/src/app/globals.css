@@ -245,12 +245,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Theme-Compatible Utilities (replaces .shadow-brutal, .shadow-brutal-sm, .border-3) ── */
-/* Components that used .shadow-brutal should use shadow-[var(--shadow-card)]              */
-/* Components that used .shadow-brutal-sm should use shadow-[var(--shadow-button)]         */
-/* Components that used .border-3 should use border-[length:var(--bw-strong)]              */
-/* These old classes are kept temporarily for backward compatibility during migration.     */
-/* They will be removed once all components are tokenized.                                  */
+/* ── Theme-Compatible Utilities ───────────────────────────── */
 .shadow-brutal {
   box-shadow: var(--shadow-card);
 }
@@ -259,4 +254,48 @@ body {
 }
 .border-3 {
   border-width: var(--bw-strong);
+}
+
+/* ── Theme-Aware Raw Elements ─────────────────────────────── */
+/* These apply theme tokens to native HTML elements not covered by components */
+
+/* Checkboxes */
+input[type='checkbox'] {
+  accent-color: var(--color-brand-500);
+  border-width: var(--bw-default) !important;
+  border-color: var(--border-color) !important;
+  border-style: solid !important;
+}
+
+/* Radio buttons */
+input[type='radio'] {
+  accent-color: var(--color-brand-500);
+  border-width: var(--bw-default) !important;
+  border-color: var(--border-color) !important;
+  border-style: solid !important;
+}
+
+/* Native <select> elements (not using Select component) */
+select:not([class*="rounded-"]):not([class*="border-"]) {
+  border-width: var(--bw-default);
+  border-color: var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+}
+
+/* Textarea focus ring */
+textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 var(--bw-default) var(--color-brand-500);
+}
+
+/* Range inputs */
+input[type='range'] {
+  accent-color: var(--color-brand-500);
+}
+
+/* Progress bars */
+progress {
+  accent-color: var(--color-brand-500);
 }

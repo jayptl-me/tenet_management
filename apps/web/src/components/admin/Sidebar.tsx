@@ -58,19 +58,19 @@ const navItems: NavItem[] = [
     href: '/guardians',
     label: 'Guardians',
     icon: <ShieldCheck className="h-5 w-5" />,
-    featureFlag: 'guardianManagement',
+    featureFlag: 'guardianPortalEnabled',
   },
   {
     href: '/assets',
     label: 'Assets',
     icon: <Package className="h-5 w-5" />,
-    featureFlag: 'assetManagement',
+    // Assets are always visible (no feature flag needed)
   },
   {
     href: '/leaves',
     label: 'Leaves',
     icon: <CalendarClock className="h-5 w-5" />,
-    featureFlag: 'leaveManagement',
+    featureFlag: 'attendanceEnabled',
   },
   {
     href: '/attendance',
@@ -96,7 +96,7 @@ export function Sidebar() {
       <div className="flex items-center justify-between border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-5 py-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="font-display text-surface-900 text-xl font-extrabold tracking-tight">
-            TENET PG
+            APEX PG
           </span>
         </Link>
         <button

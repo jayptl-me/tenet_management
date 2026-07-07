@@ -11,16 +11,33 @@ import { MealFeedback } from '../models/mealFeedback.js';
 
 const dashboard = new Hono();
 
+// ── Helper: format month string ──────────────────────────
+function getMonthString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function getDateString(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 // ── GET /dashboard/stats ────────────────────────────────
 dashboard.get('/stats', authGuard, adminOnly, async (c) => {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const currentMonth = `${year}-${month}`;
+  const currentMonth = getMonthString(now);
+
+  // --- Occupancy: sum occupied beds across all active rooms ---
+  type RoomDoc = { beds?: Array<{ isOccupied: boolean }>; length?: number };
+  const allActiveRooms: RoomDoc[] = (await Room.find({ isActive: true }).lean()) as RoomDoc[];
+  const totalRooms = allActiveRooms.length;
+  const totalBeds = allActiveRooms.reduce((sum: number, r: RoomDoc) => sum + (r.beds?.length ?? 0), 0);
+  const occupiedBeds = allActiveRooms.reduce(
+    (sum: number, r: RoomDoc) => sum + (r.beds?.filter((b: { isOccupied: boolean }) => b.isOccupied).length ?? 0),
+    0,
+  );
 
   const [
-    totalRooms,
-    occupiedBeds,
     paymentAgg,
     invoiceAgg,
     complaintsByStatus,
@@ -29,15 +46,6 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
     recentComplaints,
     recentEnquiries,
   ] = await Promise.all([
-    // Occupancy: total active rooms
-    Room.countDocuments({ isActive: true } as Record<string, unknown>),
-
-    // Occupancy: count occupied beds across all active rooms
-    Room.countDocuments({
-      isActive: true,
-      'beds.isOccupied': true,
-    } as Record<string, unknown>),
-
     // Revenue: sum of paid payments for current month
     Payment.aggregate([
       { $match: { status: 'paid', month: currentMonth } },
@@ -98,14 +106,13 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
   const revenueExpected = (invoiceAgg as Array<{ _id: null; total: number }>)[0]?.total ?? 0;
 
   // Vacancy rate
-  const vacancyRate = totalRooms > 0 ? ((totalRooms - occupiedBeds) / totalRooms) * 100 : 0;
+  const vacancyRate = totalBeds > 0 ? ((totalBeds - occupiedBeds) / totalBeds) * 100 : 0;
 
   // ── Revenue history: last 6 months ──────────────────
   const last6Months: string[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    last6Months.push(`${d.getFullYear()}-${m}`);
+    last6Months.push(getMonthString(d));
   }
 
   const [revenueHistoryCollected, revenueHistoryExpected] = await Promise.all([
@@ -139,7 +146,7 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
   for (let i = 13; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    last14Days.push(d.toISOString().slice(0, 10));
+    last14Days.push(getDateString(d));
   }
 
   const mealTrendRows = (await MealFeedback.aggregate([

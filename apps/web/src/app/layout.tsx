@@ -5,8 +5,8 @@ import ServerWakeupOverlay from '@/components/shared/ServerWakeupOverlay';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Tenet PG — Premium Paying Guest Accommodation',
-    template: '%s | Tenet PG',
+    default: 'Apex PG — Premium Paying Guest Accommodation',
+    template: '%s | Apex PG',
   },
   description:
     'Safe, comfortable, and well-managed paying guest accommodations with transparent billing, real-time updates, and zero hassle. Premium PG living for working professionals and students.',
@@ -16,17 +16,17 @@ export const metadata: Metadata = {
     'hostel',
     'co-living',
     'PG management',
-    'Tenet PG',
+    'Apex PG',
   ],
-  authors: [{ name: 'Tenet PG' }],
-  creator: 'Tenet PG',
-  metadataBase: new URL('https://tenetpg.com'),
+  authors: [{ name: 'Apex PG' }],
+  creator: 'Apex PG',
+  metadataBase: new URL('https://apexpg.com'),
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://tenetpg.com',
-    siteName: 'Tenet PG',
-    title: 'Tenet PG — Premium Paying Guest Accommodation',
+    url: 'https://apexpg.com',
+    siteName: 'Apex PG',
+    title: 'Apex PG — Premium Paying Guest Accommodation',
     description:
       'Safe, comfortable, and well-managed paying guest accommodations with transparent billing and real-time updates.',
     images: [
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Tenet PG — Premium PG Living',
+        alt: 'Apex PG — Premium PG Living',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tenet PG — Premium Paying Guest Accommodation',
+    title: 'Apex PG — Premium Paying Guest Accommodation',
     description:
       'Safe, comfortable, and well-managed paying guest accommodations with transparent billing and real-time updates.',
     images: ['/og-image.png'],
@@ -64,7 +64,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-theme="brutalist" data-mode="light">
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           <ServerWakeupOverlay />
