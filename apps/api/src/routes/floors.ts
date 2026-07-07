@@ -10,10 +10,16 @@ import { Room } from '../models/room.js';
 const floors = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
+const amenityCountSchema = z.strictObject({
+  amenityKey: z.string().min(1).regex(/^[a-z][a-z0-9_]*$/, 'Must be a valid amenity key'),
+  count: z.number().int().min(0).max(10),
+});
+
 const createFloorSchema = z.strictObject({
   floorNumber: z.number().int().min(0, 'Floor number must be 0 or greater'),
   label: z.string().min(1, 'Label is required').max(50, 'Label too long'),
   totalRooms: z.number().int().min(1, 'Must have at least 1 room').max(50, 'Max 50 rooms'),
+  amenityCounts: z.array(amenityCountSchema).optional(),
   amenities: z
     .object({
       washingMachines: z.number().int().min(0).max(5).optional(),

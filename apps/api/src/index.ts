@@ -34,6 +34,7 @@ import sseRoutes from './routes/sse.js';
 import laundryRoutes from './routes/laundry.js';
 import auditRoutes from './routes/audit.js';
 import { startScheduler } from './jobs/scheduler.js';
+import { checkServiceAvailability, getServiceAvailability } from './lib/serviceAvailability.js';
 
 const app = new Hono();
 

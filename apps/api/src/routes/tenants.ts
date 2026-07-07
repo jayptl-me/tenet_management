@@ -21,6 +21,10 @@ import {
   AppError,
   safeFilter,
 } from '../lib/routeUtils.js';
+import { isServiceAvailable } from '../lib/serviceAvailability.js';
+import { env } from '../lib/env.js';
+import { logger } from '../lib/logger.js';
+import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
@@ -338,17 +342,125 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   }
 });
 
-// ── POST /:id/documents — placeholder
+// ── POST /:id/documents — upload KYC documents (Aadhaar, photo)
 router.post('/:id/documents', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
-  if (!id) return badRequest(c, 'Invalid tenant ID');
-  return c.json(
-    {
-      success: false,
-      error: { code: 'NOT_IMPLEMENTED', message: 'Document upload coming via Cloudinary.' },
-    },
-    501,
-  );
+  if (!id) throw new ValidationError('Invalid tenant ID');
+
+  // Check Cloudinary availability with graceful degradation
+  if (!isServiceAvailable('cloudinary')) {
+    throw new ServiceUnavailableError(
+      'Cloudinary',
+      'Document uploads are not available because Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.',
+    );
+  }
+
+  const tenant = await Tenant.findById(id);
+  if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+
+  try {
+    const body = await c.req.parseBody();
+    const docType = (body?.docType as string) || 'aadhaar';
+
+    if (!['aadhaar', 'photo'].includes(docType)) {
+      throw new ValidationError('docType must be "aadhaar" or "photo"');
+    }
+
+    const file = body?.file as File | undefined;
+    if (!file || !(file instanceof File)) {
+      throw new ValidationError('A file is required. Use multipart/form-data with field name "file".');
+    }
+
+    // Validate file type and size
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      throw new ValidationError(
+        'Invalid file type. Allowed: JPEG, PNG, WebP, PDF.',
+      );
+    }
+
+    if (file.size > MAX_SIZE) {
+      throw new ValidationError('File size must be under 5MB.');
+    }
+
+    // Build Cloudinary upload form
+    const uploadForm = new FormData();
+    uploadForm.append('file', file);
+    uploadForm.append(
+      'public_id',
+      `tenants/${id}/${docType}_${Date.now()}`,
+    );
+    uploadForm.append('folder', `tenet_pg/tenants/${id}`);
+    uploadForm.append('upload_preset', ''); // Use unsigned upload or API key
+
+    const cloudName = env.CLOUDINARY_CLOUD_NAME;
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      {
+        method: 'POST',
+        body: uploadForm,
+        headers: {
+          Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const errMsg = (errData as { error?: { message?: string } })?.error?.message ?? 'Upload failed';
+      logger.error({ tenantId: id, docType, cloudinaryError: errMsg }, 'Cloudinary upload failed');
+      throw new AppError(
+        `Document upload failed: ${errMsg}`,
+        502,
+        'UPLOAD_FAILED',
+        undefined,
+        'The document upload could not be completed. Please try again.',
+      );
+    }
+
+    const result = (await response.json()) as {
+      secure_url: string;
+      public_id: string;
+      format: string;
+      width?: number;
+      height?: number;
+    };
+
+    // Update tenant with document URL (nested under documents field)
+    if (!tenant.documents) {
+      (tenant as unknown as Record<string, unknown>).documents = {};
+    }
+    if (docType === 'aadhaar') {
+      tenant.documents.aadhaarUrl = result.secure_url;
+    } else {
+      tenant.documents.photoUrl = result.secure_url;
+    }
+    await tenant.save();
+
+    logger.info(
+      { tenantId: id, docType, url: result.secure_url },
+      'Tenant document uploaded',
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        docType,
+        url: result.secure_url,
+        message: `${docType === 'aadhaar' ? 'Aadhaar' : 'Photo'} uploaded successfully.`,
+      },
+    });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return c.json(
+        { success: false, error: { code: err.code, message: err.publicMessage } },
+        err.status as 200,
+      );
+    }
+    throw err;
+  }
 });
 
 // ── GET /:id/payments
@@ -417,6 +529,68 @@ router.get('/:id/invoices', authGuard, async (c) => {
   if (!id) return badRequest(c, 'Invalid tenant ID');
   const invoices = await Invoice.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: invoices });
+});
+
+// ── GET /:id/dues — checkout dues summary (admin only)
+router.get('/:id/dues', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const tenant = await Tenant.findById(id).lean();
+  if (!tenant) return notFound(c, 'Tenant');
+  if (!tenant.isActive) {
+    return c.json({
+      success: true,
+      data: { totalDue: 0, unpaidInvoices: [], electricityDues: 0, depositHeld: tenant.depositPaid, checkedOut: true },
+    });
+  }
+
+  // Find unpaid/partial/overdue invoices
+  const unpaidInvoices = await Invoice.find(
+    safeFilter({ tenantId: id, status: { $in: ['sent', 'partial', 'overdue'] } }),
+  )
+    .select('invoiceNumber month totalAmount status')
+    .lean();
+
+  const invoiceTotal = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
+  // Find pending/overdue payments
+  const pendingPayments = await Payment.find(
+    safeFilter({ tenantId: id, status: { $in: ['pending', 'pending_verification', 'overdue'] } }),
+  )
+    .select('amount type status month')
+    .lean();
+
+  const paymentDue = pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  // Electricity dues from invoices that have electricity charges
+  const electricityInvoices = unpaidInvoices.filter((inv) => inv.status !== 'paid');
+  const electricityDues = electricityInvoices.reduce((sum, inv) => {
+    // Check line items for electricity charges
+    const invDoc = inv as unknown as { lineItems?: Array<{ description: string; amount: number }> };
+    const lines = invDoc.lineItems || [];
+    return sum + lines.filter((li) => /electricity/i.test(li.description)).reduce((s, li) => s + li.amount, 0);
+  }, 0);
+
+  const totalDue = Math.max(invoiceTotal, paymentDue);
+
+  return c.json({
+    success: true,
+    data: {
+      totalDue,
+      unpaidInvoices: unpaidInvoices.map((inv) => ({
+        _id: inv._id,
+        invoiceNumber: inv.invoiceNumber,
+        month: inv.month,
+        totalAmount: inv.totalAmount,
+        status: inv.status,
+      })),
+      electricityDues,
+      depositHeld: tenant.depositPaid || 0,
+      pendingPayments: pendingPayments.length,
+      checkedOut: false,
+    },
+  });
 });
 
 // ── GET /:id/activity — aggregated tenant activity timeline

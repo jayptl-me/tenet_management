@@ -20,15 +20,9 @@ const serviceStatusSchema = new Schema<IServiceStatusDocument>(
     },
     serviceType: {
       type: String,
-      enum: [
-        'wifi',
-        'washing_machine_1',
-        'washing_machine_2',
-        'fridge',
-        'water_supply',
-        'electricity',
-      ],
+      trim: true,
       required: [true, 'Service type is required'],
+      match: [/^[a-z][a-z0-9_]*$/, 'Service type must be a valid key (lowercase alphanumeric with underscores)'],
     },
     status: {
       type: String,
