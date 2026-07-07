@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Pencil, Trash2, Plus } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, Wrench, Wifi, Zap, Droplets, Thermometer, Shirt, Sparkles, BedSingle, ScrollText, MoonStar, Fan, Refrigerator, type LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
@@ -10,6 +10,27 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
+import type { AmenityDefinition } from '@pg/types';
+
+// ── Dynamic icon resolution ──
+const ICON_MAP: Record<string, LucideIcon> = {
+  wifi: Wifi,
+  zap: Zap,
+  droplets: Droplets,
+  thermometer: Thermometer,
+  shirt: Shirt,
+  sparkles: Sparkles,
+  'bed-single': BedSingle,
+  'scroll-text': ScrollText,
+  'moon-star': MoonStar,
+  fan: Fan,
+  refrigerator: Refrigerator,
+  wrench: Wrench,
+};
+
+function resolveIcon(iconName: string): LucideIcon {
+  return ICON_MAP[iconName] ?? Wrench;
+}
 
 interface ServiceStatusRow {
   _id: string;
@@ -21,36 +42,6 @@ interface ServiceStatusRow {
   note?: string;
   openComplaintCount?: number;
 }
-
-import {
-  Wifi,
-  Zap,
-  Droplets,
-  Thermometer,
-  Shirt,
-  Sparkles,
-  Wrench,
-} from 'lucide-react';
-
-const serviceIcons: Record<string, React.ReactNode> = {
-  wifi: <Wifi className="h-5 w-5" />,
-  electricity: <Zap className="h-5 w-5" />,
-  water_supply: <Droplets className="h-5 w-5" />,
-  washing_machine_1: <Shirt className="h-5 w-5" />,
-  washing_machine_2: <Shirt className="h-5 w-5" />,
-  fridge: <Sparkles className="h-5 w-5" />,
-  geyser: <Thermometer className="h-5 w-5" />,
-};
-
-const serviceLabels: Record<string, string> = {
-  wifi: 'WiFi',
-  electricity: 'Electricity',
-  water_supply: 'Water Supply',
-  washing_machine_1: 'Washing Machine 1',
-  washing_machine_2: 'Washing Machine 2',
-  fridge: 'Fridge',
-  geyser: 'Geyser',
-};
 
 function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (status) {
@@ -64,6 +55,7 @@ function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info
 export default function ServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState<ServiceStatusRow[]>([]);
+  const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -72,6 +64,17 @@ export default function ServicesPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Fetch amenity definitions once
+  useEffect(() => {
+    api
+      .get('app-config')
+      .json<{ success: boolean; data: { amenityDefinitions?: AmenityDefinition[] } }>()
+      .then((res) => {
+        setDefinitions(res.data?.amenityDefinitions ?? []);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -114,26 +117,43 @@ export default function ServicesPage() {
     fetchServices();
   }, [fetchServices]);
 
+  // Dynamic label resolver
+  const getLabel = (serviceType: string): string => {
+    const def = definitions.find((d) => d.key === serviceType);
+    if (def) return def.label;
+    return serviceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  // Dynamic icon resolver
+  const getIcon = (serviceType: string): LucideIcon => {
+    const def = definitions.find((d) => d.key === serviceType);
+    if (def) return resolveIcon(def.icon);
+    return Wrench;
+  };
+
   const columns: DataTableColumn<ServiceStatusRow>[] = [
     {
       header: 'Service',
-      accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="text-surface-600 flex-shrink-0">
-            {serviceIcons[row.serviceType] ?? <Wrench className="h-5 w-5" />}
-          </span>
-          <div>
-            <span className="text-surface-900 font-semibold">
-              {serviceLabels[row.serviceType] ?? row.serviceType}
+      accessor: (row) => {
+        const Icon = getIcon(row.serviceType);
+        return (
+          <div className="flex items-center gap-2">
+            <span className="flex-shrink-0 text-[color:var(--color-surface-500)]">
+              <Icon className="h-5 w-5" />
             </span>
-            {row.openComplaintCount ? (
-              <span className="ml-1.5 inline-flex items-center rounded-full bg-danger-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-danger-600">
-                {row.openComplaintCount} open
+            <div>
+              <span className="text-[color:var(--color-surface-900)] font-semibold">
+                {getLabel(row.serviceType)}
               </span>
-            ) : null}
+              {row.openComplaintCount ? (
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-[color:var(--color-danger-100)] px-1.5 py-0.5 font-mono text-[10px] font-bold text-[color:var(--color-danger-600)]">
+                  {row.openComplaintCount} open
+                </span>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: 'Floor',
@@ -167,7 +187,7 @@ export default function ServicesPage() {
     {
       header: 'Note',
       accessor: (row) => (
-        <span className="text-surface-500 block max-w-[200px] truncate text-xs">
+        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-surface-500)]">
           {row.note ?? '—'}
         </span>
       ),
@@ -181,7 +201,7 @@ export default function ServicesPage() {
               e.stopPropagation();
               router.push(`/services/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -191,7 +211,7 @@ export default function ServicesPage() {
               e.stopPropagation();
               router.push(`/services/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -201,7 +221,7 @@ export default function ServicesPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -216,8 +236,10 @@ export default function ServicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Service Status</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">
+          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-surface-900)]">
+            Service Status
+          </h2>
+          <p className="mt-0.5 text-sm text-[color:var(--color-surface-500)]">
             Monitor and update service health across floors
           </p>
         </div>
@@ -228,7 +250,7 @@ export default function ServicesPage() {
       </div>
 
       {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
           {error}
         </div>
       )}

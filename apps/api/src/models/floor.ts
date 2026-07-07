@@ -1,12 +1,14 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
-import type { IFloor } from '@pg/types/floor';
+import type { IFloor, AmenityCount } from '@pg/types/floor';
 
 export interface IFloorDocument extends Document {
   id: string;
   floorNumber: number;
   label: string;
   totalRooms: number;
-  amenities: {
+  amenityCounts: AmenityCount[];
+  /** @deprecated Use amenityCounts instead */
+  amenities?: {
     washingMachines: number;
     fridges: number;
   };
@@ -38,6 +40,31 @@ const floorSchema = new Schema<IFloorDocument>(
       min: [1, 'Must have at least 1 room'],
       max: [50, 'Cannot exceed 50 rooms per floor'],
     },
+    amenityCounts: {
+      type: [
+        new Schema(
+          {
+            amenityKey: {
+              type: String,
+              required: [true, 'Amenity key is required'],
+              validate: {
+                validator: (v: string) => /^[a-z][a-z0-9_]*$/.test(v),
+                message: 'Amenity key must be lowercase alphanumeric with underscores',
+              },
+            },
+            count: {
+              type: Number,
+              default: 0,
+              min: [0, 'Count cannot be negative'],
+              max: [10, 'Count cannot exceed 10'],
+            },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    /** @deprecated Use amenityCounts instead */
     amenities: {
       washingMachines: {
         type: Number,
@@ -71,5 +98,6 @@ const floorSchema = new Schema<IFloorDocument>(
 );
 
 floorSchema.index({ floorNumber: 1 }, { unique: true });
+floorSchema.index({ 'amenityCounts.amenityKey': 1 });
 
 export const Floor: Model<IFloorDocument> = model<IFloorDocument>('Floor', floorSchema);

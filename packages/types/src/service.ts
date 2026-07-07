@@ -1,10 +1,5 @@
-export type IServiceType =
-  | 'wifi'
-  | 'washing_machine_1'
-  | 'washing_machine_2'
-  | 'fridge'
-  | 'water_supply'
-  | 'electricity';
+/** Service type is now dynamic — validated against AppConfig.amenityDefinitions at route level. */
+export type IServiceType = string;
 
 export type IServiceStatus = 'operational' | 'degraded' | 'down';
 
@@ -16,10 +11,18 @@ export interface IServiceStatusDoc {
   lastUpdatedBy: string;
   lastUpdatedAt: string;
   note?: string;
+  openComplaintCount?: number;
   updatedAt: string;
 }
 
 export interface IServiceStatusUpdate {
   status: IServiceStatus;
+  note?: string;
+}
+
+export interface IServiceCreate {
+  floorId: string;
+  serviceType: string;
+  status?: IServiceStatus;
   note?: string;
 }

@@ -7,22 +7,41 @@ import { notFound, badRequest, parseId, safeFilter } from '../lib/routeUtils.js'
 import { ServiceStatus } from '../models/serviceStatus.js';
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
+import { AppConfig } from '../models/appConfig.js';
 
-// ── Helper: attach complaint counts per service per floor ──
+// ── Helper: derive complaint categories from AppConfig amenity definitions ──
+async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
+  const config = await AppConfig.findOne().select('amenityDefinitions').lean();
+  const definitions = config?.amenityDefinitions ?? [];
+  const map: Record<string, string[]> = {};
+  for (const def of definitions) {
+    if (def.applicableComplaintCategories && def.applicableComplaintCategories.length > 0) {
+      map[def.key] = def.applicableComplaintCategories;
+    }
+  }
+  return map;
+}
+
+// ── Helper: validate serviceType against AppConfig definitions ──
+async function isValidServiceType(serviceType: string): Promise<boolean> {
+  const config = await AppConfig.findOne().select('amenityDefinitions').lean();
+  const definitions = config?.amenityDefinitions ?? [];
+  return definitions.some((d) => d.key === serviceType);
+}
+
+// ── Helper: get amenity definitions for response enrichment ──
+async function getAmenityDefinitions() {
+  const config = await AppConfig.findOne().select('amenityDefinitions').lean();
+  return config?.amenityDefinitions ?? [];
+}
+
+// ── Helper: attach complaint counts per service per floor (dynamic) ──
 async function enrichWithComplaintCounts(
   services_list: Array<{ floorId?: { _id: string } | string; serviceType: string; [key: string]: unknown }>,
 ): Promise<Array<Record<string, unknown>>> {
   if (services_list.length === 0) return services_list;
 
-  const serviceToCategory: Record<string, string[]> = {
-    wifi: ['wifi'],
-    electricity: ['electricity', 'lights'],
-    water_supply: ['water'],
-    washing_machine_1: ['washing_machine'],
-    washing_machine_2: ['washing_machine'],
-    fridge: ['fridge'],
-    geyser: ['water'],
-  };
+  const serviceToCategory = await getAmenityComplaintMap();
 
   const enriched = await Promise.all(
     services_list.map(async (svc) => {

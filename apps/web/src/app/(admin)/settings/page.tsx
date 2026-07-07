@@ -6,14 +6,16 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { triggerThemeUpdate } from '@/themes/ThemeProvider';
-import type { IAppConfig, IFeatureFlags, ITestimonial, ThemeSettings } from '@pg/types';
+import type { IAppConfig, IFeatureFlags, ITestimonial, ThemeSettings, AmenityDefinition } from '@pg/types';
 import AppearanceTab from '@/components/admin/AppearanceTab';
+import AmenityTypesTab from '@/components/admin/AmenityTypesTab';
 
 type TabKey =
   | 'general'
   | 'pricing'
   | 'payment'
   | 'amenities'
+  | 'amenity-types'
   | 'testimonials'
   | 'features'
   | 'appearance'
@@ -23,7 +25,8 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'general', label: 'General' },
   { key: 'pricing', label: 'Pricing' },
   { key: 'payment', label: 'Payment' },
-  { key: 'amenities', label: 'Amenities' },
+  { key: 'amenities', label: 'Landing Amenities' },
+  { key: 'amenity-types', label: 'Amenity Types' },
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'features', label: 'Features' },
   { key: 'appearance', label: 'Appearance' },
@@ -81,6 +84,7 @@ interface ConfigFormData {
   termsAndConditions: string;
   features: IFeatureFlags;
   theme?: ThemeSettings;
+  amenityDefinitions: AmenityDefinition[];
 }
 
 function mapToForm(config: Partial<IAppConfig>): ConfigFormData {
@@ -123,6 +127,7 @@ function mapToForm(config: Partial<IAppConfig>): ConfigFormData {
     termsAndConditions: config.termsAndConditions ?? '',
     features: { ...defaultFeatureFlags, ...(config.features ?? {}) },
     theme: config.theme ?? { preset: 'saas', mode: 'light' },
+    amenityDefinitions: config.amenityDefinitions ?? [],
   };
 }
 
@@ -520,6 +525,13 @@ export default function SettingsPage() {
               )}
             </div>,
           )}
+
+        {activeTab === 'amenity-types' && (
+          <AmenityTypesTab
+            definitions={config.amenityDefinitions}
+            onChange={(defs) => update({ amenityDefinitions: defs })}
+          />
+        )}
 
         {activeTab === 'testimonials' &&
           renderSection(

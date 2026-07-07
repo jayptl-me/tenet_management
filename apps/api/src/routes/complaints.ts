@@ -13,19 +13,7 @@ const complaints = new Hono();
 // ── Schemas ─────────────────────────────────────────────
 const createComplaintSchema = z.strictObject({
   roomId: z.string().min(1, 'Room ID is required'),
-  category: z.enum([
-    'wifi',
-    'water',
-    'electricity',
-    'food_quality',
-    'cleaning_room',
-    'cleaning_washroom',
-    'washing_machine',
-    'fridge',
-    'lights',
-    'noise',
-    'other',
-  ]),
+  category: z.string().min(1, 'Category is required').max(50),
   title: z
     .string()
     .min(5, 'Title must be at least 5 characters')

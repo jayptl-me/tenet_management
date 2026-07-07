@@ -1,6 +1,20 @@
 import type { IAddress, ISocialLinks } from './common.js';
 import type { IBrandTokens } from './tokens.js';
 
+// ── Amenity Definition ─────────────────────────────────
+export type AmenityCategory = 'essential' | 'appliance' | 'furnishing' | 'other';
+
+export interface AmenityDefinition {
+  key: string; // unique: "wifi", "fan", "bedsheet", "washing_machine"
+  label: string; // display: "WiFi", "Fan", "Bedsheet"
+  icon: string; // lucide-react icon name: "wifi", "fan", "bed-single"
+  category: AmenityCategory;
+  showAsStatusLabel: boolean; // quick-view dot on room list
+  isPerFloor: boolean; // true = one status per floor, false = per room
+  maxPerFloor?: number; // e.g. 2 for washing machines
+  applicableComplaintCategories?: string[]; // maps to Complaint.category
+}
+
 export type ThemePreset = 'brutalist' | 'neumorphic' | 'soft-ui' | 'saas' | 'custom';
 
 export type ThemeMode = 'light' | 'dark';
@@ -48,6 +62,7 @@ export interface IAppConfig {
   socialLinks?: ISocialLinks;
   googleMapsEmbedUrl?: string;
   amenities: string[];
+  amenityDefinitions: AmenityDefinition[];
   roomPricing: {
     sharing2: number;
     sharing3: number;

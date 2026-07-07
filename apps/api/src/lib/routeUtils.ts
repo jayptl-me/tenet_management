@@ -1,5 +1,14 @@
 import type { Context } from 'hono';
 import type { Model } from 'mongoose';
+import {
+  ResourceNotFoundError,
+  ValidationError,
+  ConflictError,
+  FeatureDisabledError,
+} from './errors.js';
+
+// ── Re-export AppError for backward compatibility with existing route files ──
+export { AppError } from './errors.js';
 
 // ── Pagination Parser ───────────────────────────────────
 export function parsePagination(c: Context) {
@@ -52,61 +61,24 @@ export function parseId(id: string): string | null {
 }
 
 // ── Mongoose 9 Filter Helper ────────────────────────────
-/** Cast a plain filter object for use with Mongoose 9 strict-typed queries.
- *  Use only when filters contain ObjectId-like string values (e.g. userId, roomId). */
+/** Cast a plain filter object for use with Mongoose 9 strict-typed queries. */
 export function safeFilter<T extends Record<string, unknown>>(filter: T): Record<string, unknown> {
   return filter as Record<string, unknown>;
 }
 
-// ── Error Helpers ───────────────────────────────────────
+// ── Error Helpers (use new error classes for better UX) ─
 export function notFound(c: Context, resource: string) {
-  return c.json(
-    {
-      success: false,
-      error: { code: 'NOT_FOUND', message: `${resource} not found` },
-    },
-    404,
-  );
+  throw new ResourceNotFoundError(resource);
 }
 
 export function badRequest(c: Context, message: string, code = 'BAD_REQUEST') {
-  return c.json(
-    {
-      success: false,
-      error: { code, message },
-    },
-    400,
-  );
+  throw new ValidationError(message);
 }
 
 export function conflict(c: Context, message: string, code = 'CONFLICT') {
-  return c.json(
-    {
-      success: false,
-      error: { code, message },
-    },
-    409,
-  );
+  throw new ConflictError(message);
 }
 
 export function featureDisabled(c: Context, feature: string) {
-  return c.json(
-    {
-      success: false,
-      error: { code: 'FEATURE_DISABLED', message: `${feature} is not enabled.` },
-    },
-    404,
-  );
-}
-
-/** Thrown by services — caught by globalErrorHandler and converted to JSON */
-export class AppError extends Error {
-  constructor(
-    message: string,
-    public status: number = 400,
-    public code: string = 'APP_ERROR',
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
+  throw new FeatureDisabledError(feature);
 }

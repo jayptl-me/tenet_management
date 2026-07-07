@@ -1,22 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { ResourceSelect } from '@/components/ui/ResourceSelect';
 
-const schema = z.object({
+const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   roomId: z.string().min(1, 'Room is required'),
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.enum([
     'wifi', 'water', 'electricity', 'food_quality', 'cleaning_room',
     'cleaning_washroom', 'washing_machine', 'fridge', 'lights', 'noise', 'other',
@@ -24,126 +22,308 @@ const schema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
 });
 
-type FormData = z.infer<typeof schema>;
+type ComplaintFormData = z.infer<typeof complaintSchema>;
 
-const CATEGORY_OPTIONS = [
-  { value: 'wifi', label: 'Wi-Fi' },
-  { value: 'water', label: 'Water' },
-  { value: 'electricity', label: 'Electricity' },
-  { value: 'food_quality', label: 'Food Quality' },
-  { value: 'cleaning_room', label: 'Cleaning - Room' },
-  { value: 'cleaning_washroom', label: 'Cleaning - Washroom' },
-  { value: 'washing_machine', label: 'Washing Machine' },
-  { value: 'fridge', label: 'Fridge' },
-  { value: 'lights', label: 'Lights' },
-  { value: 'noise', label: 'Noise' },
-  { value: 'other', label: 'Other' },
-];
+interface Tenant {
+  _id: string;
+  user?: { name: string };
+  name?: string;
+  roomId?: string | { _id: string; roomNumber: string };
+}
 
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
-];
+interface Room {
+  _id: string;
+  roomNumber: string;
+  floorId?: string | { _id: string };
+}
 
-export default function NewComplaintPage() {
+function ComplaintForm() {
   const router = useRouter();
-  const [submitError, setSubmitError] = useState('');
+  const searchParams = useSearchParams();
+  const prefilledCategory = searchParams.get('category') || '';
+  const prefilledFloorId = searchParams.get('floorId') || '';
+
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(true);
+  const [isLoadingRooms, setIsLoadingRooms] = useState(true);
 
   const {
     register,
-    control,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { description: '' },
+    formState: { errors },
+    watch,
+    setValue,
+  } = useForm<ComplaintFormData>({
+    resolver: zodResolver(complaintSchema),
+    defaultValues: {
+      tenantId: '',
+      roomId: '',
+      title: '',
+      description: '',
+      category: 'other',
+      priority: 'medium',
+    },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setSubmitError('');
+  // Set prefilled category from search params
+  useEffect(() => {
+    if (prefilledCategory) {
+      const validCategories = [
+        'wifi', 'water', 'electricity', 'food_quality', 'cleaning_room',
+        'cleaning_washroom', 'washing_machine', 'fridge', 'lights', 'noise', 'other',
+      ];
+      if (validCategories.includes(prefilledCategory)) {
+        setValue('category', prefilledCategory as ComplaintFormData['category']);
+      }
+    }
+  }, [prefilledCategory, setValue]);
+
+  const selectedTenantId = watch('tenantId');
+
+  useEffect(() => {
+    api
+      .get('tenants')
+      .json<{ success: boolean; data: Tenant[] }>()
+      .then((res) => {
+        setTenants(res.data);
+      })
+      .catch(() => {
+        toast.error('Failed to load tenants');
+      })
+      .finally(() => {
+        setIsLoadingTenants(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    api
+      .get('rooms')
+      .json<{ success: boolean; data: Room[] }>()
+      .then((res) => {
+        setRooms(res.data);
+      })
+      .catch(() => {
+        toast.error('Failed to load rooms');
+      })
+      .finally(() => {
+        setIsLoadingRooms(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (selectedTenantId && tenants.length > 0) {
+      const selectedTenant = tenants.find((t) => t._id === selectedTenantId);
+      if (selectedTenant?.roomId) {
+        const roomId =
+          typeof selectedTenant.roomId === 'string'
+            ? selectedTenant.roomId
+            : selectedTenant.roomId._id;
+        setValue('roomId', roomId);
+      }
+    }
+  }, [selectedTenantId, tenants, setValue]);
+
+  const onSubmit = async (data: ComplaintFormData) => {
+    setIsSubmitting(true);
     try {
-      await api.post('complaints', { json: data }).json<{ success: boolean }>();
+      await api.post('complaints', { json: data }).json();
+      toast.success('Complaint submitted successfully');
       router.push('/complaints');
     } catch {
-      setSubmitError('Failed to create complaint. Please try again.');
+      toast.error('Failed to submit complaint');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const getTenantName = (t: Tenant) => t.name || t.user?.name || t._id;
+
   return (
-    <div className="animate-fade-in-up space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" />
+          Back
         </Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">New Complaint</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Register a new tenant complaint</p>
+          <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            New Complaint
+          </h2>
+          <p className="text-surface-500 text-sm">Report an issue</p>
         </div>
       </div>
 
-      {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {submitError}
-        </div>
-      )}
+      {/* Form Card */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Tenant */}
+          <div>
+            <label htmlFor="tenantId" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Tenant <span className="text-danger-500">*</span>
+            </label>
+            {isLoadingTenants ? (
+              <div className="border-t-brand-500 h-5 w-5 animate-spin rounded-full border-[length:var(--bw-default)]" />
+            ) : (
+              <select
+                id="tenantId"
+                {...register('tenantId')}
+                className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
+              >
+                <option value="">Select a tenant</option>
+                {tenants.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {getTenantName(t)}
+                  </option>
+                ))}
+              </select>
+            )}
+            {errors.tenantId && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.tenantId.message}</p>
+            )}
+          </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
-      >
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Controller
-              name="tenantId"
-              control={control}
-              render={({ field }) => (
-                <ResourceSelect
-                  label="Tenant"
-                  endpoint="tenants"
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Select tenant..."
-                  error={errors.tenantId?.message}
-                />
-              )}
-            />
-            <Controller
-              name="roomId"
-              control={control}
-              render={({ field }) => (
-                <ResourceSelect
-                  label="Room"
-                  endpoint="rooms"
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Select room..."
-                  error={errors.roomId?.message}
-                />
-              )}
-            />
+          {/* Room */}
+          <div>
+            <label htmlFor="roomId" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Room <span className="text-danger-500">*</span>
+            </label>
+            {isLoadingRooms ? (
+              <div className="border-t-brand-500 h-5 w-5 animate-spin rounded-full border-[length:var(--bw-default)]" />
+            ) : (
+              <select
+                id="roomId"
+                {...register('roomId')}
+                className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
+              >
+                <option value="">Select a room</option>
+                {rooms.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {r.roomNumber}
+                  </option>
+                ))}
+              </select>
+            )}
+            {errors.roomId && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.roomId.message}</p>
+            )}
           </div>
-          <Input label="Title" placeholder="Brief description of the issue" error={errors.title?.message} {...register('title')} />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select label="Category" options={CATEGORY_OPTIONS} error={errors.category?.message} {...register('category')} />
-            <Select label="Priority" options={PRIORITY_OPTIONS} error={errors.priority?.message} {...register('priority')} />
+
+          {/* Category */}
+          <div>
+            <label htmlFor="category" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Category <span className="text-danger-500">*</span>
+            </label>
+            <select
+              id="category"
+              {...register('category')}
+              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
+            >
+              <option value="">Select a category</option>
+              <option value="wifi">Wi-Fi</option>
+              <option value="water">Water</option>
+              <option value="electricity">Electricity</option>
+              <option value="food_quality">Food Quality</option>
+              <option value="cleaning_room">Cleaning - Room</option>
+              <option value="cleaning_washroom">Cleaning - Washroom</option>
+              <option value="washing_machine">Washing Machine</option>
+              <option value="fridge">Fridge</option>
+              <option value="lights">Lights</option>
+              <option value="noise">Noise</option>
+              <option value="other">Other</option>
+            </select>
+            {errors.category && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.category.message}</p>
+            )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="description" className="text-surface-800 font-display text-sm font-semibold">Description</label>
-            <textarea id="description" rows={5}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
-              placeholder="Detailed description of the complaint..."
+
+          {/* Priority */}
+          <div>
+            <label htmlFor="priority" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Priority <span className="text-danger-500">*</span>
+            </label>
+            <select
+              id="priority"
+              {...register('priority')}
+              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+            {errors.priority && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.priority.message}</p>
+            )}
+          </div>
+
+          {/* Title */}
+          <div>
+            <label htmlFor="title" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Title <span className="text-danger-500">*</span>
+            </label>
+            <input
+              id="title"
+              type="text"
+              {...register('title')}
+              placeholder="Brief title for the complaint"
+              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm placeholder:text-surface-400"
+            />
+            {errors.title && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.title.message}</p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
+              Description <span className="text-danger-500">*</span>
+            </label>
+            <textarea
+              id="description"
               {...register('description')}
+              rows={4}
+              placeholder="Describe the issue in detail"
+              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm placeholder:text-surface-400 resize-y"
             />
-            {errors.description && <p className="text-danger-600 text-sm font-medium">{errors.description.message}</p>}
+            {errors.description && (
+              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.description.message}</p>
+            )}
           </div>
-        </div>
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" />Save Complaint</Button>
-        </div>
-      </form>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={isSubmitting}>
+              <Send className="h-4 w-4" />
+              Submit Complaint
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
+  );
+}
+
+export default function NewComplaintPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        </div>
+      }
+    >
+      <ComplaintForm />
+    </Suspense>
   );
 }

@@ -1,5 +1,10 @@
 export type SharingType = 2 | 3 | 4;
 
+export interface RoomAmenityStatus {
+  amenityKey: string;
+  status: 'operational' | 'degraded' | 'down';
+}
+
 export interface IBed {
   bedId: 'A' | 'B' | 'C' | 'D';
   isOccupied: boolean;
