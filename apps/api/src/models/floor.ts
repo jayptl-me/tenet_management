@@ -97,7 +97,6 @@ const floorSchema = new Schema<IFloorDocument>(
   },
 );
 
-floorSchema.index({ floorNumber: 1 }, { unique: true });
 floorSchema.index({ 'amenityCounts.amenityKey': 1 });
 
 export const Floor: Model<IFloorDocument> = model<IFloorDocument>('Floor', floorSchema);

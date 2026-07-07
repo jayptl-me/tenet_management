@@ -112,7 +112,7 @@ electricity.put('/:id', authGuard, adminOnly, zValidator('json', updateBillSchem
   const body = c.req.valid('json');
 
   const billRaw = await (ElectricityBill.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
     .populate('roomEntries.roomId', 'roomNumber sharingType')
@@ -131,7 +131,7 @@ electricity.post('/:id/finalize', authGuard, adminOnly, async (c) => {
   const billRaw = await (ElectricityBill.findByIdAndUpdate(
     id,
     { status: 'finalized' },
-    { new: true },
+    { returnDocument: 'after' },
   )
     .populate('roomEntries.roomId', 'roomNumber sharingType')
     .lean() as unknown);

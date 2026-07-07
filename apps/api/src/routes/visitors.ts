@@ -98,7 +98,7 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
       approvedBy: user.sub,
       approvedAt: new Date(),
     },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean();
 
   if (!visitor) return notFound(c, 'Visitor');
@@ -116,7 +116,7 @@ visitors.post('/:id/arrive', authGuard, async (c) => {
       status: 'arrived',
       actualArrival: new Date(),
     },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean();
 
   if (!visitor) return notFound(c, 'Visitor');
@@ -134,7 +134,7 @@ visitors.post('/:id/depart', authGuard, async (c) => {
       status: 'departed',
       actualDeparture: new Date(),
     },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean();
 
   if (!visitor) return notFound(c, 'Visitor');
@@ -161,7 +161,7 @@ visitors.put('/:id', authGuard, adminOnly, async (c) => {
     }
   }
 
-  const visitor = await Visitor.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).lean();
+  const visitor = await Visitor.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true }).lean();
   if (!visitor) return notFound(c, 'Visitor');
 
   return c.json({ success: true, data: visitor });

@@ -6,6 +6,7 @@ export interface IMealFeedbackDocument extends Document {
   date: string;
   mealType: string;
   rating: number;
+  status: string;
   comment?: string;
   categories: string[];
   createdAt: Date;
@@ -33,6 +34,11 @@ const mealFeedbackSchema = new Schema<IMealFeedbackDocument>(
       required: [true, 'Rating is required'],
       min: [1, 'Rating must be at least 1'],
       max: [5, 'Rating cannot exceed 5'],
+    },
+    status: {
+      type: String,
+      enum: ['submitted', 'acknowledged', 'actioned'],
+      default: 'submitted',
     },
     comment: {
       type: String,
@@ -63,6 +69,14 @@ const mealFeedbackSchema = new Schema<IMealFeedbackDocument>(
 );
 
 mealFeedbackSchema.index({ tenantId: 1, date: 1, mealType: 1 }, { unique: true });
+
+// Virtual: populate tenant -> user + room for frontend display
+mealFeedbackSchema.virtual('tenant', {
+  ref: 'Tenant',
+  localField: 'tenantId',
+  foreignField: '_id',
+  justOne: true,
+});
 
 export const MealFeedback: Model<IMealFeedbackDocument> = model<IMealFeedbackDocument>(
   'MealFeedback',

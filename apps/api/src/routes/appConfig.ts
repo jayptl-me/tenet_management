@@ -141,7 +141,7 @@ appConfig.put('/', authGuard, adminOnly, zValidator('json', appConfigUpdateSchem
     body,
     {
       upsert: true,
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     },
   ).lean();

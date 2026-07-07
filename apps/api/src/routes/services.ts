@@ -223,7 +223,7 @@ services.put('/:id/full', authGuard, adminOnly, zValidator('json', z.strictObjec
   const id = c.req.param('id');
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
   const body = c.req.valid('json') as any;
-  const service = await ServiceStatus.findByIdAndUpdate(id, body, { new: true, runValidators: true })
+  const service = await ServiceStatus.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true })
     .populate('floor').lean() as any;
   if (!service) return notFound(c, 'Service');
   return c.json({ success: true, data: service });

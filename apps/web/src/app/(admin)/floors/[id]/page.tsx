@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Building, Hash, DoorOpen, WashingMachine, Refrigerator } from 'lucide-react';
+import { ArrowLeft, Building, Hash, DoorOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -14,6 +14,7 @@ interface FloorDetail {
   floorNumber: number;
   description?: string;
   totalRooms: number;
+  amenityCounts?: Array<{ amenityKey: string; count: number }>;
   amenities?: {
     washingMachines?: number;
     fridges?: number;
@@ -139,31 +140,28 @@ export default function FloorDetailPage() {
       </div>
 
       {/* Amenities Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Amenities</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
-            <WashingMachine className="text-brand-600 h-6 w-6" />
-            <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">
-                Washing Machines
-              </p>
-              <p className="text-surface-900 font-display text-2xl font-extrabold">
-                {floor.amenities?.washingMachines ?? 0}
-              </p>
-            </div>
-          </div>
-          <div className="bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
-            <Refrigerator className="text-brand-600 h-6 w-6" />
-            <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Fridges</p>
-              <p className="text-surface-900 font-display text-2xl font-extrabold">
-                {floor.amenities?.fridges ?? 0}
-              </p>
-            </div>
+      {(floor.amenityCounts && floor.amenityCounts.length > 0) && (
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Amenities</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {floor.amenityCounts.map((ac: { amenityKey: string; count: number }) => {
+              const label = ac.amenityKey
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (c: string) => c.toUpperCase());
+              return (
+                <div key={ac.amenityKey} className="bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
+                  <div className="text-surface-700 font-display text-2xl font-extrabold">
+                    {ac.count}
+                  </div>
+                  <div>
+                    <p className="text-surface-800 font-display text-sm font-semibold">{label}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Description Card */}
       {floor.description && (

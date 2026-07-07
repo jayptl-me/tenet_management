@@ -7,12 +7,18 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
+import type { IAppConfig } from '@pg/types';
 
 interface BedDetail {
   bedId: string;
   isOccupied: boolean;
   tenantId?: string | null;
   tenantName?: string;
+}
+
+interface RoomAmenityStatusDoc {
+  amenityKey: string;
+  status: string;
 }
 
 interface RoomDetail {
@@ -26,6 +32,7 @@ interface RoomDetail {
   photos?: string[];
   beds?: BedDetail[];
   occupancyCount?: number;
+  roomAmenities?: RoomAmenityStatusDoc[];
   createdAt: string;
 }
 
@@ -195,6 +202,37 @@ export default function RoomDetailPage() {
           <p className="text-surface-500 text-sm">No bed information available</p>
         )}
       </div>
+
+      {/* Room Amenities Status */}
+      {room.roomAmenities && room.roomAmenities.length > 0 && (
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Amenities</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {room.roomAmenities.map((a) => {
+              const statusVariant =
+                a.status === 'operational' ? 'success' :
+                a.status === 'degraded' ? 'warning' : 'danger';
+              const statusLabel =
+                a.status === 'operational' ? 'Operational' :
+                a.status === 'degraded' ? 'Degraded' : 'Down';
+              const label = a.amenityKey
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+              return (
+                <div
+                  key={a.amenityKey}
+                  className="bg-surface-50 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-3"
+                >
+                  <p className="text-surface-800 font-display text-sm font-semibold">{label}</p>
+                  <div className="mt-1">
+                    <StatusBadge variant={statusVariant as 'success' | 'warning' | 'danger'} label={statusLabel} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Description Card */}
       {room.description && (

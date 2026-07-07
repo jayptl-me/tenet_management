@@ -24,7 +24,7 @@ export async function nextInvoiceNumber(month: string): Promise<string> {
   const doc = await Counter.findByIdAndUpdate(
     counterId,
     { $inc: { seq: 1 } },
-    { new: true, upsert: true },
+    { returnDocument: 'after', upsert: true },
   );
 
   if (!doc) {

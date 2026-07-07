@@ -99,7 +99,6 @@ const invoiceSchema = new Schema<IInvoiceDocument>(
 );
 
 // ── Indexes ─────────────────────────────────────────────
-invoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 invoiceSchema.index({ tenantId: 1 });
 invoiceSchema.index({ month: 1 });
 invoiceSchema.index({ status: 1 });

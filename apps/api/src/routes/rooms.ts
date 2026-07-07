@@ -17,6 +17,11 @@ import {
 
 // ── Zod Schemas ──────────────────────────────────────────
 
+const roomAmenitySchema = z.strictObject({
+  amenityKey: z.string().min(1),
+  status: z.enum(['operational', 'degraded', 'down']),
+});
+
 const createRoomSchema = z.strictObject({
   roomNumber: z.string().trim().min(1).max(20).toUpperCase(),
   floorId: z.string().min(1, 'Floor ID is required'),
@@ -24,6 +29,7 @@ const createRoomSchema = z.strictObject({
   monthlyRent: z.number().min(1000).max(50000),
   description: z.string().trim().max(500).optional(),
   photos: z.array(z.string().url()).optional(),
+  roomAmenities: z.array(roomAmenitySchema).optional(),
 });
 
 const updateRoomSchema = z.strictObject({
@@ -34,6 +40,7 @@ const updateRoomSchema = z.strictObject({
   description: z.string().trim().max(500).optional(),
   photos: z.array(z.string().url()).optional(),
   isActive: z.boolean().optional(),
+  roomAmenities: z.array(roomAmenitySchema).optional(),
 });
 
 // ── Router ───────────────────────────────────────────────
@@ -185,7 +192,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
   }
 
   const room = await Room.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
     .populate('floor')
@@ -215,7 +222,7 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
     );
   }
 
-  const room = await Room.findByIdAndUpdate(id, { isActive: false }, { new: true }).lean();
+  const room = await Room.findByIdAndUpdate(id, { isActive: false }, { returnDocument: 'after' }).lean();
 
   if (!room) return notFound(c, 'Room');
 

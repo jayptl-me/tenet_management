@@ -50,7 +50,7 @@ meals.post(
         categories: body.categories,
         comment: body.comment ?? '',
       },
-      { upsert: true, new: true, runValidators: true },
+      { upsert: true, returnDocument: 'after', runValidators: true },
     ).lean();
 
     return c.json({ success: true, data: feedback }, 201);
@@ -134,7 +134,13 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({ path: 'tenant', populate: { path: 'user', select: 'name' } })
+      .populate({
+        path: 'tenant',
+        populate: [
+          { path: 'user', select: 'name' },
+          { path: 'room', select: 'roomNumber' },
+        ],
+      })
       .lean(),
     MealFeedback.countDocuments(filter as Record<string, unknown>),
   ]);
@@ -152,6 +158,26 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
 });
 
 
+// ── GET /meals/:id ──────────────────────────────────────
+meals.get('/:id', authGuard, adminOnly, async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
+
+  const feedback = await MealFeedback.findById(id)
+    .populate({
+      path: 'tenantId',
+      populate: [
+        { path: 'userId', select: 'name email phone' },
+        { path: 'roomId', select: 'roomNumber' },
+      ],
+    })
+    .lean();
+
+  if (!feedback) return notFound(c, 'Meal feedback');
+
+  return c.json({ success: true, data: feedback });
+});
+
 // ── PUT /meals/:id ──────────────────────────────────────
 meals.put('/:id', authGuard, adminOnly, zValidator('json', z.strictObject({
   rating: z.number().int().min(1).max(5).optional(),
@@ -161,7 +187,7 @@ meals.put('/:id', authGuard, adminOnly, zValidator('json', z.strictObject({
   const id = c.req.param('id');
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
   const body = c.req.valid('json');
-  const feedback = await MealFeedback.findByIdAndUpdate(id, body, { new: true, runValidators: true }).lean();
+  const feedback = await MealFeedback.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true }).lean();
   if (!feedback) return notFound(c, 'Meal feedback');
   return c.json({ success: true, data: feedback });
 });

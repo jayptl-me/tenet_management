@@ -198,7 +198,7 @@ complaints.put(
     }
 
     const complaint = await Complaint.findByIdAndUpdate(id, updateData, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).lean();
 

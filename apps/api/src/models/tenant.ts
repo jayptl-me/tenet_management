@@ -94,7 +94,6 @@ const tenantSchema = new Schema<ITenantDocument>(
 );
 
 // ── Indexes ─────────────────────────────────────────────
-tenantSchema.index({ userId: 1 }, { unique: true });
 tenantSchema.index({ roomId: 1 });
 tenantSchema.index({ bedId: 1 });
 tenantSchema.index({ isActive: 1 });

@@ -72,7 +72,7 @@ floors.put('/:id', authGuard, adminOnly, zValidator('json', updateFloorSchema), 
 
   try {
     const floor = await Floor.findByIdAndUpdate(id, body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).lean();
     if (!floor) return notFound(c, 'Floor');

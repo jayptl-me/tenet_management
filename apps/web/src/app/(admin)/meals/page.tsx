@@ -44,7 +44,7 @@ export default function MealsPage() {
       if (mealFilter) params.set('mealType', mealFilter);
       if (ratingFilter) params.set('rating', ratingFilter);
 
-      const res = await api.get(`meals?${params.toString()}`).json<{
+      const res = await api.get(`meals/feedback?${params.toString()}`).json<{
         success: boolean;
         data: MealFeedbackRow[];
         meta: { total: number; page: number; limit: number; totalPages: number };
