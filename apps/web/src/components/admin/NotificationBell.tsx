@@ -135,7 +135,7 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={handleToggle}
-        className="hover:bg-surface-100 relative rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white p-2 shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] active:scale-[var(--active-press-scale)]"
+        className="hover:bg-surface-100 relative rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2 shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] active:scale-[var(--active-press-scale)]"
         aria-label="Notifications"
       >
         <Bell className="text-surface-700 h-5 w-5" />
@@ -147,7 +147,7 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-dropdown)]">
+        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-dropdown)]">
           {/* Header */}
           <div className="flex items-center justify-between border-b-[length:var(--bw-default)] border-b-[color:var(--color-surface-200)] p-3">
             <h3 className="font-display text-surface-900 text-sm font-bold">Notifications</h3>
@@ -166,7 +166,7 @@ export function NotificationBell() {
           <div className="max-h-[360px] overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center p-6">
-                <div className="border-surface-200 border-t-brand-500 h-5 w-5 animate-spin rounded-full border-2" />
+                <div className="border-[color:var(--color-surface-200)] border-t-brand-500 h-5 w-5 animate-spin rounded-full border-2" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-6 text-center">
@@ -229,7 +229,7 @@ export function NotificationBell() {
           {/* Footer */}
           <div className="border-surface-200 border-t-2 p-2">
             <a
-              href="/admin/notifications"
+              href="/notifications"
               className="font-body text-brand-600 hover:bg-brand-50 block rounded-md px-3 py-2 text-center text-xs font-semibold transition-colors duration-[var(--transition-duration)]"
             >
               View all notifications

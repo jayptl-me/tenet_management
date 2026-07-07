@@ -8,6 +8,7 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { Invoice } from '../models/invoice.js';
+import { Payment } from '../models/payment.js';
 import { Tenant } from '../models/tenant.js';
 import { generateSingleInvoice, generateMonthlyInvoices } from '../services/invoice.service.js';
 import { InvoicePdf } from '../templates/InvoicePdf.js';
@@ -223,6 +224,32 @@ invoices.get('/:id/pdf', authGuard, async (c) => {
       500,
     );
   }
+});
+
+// ── DELETE /invoices/:id ──────────────────────────────────
+invoices.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid invoice ID');
+
+  const invoice = await Invoice.findById(id).lean();
+  if (!invoice) return notFound(c, 'Invoice');
+
+  // Prevent deletion of paid invoices
+  if ((invoice as unknown as Record<string, unknown>).status === 'paid') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'INVOICE_PAID', message: 'Cannot delete paid invoices.' },
+      },
+      422,
+    );
+  }
+
+  // Delete all linked payments first
+  await Payment.deleteMany(safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) } as Record<string, unknown>));
+  await Invoice.findByIdAndDelete(id);
+
+  return c.json({ success: true, data: { message: 'Invoice deleted' } });
 });
 
 // ── GET /invoices/:id/payment-status ────────────────────

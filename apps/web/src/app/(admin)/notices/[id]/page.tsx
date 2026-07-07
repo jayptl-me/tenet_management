@@ -102,7 +102,7 @@ export default function NoticeDetailPage() {
       </div>
 
       {/* Content Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 flex items-center gap-2 text-lg font-bold">
           <Megaphone className="text-brand-600 h-5 w-5" />
           Notice Content
@@ -115,7 +115,7 @@ export default function NoticeDetailPage() {
       </div>
 
       {/* Details Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Details</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -156,7 +156,7 @@ export default function NoticeDetailPage() {
                 {notice.targetIds.map((tid) => (
                   <code
                     key={tid}
-                    className="border-surface-300 bg-surface-50 text-surface-600 rounded border px-2 py-0.5 font-mono text-xs"
+                    className="border-[color:var(--color-surface-300)] bg-surface-50 text-surface-600 rounded border px-2 py-0.5 font-mono text-xs"
                   >
                     {tid}
                   </code>

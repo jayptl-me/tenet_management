@@ -6,14 +6,14 @@ import { ArrowLeft, Building, Hash, DoorOpen, WashingMachine, Refrigerator } fro
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
 
 interface FloorDetail {
   _id: string;
-  floorName: string;
+  label: string;
   floorNumber: number;
   description?: string;
-  isActive: boolean;
-  roomCount?: number;
+  totalRooms: number;
   amenities?: {
     washingMachines?: number;
     fridges?: number;
@@ -70,8 +70,6 @@ export default function FloorDetailPage() {
     );
   }
 
-  const statusLabel = floor.isActive ? 'Active' : 'Inactive';
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -83,23 +81,22 @@ export default function FloorDetailPage() {
           </Button>
           <div>
             <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-              {floor.floorName}
+              {floor.label}
             </h2>
             <p className="text-surface-500 text-sm">Floor ID: {floor._id}</p>
           </div>
         </div>
-        <StatusBadge variant={statusToVariant(statusLabel)} label={statusLabel} />
       </div>
 
       {/* Floor Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Floor Information</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Floor Name</p>
+            <p className="text-surface-800 font-display text-sm font-semibold">Label</p>
             <p className="text-surface-700 flex items-center gap-1 text-sm">
               <Building className="text-surface-400 h-3.5 w-3.5" />
-              {floor.floorName}
+              {floor.label}
             </p>
           </div>
           <div>
@@ -113,7 +110,7 @@ export default function FloorDetailPage() {
             <p className="text-surface-800 font-display text-sm font-semibold">Total Rooms</p>
             <p className="text-surface-700 flex items-center gap-1 text-sm">
               <DoorOpen className="text-surface-400 h-3.5 w-3.5" />
-              {floor.roomCount ?? 0}
+              {floor.totalRooms}
             </p>
           </div>
           <div>
@@ -129,8 +126,14 @@ export default function FloorDetailPage() {
         </div>
       </div>
 
+      {/* Service Health Card */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Service Health</h3>
+        <FloorServiceGrid floorId={floor._id} floorLabel={floor.label} />
+      </div>
+
       {/* Amenities Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Amenities</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
@@ -158,7 +161,7 @@ export default function FloorDetailPage() {
 
       {/* Description Card */}
       {floor.description && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Description</h3>
           <p className="text-surface-700 whitespace-pre-wrap text-sm">{floor.description}</p>
         </div>

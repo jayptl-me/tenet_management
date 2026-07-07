@@ -141,6 +141,32 @@ visitors.post('/:id/depart', authGuard, async (c) => {
   return c.json({ success: true, data: visitor });
 });
 
+// ── PUT /visitors/:id ───────────────────────────────────
+visitors.put('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid visitor ID');
+
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return badRequest(c, 'Invalid JSON body');
+  }
+
+  const allowedFields = ['name', 'phone', 'purpose', 'expectedVisitDate', 'expectedVisitTime', 'notes', 'status'];
+  const updateData: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updateData[field] = body[field];
+    }
+  }
+
+  const visitor = await Visitor.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).lean();
+  if (!visitor) return notFound(c, 'Visitor');
+
+  return c.json({ success: true, data: visitor });
+});
+
 // ── GET /visitors/my ────────────────────────────────────
 visitors.get('/my', authGuard, tenantOnly, async (c) => {
   const user = c.get('user');
@@ -155,6 +181,16 @@ visitors.get('/my', authGuard, tenantOnly, async (c) => {
     .lean();
 
   return c.json({ success: true, data });
+});
+
+
+// ── DELETE /visitors/:id ────────────────────────────────
+visitors.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = c.req.param('id');
+  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid visitor ID');
+  const visitor = await Visitor.findByIdAndDelete(id);
+  if (!visitor) return notFound(c, 'Visitor');
+  return c.json({ success: true, data: { message: 'Visitor deleted' } });
 });
 
 export default visitors;

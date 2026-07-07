@@ -1,12 +1,13 @@
 /* ═════════════════════════════════════════════════════════
-   SAAS / ENTERPRISE THEME (Light & Dark)
-   Design ref: TheFrontKit "SaaS Design Tokens" (2026) + getcolors.dev (2026)
-   Philosophy: Professional, clean, efficient. Function over form.
+   SAAS / ENTERPRISE THEME v2 (Light & Dark)
+   Design ref: Linear, Vercel, Stripe (2026 modern SaaS)
+   Philosophy: Professional, clean, refined. Subtle polish
+              without decoration. Speed & clarity first.
    ═════════════════════════════════════════════════════════ */
 
 /* ── SaaS Light ─────────────────────────────────────────── */
 [data-theme='saas']:not([data-mode='dark']) {
-  /* Brand — Professional Indigo */
+  /* Brand — Vibrant Indigo (Linear-inspired energy) */
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
   --color-brand-200: #c7d2fe;
@@ -19,84 +20,159 @@
   --color-brand-900: #312e81;
   --color-brand-950: #1e1b4b;
 
-  /* Surface — Neutral cool gray (professional, no warmth) */
+  /* Semantic colors — Full scales for all StatusBadge variants and DataTable row colors */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #4ade80;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+
+  /* Surface — Warm-neutral modern gray (Stripe/Vercel influence) */
   --color-surface-50: #fafafa;
-  --color-surface-100: #f5f5f5;
-  --color-surface-200: #e5e5e5;
-  --color-surface-300: #d4d4d4;
-  --color-surface-400: #a3a3a3;
-  --color-surface-500: #737373;
-  --color-surface-600: #525252;
-  --color-surface-700: #404040;
-  --color-surface-800: #262626;
-  --color-surface-900: #171717;
-  --color-surface-950: #0a0a0a;
+  --color-surface-100: #f4f4f5;
+  --color-surface-200: #e4e4e7;
+  --color-surface-300: #d4d4d8;
+  --color-surface-400: #a1a1aa;
+  --color-surface-500: #71717a;
+  --color-surface-600: #52525b;
+  --color-surface-700: #3f3f46;
+  --color-surface-800: #27272a;
+  --color-surface-900: #18181b;
+  --color-surface-950: #09090b;
 
-  /* Borders — Thin, neutral, professional */
+  /* Borders — Refined, slightly softer */
   --bw-default: 1px;
-  --bw-strong: 1px;
-  --border-color: #e5e7eb;
+  --bw-strong: 1.5px;
+  --border-color: #e4e4e7;
 
-  /* Radii — Tight, professional (TheFrontKit token scale) */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  /* Radii — Modern SaaS (slightly more open than legacy 4px) */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows — Tight, close, subtle */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-button-pressed: none;
-  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08);
+  /* Shadows — Layered depth with brand tint (Linear-style) */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(99, 102, 241, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
 
-  /* Typography — Inter ONLY (system-grade, no decorative fonts) */
-  --font-display: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Typography — Inter system stack (Vercel-grade) */
+  --font-display: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  --font-body: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
-  /* Transition — Moderate, standard */
-  --transition-duration: 200ms;
-  --transition-easing: ease;
+  /* Transition — Smooth, polished micro-interactions */
+  --transition-duration: 150ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Layout — Compact, dense (information density focus) */
-  --sidebar-width: 240px;
-  --header-height: 60px;
+  /* Layout — Modern proportions */
+  --sidebar-width: 260px;
+  --header-height: 56px;
 
-  /* Behaviors — No animation, background color shift only */
-  --hover-lift: none;
-  --active-press-scale: 1;
+  /* Behaviors — Subtle polish, never distracting */
+  --hover-lift: translateY(-1px);
+  --active-press-scale: 0.98;
   --active-press-x: 0px;
-  --active-press-y: 0px;
+  --active-press-y: 1px;
 }
 
-/* ── SaaS Dark ──────────────────────────────────────── */
-[data-theme='saas-dark'],
+/* ── SaaS Dark (Linear/Vercel-inspired deep mode) ───── */
 [data-theme='saas'][data-mode='dark'] {
-  /* Surface — Slightly warm dark bg (getcolors.dev: #0a0a0a, not clinical #000) */
-  --color-surface-50: #0a0a0a;
-  --color-surface-100: #171717;
-  --color-surface-200: #262626;
-  --color-surface-300: #404040;
-  --color-surface-400: #525252;
-  --color-surface-500: #737373;
-  --color-surface-600: #a3a3a3;
-  --color-surface-700: #d4d4d4;
-  --color-surface-800: #e5e5e5;
-  --color-surface-900: #f5f5f5;
+  /* Surface — Deep zinc/neutral dark (Linear-grade contrast) */
+  --color-surface-50: #09090b;
+  --color-surface-100: #18181b;
+  --color-surface-200: #27272a;
+  --color-surface-300: #3f3f46;
+  --color-surface-400: #52525b;
+  --color-surface-500: #71717a;
+  --color-surface-600: #a1a1aa;
+  --color-surface-700: #d4d4d8;
+  --color-surface-800: #e4e4e7;
+  --color-surface-900: #f4f4f5;
   --color-surface-950: #fafafa;
 
-  /* Brand stays SAME — indigo #6366f1 contrasts well on dark */
-  /* Border — Subtle dark borders (getcolors.dev pattern) */
-  --border-color: rgba(255, 255, 255, 0.08);
+  /* Semantic colors — Full scale for StatusBadge, DataTable rows, alerts */
+  --color-success-50: #022c22;
+  --color-success-100: #022c22;
+  --color-success-200: #03582f;
+  --color-success-300: #059669;
+  --color-success-400: #10b981;
+  --color-success-500: #10b981;
+  --color-success-600: #34d399;
+  --color-success-700: #6ee7b7;
+  --color-success-800: #a7f3d0;
+  --color-success-900: #d1fae5;
+  --color-warning-50: #451a03;
+  --color-warning-100: #451a03;
+  --color-warning-200: #78350f;
+  --color-warning-300: #d97706;
+  --color-warning-400: #f59e0b;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #fbbf24;
+  --color-warning-700: #fcd34d;
+  --color-warning-800: #fde68a;
+  --color-warning-900: #fef3c7;
+  --color-danger-50: #450a0a;
+  --color-danger-100: #450a0a;
+  --color-danger-200: #7f1d1d;
+  --color-danger-300: #dc2626;
+  --color-danger-400: #ef4444;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #f87171;
+  --color-danger-700: #fca5a5;
+  --color-danger-800: #fecaca;
+  --color-danger-900: #fee2e2;
 
-  /* Shadows — Dark-adapted (same tight pattern, darker values) */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-button: none;
-  --shadow-button-pressed: none;
-  --shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.5), 0 1px 4px rgba(0, 0, 0, 0.3);
-  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.3);
+  /* Border — Crisp, higher contrast on dark */
+  --bw-default: 1px;
+  --bw-strong: 1.5px;
+  --border-color: rgba(255, 255, 255, 0.1);
+
+  /* Shadows — Deeper, more atmospheric */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-card-hover: 0 4px 16px rgba(99, 102, 241, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-button: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Cross-cutting dark tokens */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --shimmer-base: var(--color-surface-300);
+  --shimmer-shine: var(--color-surface-200);
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --disabled-opacity: 0.5;
+  --disabled-bg: var(--color-surface-300);
 }

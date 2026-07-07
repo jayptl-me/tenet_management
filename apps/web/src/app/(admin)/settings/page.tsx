@@ -122,7 +122,7 @@ function mapToForm(config: Partial<IAppConfig>): ConfigFormData {
     panNumber: config.panNumber ?? '',
     termsAndConditions: config.termsAndConditions ?? '',
     features: { ...defaultFeatureFlags, ...(config.features ?? {}) },
-    theme: config.theme ?? { preset: 'brutalist', mode: 'light' },
+    theme: config.theme ?? { preset: 'saas', mode: 'light' },
   };
 }
 
@@ -231,7 +231,7 @@ export default function SettingsPage() {
   }
 
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
-    <section className="space-y-4 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+    <section className="space-y-4 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
       <div>
         <h3 className="font-display text-surface-900 text-lg font-bold">{title}</h3>
         <p className="text-surface-500 mt-0.5 text-sm">{description}</p>
@@ -274,7 +274,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`font-display flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
               activeTab === tab.key
-                ? 'text-surface-900 bg-white shadow-[var(--shadow-button)]'
+                ? 'text-surface-900 bg-[color:var(--color-surface-100)] shadow-[var(--shadow-button)]'
                 : 'text-surface-500 hover:text-surface-700'
             }`}
           >
@@ -633,7 +633,7 @@ export default function SettingsPage() {
 
         {activeTab === 'appearance' && (
           <AppearanceTab
-            theme={config.theme ?? { preset: 'brutalist', mode: 'light' }}
+            theme={config.theme ?? { preset: 'saas', mode: 'light' }}
             onChange={(theme) => update({ theme })}
           />
         )}

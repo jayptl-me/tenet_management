@@ -68,7 +68,7 @@ export function DataTable<T>({
       )}
 
       <div className="overflow-x-auto rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)]">
-        <table className="font-[family:var(--font-body)] w-full border-collapse bg-white">
+        <table className="font-[family:var(--font-body)] w-full border-collapse bg-[color:var(--color-surface-100)]">
           <thead>
             <tr className="bg-surface-100">
               {columns.map((col, i) => (
@@ -121,7 +121,7 @@ export function DataTable<T>({
                   className={clsx(
                     'border-b-[length:var(--bw-default)] border-b-[color:var(--color-surface-200)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
                     onRowClick && 'hover:bg-brand-50 cursor-pointer',
-                    rowIdx % 2 === 0 ? 'bg-white' : 'bg-surface-50',
+                    rowIdx % 2 === 0 ? 'bg-[color:var(--color-surface-100)]' : 'bg-surface-50',
                   )}
                 >
                   {columns.map((col, colIdx) => (
@@ -148,7 +148,7 @@ export function DataTable<T>({
             <select
               value={pagination.perPage}
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
-              className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white px-2 py-1 text-sm font-semibold"
+              className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-2 py-1 text-sm font-semibold"
             >
               {PER_PAGE_OPTIONS.map((n) => (
                 <option key={n} value={n}>

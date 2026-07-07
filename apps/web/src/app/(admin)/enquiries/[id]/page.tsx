@@ -153,7 +153,7 @@ export default function EnquiryDetailPage() {
       {/* Main detail cards */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Enquiry details */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Enquiry Details
           </h3>
@@ -214,7 +214,7 @@ export default function EnquiryDetailPage() {
           </div>
 
           {enquiry.message && (
-            <div className="border-surface-200 mt-6 border-t-2 pt-4">
+            <div className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
               <p className="text-surface-500 mb-2 text-xs font-semibold uppercase tracking-wider">
                 Message
               </p>
@@ -246,7 +246,7 @@ export default function EnquiryDetailPage() {
               </div>
             )}
             {enquiry.notes && (
-              <div className="border-surface-200 border-t-2 pt-3">
+              <div className="border-[color:var(--color-surface-200)] border-t-2 pt-3">
                 <p className="text-surface-500 text-xs font-semibold uppercase tracking-wider">
                   Notes
                 </p>
@@ -258,7 +258,7 @@ export default function EnquiryDetailPage() {
       </div>
 
       {/* Status update form */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">Update Status</h3>
         <form
           onSubmit={handleSubmit(onSubmit)}

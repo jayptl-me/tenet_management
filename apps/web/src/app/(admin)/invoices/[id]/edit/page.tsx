@@ -71,7 +71,7 @@ export default function EditInvoicePage() {
         </div>
       </div>
       {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Month" type="month" error={errors.month?.message} {...register('month')} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -84,7 +84,7 @@ export default function EditInvoicePage() {
           </div>
           <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
         </div>
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
         </div>

@@ -6,7 +6,7 @@
 
 /* ── Neumorphic Light ───────────────────────────────────── */
 [data-theme='neumorphic']:not([data-mode='dark']) {
-  /* Brand — Soft Blue-Purple (used sparingly, accents only) */
+  /* Brand — Soft Blue-Purple */
   --color-brand-50: #f0f1ff;
   --color-brand-100: #dde0ff;
   --color-brand-200: #bcc1ff;
@@ -19,7 +19,7 @@
   --color-brand-900: #1a1f4d;
   --color-brand-950: #3b2f6e;
 
-  /* Surface — Pale Lavender Gray (background matches element bg) */
+  /* Surface — Pale Lavender Gray */
   --color-surface-50: #edeef2;
   --color-surface-100: #e4e5ea;
   --color-surface-200: #d1d3d9;
@@ -29,8 +29,40 @@
   --color-surface-600: #636570;
   --color-surface-700: #4a4c55;
   --color-surface-800: #33343d;
-  --color-surface-900: #2a2a3d;
-  --color-surface-950: #1a1a2e;
+  --color-surface-900: #1e1f28;
+  --color-surface-950: #12131a;
+
+  /* Semantic — Full scale for StatusBadge, DataTable, alerts */
+  --color-danger-50: #fdf2f5;
+  --color-danger-100: #fce4e8;
+  --color-danger-200: #f9c8d2;
+  --color-danger-300: #f5a3b3;
+  --color-danger-400: #f0708a;
+  --color-danger-500: #e84a6b;
+  --color-danger-600: #d12d51;
+  --color-danger-700: #ab1f3f;
+  --color-danger-800: #891937;
+  --color-danger-900: #6a1532;
+  --color-success-50: #ecfaf2;
+  --color-success-100: #d7f4e0;
+  --color-success-200: #b2e9c4;
+  --color-success-300: #7fd9a2;
+  --color-success-400: #4dc57b;
+  --color-success-500: #2dab5e;
+  --color-success-600: #1f8e4b;
+  --color-success-700: #19703c;
+  --color-success-800: #155831;
+  --color-success-900: #114628;
+  --color-warning-50: #fffaf0;
+  --color-warning-100: #fef3dc;
+  --color-warning-200: #fce3b8;
+  --color-warning-300: #fad08a;
+  --color-warning-400: #f7b85a;
+  --color-warning-500: #f4a036;
+  --color-warning-600: #e0841c;
+  --color-warning-700: #b76717;
+  --color-warning-800: #92501a;
+  --color-warning-900: #734219;
 
   /* Borders — 0px (borderless; extrusion from paired shadows) */
   --bw-default: 0px;
@@ -44,7 +76,7 @@
   --radius-xl: 24px;
   --radius-full: 9999px;
 
-  /* Shadows — Duotone pairs (raised: dark bottom-right + light top-left) */
+  /* Shadows — Duotone pairs */
   --shadow-card: 8px 8px 16px #d1d3d9, -8px -8px 16px #ffffff;
   --shadow-card-hover: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
   --shadow-button: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
@@ -72,19 +104,23 @@
   --active-press-x: 0px;
   --active-press-y: 0px;
 
-  /* Accessibility — StudioLimb mitigation for WCAG */
-  --focus-ring-color: rgba(124, 111, 255, 0.4);
+  /* ── Cross-cutting tokens ──────────────────────────────── */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --shimmer-base: var(--color-surface-200);
+  --shimmer-shine: var(--color-surface-100);
+  --focus-ring-color: rgba(92, 107, 255, 0.4);
   --focus-ring-width: 2px;
-  --interactive-border: 1px solid rgba(0, 0, 0, 0.08);
   --disabled-opacity: 0.4;
+  --disabled-bg: var(--color-surface-200);
+  --interactive-border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* ── Neumorphic Dark ────────────────────────────────────── */
-[data-theme='neumorphic-dark'],
 [data-theme='neumorphic'][data-mode='dark'] {
-  /* Surface — Mid-tone dark (StudioLimb: NOT pure black, need room for shadow pair) */
-  --color-surface-50: #1a1e28;
-  --color-surface-100: #1e2430;
+  --color-surface-50: #12131a;
+  --color-surface-100: #1a1e28;
   --color-surface-200: #242b38;
   --color-surface-300: #2a3242;
   --color-surface-400: #384254;
@@ -95,20 +131,61 @@
   --color-surface-900: #dce0e8;
   --color-surface-950: #f0f2f5;
 
-  /* Brand shifts lighter by 1 step for contrast against dark surfaces */
   --color-brand-500: #7c8aff;
 
-  /* Shadows — Dark mode duotone pairs (bg darkened ~15% / lightened ~10%) */
-  --shadow-card: 8px 8px 16px #10131a, -8px -8px 16px #2a3040;
-  --shadow-card-hover: 6px 6px 12px #10131a, -6px -6px 12px #2a3040;
-  --shadow-button: 6px 6px 12px #10131a, -6px -6px 12px #2a3040;
-  --shadow-button-pressed: inset 4px 4px 8px #10131a, inset -4px -4px 8px #2a3040;
-  --shadow-dropdown: 12px 12px 24px #10131a, -12px -12px 24px #2a3040;
-  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.3), -10px -10px 20px rgba(255, 255, 255, 0.1);
-  --shadow-input: inset 4px 4px 8px #10131a, inset -4px -4px 8px #2a3040;
+  /* Semantic — Dark-mode adjusted */
+  --color-danger-50: #3b1118;
+  --color-danger-100: #6a1532;
+  --color-danger-200: #891937;
+  --color-danger-300: #ab1f3f;
+  --color-danger-400: #d12d51;
+  --color-danger-500: #e84a6b;
+  --color-danger-600: #f0708a;
+  --color-danger-700: #f5a3b3;
+  --color-danger-800: #f9c8d2;
+  --color-danger-900: #fce4e8;
+  --color-success-50: #0d2c18;
+  --color-success-100: #114628;
+  --color-success-200: #155831;
+  --color-success-300: #19703c;
+  --color-success-400: #1f8e4b;
+  --color-success-500: #2dab5e;
+  --color-success-600: #4dc57b;
+  --color-success-700: #7fd9a2;
+  --color-success-800: #b2e9c4;
+  --color-success-900: #d7f4e0;
+  --color-warning-50: #3b2411;
+  --color-warning-100: #734219;
+  --color-warning-200: #92501a;
+  --color-warning-300: #b76717;
+  --color-warning-400: #e0841c;
+  --color-warning-500: #f4a036;
+  --color-warning-600: #f7b85a;
+  --color-warning-700: #fad08a;
+  --color-warning-800: #fce3b8;
+  --color-warning-900: #fef3dc;
 
-  /* Accessibility — Dark mode adjustments */
+  --bw-default: 0px;
+  --bw-strong: 0px;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  --shadow-card: 8px 8px 16px #0a0b11, -8px -8px 16px #242b38;
+  --shadow-card-hover: 6px 6px 12px #0a0b11, -6px -6px 12px #242b38;
+  --shadow-button: 6px 6px 12px #0a0b11, -6px -6px 12px #242b38;
+  --shadow-button-pressed: inset 4px 4px 8px #0a0b11, inset -4px -4px 8px #242b38;
+  --shadow-dropdown: 12px 12px 24px #0a0b11, -12px -12px 24px #242b38;
+  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.3), -10px -10px 20px rgba(255, 255, 255, 0.06);
+  --shadow-input: inset 4px 4px 8px #0a0b11, inset -4px -4px 8px #242b38;
+
+  /* Cross-cutting dark */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --shimmer-base: var(--color-surface-300);
+  --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: rgba(156, 141, 255, 0.6);
-  --interactive-border: 1px solid rgba(255, 255, 255, 0.08);
+  --focus-ring-width: 2px;
   --disabled-opacity: 0.35;
+  --disabled-bg: var(--color-surface-300);
+  --interactive-border: 1px solid rgba(255, 255, 255, 0.08);
 }

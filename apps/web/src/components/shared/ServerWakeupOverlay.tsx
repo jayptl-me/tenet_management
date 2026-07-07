@@ -9,7 +9,7 @@ export default function ServerWakeupOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]">
-      <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 text-center shadow-[var(--shadow-card)]">
+      <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 text-center shadow-[var(--shadow-card)]">
         {/* Loading Spinner */}
         <div className="bg-brand-100 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]">
           <svg className="text-brand-600 h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -5,13 +5,33 @@ import { api } from '@/lib/api';
 import type { ThemeSettings } from '@pg/types';
 
 const DEFAULT_THEME: ThemeSettings = {
-  preset: 'brutalist',
+  preset: 'saas',
   mode: 'light',
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const prevThemeRef = useRef<string | null>(null);
+
+  // Bootstrap from localStorage immediately to prevent SSR flash
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('tenet-theme');
+      if (stored) {
+        const settings = JSON.parse(stored) as ThemeSettings;
+        const root = document.documentElement;
+        root.setAttribute('data-theme', settings.preset);
+        root.setAttribute('data-mode', settings.mode);
+        if (settings.brandColor) {
+          root.style.setProperty('--color-brand-500', settings.brandColor);
+        }
+        prevThemeRef.current = `${settings.preset}-${settings.mode}-${settings.brandColor ?? ''}`;
+      }
+    } catch {
+      // ignore
+    }
+    setMounted(true);
+  }, []);
 
   const applyTheme = useCallback((settings: ThemeSettings) => {
     const root = document.documentElement;

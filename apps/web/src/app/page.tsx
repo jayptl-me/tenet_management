@@ -181,7 +181,7 @@ export default function LandingPage() {
       />
 
       {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] bg-white">
+      <nav className="sticky top-0 z-50 border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="font-display text-surface-900 text-2xl font-extrabold uppercase tracking-tight">
@@ -230,7 +230,7 @@ export default function LandingPage() {
 
           {/* Mobile hamburger */}
           <button
-            className="rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2 md:hidden"
+            className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2 md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -239,7 +239,7 @@ export default function LandingPage() {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="animate-slide-in-left space-y-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] bg-white px-4 py-4 md:hidden">
+          <div className="animate-slide-in-left space-y-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-4 md:hidden">
             <a
               href="#amenities"
               className="text-surface-700 block py-2 text-sm font-semibold"
@@ -298,7 +298,7 @@ export default function LandingPage() {
               <Button
                 variant="secondary"
                 size="lg"
-                className="text-brand-600 bg-white shadow-[var(--shadow-card)]"
+                className="text-brand-600 bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)]"
               >
                 Book a Visit
               </Button>
@@ -315,8 +315,8 @@ export default function LandingPage() {
           </div>
         </div>
         {/* Decorative dots */}
-        <div className="absolute right-8 top-8 h-16 w-16 rounded-full border-2 border-white/20 bg-white/10" />
-        <div className="absolute bottom-12 left-12 h-24 w-24 rounded-full border-2 border-white/20 bg-white/10" />
+        <div className="absolute right-8 top-8 h-16 w-16 rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10" />
+        <div className="absolute bottom-12 left-12 h-24 w-24 rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10" />
       </section>
 
       {/* Amenities Grid */}
@@ -334,9 +334,9 @@ export default function LandingPage() {
           {amenities.map((amenity, i) => (
             <div
               key={i}
-              className="hover:translate-[var(--hover-lift)] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:shadow-[var(--shadow-button)]"
+              className="hover:translate-[var(--hover-lift)] rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:shadow-[var(--shadow-button)]"
             >
-              <div className="bg-brand-100 text-brand-600 mx-auto mb-3 w-fit rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
+              <div className="bg-brand-100 text-brand-600 mx-auto mb-3 w-fit rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
                 {amenity.toLowerCase().includes('wifi') ? (
                   <Zap className="h-5 w-5" />
                 ) : amenity.toLowerCase().includes('security') ? (
@@ -361,7 +361,7 @@ export default function LandingPage() {
       {/* Room Pricing Section */}
       <section
         id="rooms"
-        className="border-y-[length:var(--bw-strong)] border-y-[color:var(--border-color)] bg-white py-16 md:py-24"
+        className="border-y-[length:var(--bw-strong)] border-y-[color:var(--border-color)] bg-[color:var(--color-surface-100)] py-16 md:py-24"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-12 text-center">
@@ -375,7 +375,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {/* 2 Sharing */}
-            <div className="bg-surface-50 hover:translate-[var(--hover-lift)] relative flex flex-col justify-between rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
+            <div className="bg-surface-50 hover:translate-[var(--hover-lift)] relative flex flex-col justify-between rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
               <div>
                 <h3 className="font-display text-surface-900 text-xl font-bold uppercase">
                   2 Sharing
@@ -401,7 +401,7 @@ export default function LandingPage() {
               </div>
               <Button
                 variant="outline"
-                className="mt-4 w-full bg-white"
+                className="mt-4 w-full bg-[color:var(--color-surface-100)]"
                 onClick={() => handleEnquireClick('2')}
               >
                 Enquire Now
@@ -409,8 +409,8 @@ export default function LandingPage() {
             </div>
 
             {/* 3 Sharing - Popular */}
-            <div className="hover:translate-[var(--hover-lift)] ring-3 relative flex flex-col justify-between rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-brand-500)] bg-white p-6 shadow-[var(--shadow-card)] ring-[color:var(--color-brand-500)] ring-offset-2 transition-all duration-[var(--transition-duration)]">
-              <div className="bg-brand-500 font-display absolute -top-3.5 right-6 rounded-full border-2 border-black px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
+            <div className="hover:translate-[var(--hover-lift)] ring-3 relative flex flex-col justify-between rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--color-brand-500)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] ring-[color:var(--color-brand-500)] ring-offset-2 transition-all duration-[var(--transition-duration)]">
+              <div className="bg-brand-500 font-display absolute -top-3.5 right-6 rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
                 Most Popular
               </div>
               <div>
@@ -446,7 +446,7 @@ export default function LandingPage() {
             </div>
 
             {/* 4 Sharing */}
-            <div className="bg-surface-50 hover:translate-[var(--hover-lift)] relative flex flex-col justify-between rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
+            <div className="bg-surface-50 hover:translate-[var(--hover-lift)] relative flex flex-col justify-between rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
               <div>
                 <h3 className="font-display text-surface-900 text-xl font-bold uppercase">
                   4 Sharing
@@ -472,7 +472,7 @@ export default function LandingPage() {
               </div>
               <Button
                 variant="outline"
-                className="mt-4 w-full bg-white"
+                className="mt-4 w-full bg-[color:var(--color-surface-100)]"
                 onClick={() => handleEnquireClick('4')}
               >
                 Enquire Now
@@ -495,7 +495,7 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Card 1 */}
-          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
+          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
             <div className="h-48 overflow-hidden bg-surface-100">
               <img
                 src="/images/gallery-room.jpg"
@@ -515,7 +515,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 2 */}
-          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
+          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
             <div className="bg-success-500 flex h-48 items-center justify-center text-white">
               <span className="font-display text-2xl font-bold uppercase tracking-wider">
                 Mess Hall
@@ -532,7 +532,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 3 */}
-          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
+          <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
             <div className="bg-brand-400 flex h-48 items-center justify-center text-white">
               <span className="font-display text-2xl font-bold uppercase tracking-wider">
                 Study Lounge
@@ -551,7 +551,7 @@ export default function LandingPage() {
       {/* About */}
       <section
         id="about"
-        className="border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] bg-white py-16 md:py-24"
+        className="border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] py-16 md:py-24"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
@@ -578,31 +578,31 @@ export default function LandingPage() {
                 </span>
               </div>
             </div>
-            <div className="bg-brand-500 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-8 text-center text-white shadow-[var(--shadow-card)]">
+            <div className="bg-brand-500 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-8 text-center text-white shadow-[var(--shadow-card)]">
               <p className="font-display mb-2 text-6xl font-extrabold">500+</p>
               <p className="text-brand-100 mb-6 text-sm font-semibold uppercase tracking-wider">
                 Happy Residents
               </p>
               <div className="font-display grid grid-cols-2 gap-4 text-left">
-                <div className="rounded-md border-2 border-white/20 bg-white/10 p-3">
+                <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10 p-3">
                   <p className="font-display text-2xl font-bold">99%</p>
                   <p className="text-brand-200 text-xs font-bold uppercase tracking-wider">
                     Occupancy
                   </p>
                 </div>
-                <div className="rounded-md border-2 border-white/20 bg-white/10 p-3">
+                <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10 p-3">
                   <p className="font-display text-2xl font-bold">4.8</p>
                   <p className="text-brand-200 text-xs font-bold uppercase tracking-wider">
                     Avg Rating
                   </p>
                 </div>
-                <div className="rounded-md border-2 border-white/20 bg-white/10 p-3">
+                <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10 p-3">
                   <p className="font-display text-2xl font-bold">24×7</p>
                   <p className="text-brand-200 text-xs font-bold uppercase tracking-wider">
                     Security
                   </p>
                 </div>
-                <div className="rounded-md border-2 border-white/20 bg-white/10 p-3">
+                <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-white/10 p-3">
                   <p className="font-display text-2xl font-bold">3</p>
                   <p className="text-brand-200 text-xs font-bold uppercase tracking-wider">
                     Meals/Day
@@ -634,7 +634,7 @@ export default function LandingPage() {
             {testimonials.map((t, i) => (
               <div
                 key={i}
-                className="hover:translate-[var(--hover-lift)] flex flex-col justify-between rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]"
+                className="hover:translate-[var(--hover-lift)] flex flex-col justify-between rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]"
               >
                 <div>
                   <div className="text-warning-500 mb-4 flex gap-1">
@@ -646,7 +646,7 @@ export default function LandingPage() {
                     &ldquo;{t.quote}&rdquo;
                   </p>
                 </div>
-                <div className="border-surface-200 flex items-center justify-between border-t-2 pt-4">
+                <div className="border-[color:var(--border-color)] flex items-center justify-between border-t-[length:var(--bw-default)] pt-4">
                   <span className="font-display text-surface-900 text-sm font-extrabold uppercase">
                     {t.name}
                   </span>
@@ -676,7 +676,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-surface-200 h-80 overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] shadow-[var(--shadow-card)]">
+            <div className="bg-surface-200 h-80 overflow-hidden rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] shadow-[var(--shadow-card)]">
               {mapsEmbedUrl ? (
                 <iframe
                   title="Google Maps Location"
@@ -722,7 +722,7 @@ export default function LandingPage() {
             </div>
 
             {formSent ? (
-              <div className="bg-success-100 font-display rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-8 text-center shadow-[var(--shadow-card)]">
+              <div className="bg-success-100 font-display rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-8 text-center shadow-[var(--shadow-card)]">
                 <div className="mb-3 flex justify-center">
                   <Check className="text-success-600 h-10 w-10" />
                 </div>
@@ -736,7 +736,7 @@ export default function LandingPage() {
             ) : (
               <form
                 onSubmit={handleEnquiry}
-                className="space-y-4 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
+                className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
               >
                 <Input label="Full Name" name="name" placeholder="John Doe" required />
                 <Input
@@ -766,7 +766,7 @@ export default function LandingPage() {
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Tell us about your requirements..."
-                    className="text-surface-900 placeholder:text-surface-400 focus:ring-brand-500 font-[family:var(--font-body)] w-full resize-none rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
+                    className="text-surface-900 placeholder:text-surface-400 focus:ring-brand-500 font-[family:var(--font-body)] w-full resize-none rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
                   />
                 </div>
                 {formError && <p className="text-danger-600 text-sm font-medium">{formError}</p>}

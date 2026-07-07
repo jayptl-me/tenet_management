@@ -305,4 +305,17 @@ attendance.get('/:id', authGuard, async (c) => {
   return c.json({ success: true, data: mapRecord(record as unknown as Record<string, unknown>) });
 });
 
+// ── DELETE /attendance/:id — admin deletes a record ─────
+attendance.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid attendance ID');
+
+  const record = await AttendanceRecord.findById(id);
+  if (!record) return notFound(c, 'Attendance record');
+
+  await AttendanceRecord.findByIdAndDelete(id);
+
+  return c.json({ success: true, data: { message: 'Attendance record deleted' } });
+});
+
 export default attendance;
