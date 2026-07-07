@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Megaphone, Calendar, Target, FileText } from 'lucide-react';
+import { ArrowLeft, Megaphone, Calendar, Target, FileText, MessageCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { generateWhatsAppUrl } from '@/lib/whatsapp';
 
 interface NoticeDetail {
   _id: string;
@@ -164,6 +165,26 @@ export default function NoticeDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const phone = process.env.NEXT_PUBLIC_PG_PHONE ?? '';
+              const text = `${notice.title}: ${notice.content}`;
+              const url = generateWhatsAppUrl(phone, text);
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Share via WhatsApp
+          </Button>
         </div>
       </div>
     </div>

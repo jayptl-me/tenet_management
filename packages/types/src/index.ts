@@ -26,7 +26,7 @@ export type {
 } from './user.js';
 
 // ── Floor ──────────────────────────────────────────────
-export type { IFloor, IFloorCreate } from './floor.js';
+export type { AmenityCount, IFloor, IFloorCreate } from './floor.js';
 
 // ── Room ───────────────────────────────────────────────
 export type { SharingType, IBed, IRoom, IRoomCreate, IRoomWithOccupants } from './room.js';
@@ -88,6 +88,8 @@ export type { IEnquiryStatus, IEnquiry, IEnquiryCreate } from './enquiry.js';
 
 // ── AppConfig ──────────────────────────────────────────
 export type {
+  AmenityCategory,
+  AmenityDefinition,
   ThemePreset,
   ThemeMode,
   ThemeSettings,

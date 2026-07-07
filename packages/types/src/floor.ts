@@ -1,9 +1,16 @@
+export interface AmenityCount {
+  amenityKey: string;
+  count: number;
+}
+
 export interface IFloor {
   id: string;
   floorNumber: number;
   label: string;
   totalRooms: number;
-  amenities: {
+  amenityCounts: AmenityCount[];
+  /** @deprecated Use amenityCounts instead */
+  amenities?: {
     washingMachines: number;
     fridges: number;
   };
@@ -14,8 +21,5 @@ export interface IFloorCreate {
   floorNumber: number;
   label: string;
   totalRooms: number;
-  amenities: {
-    washingMachines: number;
-    fridges: number;
-  };
+  amenityCounts?: AmenityCount[];
 }

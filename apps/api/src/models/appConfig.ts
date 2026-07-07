@@ -43,6 +43,16 @@ export interface IAppConfigDocument extends Document {
   gstNumber?: string;
   panNumber?: string;
   termsAndConditions?: string;
+  amenityDefinitions: Array<{
+    key: string;
+    label: string;
+    icon: string;
+    category: 'essential' | 'appliance' | 'furnishing' | 'other';
+    showAsStatusLabel: boolean;
+    isPerFloor: boolean;
+    maxPerFloor?: number;
+    applicableComplaintCategories?: string[];
+  }>;
   features: {
     attendanceEnabled: boolean;
     laundryEnabled: boolean;
@@ -76,6 +86,141 @@ const testimonialSchema = new Schema(
   },
   { _id: false },
 );
+
+const amenityDefinitionSchema = new Schema(
+  {
+    key: {
+      type: String,
+      required: [true, 'Amenity key is required'],
+      match: [/^[a-z][a-z0-9_]*$/, 'Key must be lowercase alphanumeric with underscores'],
+    },
+    label: {
+      type: String,
+      required: [true, 'Label is required'],
+      trim: true,
+      maxlength: [50, 'Label cannot exceed 50 characters'],
+    },
+    icon: {
+      type: String,
+      required: [true, 'Icon name (lucide) is required'],
+      trim: true,
+    },
+    category: {
+      type: String,
+      enum: ['essential', 'appliance', 'furnishing', 'other'],
+      required: [true, 'Category is required'],
+    },
+    showAsStatusLabel: {
+      type: Boolean,
+      default: false,
+    },
+    isPerFloor: {
+      type: Boolean,
+      default: true,
+    },
+    maxPerFloor: {
+      type: Number,
+      min: [0, 'Max per floor must be >= 0'],
+      max: [10, 'Max per floor cannot exceed 10'],
+    },
+    applicableComplaintCategories: {
+      type: [String],
+      default: undefined,
+    },
+  },
+  { _id: false },
+);
+
+const DEFAULT_AMENITY_DEFINITIONS = [
+  {
+    key: 'wifi',
+    label: 'WiFi',
+    icon: 'wifi',
+    category: 'essential',
+    showAsStatusLabel: true,
+    isPerFloor: true,
+    applicableComplaintCategories: ['wifi'],
+  },
+  {
+    key: 'electricity',
+    label: 'Electricity',
+    icon: 'zap',
+    category: 'essential',
+    showAsStatusLabel: true,
+    isPerFloor: true,
+    applicableComplaintCategories: ['electricity', 'lights'],
+  },
+  {
+    key: 'water_supply',
+    label: 'Water Supply',
+    icon: 'droplets',
+    category: 'essential',
+    showAsStatusLabel: true,
+    isPerFloor: true,
+    applicableComplaintCategories: ['water'],
+  },
+  {
+    key: 'geyser',
+    label: 'Geyser',
+    icon: 'thermometer',
+    category: 'essential',
+    showAsStatusLabel: false,
+    isPerFloor: true,
+    applicableComplaintCategories: ['water'],
+  },
+  {
+    key: 'washing_machine',
+    label: 'Washing Machine',
+    icon: 'shirt',
+    category: 'appliance',
+    showAsStatusLabel: false,
+    isPerFloor: true,
+    maxPerFloor: 3,
+    applicableComplaintCategories: ['washing_machine'],
+  },
+  {
+    key: 'fridge',
+    label: 'Fridge',
+    icon: 'sparkles',
+    category: 'appliance',
+    showAsStatusLabel: false,
+    isPerFloor: true,
+    maxPerFloor: 2,
+    applicableComplaintCategories: ['fridge'],
+  },
+  {
+    key: 'fan',
+    label: 'Fan',
+    icon: 'fan',
+    category: 'furnishing',
+    showAsStatusLabel: false,
+    isPerFloor: false,
+  },
+  {
+    key: 'bed',
+    label: 'Bed',
+    icon: 'bed-single',
+    category: 'furnishing',
+    showAsStatusLabel: false,
+    isPerFloor: false,
+  },
+  {
+    key: 'bedsheet',
+    label: 'Bedsheet',
+    icon: 'scroll-text',
+    category: 'furnishing',
+    showAsStatusLabel: false,
+    isPerFloor: false,
+  },
+  {
+    key: 'pillow',
+    label: 'Pillow',
+    icon: 'moon-star',
+    category: 'furnishing',
+    showAsStatusLabel: false,
+    isPerFloor: false,
+  },
+];
 
 const appConfigSchema = new Schema<IAppConfigDocument>(
   {
@@ -146,6 +291,10 @@ const appConfigSchema = new Schema<IAppConfigDocument>(
     gstNumber: { type: String, trim: true },
     panNumber: { type: String, trim: true },
     termsAndConditions: { type: String, maxlength: 10000 },
+    amenityDefinitions: {
+      type: [amenityDefinitionSchema],
+      default: () => [...DEFAULT_AMENITY_DEFINITIONS],
+    } as any,
     features: {
       attendanceEnabled: { type: Boolean, default: false },
       laundryEnabled: { type: Boolean, default: true },

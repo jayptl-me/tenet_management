@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -51,10 +52,9 @@ export default function FloorsPage() {
     try {
       await api.delete(`floors/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchFloors();
+      await fetchFloors();
     } catch {
       setError('Failed to delete floor');
-      setDeleting(false);
     } finally {
       setDeleting(false);
     }
@@ -63,7 +63,7 @@ export default function FloorsPage() {
   const columns: DataTableColumn<FloorRow>[] = [
     {
       header: 'Floor',
-      accessor: (row) => <span className="text-surface-900 font-semibold">{row.label}</span>,
+      accessor: (row) => <span className="font-semibold text-[color:var(--color-surface-900)]">{row.label}</span>,
     },
     {
       header: 'Floor #',
@@ -74,6 +74,15 @@ export default function FloorsPage() {
       accessor: (row) => row.totalRooms,
     },
     {
+      header: 'Services',
+      accessor: (row) => (
+        <div onClick={(e) => e.stopPropagation()} className="min-w-[140px]">
+          <FloorServiceGrid floorId={row._id} compact />
+        </div>
+      ),
+      className: 'w-[180px]',
+    },
+    {
       header: 'Actions',
       accessor: (row) => (
         <div className="flex items-center gap-1">
@@ -82,7 +91,7 @@ export default function FloorsPage() {
               e.stopPropagation();
               router.push(`/floors/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -92,7 +101,7 @@ export default function FloorsPage() {
               e.stopPropagation();
               router.push(`/floors/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -102,7 +111,7 @@ export default function FloorsPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -117,8 +126,12 @@ export default function FloorsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Floors</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Manage building floors</p>
+          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-surface-900)]">
+            Floors
+          </h2>
+          <p className="mt-0.5 text-sm text-[color:var(--color-surface-500)]">
+            Manage building floors
+          </p>
         </div>
         <Button onClick={() => router.push('/floors/new')}>
           <Plus className="h-4 w-4" />
@@ -127,7 +140,7 @@ export default function FloorsPage() {
       </div>
 
       {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
           {error}
         </div>
       )}

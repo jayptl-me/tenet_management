@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,9 +24,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function NewTenantPage() {
+function TenantForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState('');
+
+  const prefilledName = searchParams.get('name') || '';
+  const prefilledPhone = searchParams.get('phone') || '';
+  const prefilledEmail = searchParams.get('email') || '';
 
   const {
     register,
@@ -35,7 +40,13 @@ export default function NewTenantPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { depositPaid: 0, monthlyRent: 0 },
+    defaultValues: {
+      name: prefilledName,
+      email: prefilledEmail,
+      phone: prefilledPhone,
+      depositPaid: 0,
+      monthlyRent: 0,
+    },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -108,5 +119,19 @@ export default function NewTenantPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewTenantPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        </div>
+      }
+    >
+      <TenantForm />
+    </Suspense>
   );
 }

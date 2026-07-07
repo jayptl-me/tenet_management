@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/themes/ThemeProvider';
 import ServerWakeupOverlay from '@/components/shared/ServerWakeupOverlay';
+import AppProviders from '@/components/shared/AppProviders';
 
 export const metadata: Metadata = {
   title: {
@@ -73,10 +74,12 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
-          <ServerWakeupOverlay />
-          {children}
-        </ThemeProvider>
+        <AppProviders>
+          <ThemeProvider>
+            <ServerWakeupOverlay />
+            {children}
+          </ThemeProvider>
+        </AppProviders>
       </body>
     </html>
   );

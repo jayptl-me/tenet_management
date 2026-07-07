@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Megaphone, AlertTriangle, CreditCard, Check, MessageSquare, Wrench, Zap, Waves, Utensils, Users, Building2, DoorOpen, User } from 'lucide-react';
+import { ArrowLeft, Send, Megaphone, AlertTriangle, CreditCard, Check, MessageSquare, Wrench, Zap, Waves, Utensils, Users, Building2, DoorOpen, User, Copy } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+import { toast } from 'sonner';
 import type { INotificationType } from '@pg/types';
 
 type TargetFilter = 'all' | 'floor' | 'room' | 'individual';
@@ -223,6 +225,40 @@ export default function NewNotificationPage() {
             <p className="text-[color:var(--color-surface-400)] mt-1 text-right font-[family:var(--font-mono)] text-xs">
               {body.length}/2000
             </p>
+
+            {/* WhatsApp Share Preview for Emergency */}
+            {type === 'emergency' && (() => {
+              const whatsappUrl = generateWhatsAppUrl('', `EMERGENCY: ${title}\n${body}`);
+              return (
+                <div className="border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] mt-3 rounded-lg border-[length:var(--bw-default)] p-4">
+                  <p className="font-[family:var(--font-body)] text-[color:var(--color-surface-700)] mb-2 text-xs font-semibold uppercase tracking-wider">
+                    WhatsApp Share Preview
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-[family:var(--font-mono)] text-[color:var(--color-brand-600)] flex-1 truncate text-xs underline"
+                    >
+                      {whatsappUrl}
+                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(whatsappUrl);
+                        toast.success('WhatsApp link copied to clipboard');
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy link
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Send Push Toggle */}

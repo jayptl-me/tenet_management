@@ -1,5 +1,5 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
-import type { SharingType } from '@pg/types/room';
+import type { SharingType, RoomAmenityStatus } from '@pg/types/room';
 
 const BED_IDS = ['A', 'B', 'C', 'D'] as const;
 
@@ -19,6 +19,7 @@ export interface IRoomDocument extends Document {
   description?: string;
   photos: string[];
   beds: IBedSubdoc[];
+  roomAmenities: RoomAmenityStatus[];
   occupancyCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -43,6 +44,22 @@ const bedSchema = new Schema<IBedSubdoc>(
       type: Schema.Types.ObjectId,
       ref: 'Tenant',
       default: null,
+    },
+  },
+  { _id: false },
+);
+
+const roomAmenitySchema = new Schema<RoomAmenityStatus>(
+  {
+    amenityKey: {
+      type: String,
+      required: true,
+      match: /^[a-z][a-z0-9_]*$/,
+    },
+    status: {
+      type: String,
+      enum: ['operational', 'degraded', 'down'],
+      default: 'operational',
     },
   },
   { _id: false },
@@ -85,6 +102,10 @@ const roomSchema: any = new Schema(
       maxlength: [500, 'Description cannot exceed 500 characters'],
     },
     photos: [{ type: String }],
+    roomAmenities: {
+      type: [roomAmenitySchema],
+      default: [],
+    },
     beds: {
       type: [bedSchema],
       validate: {
@@ -122,6 +143,7 @@ roomSchema.index({ floorId: 1 });
 roomSchema.index({ sharingType: 1 });
 roomSchema.index({ isActive: 1 });
 roomSchema.index({ 'beds.isOccupied': 1 });
+roomSchema.index({ 'roomAmenities.amenityKey': 1 });
 
 // ── Virtual: populate floor info ────────────────────────
 roomSchema.virtual('floor', {

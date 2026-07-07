@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -277,6 +277,26 @@ export default function EnquiryDetailPage() {
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         </form>
+      </div>
+
+      {/* Actions */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 text-lg font-bold">Actions</h3>
+        <p className="text-surface-600 mt-1 mb-4 text-sm">
+          Convert this enquiry into a tenant. This will pre-fill the new tenant form with the
+          enquirer's details.
+        </p>
+        <Button
+          variant="primary"
+          onClick={() =>
+            router.push(
+              `/tenants/new?name=${encodeURIComponent(enquiry.name)}&phone=${encodeURIComponent(enquiry.phone)}&email=${encodeURIComponent(enquiry.email || '')}&source=enquiry&enquiryId=${enquiry._id}`
+            )
+          }
+        >
+          <UserPlus className="h-4 w-4" />
+          Convert to Tenant
+        </Button>
       </div>
 
       {/* Meta */}

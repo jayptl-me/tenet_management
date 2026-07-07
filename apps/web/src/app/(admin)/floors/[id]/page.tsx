@@ -129,7 +129,13 @@ export default function FloorDetailPage() {
       {/* Service Health Card */}
       <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Service Health</h3>
-        <FloorServiceGrid floorId={floor._id} floorLabel={floor.label} />
+        <FloorServiceGrid
+          floorId={floor._id}
+          floorLabel={floor.label}
+          onReportIssue={(serviceType) => {
+            router.push(`/complaints/new?category=${encodeURIComponent(serviceType)}&floorId=${encodeURIComponent(floor._id)}`);
+          }}
+        />
       </div>
 
       {/* Amenities Card */}
