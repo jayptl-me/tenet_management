@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 interface RoomRow {
   _id: string;
   roomNumber: string;
-  floor?: { _id: string; floorName: string };
+  floor?: { _id: string; label: string };
   sharingType: number;
   monthlyRent: number;
   description?: string;
@@ -71,7 +71,7 @@ export default function RoomsPage() {
     },
     {
       header: 'Floor',
-      accessor: (row) => row.floor?.floorName ?? 'N/A',
+      accessor: (row) => row.floor?.label ?? 'N/A',
     },
     {
       header: 'Type',
@@ -99,20 +99,32 @@ export default function RoomsPage() {
       ),
     },
     {
-      header: 'Actions',
+      header: '',
       accessor: (row) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(`/rooms/${row._id}`);
-          }}
-          className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors duration-[var(--transition-duration)]"
-        >
-          <Eye className="h-3 w-3" />
-          View
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/rooms/${row._id}`);
+            }}
+            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="View"
+          >
+            <Eye className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/rooms/${row._id}/edit`);
+            }}
+            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
       ),
-      className: 'w-[80px]',
+      className: 'w-[90px]',
     },
   ];
 
@@ -139,10 +151,7 @@ export default function RoomsPage() {
         <Input
           placeholder="Search by room number..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="max-w-xs"
         />
         <Select
@@ -153,10 +162,7 @@ export default function RoomsPage() {
             { value: '4', label: '4 Sharing' },
           ]}
           value={sharingFilter}
-          onChange={(e) => {
-            setSharingFilter(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setSharingFilter(e.target.value); setPage(1); }}
           className="max-w-[180px]"
         />
         <Select
@@ -166,10 +172,7 @@ export default function RoomsPage() {
             { value: 'false', label: 'Inactive' },
           ]}
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="max-w-[160px]"
         />
       </div>
@@ -180,16 +183,7 @@ export default function RoomsPage() {
         keyExtractor={(row: RoomRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/rooms/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: (p) => setPage(p),
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
+        pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
       />
     </div>
   );

@@ -1,7 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bell, Check, X } from 'lucide-react';
+import {
+  Bell,
+  Check,
+  X,
+  MessageSquare,
+  Megaphone,
+  Wrench,
+  Zap,
+  User,
+  AlertTriangle,
+  Utensils,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import type { INotification } from '@pg/types';
@@ -101,16 +112,16 @@ export function NotificationBell() {
 
   if (!isAuthenticated) return null;
 
-  const typeIcons: Record<string, string> = {
-    payment_reminder: '💰',
-    payment_verified: '✅',
-    complaint_update: '📋',
-    announcement: '📢',
-    service_update: '🔧',
-    electricity_bill: '⚡',
-    welcome: '👋',
-    emergency: '🚨',
-    meal_feedback: '🍽️',
+  const typeIcons: Record<string, React.ReactNode> = {
+    payment_reminder: <Bell className="h-4 w-4 text-warning-500" />,
+    payment_verified: <Check className="h-4 w-4 text-success-500" />,
+    complaint_update: <MessageSquare className="h-4 w-4 text-brand-500" />,
+    announcement: <Megaphone className="h-4 w-4 text-brand-500" />,
+    service_update: <Wrench className="h-4 w-4 text-warning-500" />,
+    electricity_bill: <Zap className="h-4 w-4 text-danger-500" />,
+    welcome: <User className="h-4 w-4 text-success-500" />,
+    emergency: <AlertTriangle className="h-4 w-4 text-danger-500" />,
+    meal_feedback: <Utensils className="h-4 w-4 text-brand-500" />,
   };
 
   const typeColors: Record<string, string> = {
@@ -172,8 +183,8 @@ export function NotificationBell() {
                       isUnread ? 'bg-brand-50/50' : ''
                     }`}
                   >
-                    <span className="mt-0.5 text-lg" role="img" aria-label={notif.type}>
-                      {typeIcons[notif.type] ?? '🔔'}
+                    <span className="mt-0.5 flex-shrink-0">
+                      {typeIcons[notif.type] ?? <Bell className="text-surface-400 h-4 w-4" />}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

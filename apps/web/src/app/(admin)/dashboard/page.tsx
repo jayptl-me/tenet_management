@@ -154,7 +154,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Chart */}
-      <section className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <section className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
           Revenue — Last 6 Months
         </h3>
@@ -163,30 +163,32 @@ export default function DashboardPage() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={stats.revenueHistory} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fontFamily: 'sans-serif' }} />
+              <CartesianGrid strokeDasharray="3 3" style={{ stroke: 'var(--color-surface-300)' }} />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fontFamily: 'var(--font-body)' }} />
               <YAxis
-                tick={{ fontSize: 12, fontFamily: 'sans-serif' }}
+                tick={{ fontSize: 12, fontFamily: 'var(--font-body)' }}
                 tickFormatter={(v: number) => `₹${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
                 formatter={(value: number) => [`₹${value.toLocaleString()}`, undefined]}
                 contentStyle={{
-                  border: '2px solid #000',
-                  borderRadius: 8,
-                  fontFamily: 'sans-serif',
+                  border: 'var(--bw-strong) solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'var(--font-body)',
+                  background: 'var(--color-surface-50)',
+                  color: 'var(--color-surface-900)',
                 }}
               />
-              <Legend wrapperStyle={{ fontFamily: 'sans-serif', fontSize: 13 }} />
-              <Bar dataKey="expected" name="Expected" fill="#A8A29E" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="collected" name="Collected" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+              <Legend wrapperStyle={{ fontFamily: 'var(--font-body)', fontSize: 13 }} />
+              <Bar dataKey="expected" name="Expected" fill="var(--color-surface-400)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="collected" name="Collected" fill="var(--color-brand-500)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
       </section>
 
       {/* Meal Feedback Trend */}
-      <section className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <section className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
         <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
           Meal Feedback — Last 14 Days
         </h3>
@@ -197,33 +199,35 @@ export default function DashboardPage() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={stats.mealFeedbackTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <CartesianGrid strokeDasharray="3 3" style={{ stroke: 'var(--color-surface-300)' }} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11, fontFamily: 'sans-serif' }}
+                tick={{ fontSize: 11, fontFamily: 'var(--font-body)' }}
                 tickFormatter={(v: string) => {
                   const d = new Date(v);
                   return `${d.getDate()}/${d.getMonth() + 1}`;
                 }}
               />
-              <YAxis domain={[0, 5]} tick={{ fontSize: 12, fontFamily: 'sans-serif' }} />
+              <YAxis domain={[0, 5]} tick={{ fontSize: 12, fontFamily: 'var(--font-body)' }} />
               <Tooltip
-                formatter={(value: number) => [`${value} ★`, undefined]}
+                formatter={(value: number) => [`${value.toFixed(1)} / 5`, undefined]}
                 labelFormatter={(label: string) =>
                   new Date(label).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
                 }
                 contentStyle={{
-                  border: '2px solid #000',
-                  borderRadius: 8,
-                  fontFamily: 'sans-serif',
+                  border: 'var(--bw-strong) solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'var(--font-body)',
+                  background: 'var(--color-surface-50)',
+                  color: 'var(--color-surface-900)',
                 }}
               />
-              <Legend wrapperStyle={{ fontFamily: 'sans-serif', fontSize: 13 }} />
+              <Legend wrapperStyle={{ fontFamily: 'var(--font-body)', fontSize: 13 }} />
               <Line
                 type="monotone"
                 dataKey="breakfast"
                 name="Breakfast"
-                stroke="#F59E0B"
+                stroke="var(--color-brand-500)"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
@@ -232,7 +236,7 @@ export default function DashboardPage() {
                 type="monotone"
                 dataKey="lunch"
                 name="Lunch"
-                stroke="#84CC16"
+                stroke="var(--color-success-500)"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
@@ -241,7 +245,7 @@ export default function DashboardPage() {
                 type="monotone"
                 dataKey="dinner"
                 name="Dinner"
-                stroke="#6366F1"
+                stroke="var(--color-danger-500)"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}

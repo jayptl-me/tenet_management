@@ -1,3 +1,12 @@
+/**
+ * MongoDB connection manager — single shared connection.
+ *
+ * Architecture: ONE mongoose instance per process.
+ * All route handlers, models, and services share this single connection pool.
+ * No request opens its own connection. This is the production-grade pattern.
+ *
+ * Atlas free tier (M0) optimal pool size: 5–10 connections.
+ */
 import mongoose from 'mongoose';
 import logger from './logger.js';
 import { env } from './env.js';
@@ -15,12 +24,20 @@ export async function connectDatabase(): Promise<void> {
   }
 
   const MAX_RETRIES = 3;
-  const RETRY_DELAY_MS = 5000;
+  const RETRY_DELAY_MS = 3000;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
+      // Single connection — all models/routes share this pool
       await mongoose.connect(env.MONGODB_URI, {
+        // Atlas free tier optimal pool: small footprint
+        maxPoolSize: 10,
+        minPoolSize: 2,
         serverSelectionTimeoutMS: 10000,
+        // Retry once on transient write errors
+        retryWrites: true,
+        // Use majority write concern for data safety
+        w: 'majority',
       });
 
       mongoose.connection.on('connected', () => {
@@ -39,7 +56,7 @@ export async function connectDatabase(): Promise<void> {
       });
 
       isConnected = true;
-      logger.info({ attempt }, 'MongoDB connected successfully');
+      logger.info({ attempt, poolSize: 10 }, 'MongoDB connected successfully');
       return;
     } catch (error) {
       logger.error({ err: error, attempt }, `MongoDB connection attempt ${attempt} failed`);
@@ -49,7 +66,7 @@ export async function connectDatabase(): Promise<void> {
     }
   }
 
-  throw new Error('Failed to connect to MongoDB after 3 attempts');
+  throw new Error('Failed to connect to MongoDB after 3 attempts — check MONGODB_URI and network');
 }
 
 export async function disconnectDatabase(): Promise<void> {

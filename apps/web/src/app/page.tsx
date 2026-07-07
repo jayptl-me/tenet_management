@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/Input';
 import type { IAppConfigPublic } from '@pg/types';
 
 const DEFAULT_CONFIG: Partial<IAppConfigPublic> = {
-  pgName: 'Tenet PG',
+  pgName: 'Apex PG',
   tagline: 'Your home, your space.',
   amenities: [
     'High-Speed WiFi',
@@ -60,14 +60,14 @@ export default function LandingPage() {
   }, []);
 
   // Dynamically resolve configuration and fallbacks
-  const pgName = config?.pgName || 'Tenet PG';
+  const pgName = config?.pgName || 'Apex PG';
   const tagline = config?.tagline || 'Your home, your space.';
   const headline = config?.landingHeroHeadline || 'Premium PG Living, Effortlessly Managed';
   const subline =
     config?.landingHeroSubline ||
     'Safe, comfortable, and well-managed paying guest accommodations with transparent billing, real-time updates, and zero hassle.';
   const phone = config?.phone || '+91 98765 43210';
-  const email = config?.email || 'hello@tenetpg.com';
+  const email = config?.email || 'hello@apexpg.com';
   const address = config?.address || {
     line1: '123 Main Road',
     city: 'Bangalore',
@@ -113,8 +113,8 @@ export default function LandingPage() {
     '@type': 'LodgingBusiness',
     name: pgName,
     description: tagline,
-    image: config?.heroImageUrl || 'https://tenetpg.com/og-image.png',
-    url: 'https://tenetpg.com',
+    image: config?.heroImageUrl || 'https://apexpg.com/og-image.png',
+    url: 'https://apexpg.com',
     telephone: phone,
     email: email,
     address: {
@@ -496,29 +496,32 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Card 1 */}
           <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
-            <div className="from-brand-300 to-brand-500 flex h-48 items-center justify-center bg-gradient-to-br text-white">
-              <span className="font-display text-2xl font-bold uppercase tracking-wider">
-                Premium Suite
-              </span>
+            <div className="h-48 overflow-hidden bg-surface-100">
+              <img
+                src="/images/gallery-room.jpg"
+                alt="Premium Double-Sharing Suite"
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
             </div>
-            <div className="border-t-2 border-black p-4">
+            <div className="border-t-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
               <h3 className="font-display text-surface-900 text-lg font-bold">
-                Cozy Double-Sharing Bed
+                Premium Double-Sharing Suite
               </h3>
               <p className="text-surface-500 font-body mt-1 text-sm">
-                Fully ventilated with modern study desks.
+                Fully ventilated rooms with modern study desks and comfortable beds.
               </p>
             </div>
           </div>
 
           {/* Card 2 */}
           <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
-            <div className="from-success-300 to-success-500 flex h-48 items-center justify-center bg-gradient-to-br text-white">
+            <div className="bg-success-500 flex h-48 items-center justify-center text-white">
               <span className="font-display text-2xl font-bold uppercase tracking-wider">
                 Mess Hall
               </span>
             </div>
-            <div className="border-t-2 border-black p-4">
+            <div className="border-t-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
               <h3 className="font-display text-surface-900 text-lg font-bold">
                 Feedback-Driven Canteen
               </h3>
@@ -530,12 +533,12 @@ export default function LandingPage() {
 
           {/* Card 3 */}
           <div className="hover:translate-[var(--hover-lift)] overflow-hidden rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]">
-            <div className="from-brand-200 to-brand-400 flex h-48 items-center justify-center bg-gradient-to-br text-white">
+            <div className="bg-brand-400 flex h-48 items-center justify-center text-white">
               <span className="font-display text-2xl font-bold uppercase tracking-wider">
                 Study Lounge
               </span>
             </div>
-            <div className="border-t-2 border-black p-4">
+            <div className="border-t-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
               <h3 className="font-display text-surface-900 text-lg font-bold">Quiet Study Area</h3>
               <p className="text-surface-500 font-body mt-1 text-sm">
                 Dedicated space for high-productivity workflow.
@@ -720,11 +723,13 @@ export default function LandingPage() {
 
             {formSent ? (
               <div className="bg-success-100 font-display rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-8 text-center shadow-[var(--shadow-card)]">
-                <div className="mb-3 text-4xl">🎉</div>
+                <div className="mb-3 flex justify-center">
+                  <Check className="text-success-600 h-10 w-10" />
+                </div>
                 <h3 className="font-display text-success-800 mb-2 text-xl font-bold uppercase">
                   Thank You!
                 </h3>
-                <p className="text-success-700 font-body">
+                <p className="text-success-700 font-[family:var(--font-body)]">
                   We have received your enquiry and will get back to you shortly.
                 </p>
               </div>

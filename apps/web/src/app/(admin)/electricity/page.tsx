@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Eye, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -27,6 +29,7 @@ interface ElectricityBillRow {
 }
 
 export default function ElectricityPage() {
+  const router = useRouter();
   const [bills, setBills] = useState<ElectricityBillRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -95,6 +98,34 @@ export default function ElectricityPage() {
           {row.notes ?? '—'}
         </span>
       ),
+    },
+    {
+      header: 'Actions',
+      accessor: (row) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/electricity/${row._id}`);
+            }}
+            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="View"
+          >
+            <Eye className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/electricity/${row._id}/edit`);
+            }}
+            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
+      ),
+      className: 'w-[90px]',
     },
   ];
 

@@ -157,4 +157,5 @@ function setupSelfPing(): void {
 
 setupSelfPing();
 
-export default app;
+// No default export — Bun auto-starts if it finds `export default { fetch }`.
+// We call Bun.serve() explicitly above, so no default export here.

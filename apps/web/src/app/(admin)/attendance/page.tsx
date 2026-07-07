@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -110,18 +110,30 @@ export default function AttendancePage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(`/attendance/${row._id}`);
-          }}
-          className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors duration-[var(--transition-duration)]"
-        >
-          <Eye className="h-3 w-3" />
-          View
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/attendance/${row._id}`);
+            }}
+            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="View"
+          >
+            <Eye className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/attendance/${row._id}/edit`);
+            }}
+            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
       ),
-      className: 'w-[80px]',
+      className: 'w-[90px]',
     },
   ];
 

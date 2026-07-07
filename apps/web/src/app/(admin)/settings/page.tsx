@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Save, Plus, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { triggerThemeUpdate } from '@/themes/ThemeProvider';
 import type { IAppConfig, IFeatureFlags, ITestimonial, ThemeSettings } from '@pg/types';
 import AppearanceTab from '@/components/admin/AppearanceTab';
 
@@ -151,6 +152,10 @@ export default function SettingsPage() {
       await api.put('app-config', { json: config }).json();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      // Trigger theme re-fetch so changes apply immediately
+      if (typeof window !== 'undefined') {
+        triggerThemeUpdate();
+      }
     } catch {
       setError('Failed to save settings');
     } finally {
@@ -466,7 +471,7 @@ export default function SettingsPage() {
                 label="UPI Payee Name"
                 value={config.upiPayeeName}
                 onChange={(e) => update({ upiPayeeName: e.target.value })}
-                placeholder="Tenet PG"
+                placeholder="Apex PG"
               />
             </div>,
           )}
