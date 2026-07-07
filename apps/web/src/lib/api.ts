@@ -9,7 +9,6 @@ const rawApi = ky.create({
     beforeRequest: [
       (request) => {
         if (typeof window !== 'undefined') {
-          // Read from Zustand persist storage (pg-auth-storage key in localStorage)
           let token: string | null = null;
           try {
             const raw = localStorage.getItem('pg-auth-storage');
@@ -17,9 +16,9 @@ const rawApi = ky.create({
               const parsed = JSON.parse(raw);
               token = parsed?.state?.accessToken ?? null;
             }
-          } catch {}
-          // Fallback to direct key
-          if (!token) token = localStorage.getItem('accessToken');
+          } catch {
+            // localStorage not available
+          }
           if (token) {
             request.headers.set('Authorization', `Bearer ${token}`);
           }
@@ -29,6 +28,9 @@ const rawApi = ky.create({
     afterResponse: [
       async (_request, _options, response) => {
         if (response.status === 401 && typeof window !== 'undefined') {
+          // Avoid infinite loop on auth endpoints
+          if (_request.url.includes('/auth/')) return response;
+
           let refreshToken: string | null = null;
           try {
             const raw = localStorage.getItem('pg-auth-storage');
@@ -36,24 +38,42 @@ const rawApi = ky.create({
               const parsed = JSON.parse(raw);
               refreshToken = parsed?.state?.refreshToken ?? null;
             }
-          } catch {}
-          if (!refreshToken) refreshToken = localStorage.getItem('refreshToken');
-          if (refreshToken && !_request.url.includes('/auth/')) {
+          } catch {
+            // localStorage not available
+          }
+
+          if (refreshToken) {
             try {
               const refreshResponse = await ky
                 .post(`${API_BASE_URL}/auth/refresh`, {
                   json: { refreshToken },
                 })
-                .json<{ accessToken: string; refreshToken: string }>();
+                .json<{
+                  success: boolean;
+                  data: { accessToken: string; refreshToken: string };
+                }>();
 
-              localStorage.setItem('accessToken', refreshResponse.accessToken);
-              localStorage.setItem('refreshToken', refreshResponse.refreshToken);
+              const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-              _request.headers.set('Authorization', `Bearer ${refreshResponse.accessToken}`);
-              return ky(_request);
+              // Update zustand store
+              try {
+                const raw = localStorage.getItem('pg-auth-storage');
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  parsed.state.accessToken = accessToken;
+                  parsed.state.refreshToken = newRefreshToken;
+                  localStorage.setItem('pg-auth-storage', JSON.stringify(parsed));
+                }
+              } catch {
+                // fallback
+              }
+
+              // Retry original request with new token
+              const newRequest = new Request(_request);
+              newRequest.headers.set('Authorization', `Bearer ${accessToken}`);
+              return ky(newRequest);
             } catch {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('pg-auth-storage');
               window.location.href = '/login';
             }
           }
@@ -64,7 +84,7 @@ const rawApi = ky.create({
   },
 });
 
-// Intercept promise resolution to decrement active requests counter
+// Track active requests for loading state
 const wrapResponsePromise = <T>(promise: Promise<T>): Promise<T> => {
   let decremented = false;
   const decrement = () => {
@@ -118,7 +138,6 @@ const wrapResponsePromise = <T>(promise: Promise<T>): Promise<T> => {
             });
           }
 
-          // Handle response helper methods like .json(), .text(), etc.
           const result = value.apply(target, args);
           if (result instanceof Promise) {
             return result.then(
@@ -140,7 +159,6 @@ const wrapResponsePromise = <T>(promise: Promise<T>): Promise<T> => {
   }) as Promise<T>;
 };
 
-// Wrap kyInstance to track the request lifecycle
 const wrapKy = (instance: typeof rawApi) => {
   const handler: ProxyHandler<typeof rawApi> = {
     apply(target, thisArg, argArray) {

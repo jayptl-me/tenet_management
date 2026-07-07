@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Eye, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -11,23 +13,36 @@ interface ServiceStatusRow {
   _id: string;
   serviceType: string;
   status: string;
-  floor?: { floorName: string };
+  floor?: { label: string };
   lastUpdatedAt?: string;
   lastUpdatedBy?: { name: string };
   note?: string;
 }
 
-const serviceIcons: Record<string, string> = {
-  wifi: '📶',
-  water: '💧',
-  power: '⚡',
-  ac: '❄️',
-  laundry: '🧺',
-  cleaning: '🧹',
-  security: '🔒',
-  elevator: '🛗',
-  parking: '🚗',
-  other: '🔧',
+import {
+  Wifi,
+  Droplets,
+  Zap,
+  Thermometer,
+  Shirt,
+  Sparkles,
+  Shield,
+  ArrowUpDown,
+  Car,
+  Wrench,
+} from 'lucide-react';
+
+const serviceIcons: Record<string, React.ReactNode> = {
+  wifi: <Wifi className="h-5 w-5" />,
+  water: <Droplets className="h-5 w-5" />,
+  power: <Zap className="h-5 w-5" />,
+  ac: <Thermometer className="h-5 w-5" />,
+  laundry: <Shirt className="h-5 w-5" />,
+  cleaning: <Sparkles className="h-5 w-5" />,
+  security: <Shield className="h-5 w-5" />,
+  elevator: <ArrowUpDown className="h-5 w-5" />,
+  parking: <Car className="h-5 w-5" />,
+  other: <Wrench className="h-5 w-5" />,
 };
 
 const serviceLabels: Record<string, string> = {
@@ -44,6 +59,7 @@ const serviceLabels: Record<string, string> = {
 };
 
 export default function ServicesPage() {
+  const router = useRouter();
   const [services, setServices] = useState<ServiceStatusRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -84,12 +100,8 @@ export default function ServicesPage() {
       header: 'Service',
       accessor: (row) => (
         <div className="flex items-center gap-2">
-          <span
-            className="text-lg"
-            role="img"
-            aria-label={serviceLabels[row.serviceType] ?? row.serviceType}
-          >
-            {serviceIcons[row.serviceType] ?? '🔧'}
+          <span className="text-surface-600 flex-shrink-0">
+            {serviceIcons[row.serviceType] ?? <Wrench className="h-5 w-5" />}
           </span>
           <span className="text-surface-900 font-semibold">
             {serviceLabels[row.serviceType] ?? row.serviceType}
@@ -99,7 +111,7 @@ export default function ServicesPage() {
     },
     {
       header: 'Floor',
-      accessor: (row) => row.floor?.floorName ?? '—',
+      accessor: (row) => row.floor?.label ?? '—',
     },
     {
       header: 'Status',
@@ -139,6 +151,34 @@ export default function ServicesPage() {
           {row.note ?? '—'}
         </span>
       ),
+    },
+    {
+      header: 'Actions',
+      accessor: (row) => (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/services/${row._id}`);
+            }}
+            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="View"
+          >
+            <Eye className="h-3 w-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/services/${row._id}/edit`);
+            }}
+            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Edit"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
+      ),
+      className: 'w-[90px]',
     },
   ];
 

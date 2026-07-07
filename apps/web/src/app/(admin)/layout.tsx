@@ -24,22 +24,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Verify token is still valid by fetching current user
     if (!user) {
+      // auth/me returns user directly at data, not nested in { user: ... }
       api
         .get('auth/me')
-        .json<{ success: boolean; data: { user: IUser } }>()
+        .json<{ success: boolean; data: IUser }>()
         .then((res) => {
-          const { user: fetchedUser } = res.data;
-          login(fetchedUser, accessToken, refreshToken ?? '');
+          login(res.data, accessToken, refreshToken ?? '');
         })
         .catch(async () => {
-          // Try token refresh
+          // Try token refresh — refresh does NOT return user, only tokens
           try {
-            const res = await api.post('auth/refresh').json<{
+            const res = await api.post('auth/refresh', {
+              json: { refreshToken },
+            }).json<{
               success: boolean;
-              data: { accessToken: string; refreshToken: string; user: IUser };
+              data: { accessToken: string; refreshToken: string };
             }>();
-            const { accessToken: newAt, refreshToken: newRt, user: refreshedUser } = res.data;
-            login(refreshedUser, newAt, newRt);
+            const { accessToken: newAt, refreshToken: newRt } = res.data;
+            // After successful refresh, fetch user
+            const meRes = await api.get('auth/me').json<{
+              success: boolean;
+              data: IUser;
+            }>();
+            login(meRes.data, newAt, newRt);
           } catch {
             logout();
             router.replace('/login');
