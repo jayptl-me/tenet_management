@@ -166,7 +166,7 @@ export default function NotificationsPage() {
           onClick={() => setActiveTab('compose')}
           className={`font-display flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
             activeTab === 'compose'
-              ? 'text-surface-900 bg-white shadow-[var(--shadow-button)]'
+              ? 'text-surface-900 bg-[color:var(--color-surface-100)] shadow-[var(--shadow-button)]'
               : 'text-surface-500 hover:text-surface-700'
           }`}
         >
@@ -177,7 +177,7 @@ export default function NotificationsPage() {
           onClick={() => setActiveTab('history')}
           className={`font-display flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
             activeTab === 'history'
-              ? 'text-surface-900 bg-white shadow-[var(--shadow-button)]'
+              ? 'text-surface-900 bg-[color:var(--color-surface-100)] shadow-[var(--shadow-button)]'
               : 'text-surface-500 hover:text-surface-700'
           }`}
         >
@@ -188,7 +188,7 @@ export default function NotificationsPage() {
 
       {/* Compose Tab */}
       {activeTab === 'compose' && (
-        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
           <div className="grid gap-5">
             {/* Target Type */}
             <div>
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
                     className={`font-body flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
                       form.targetType === key
                         ? 'bg-brand-500 text-white shadow-[var(--shadow-button)]'
-                        : 'text-surface-600 hover:bg-surface-50 bg-white'
+                        : 'text-surface-600 hover:bg-surface-50 bg-[color:var(--color-surface-100)]'
                     }`}
                   >
                     {targetIcons[key]}
@@ -255,7 +255,7 @@ export default function NotificationsPage() {
                     className={`font-body flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
                       form.type === opt.value
                         ? 'bg-surface-900 text-white shadow-[var(--shadow-button)]'
-                        : 'text-surface-600 hover:bg-surface-50 bg-white'
+                        : 'text-surface-600 hover:bg-surface-50 bg-[color:var(--color-surface-100)]'
                     }`}
                   >
                     {typeIconsMap[opt.value]}
@@ -342,7 +342,7 @@ export default function NotificationsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white shadow-[var(--shadow-card)]">
+        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)]">
           {/* Filters */}
           <div className="border-surface-200 flex items-center gap-3 border-b-2 p-4">
             <Filter className="text-surface-400 h-4 w-4" />

@@ -26,6 +26,9 @@ import {
   Menu,
   X,
   LogOut,
+  Shirt,
+  FileSpreadsheet,
+  ScrollText,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useState } from 'react';
@@ -43,6 +46,7 @@ const navItems: NavItem[] = [
   { href: '/tenants', label: 'Tenants', icon: <Users className="h-5 w-5" /> },
   { href: '/rooms', label: 'Rooms', icon: <BedDouble className="h-5 w-5" /> },
   { href: '/floors', label: 'Floors', icon: <Building2 className="h-5 w-5" /> },
+  { href: '/laundry', label: 'Laundry', icon: <Shirt className="h-5 w-5" />, featureFlag: 'laundryEnabled' },
   { href: '/payments', label: 'Payments', icon: <CreditCard className="h-5 w-5" /> },
   { href: '/invoices', label: 'Invoices', icon: <Receipt className="h-5 w-5" /> },
   { href: '/electricity', label: 'Electricity', icon: <Zap className="h-5 w-5" /> },
@@ -78,6 +82,8 @@ const navItems: NavItem[] = [
     icon: <CalendarCheck className="h-5 w-5" />,
     featureFlag: 'attendanceEnabled',
   },
+  { href: '/audit-logs', label: 'Audit Logs', icon: <ScrollText className="h-5 w-5" /> },
+  { href: '/export', label: 'Export', icon: <FileSpreadsheet className="h-5 w-5" /> },
 ];
 
 export function Sidebar() {
@@ -91,7 +97,7 @@ export function Sidebar() {
   };
 
   const sidebarContent = (
-    <nav className="flex h-full flex-col border-r-[length:var(--bw-strong)] border-r-[color:var(--border-color)] bg-white">
+    <nav className="flex h-full flex-col border-r-[length:var(--bw-strong)] border-r-[color:var(--border-color)] bg-[color:var(--color-surface-100)]">
       {/* Brand */}
       <div className="flex items-center justify-between border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-5 py-4">
         <Link href="/dashboard" className="flex items-center gap-2">
@@ -164,7 +170,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed left-4 top-4 z-50 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-2 shadow-[var(--shadow-card)] md:hidden"
+        className="fixed left-4 top-4 z-50 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2 shadow-[var(--shadow-card)] md:hidden"
         onClick={() => setMobileOpen(true)}
       >
         <Menu className="h-5 w-5" />

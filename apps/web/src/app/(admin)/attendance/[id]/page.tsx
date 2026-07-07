@@ -127,7 +127,7 @@ export default function AttendanceDetailPage() {
       </div>
 
       {/* Main card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Tenant & Room Info */}
           <section className="space-y-4">
@@ -181,7 +181,7 @@ export default function AttendanceDetailPage() {
 
           {/* Status & Times */}
           <section className="space-y-4">
-            <h3 className="font-display text-surface-900 border-surface-200 border-b-2 pb-2 text-lg font-bold">
+            <h3 className="font-display text-surface-900 border-[color:var(--color-surface-200)] border-b-2 pb-2 text-lg font-bold">
               Attendance Details
             </h3>
 

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -30,6 +31,8 @@ export default function MealsPage() {
   const [mealFilter, setMealFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<MealFeedbackRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchFeedbacks = useCallback(async () => {
     setIsLoading(true);
@@ -58,6 +61,20 @@ export default function MealsPage() {
   useEffect(() => {
     fetchFeedbacks();
   }, [fetchFeedbacks]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`meals/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchFeedbacks();
+    } catch {
+      setError('Failed to delete meal feedback');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<MealFeedbackRow>[] = [
     {
@@ -118,9 +135,19 @@ export default function MealsPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -189,6 +216,14 @@ export default function MealsPage() {
             setPage(1);
           },
         }}
+      />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Meal Feedback"
+        message={`Are you sure you want to delete this feedback? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

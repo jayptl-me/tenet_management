@@ -193,6 +193,22 @@ leaves.get('/:id', authGuard, async (c) => {
   return c.json({ success: true, data: mapLeave(leave as unknown as Record<string, unknown>) });
 });
 
+// ── DELETE /leaves/:id — admin deletes pending leave ────
+leaves.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid leave ID');
+
+  const leave = await LeaveApplication.findById(id);
+  if (!leave) return notFound(c, 'Leave application');
+  if (leave.status !== 'pending') {
+    return badRequest(c, `Leave is already ${leave.status}`, 'LEAVE_NOT_PENDING');
+  }
+
+  await LeaveApplication.findByIdAndDelete(id);
+
+  return c.json({ success: true, data: { message: 'Leave application deleted' } });
+});
+
 // ── PUT /leaves/:id/approve — admin approves ───────────
 leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));

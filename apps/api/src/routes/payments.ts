@@ -29,6 +29,39 @@ const tenantFindOne = Tenant.findOne.bind(Tenant) as unknown as FindOneFn;
 
 const payments = new Hono();
 
+// ── Helper: Update invoice status based on payments ─────
+async function updateInvoicePaymentStatus(invoiceId: string): Promise<void> {
+  const paymentsRaw = await paymentFind(
+    safeFilter({
+      invoiceId: new mongoose.Types.ObjectId(invoiceId),
+      status: { $ne: 'cancelled' },
+    }),
+  );
+
+  const invoiceRaw = await invoiceFindOne(
+    safeFilter({ _id: new mongoose.Types.ObjectId(invoiceId) }),
+  );
+  if (!invoiceRaw) return;
+
+  const invoice = invoiceRaw as Record<string, unknown>;
+  const invoiceTotal = invoice.totalAmount as number;
+
+  const totalPaid = (paymentsRaw as unknown as Array<Record<string, unknown>>)
+    .filter((p) => p.status === 'paid')
+    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
+
+  let newStatus: string;
+  if (totalPaid >= invoiceTotal) {
+    newStatus = 'paid';
+  } else if (totalPaid > 0) {
+    newStatus = 'partial';
+  } else {
+    newStatus = (invoice.status as string) ?? 'sent';
+  }
+
+  await Invoice.findByIdAndUpdate(invoiceId, { status: newStatus });
+}
+
 // ── Schemas ─────────────────────────────────────────────
 
 const offlinePaymentSchema = z.strictObject({
@@ -413,37 +446,35 @@ payments.get('/:id/receipt', authGuard, async (c) => {
   return c.json({ success: true, data: payment });
 });
 
-// ── Helper: Update invoice status based on payments ─────
-async function updateInvoicePaymentStatus(invoiceId: string): Promise<void> {
-  const paymentsRaw = await paymentFind(
-    safeFilter({
-      invoiceId: new mongoose.Types.ObjectId(invoiceId),
-      status: { $ne: 'cancelled' },
-    }),
-  );
+// ── DELETE /payments/:id ────────────────────────────────
+payments.delete('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid payment ID');
 
-  const invoiceRaw = await invoiceFindOne(
-    safeFilter({ _id: new mongoose.Types.ObjectId(invoiceId) }),
-  );
-  if (!invoiceRaw) return;
+  const payment = await Payment.findById(id);
+  if (!payment) return notFound(c, 'Payment');
 
-  const invoice = invoiceRaw as Record<string, unknown>;
-  const invoiceTotal = invoice.totalAmount as number;
-
-  const totalPaid = (paymentsRaw as unknown as Array<Record<string, unknown>>)
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
-
-  let newStatus: string;
-  if (totalPaid >= invoiceTotal) {
-    newStatus = 'paid';
-  } else if (totalPaid > 0) {
-    newStatus = 'partial';
-  } else {
-    newStatus = (invoice.status as string) ?? 'sent';
+  // Check if payment is verified (paid) - only allow delete of unverified payments
+  if (payment.status === 'paid') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'PAYMENT_VERIFIED',
+          message: 'Cannot delete verified payments. Void the payment instead.',
+        },
+      },
+      422,
+    );
   }
 
-  await Invoice.findByIdAndUpdate(invoiceId, { status: newStatus });
-}
+  const invoiceId = String(payment.invoiceId);
+  await Payment.findByIdAndDelete(id);
+
+  // Update invoice payment status after deletion
+  await updateInvoicePaymentStatus(invoiceId);
+
+  return c.json({ success: true, data: { message: 'Payment deleted' } });
+});
 
 export default payments;

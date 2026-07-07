@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
+import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -37,6 +39,8 @@ export default function ElectricityPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ElectricityBillRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchBills = useCallback(async () => {
     setIsLoading(true);
@@ -64,6 +68,20 @@ export default function ElectricityPage() {
   useEffect(() => {
     fetchBills();
   }, [fetchBills]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`electricity/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchBills();
+    } catch {
+      setError('Failed to delete electricity bill');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<ElectricityBillRow>[] = [
     {
@@ -123,19 +141,35 @@ export default function ElectricityPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-          Electricity Bills
-        </h2>
-        <p className="text-surface-500 mt-0.5 text-sm">Track electricity usage and billing by month</p>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            Electricity Bills
+          </h2>
+          <p className="text-surface-500 mt-0.5 text-sm">Track electricity usage and billing by month</p>
+        </div>
+        <Button onClick={() => router.push('/electricity/new')}>
+          <Plus className="h-4 w-4" />
+          Record Bill
+        </Button>
       </div>
 
       {error && (
@@ -176,6 +210,15 @@ export default function ElectricityPage() {
             setPage(1);
           },
         }}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Electricity Bill"
+        message={`Are you sure you want to delete this electricity bill? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

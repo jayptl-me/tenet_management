@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Pencil } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Button } from '@/components/ui/Button';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
 
@@ -13,50 +15,51 @@ interface ServiceStatusRow {
   _id: string;
   serviceType: string;
   status: string;
-  floor?: { label: string };
+  floor?: { label: string; floorNumber?: number };
   lastUpdatedAt?: string;
   lastUpdatedBy?: { name: string };
   note?: string;
+  openComplaintCount?: number;
 }
 
 import {
   Wifi,
-  Droplets,
   Zap,
+  Droplets,
   Thermometer,
   Shirt,
   Sparkles,
-  Shield,
-  ArrowUpDown,
-  Car,
   Wrench,
 } from 'lucide-react';
 
 const serviceIcons: Record<string, React.ReactNode> = {
   wifi: <Wifi className="h-5 w-5" />,
-  water: <Droplets className="h-5 w-5" />,
-  power: <Zap className="h-5 w-5" />,
-  ac: <Thermometer className="h-5 w-5" />,
-  laundry: <Shirt className="h-5 w-5" />,
-  cleaning: <Sparkles className="h-5 w-5" />,
-  security: <Shield className="h-5 w-5" />,
-  elevator: <ArrowUpDown className="h-5 w-5" />,
-  parking: <Car className="h-5 w-5" />,
-  other: <Wrench className="h-5 w-5" />,
+  electricity: <Zap className="h-5 w-5" />,
+  water_supply: <Droplets className="h-5 w-5" />,
+  washing_machine_1: <Shirt className="h-5 w-5" />,
+  washing_machine_2: <Shirt className="h-5 w-5" />,
+  fridge: <Sparkles className="h-5 w-5" />,
+  geyser: <Thermometer className="h-5 w-5" />,
 };
 
 const serviceLabels: Record<string, string> = {
   wifi: 'WiFi',
-  water: 'Water Supply',
-  power: 'Power',
-  ac: 'Air Conditioning',
-  laundry: 'Laundry',
-  cleaning: 'Cleaning',
-  security: 'Security',
-  elevator: 'Elevator',
-  parking: 'Parking',
-  other: 'Other',
+  electricity: 'Electricity',
+  water_supply: 'Water Supply',
+  washing_machine_1: 'Washing Machine 1',
+  washing_machine_2: 'Washing Machine 2',
+  fridge: 'Fridge',
+  geyser: 'Geyser',
 };
+
+function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  switch (status) {
+    case 'operational': return 'success';
+    case 'degraded': return 'warning';
+    case 'down': return 'danger';
+    default: return 'neutral';
+  }
+}
 
 export default function ServicesPage() {
   const router = useRouter();
@@ -67,6 +70,22 @@ export default function ServicesPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`services/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchServices();
+    } catch {
+      setError('Failed to delete service');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchServices = useCallback(async () => {
     setIsLoading(true);
@@ -103,9 +122,16 @@ export default function ServicesPage() {
           <span className="text-surface-600 flex-shrink-0">
             {serviceIcons[row.serviceType] ?? <Wrench className="h-5 w-5" />}
           </span>
-          <span className="text-surface-900 font-semibold">
-            {serviceLabels[row.serviceType] ?? row.serviceType}
-          </span>
+          <div>
+            <span className="text-surface-900 font-semibold">
+              {serviceLabels[row.serviceType] ?? row.serviceType}
+            </span>
+            {row.openComplaintCount ? (
+              <span className="ml-1.5 inline-flex items-center rounded-full bg-danger-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-danger-600">
+                {row.openComplaintCount} open
+              </span>
+            ) : null}
+          </div>
         </div>
       ),
     },
@@ -117,14 +143,8 @@ export default function ServicesPage() {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
-          variant={
-            row.status === 'operational'
-              ? 'success'
-              : row.status === 'degraded'
-                ? 'warning'
-                : 'danger'
-          }
-          label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+          variant={statusVariant(row.status)}
+          label={row.status.replace(/_/g, ' ')}
         />
       ),
     },
@@ -176,19 +196,35 @@ export default function ServicesPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-surface-900 text-2xl font-extrabold">Service Status</h2>
-        <p className="text-surface-500 mt-0.5 text-sm">
-          Monitor and update service health across floors
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Service Status</h2>
+          <p className="text-surface-500 mt-0.5 text-sm">
+            Monitor and update service health across floors
+          </p>
+        </div>
+        <Button onClick={() => router.push('/services/new')}>
+          <Plus className="h-4 w-4" />
+          Add Service
+        </Button>
       </div>
 
       {error && (
@@ -229,6 +265,15 @@ export default function ServicesPage() {
             setPage(1);
           },
         }}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Service"
+        message="Are you sure you want to delete this service status? This action cannot be undone."
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

@@ -102,7 +102,7 @@ export default function MenuDetailPage() {
       {/* Meals */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Breakfast */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center gap-2">
             <div className="bg-warning-100 flex h-10 w-10 items-center justify-center rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)]">
               <Sun className="text-warning-600 h-5 w-5" />
@@ -115,7 +115,7 @@ export default function MenuDetailPage() {
         </div>
 
         {/* Lunch */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center gap-2">
             <div className="bg-brand-100 flex h-10 w-10 items-center justify-center rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)]">
               <Sunset className="text-brand-600 h-5 w-5" />
@@ -128,7 +128,7 @@ export default function MenuDetailPage() {
         </div>
 
         {/* Dinner */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center gap-2">
             <div className="bg-surface-800 flex h-10 w-10 items-center justify-center rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)]">
               <Moon className="text-surface-200 h-5 w-5" />

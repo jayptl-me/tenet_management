@@ -32,6 +32,38 @@
   --color-surface-900: #0f172a;
   --color-surface-950: #020617;
 
+  /* Semantic — Full scale for StatusBadge, DataTable rows, alerts */
+  --color-danger-50: #fff5f5;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+  --color-success-50: #f0fdf9;
+  --color-success-100: #ccfbf1;
+  --color-success-200: #99f6e4;
+  --color-success-300: #5eead4;
+  --color-success-400: #2dd4bf;
+  --color-success-500: #14b8a6;
+  --color-success-600: #0d9488;
+  --color-success-700: #0f766e;
+  --color-success-800: #115e59;
+  --color-success-900: #134e4a;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+  --color-warning-600: #ca8a04;
+  --color-warning-700: #a16207;
+  --color-warning-800: #854d0e;
+  --color-warning-900: #713f12;
+
   /* Borders — Thin, semi-transparent white */
   --bw-default: 1px;
   --bw-strong: 1px;
@@ -76,12 +108,22 @@
   --active-press-scale: 0.98;
   --active-press-x: 0px;
   --active-press-y: 0px;
+
+  /* ── Cross-cutting tokens ──────────────────────────────── */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --shimmer-base: var(--color-surface-200);
+  --shimmer-shine: var(--color-surface-100);
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --disabled-opacity: 0.45;
+  --disabled-bg: var(--color-surface-200);
 }
 
 /* ── Glassmorphic Dark ──────────────────────────────────── */
-[data-theme='soft-ui-dark'],
 [data-theme='soft-ui'][data-mode='dark'] {
-  /* Surface — Dark slate (glass effect diminished in dark mode) */
+  /* Surface — Dark slate */
   --color-surface-50: #020617;
   --color-surface-100: #0f172a;
   --color-surface-200: #1e293b;
@@ -97,10 +139,44 @@
   /* Brand shifts lighter for contrast on dark glass */
   --color-brand-500: #22d3ee;
 
-  /* Border — Muted instead of bright white */
+  /* Semantic — Dark-mode adjusted */
+  --color-danger-50: #450a0a;
+  --color-danger-100: #7f1d1d;
+  --color-danger-200: #991b1b;
+  --color-danger-300: #b91c1c;
+  --color-danger-400: #dc2626;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #f87171;
+  --color-danger-700: #fca5a5;
+  --color-danger-800: #fecaca;
+  --color-danger-900: #fee2e2;
+  --color-success-50: #042f2e;
+  --color-success-100: #134e4a;
+  --color-success-200: #115e59;
+  --color-success-300: #0f766e;
+  --color-success-400: #0d9488;
+  --color-success-500: #14b8a6;
+  --color-success-600: #2dd4bf;
+  --color-success-700: #5eead4;
+  --color-success-800: #99f6e4;
+  --color-success-900: #ccfbf1;
+  --color-warning-50: #451a03;
+  --color-warning-100: #713f12;
+  --color-warning-200: #854d0e;
+  --color-warning-300: #a16207;
+  --color-warning-400: #ca8a04;
+  --color-warning-500: #eab308;
+  --color-warning-600: #facc15;
+  --color-warning-700: #fcd34d;
+  --color-warning-800: #fde68a;
+  --color-warning-900: #fef3c7;
+
+  /* Borders */
+  --bw-default: 1px;
+  --bw-strong: 1px;
   --border-color: rgba(100, 116, 139, 0.3);
 
-  /* Shadows — Deeper, darker (replaces diminished glass effect) */
+  /* Shadows — Deeper, darker */
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
   --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -108,9 +184,20 @@
   --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
 
-  /* Glass — Dark translucent (not true glass but dark tint overlay) */
+  /* Glass — Dark translucent */
   --backdrop-blur: 12px;
   --backdrop-saturate: 120%;
   --glass-bg: rgba(15, 23, 42, 0.7);
   --glass-bg-hover: rgba(15, 23, 42, 0.85);
+
+  /* Cross-cutting dark */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-400);
+  --shimmer-base: var(--color-surface-300);
+  --shimmer-shine: var(--color-surface-200);
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --disabled-opacity: 0.45;
+  --disabled-bg: var(--color-surface-300);
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -10,10 +10,11 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 
 const schema = z.object({
   roomNumber: z.string().min(1, 'Room number is required'),
-  floorId: z.string().min(1, 'Floor ID is required'),
+  floorId: z.string().min(1, 'Floor is required'),
   sharingType: z.coerce.number().refine((v) => [2, 3, 4].includes(v), 'Must be 2, 3, or 4'),
   monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
   description: z.string().optional(),
@@ -33,6 +34,7 @@ export default function NewRoomPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -70,7 +72,7 @@ export default function NewRoomPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
+        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -80,11 +82,19 @@ export default function NewRoomPage() {
               error={errors.roomNumber?.message}
               {...register('roomNumber')}
             />
-            <Input
-              label="Floor ID"
-              placeholder="Enter floor ID"
-              error={errors.floorId?.message}
-              {...register('floorId')}
+            <Controller
+              name="floorId"
+              control={control}
+              render={({ field }) => (
+                <ResourceSelect
+                  label="Floor"
+                  endpoint="floors"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select floor..."
+                  error={errors.floorId?.message}
+                />
+              )}
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -111,7 +121,7 @@ export default function NewRoomPage() {
             <textarea
               id="description"
               rows={3}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
+              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
               placeholder="Optional description..."
               {...register('description')}
             />

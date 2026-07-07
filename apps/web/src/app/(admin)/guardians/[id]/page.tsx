@@ -98,7 +98,7 @@ export default function GuardianDetailPage() {
       </div>
 
       {/* Main card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Personal Info Section */}
           <section className="space-y-4">
@@ -161,7 +161,7 @@ export default function GuardianDetailPage() {
 
           {/* Status & Linked Info Section */}
           <section className="space-y-4">
-            <h3 className="font-display text-surface-900 border-surface-200 border-b-2 pb-2 text-lg font-bold">
+            <h3 className="font-display text-surface-900 border-[color:var(--color-surface-200)] border-b-2 pb-2 text-lg font-bold">
               Status & Linked Info
             </h3>
 

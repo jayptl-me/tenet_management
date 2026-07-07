@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileDown, MessageCircle, Copy } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 interface InvoiceDetail {
   _id: string;
@@ -110,7 +113,7 @@ export default function InvoiceDetailPage() {
       {/* Main detail cards */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Invoice info */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)] lg:col-span-2">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)] lg:col-span-2">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Invoice Details
           </h3>
@@ -187,7 +190,7 @@ export default function InvoiceDetailPage() {
                 ₹{invoice.paidAmount.toLocaleString()}
               </span>
             </div>
-            <div className="border-surface-200 flex justify-between border-t-2 pt-3">
+            <div className="border-[color:var(--color-surface-200)] flex justify-between border-t-2 pt-3">
               <span className="text-surface-800 text-sm font-semibold">Balance Due</span>
               <span
                 className={`text-lg font-extrabold ${invoice.balance > 0 ? 'text-danger-600' : 'text-success-700'}`}
@@ -201,7 +204,7 @@ export default function InvoiceDetailPage() {
 
       {/* Line items */}
       {invoice.lineItems && invoice.lineItems.length > 0 && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">Line Items</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -268,7 +271,7 @@ export default function InvoiceDetailPage() {
 
       {/* Tenant info card */}
       {invoice.tenant && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
           <h3 className="font-display text-surface-900 mb-4 text-lg font-extrabold">
             Tenant Information
           </h3>
@@ -306,6 +309,42 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              window.open(`${API_BASE_URL}/invoices/${invoice._id}/pdf`, '_blank');
+            }}
+          >
+            <FileDown className="h-4 w-4" />
+            Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const phone = invoice.tenant?.user?.phone ?? '';
+              const pdfUrl = `${API_BASE_URL}/invoices/${invoice._id}/pdf`;
+              const text = [
+                `Invoice ${invoice.invoiceNumber}`,
+                `Amount: Rs.${invoice.totalAmount.toLocaleString()}`,
+                `Download PDF: ${pdfUrl}`,
+              ].join('\n');
+              const url = generateWhatsAppUrl(phone, text);
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            disabled={!invoice.tenant?.user?.phone}
+          >
+            <MessageCircle className="h-4 w-4" />
+            Share via WhatsApp
+          </Button>
+        </div>
+      </div>
 
       {/* Meta */}
       {invoice.updatedAt && (

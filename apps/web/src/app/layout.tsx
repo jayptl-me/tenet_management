@@ -64,7 +64,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" data-theme="brutalist" data-mode="light">
+    <html lang="en" className="h-full antialiased" data-theme="saas" data-mode="light">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('tenet-theme');if(t){try{var s=JSON.parse(t);var r=document.documentElement;if(s.preset)r.setAttribute('data-theme',s.preset);if(s.mode)r.setAttribute('data-mode',s.mode);if(s.brandColor)r.style.setProperty('--color-brand-500',s.brandColor)}catch(e){}}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
           <ServerWakeupOverlay />

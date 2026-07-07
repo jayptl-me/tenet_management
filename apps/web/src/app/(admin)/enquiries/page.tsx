@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
+import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -29,6 +31,8 @@ export default function EnquiriesPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<EnquiryRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchEnquiries = useCallback(async () => {
     setIsLoading(true);
@@ -56,6 +60,20 @@ export default function EnquiriesPage() {
   useEffect(() => {
     fetchEnquiries();
   }, [fetchEnquiries]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`enquiries/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchEnquiries();
+    } catch {
+      setError('Failed to delete enquiry');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<EnquiryRow>[] = [
     {
@@ -116,17 +134,33 @@ export default function EnquiriesPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-surface-900 text-2xl font-extrabold">Enquiries</h2>
-        <p className="text-surface-500 mt-0.5 text-sm">Manage prospective tenant enquiries</p>
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Enquiries</h2>
+          <p className="text-surface-500 mt-0.5 text-sm">Manage prospective tenant enquiries</p>
+        </div>
+        <Button onClick={() => router.push('/enquiries/new')}>
+          <Plus className="h-4 w-4" />
+          New Enquiry
+        </Button>
       </div>
       {error && (
         <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
@@ -167,6 +201,14 @@ export default function EnquiriesPage() {
             setPage(1);
           },
         }}
+      />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Enquiry"
+        message={`Are you sure you want to delete enquiry from "${deleteTarget?.name}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

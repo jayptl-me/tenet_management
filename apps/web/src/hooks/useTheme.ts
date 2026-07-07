@@ -6,7 +6,7 @@ import { triggerThemeUpdate } from '@/themes/ThemeProvider';
 import type { ThemeSettings, ThemePreset, ThemeMode } from '@pg/types';
 
 const DEFAULT_THEME: ThemeSettings = {
-  preset: 'brutalist',
+  preset: 'saas',
   mode: 'light',
 };
 
@@ -36,101 +36,59 @@ function storeTheme(theme: ThemeSettings) {
   }
 }
 
+function readThemeFromDOM(): ThemeSettings {
+  const root = document.documentElement;
+  const preset = (root.getAttribute('data-theme') as ThemePreset) ?? 'saas';
+  const mode = (root.getAttribute('data-mode') as ThemeMode) ?? 'light';
+  return { preset, mode };
+}
+
 export function useTheme() {
   const [theme, setThemeState] = useState<ThemeSettings>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
 
-  const applyThemeConfig = useCallback(async () => {
-    // Priority: localStorage → AppConfig API → system preference → default
-    const stored = loadStoredTheme();
-    if (stored) {
-      setThemeState(stored);
-      applyThemeToDOM(stored);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await api.get('app-config').json<{ success: boolean; data: { theme?: ThemeSettings } }>();
-      const configTheme = res.data?.theme;
-      if (configTheme) {
-        // If mode is not explicitly set by user, use system preference
-        if (!configTheme.mode || configTheme.mode === 'light') {
-          configTheme.mode = getSystemMode();
-        }
-        setThemeState(configTheme);
-        applyThemeToDOM(configTheme);
-        storeTheme(configTheme);
-      } else {
-        const sysMode = getSystemMode();
-        const t = { ...DEFAULT_THEME, mode: sysMode };
-        setThemeState(t);
-        applyThemeToDOM(t);
-      }
-    } catch {
-      const sysMode = getSystemMode();
-      const t = { ...DEFAULT_THEME, mode: sysMode };
-      setThemeState(t);
-      applyThemeToDOM(t);
-    }
+  // Bootstrap: read initial state from DOM (set by ThemeProvider before hydration)
+  useEffect(() => {
+    const initial = readThemeFromDOM();
+    setThemeState(initial);
     setLoading(false);
   }, []);
 
+  // Listen for theme-update events fired by ThemeProvider after settings save
   useEffect(() => {
-    applyThemeConfig();
-
-    // Listen for system color scheme changes
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-      setThemeState((prev) => {
-        const updated: ThemeSettings = { ...prev, mode: e.matches ? 'dark' : 'light' };
-        applyThemeToDOM(updated);
-        storeTheme(updated);
-        return updated;
-      });
-    };
-    mq.addEventListener('change', handler);
-
-    // Listen for theme update from settings
     const handleUpdate = () => {
-      applyThemeConfig();
+      const updated = readThemeFromDOM();
+      setThemeState(updated);
     };
     window.addEventListener('theme-update', handleUpdate);
+    return () => window.removeEventListener('theme-update', handleUpdate);
+  }, []);
 
-    return () => {
-      mq.removeEventListener('change', handler);
-      window.removeEventListener('theme-update', handleUpdate);
-    };
-  }, [applyThemeConfig]);
-
-  const setTheme = useCallback((settings: ThemeSettings) => {
+  const applyAndPersist = useCallback((settings: ThemeSettings) => {
     applyThemeToDOM(settings);
     storeTheme(settings);
     setThemeState(settings);
-    // Also persist to AppConfig API
     api.put('app-config', { json: { theme: settings } }).catch(() => {});
   }, []);
 
   const toggleMode = useCallback(() => {
-    setThemeState((prev) => {
-      const newMode: ThemeMode = prev.mode === 'dark' ? 'light' : 'dark';
-      const updated: ThemeSettings = { ...prev, mode: newMode };
-      applyThemeToDOM(updated);
-      storeTheme(updated);
-      api.put('app-config', { json: { theme: updated } }).catch(() => {});
-      return updated;
-    });
-  }, []);
+    const root = document.documentElement;
+    const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
+    const currentPreset = root.getAttribute('data-theme') as ThemePreset ?? 'saas';
+    const updated: ThemeSettings = { preset: currentPreset, mode: currentMode === 'dark' ? 'light' : 'dark' };
+    applyAndPersist(updated);
+  }, [applyAndPersist]);
 
   const setPreset = useCallback((preset: ThemePreset) => {
-    setThemeState((prev) => {
-      const updated: ThemeSettings = { ...prev, preset };
-      applyThemeToDOM(updated);
-      storeTheme(updated);
-      api.put('app-config', { json: { theme: updated } }).catch(() => {});
-      return updated;
-    });
-  }, []);
+    const root = document.documentElement;
+    const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
+    const updated: ThemeSettings = { preset, mode: currentMode };
+    applyAndPersist(updated);
+  }, [applyAndPersist]);
+
+  const setTheme = useCallback((settings: ThemeSettings) => {
+    applyAndPersist(settings);
+  }, [applyAndPersist]);
 
   return { theme, loading, setTheme, toggleMode, setPreset };
 }

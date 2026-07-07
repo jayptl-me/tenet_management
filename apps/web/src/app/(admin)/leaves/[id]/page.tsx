@@ -128,7 +128,7 @@ export default function LeaveDetailPage() {
       </div>
 
       {/* Main card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Tenant & Room Info */}
           <section className="space-y-4">
@@ -229,7 +229,7 @@ export default function LeaveDetailPage() {
         </div>
 
         {/* Reason Section */}
-        <section className="border-surface-200 mt-6 border-t-2 pt-4">
+        <section className="border-[color:var(--color-surface-200)] mt-6 border-t-2 pt-4">
           <div className="flex items-start gap-3">
             <FileText className="text-surface-400 mt-0.5 h-5 w-5 shrink-0" />
             <div>
@@ -270,7 +270,7 @@ export default function LeaveDetailPage() {
                 size="sm"
                 onClick={() => handleAction('approve')}
                 disabled={!canApprove}
-                className="bg-success-600 border-success-700 hover:bg-success-700 text-white"
+                className="bg-success-600 border-success-700 hover:bg-success-700 text-[color:var(--color-surface-50)]"
               >
                 {actionLoading === 'approve' ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

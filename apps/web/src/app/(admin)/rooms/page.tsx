@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { ServiceStatusIndicator } from '@/components/ui/ServiceStatusIndicator';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -34,6 +36,8 @@ export default function RoomsPage() {
   const [sharingFilter, setSharingFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<RoomRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchRooms = useCallback(async () => {
     setIsLoading(true);
@@ -64,6 +68,20 @@ export default function RoomsPage() {
     fetchRooms();
   }, [fetchRooms]);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`rooms/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchRooms();
+    } catch {
+      setError('Failed to delete room');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const columns: DataTableColumn<RoomRow>[] = [
     {
       header: 'Room',
@@ -90,6 +108,15 @@ export default function RoomsPage() {
       },
     },
     {
+      header: 'Services',
+      accessor: (row) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <ServiceStatusIndicator floorId={row.floor?._id} compact />
+        </div>
+      ),
+      className: 'w-[100px]',
+    },
+    {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
@@ -99,7 +126,7 @@ export default function RoomsPage() {
       ),
     },
     {
-      header: '',
+      header: 'Actions',
       accessor: (row) => (
         <div className="flex items-center gap-1">
           <button
@@ -122,9 +149,19 @@ export default function RoomsPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -184,6 +221,15 @@ export default function RoomsPage() {
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/rooms/${row._id}`)}
         pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Room"
+        message={`Are you sure you want to delete "${deleteTarget?.roomNumber}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

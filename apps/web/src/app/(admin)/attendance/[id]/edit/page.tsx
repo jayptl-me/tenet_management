@@ -92,7 +92,7 @@ export default function EditPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]"
+        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
           <Input
@@ -127,7 +127,7 @@ export default function EditPage() {
           />
         </div>
 
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>

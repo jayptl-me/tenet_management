@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -30,6 +31,8 @@ export default function InvoicesPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
@@ -57,6 +60,20 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`invoices/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchInvoices();
+    } catch {
+      setError('Failed to delete invoice');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<InvoiceRow>[] = [
     {
@@ -118,9 +135,19 @@ export default function InvoicesPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -179,6 +206,15 @@ export default function InvoicesPage() {
             setPage(1);
           },
         }}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Invoice"
+        message={`Are you sure you want to delete this invoice? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
