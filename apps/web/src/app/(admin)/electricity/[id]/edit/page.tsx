@@ -9,22 +9,22 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 
 const schema = z.object({
   month: z.string().min(1, 'Month is required'),
   totalBillAmount: z.coerce.number().positive('Total bill amount must be positive'),
+  status: z.string().min(1, 'Status is required'),
   notes: z.string().optional(),
 });
 
+type FormData = z.infer<typeof schema>;
 
 const statusOptions = [
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'finalized', label: 'Finalized' },
+  { value: 'distributed', label: 'Distributed' },
 ];
-
-type FormData = z.infer<typeof schema>;
 
 export default function EditElectricityPage() {
   const router = useRouter();
@@ -70,6 +70,7 @@ export default function EditElectricityPage() {
         <div className="space-y-5">
           <Input label="Month" type="month" error={errors.month?.message} {...register('month')} />
           <Input label="Total Bill Amount" type="number" step="0.01" error={errors.totalBillAmount?.message} {...register('totalBillAmount')} />
+          <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
           <Input label="Notes" error={errors.notes?.message} {...register('notes')} />
         </div>
         <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">

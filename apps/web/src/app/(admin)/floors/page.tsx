@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -21,6 +22,8 @@ export default function FloorsPage() {
   const [floors, setFloors] = useState<FloorRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<FloorRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchFloors = useCallback(async () => {
     setIsLoading(true);
@@ -41,6 +44,21 @@ export default function FloorsPage() {
   useEffect(() => {
     fetchFloors();
   }, [fetchFloors]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`floors/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      fetchFloors();
+    } catch {
+      setError('Failed to delete floor');
+      setDeleting(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: DataTableColumn<FloorRow>[] = [
     {
@@ -79,9 +97,19 @@ export default function FloorsPage() {
           >
             <Pencil className="h-3 w-3" />
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget(row);
+            }}
+            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
       ),
-      className: 'w-[90px]',
+      className: 'w-[120px]',
     },
   ];
 
@@ -110,6 +138,15 @@ export default function FloorsPage() {
         keyExtractor={(row: FloorRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/floors/${row._id}`)}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Floor"
+        message={`Are you sure you want to delete "${deleteTarget?.label}"? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

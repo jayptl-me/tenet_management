@@ -13,19 +13,23 @@ import { Select } from '@/components/ui/Select';
 
 const schema = z.object({
   month: z.string().min(1, 'Month is required'),
+  rentAmount: z.coerce.number().min(0, 'Rent amount cannot be negative'),
+  electricityAmount: z.coerce.number().min(0, 'Electricity amount cannot be negative'),
+  otherCharges: z.coerce.number().min(0, 'Other charges cannot be negative'),
   totalAmount: z.coerce.number().positive('Total amount must be positive'),
   status: z.string().min(1, 'Status is required'),
 });
 
+type FormData = z.infer<typeof schema>;
 
 const statusOptions = [
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'partial', label: 'Partially Paid' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
-
-type FormData = z.infer<typeof schema>;
 
 export default function EditInvoicePage() {
   const router = useRouter();
@@ -70,20 +74,15 @@ export default function EditInvoicePage() {
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-white p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Month" type="month" error={errors.month?.message} {...register('month')} />
-          <Input label="Total Amount" type="number" step="0.01" error={errors.totalAmount?.message} {...register('totalAmount')} />
-          <Select
-            label="Status"
-            options={[
-              { value: 'draft', label: 'Draft' },
-              { value: 'sent', label: 'Sent' },
-              { value: 'partial', label: 'Partially Paid' },
-              { value: 'paid', label: 'Paid' },
-              { value: 'overdue', label: 'Overdue' },
-              { value: 'cancelled', label: 'Cancelled' },
-            ]}
-            error={errors.status?.message}
-            {...register('status')}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input label="Rent Amount" type="number" step="0.01" error={errors.rentAmount?.message} {...register('rentAmount')} />
+            <Input label="Electricity Amount" type="number" step="0.01" error={errors.electricityAmount?.message} {...register('electricityAmount')} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input label="Other Charges" type="number" step="0.01" error={errors.otherCharges?.message} {...register('otherCharges')} />
+            <Input label="Total Amount" type="number" step="0.01" error={errors.totalAmount?.message} {...register('totalAmount')} />
+          </div>
+          <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
         </div>
         <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
