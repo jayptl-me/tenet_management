@@ -1,64 +1,48 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
 
-const TIME_SLOTS = [
-  '06-08',
-  '08-10',
-  '10-12',
-  '12-14',
-  '14-16',
-  '16-18',
-  '18-20',
-  '20-22',
-] as const;
-
 export interface ILaundrySlotDocument extends Document {
   id: string;
-  floorId: Schema.Types.ObjectId;
-  machineNumber: number;
-  date: string;
-  timeSlot: string;
-  tenantId: Schema.Types.ObjectId | null;
-  bookingId: Schema.Types.ObjectId | null;
+  tenantId: Schema.Types.ObjectId;
+  slotDate: string;
+  slotTime: string;
+  items?: number;
   status: string;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const laundrySlotSchema = new Schema<ILaundrySlotDocument>(
   {
-    floorId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Floor',
-      required: [true, 'Floor reference is required'],
-    },
-    machineNumber: {
-      type: Number,
-      enum: [1, 2],
-      required: [true, 'Machine number is required'],
-    },
-    date: {
-      type: String,
-      required: [true, 'Date is required'],
-      match: [/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'],
-    },
-    timeSlot: {
-      type: String,
-      enum: TIME_SLOTS,
-      required: [true, 'Time slot is required'],
-    },
     tenantId: {
       type: Schema.Types.ObjectId,
       ref: 'Tenant',
-      default: null,
+      required: [true, 'Tenant reference is required'],
     },
-    bookingId: {
-      type: Schema.Types.ObjectId,
-      default: null,
+    slotDate: {
+      type: String,
+      required: [true, 'Slot date is required'],
+      match: [/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'],
+    },
+    slotTime: {
+      type: String,
+      required: [true, 'Slot time is required'],
+    },
+    items: {
+      type: Number,
+      min: 1,
+      default: 1,
     },
     status: {
       type: String,
-      enum: ['available', 'booked', 'maintenance'],
-      default: 'available',
+      enum: ['booked', 'confirmed', 'completed', 'cancelled'],
+      default: 'booked',
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+      default: '',
     },
   },
   {
@@ -78,41 +62,23 @@ const laundrySlotSchema = new Schema<ILaundrySlotDocument>(
   },
 );
 
-laundrySlotSchema.index({ floorId: 1, machineNumber: 1, date: 1, timeSlot: 1 }, { unique: true });
-laundrySlotSchema.index({ tenantId: 1, date: 1 });
-laundrySlotSchema.index({ floorId: 1, date: 1 });
+laundrySlotSchema.index({ tenantId: 1, slotDate: 1, slotTime: 1 }, { unique: true });
+laundrySlotSchema.index({ slotDate: 1, status: 1 });
 
-/**
- * Auto-generate laundry slots for a floor for a given date.
- * Skips generation if slots already exist for that floor+date.
- */
-export async function generateLaundrySlots(
-  floorId: string,
-  date: string,
-  machines: number = 2,
-): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = await LaundrySlot.exists({ floorId: floorId as any, date });
-  if (existing) return;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slots: any[] = [];
-  for (let machine = 1; machine <= Math.min(machines, 2); machine++) {
-    for (const timeSlot of TIME_SLOTS) {
-      slots.push({
-        floorId,
-        machineNumber: machine,
-        date,
-        timeSlot,
-        status: 'available',
-      });
-    }
-  }
-
-  await LaundrySlot.insertMany(slots, { ordered: false });
-}
+// Virtual: populate tenant -> user + room for display
+laundrySlotSchema.virtual('tenant', {
+  ref: 'Tenant',
+  localField: 'tenantId',
+  foreignField: '_id',
+  justOne: true,
+});
 
 export const LaundrySlot: Model<ILaundrySlotDocument> = model<ILaundrySlotDocument>(
   'LaundrySlot',
   laundrySlotSchema,
 );
+
+/** Stub retained for backwards-compat — slot generation is now manual via admin UI */
+export async function generateLaundrySlots(): Promise<void> {
+  // no-op: slots are now created manually through the admin dashboard
+}

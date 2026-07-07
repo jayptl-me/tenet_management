@@ -332,7 +332,7 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
       screenshotUrl: body.screenshotUrl ?? payment.screenshotUrl,
       status: 'pending_verification',
     },
-    { new: true },
+    { returnDocument: 'after' },
   ).lean() as unknown);
 
   logger.info(
@@ -382,7 +382,7 @@ payments.post(
     }
 
     const paymentRaw = await (Payment.findByIdAndUpdate(paymentId, updateData, {
-      new: true,
+      returnDocument: 'after',
     }).lean() as unknown);
     if (!paymentRaw) return notFound(c, 'Payment');
 

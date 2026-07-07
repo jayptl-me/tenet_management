@@ -114,7 +114,7 @@ notices.put('/:id', authGuard, adminOnly, zValidator('json', updateNoticeSchema)
   const body = c.req.valid('json');
 
   const notice = await NoticePost.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
     .populate('author', 'name email')

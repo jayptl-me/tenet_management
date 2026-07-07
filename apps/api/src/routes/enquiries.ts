@@ -99,7 +99,7 @@ enquiries.put(
     const body = c.req.valid('json');
 
     const enquiry = await Enquiry.findByIdAndUpdate(id, body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).lean();
 

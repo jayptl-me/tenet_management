@@ -105,7 +105,7 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
   const body = c.req.valid('json');
 
   const asset = await Asset.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   }).lean();
 
@@ -119,7 +119,7 @@ assets.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid asset ID');
 
-  const asset = await Asset.findByIdAndUpdate(id, { status: 'retired' }, { new: true }).lean();
+  const asset = await Asset.findByIdAndUpdate(id, { status: 'retired' }, { returnDocument: 'after' }).lean();
 
   if (!asset) return notFound(c, 'Asset');
 

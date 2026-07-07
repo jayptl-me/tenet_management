@@ -117,7 +117,6 @@ paymentSchema.index({ invoiceId: 1 });
 paymentSchema.index({ month: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ dueDate: 1 });
-paymentSchema.index({ utrNumber: 1 }, { unique: true, sparse: true });
 paymentSchema.index({ tenantId: 1, month: 1 });
 
 // ── Virtuals ────────────────────────────────────────────

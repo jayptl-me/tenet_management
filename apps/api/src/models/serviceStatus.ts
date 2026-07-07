@@ -64,6 +64,14 @@ const serviceStatusSchema = new Schema<IServiceStatusDocument>(
 
 serviceStatusSchema.index({ floorId: 1, serviceType: 1 }, { unique: true });
 
+// Virtual: populate floor data for frontend display
+serviceStatusSchema.virtual('floor', {
+  ref: 'Floor',
+  localField: 'floorId',
+  foreignField: '_id',
+  justOne: true,
+});
+
 export const ServiceStatus: Model<IServiceStatusDocument> = model<IServiceStatusDocument>(
   'ServiceStatus',
   serviceStatusSchema,

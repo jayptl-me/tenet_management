@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,16 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-
-const schema = z.object({
-  roomNumber: z.string().min(1, 'Room number is required'),
-  floorId: z.string().min(1, 'Floor is required'),
-  sharingType: z.coerce.number().refine((v) => [2, 3, 4].includes(v), 'Must be 2, 3, or 4'),
-  monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
-  description: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
+import type { IAppConfig } from '@pg/types';
 
 const SHARING_OPTIONS = [
   { value: '2', label: '2 Sharing' },
@@ -28,29 +19,107 @@ const SHARING_OPTIONS = [
   { value: '4', label: '4 Sharing' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'operational', label: 'Operational' },
+  { value: 'degraded', label: 'Degraded' },
+  { value: 'down', label: 'Down' },
+];
+
+type RoomAmenityDef = { key: string; label: string; icon: string; category: string };
+
 export default function NewRoomPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
+  const [roomAmenityDefs, setRoomAmenityDefs] = useState<RoomAmenityDef[]>([]);
+  const [loadingDefs, setLoadingDefs] = useState(true);
+
+  useEffect(() => {
+    api.get('app-config')
+      .json<{ success: boolean; data: IAppConfig }>()
+      .then((res) => {
+        const defs = (res.data.amenityDefinitions ?? [])
+          .filter((d) => !d.isPerFloor)
+          .map((d) => ({ key: d.key, label: d.label, icon: d.icon, category: d.category }));
+        setRoomAmenityDefs(defs);
+      })
+      .catch(() => {
+        setRoomAmenityDefs([
+          { key: 'fan', label: 'Fan', icon: 'fan', category: 'furnishing' },
+          { key: 'bed', label: 'Bed', icon: 'bed-single', category: 'furnishing' },
+          { key: 'bedsheet', label: 'Bedsheet', icon: 'scroll-text', category: 'furnishing' },
+          { key: 'pillow', label: 'Pillow', icon: 'moon-star', category: 'furnishing' },
+        ]);
+      })
+      .finally(() => setLoadingDefs(false));
+  }, []);
+
+  // Build a flat schema dynamically with all amenity fields
+  const schema = z.object({
+    roomNumber: z.string().min(1, 'Room number is required'),
+    floorId: z.string().min(1, 'Floor is required'),
+    sharingType: z.coerce.number().refine((v) => [2, 3, 4].includes(v), 'Must be 2, 3, or 4'),
+    monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
+    description: z.string().optional(),
+    ...Object.fromEntries(
+      roomAmenityDefs.map((a) => [
+        `amenity_${a.key}`,
+        z.enum(['operational', 'degraded', 'down']).optional().default('operational'),
+      ]),
+    ),
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type FormValues = Record<string, any>;
 
   const {
     register,
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { sharingType: 2, monthlyRent: 0, description: '' },
+    defaultValues: {
+      sharingType: 2,
+      monthlyRent: 0,
+      description: '',
+      ...Object.fromEntries(roomAmenityDefs.map((a) => [`amenity_${a.key}`, 'operational'])),
+    },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormValues) => {
     setSubmitError('');
     try {
-      await api.post('rooms', { json: data }).json<{ success: boolean }>();
+      const roomAmenities = roomAmenityDefs.map((a) => ({
+        amenityKey: a.key,
+        status: data[`amenity_${a.key}`] ?? 'operational',
+      }));
+
+      await api.post('rooms', {
+        json: {
+          roomNumber: data.roomNumber,
+          floorId: data.floorId,
+          sharingType: Number(data.sharingType),
+          monthlyRent: Number(data.monthlyRent),
+          description: data.description || undefined,
+          roomAmenities,
+        },
+      }).json<{ success: boolean }>();
+
       router.push('/rooms');
     } catch {
       setSubmitError('Failed to create room. Please try again.');
     }
   };
+
+  if (loadingDefs) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+      </div>
+    );
+  }
+
+  const err = errors as Record<string, { message?: string }>;
 
   return (
     <div className="animate-fade-in-up space-y-6">
@@ -79,7 +148,7 @@ export default function NewRoomPage() {
             <Input
               label="Room Number"
               placeholder="e.g. 101, G2"
-              error={errors.roomNumber?.message}
+              error={err.roomNumber?.message}
               {...register('roomNumber')}
             />
             <Controller
@@ -92,7 +161,7 @@ export default function NewRoomPage() {
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="Select floor..."
-                  error={errors.floorId?.message}
+                  error={err.floorId?.message}
                 />
               )}
             />
@@ -101,13 +170,13 @@ export default function NewRoomPage() {
             <Select
               label="Sharing Type"
               options={SHARING_OPTIONS}
-              error={errors.sharingType?.message}
+              error={err.sharingType?.message}
               {...register('sharingType')}
             />
             <Input
               label="Monthly Rent (₹)"
               type="number"
-              error={errors.monthlyRent?.message}
+              error={err.monthlyRent?.message}
               {...register('monthlyRent')}
             />
           </div>
@@ -126,6 +195,28 @@ export default function NewRoomPage() {
               {...register('description')}
             />
           </div>
+
+          {/* Room-level amenity status */}
+          {roomAmenityDefs.length > 0 && (
+            <div>
+              <h4 className="font-display text-surface-900 mb-3 text-sm font-bold">Room Amenity Status</h4>
+              <p className="text-surface-500 mb-3 text-xs">Set the initial status for room-specific amenities</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {roomAmenityDefs.map((a) => {
+                  const fieldName = `amenity_${a.key}`;
+                  return (
+                    <Select
+                      key={a.key}
+                      label={a.label}
+                      options={STATUS_OPTIONS}
+                      error={err[fieldName]?.message}
+                      {...register(fieldName)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
         <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>

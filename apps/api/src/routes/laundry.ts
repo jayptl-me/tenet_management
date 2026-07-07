@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { notFound, badRequest, parseId, safeFilter } from '../lib/routeUtils.js';
+import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { LaundrySlot } from '../models/laundrySlot.js';
 
 const laundry = new Hono();
@@ -18,7 +18,7 @@ const createSlotSchema = z.strictObject({
 });
 
 const updateSlotSchema = z.strictObject({
-  status: z.enum(['booked', 'completed', 'cancelled']).optional(),
+  status: z.enum(['booked', 'confirmed', 'completed', 'cancelled']).optional(),
   slotDate: z.string().min(1).optional(),
   slotTime: z.string().min(1).optional(),
   items: z.number().int().min(1).optional(),
@@ -42,13 +42,35 @@ laundry.get('/', authGuard, async (c) => {
     return c.json({ success: true, data });
   }
 
-  // Admins see all
-  const data = await LaundrySlot.find()
-    .sort({ slotDate: -1, slotTime: -1 })
-    .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
-    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
-    .lean();
-  return c.json({ success: true, data });
+  // Admins see all — with pagination and status filter
+  const status = c.req.query('status');
+  const filter: Record<string, unknown> = {};
+  if (status) filter.status = status;
+
+  const pagination = parsePagination(c);
+  const { sort, order, skip, limit, page } = pagination;
+
+  const [data, total] = await Promise.all([
+    LaundrySlot.find(filter)
+      .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
+      .skip(skip)
+      .limit(limit)
+      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
+      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+      .lean(),
+    LaundrySlot.countDocuments(filter),
+  ]);
+
+  return c.json({
+    success: true,
+    data,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 });
 
 // ── GET /laundry-slots/:id ──────────────────────────────
@@ -95,7 +117,7 @@ laundry.put('/:id', authGuard, adminOnly, zValidator('json', updateSlotSchema), 
 
   const body = c.req.valid('json');
   const slot = await LaundrySlot.findByIdAndUpdate(id, body, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   })
     .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
