@@ -2,12 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Phone, Calendar, Home, CreditCard, LogOut, MessageCircle, Copy, AlertTriangle, IndianRupee, FileText, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  Calendar,
+  Home,
+  Banknote,
+  LogOut,
+  MessageCircle,
+  Copy,
+  AlertTriangle,
+  CreditCard,
+  FileText,
+  Loader2,
+  User,
+  Shield,
+  Pencil,
+} from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TenantActivityTimeline } from '@/components/ui/TenantActivityTimeline';
-import { ServiceStatusIndicator } from '@/components/ui/ServiceStatusIndicator';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 
@@ -24,6 +38,16 @@ interface TenantDetail {
   documents?: { aadhaarUrl?: string; photoUrl?: string };
   emergencyContact?: { name?: string; phone?: string; relation?: string };
   createdAt: string;
+}
+
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '₹0';
+  try { return `₹${amount.toLocaleString('en-IN')}`; } catch { return `₹${amount}`; }
+}
+
+function formatDate(d: string | null | undefined): string {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; }
 }
 
 export default function TenantDetailPage() {
@@ -51,18 +75,10 @@ export default function TenantDetailPage() {
     if (!id) return;
     setIsLoading(true);
     setError('');
-    api
-      .get(`tenants/${id}`)
-      .json<{ success: boolean; data: TenantDetail }>()
-      .then((res) => {
-        setTenant(res.data);
-      })
-      .catch(() => {
-        setError('Failed to load tenant details');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    api.get(`tenants/${id}`).json<{ success: boolean; data: TenantDetail }>()
+      .then((res) => setTenant(res.data))
+      .catch(() => setError('Failed to load tenant details'))
+      .finally(() => setIsLoading(false));
   }, [id]);
 
   const handleCheckoutClick = async () => {
@@ -72,382 +88,205 @@ export default function TenantDetailPage() {
     setDuesData(null);
     setCheckoutError('');
     try {
-      const res = await api
-        .get(`tenants/${tenant._id}/dues`)
-        .json<{ success: boolean; data: typeof duesData }>();
+      const res = await api.get(`tenants/${tenant._id}/dues`).json<{ success: boolean; data: typeof duesData }>();
       setDuesData(res.data);
-    } catch {
-      setCheckoutError('Failed to fetch dues summary');
-    } finally {
-      setDuesLoading(false);
-    }
+    } catch { setCheckoutError('Failed to fetch dues summary'); } finally { setDuesLoading(false); }
   };
 
   const handleConfirmCheckout = async () => {
     if (!tenant) return;
     setCheckingOut(true);
     setCheckoutError('');
-    try {
-      await api.post(`tenants/${tenant._id}/checkout`, { json: {} }).json();
-      setShowCheckoutModal(false);
-      window.location.reload();
-    } catch {
-      setCheckoutError('Failed to checkout tenant. Please try again.');
-    } finally {
-      setCheckingOut(false);
-    }
+    try { await api.post(`tenants/${tenant._id}/checkout`, { json: {} }).json(); setShowCheckoutModal(false); window.location.reload(); }
+    catch { setCheckoutError('Failed to checkout tenant.'); } finally { setCheckingOut(false); }
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
-      </div>
-    );
+    return <div className="flex min-h-[60vh] items-center justify-center"><div className="border-t-brand-600 h-10 w-10 animate-spin rounded-full border-[3px] border-gray-200" /></div>;
   }
 
   if (error || !tenant) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error || 'Tenant not found'}
-        </div>
+        <button onClick={() => router.back()} className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2 text-sm font-bold shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">{error || 'Tenant not found'}</div>
       </div>
     );
   }
 
-  const statusLabel = tenant.isActive ? 'Active' : 'Inactive';
-
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+          <button onClick={() => router.back()} className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+            <ArrowLeft className="h-4 w-4 text-gray-700" />
+          </button>
           <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-              {tenant.user?.name ?? 'Tenant Details'}
-            </h2>
-            <p className="text-surface-500 text-sm">Tenant ID: {tenant._id}</p>
+            <h2 className="font-black text-2xl text-gray-900 tracking-tight">{tenant.user?.name ?? 'Tenant Details'}</h2>
+            <p className="text-gray-500 text-sm mt-0.5">Bed {tenant.bedId} · Room {tenant.room?.roomNumber ?? 'N/A'}</p>
           </div>
         </div>
-        <StatusBadge variant={statusToVariant(statusLabel)} label={statusLabel} />
-      </div>
-
-      {/* Personal Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Personal Info</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Name</p>
-            <p className="text-surface-700 text-sm">{tenant.user?.name ?? 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Email</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Mail className="text-surface-400 h-3.5 w-3.5" />
-              {tenant.user?.email ?? 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Phone</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Phone className="text-surface-400 h-3.5 w-3.5" />
-              {tenant.user?.phone ?? 'N/A'}
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-2 px-3 py-1.5 text-xs font-bold shadow-[2px_2px_0px_0px_currentColor] ${tenant.isActive ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-emerald-400' : 'border-red-300 bg-red-50 text-red-600 shadow-red-300'}`}>
+            <span className={`inline-block h-2 w-2 rounded-full ${tenant.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
+            {tenant.isActive ? 'Active' : 'Inactive'}
+          </span>
+          <button onClick={() => router.push(`/tenants/${tenant._id}/edit`)} className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-gray-600 hover:text-gray-900" title="Edit tenant">
+            <Pencil className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Room Details Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Room Details</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Room</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Home className="text-surface-400 h-3.5 w-3.5" />
-              {tenant.room?.roomNumber ?? 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Bed ID</p>
-            <p className="text-surface-700 text-sm">{tenant.bedId ?? 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Floor</p>
-            <p className="text-surface-700 text-sm">{tenant.room?.floor?.label ?? 'N/A'}</p>
-          </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-2"><Banknote className="h-3.5 w-3.5" /> Rent</div>
+          <p className="text-2xl font-black text-gray-900">{formatCurrency(tenant.monthlyRent)}</p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-blue-400 bg-blue-50 p-5 shadow-[4px_4px_0px_0px_#60a5fa]">
+          <div className="flex items-center gap-2 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2"><CreditCard className="h-3.5 w-3.5" /> Deposit</div>
+          <p className="text-2xl font-black text-blue-800">{formatCurrency(tenant.depositPaid)}</p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-2"><Calendar className="h-3.5 w-3.5" /> Move-in</div>
+          <p className="text-2xl font-black text-gray-900">{formatDate(tenant.moveInDate)}</p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-2"><Calendar className="h-3.5 w-3.5" /> Move-out</div>
+          <p className="text-2xl font-black text-gray-900">{formatDate(tenant.moveOutDate)}</p>
         </div>
       </div>
 
-      {/* Financial Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Financial</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Monthly Rent</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <CreditCard className="text-surface-400 h-3.5 w-3.5" />₹
-              {tenant.monthlyRent?.toLocaleString() ?? '0'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Deposit Paid</p>
-            <p className="text-surface-700 text-sm">
-              ₹{tenant.depositPaid?.toLocaleString() ?? '0'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Move-in Date</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Calendar className="text-surface-400 h-3.5 w-3.5" />
-              {tenant.moveInDate
-                ? new Date(tenant.moveInDate).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })
-                : 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Move-out Date</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Calendar className="text-surface-400 h-3.5 w-3.5" />
-              {tenant.moveOutDate
-                ? new Date(tenant.moveOutDate).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })
-                : '—'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Emergency Contact Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Emergency Contact</h3>
-        {tenant.emergencyContact &&
-        (tenant.emergencyContact.name || tenant.emergencyContact.phone) ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Contact & Room */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2"><User className="h-5 w-5 text-amber-500" />Contact</h3>
+          <div className="space-y-3">
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Name</p>
-              <p className="text-surface-700 text-sm">{tenant.emergencyContact.name ?? '—'}</p>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Email</p>
+              <p className="text-gray-900 font-semibold flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-gray-400" />{tenant.user?.email ?? 'N/A'}</p>
             </div>
             <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Phone</p>
-              <p className="text-surface-700 text-sm">{tenant.emergencyContact.phone ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-surface-800 font-display text-sm font-semibold">Relation</p>
-              <p className="text-surface-700 text-sm">{tenant.emergencyContact.relation ?? '—'}</p>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Phone</p>
+              <p className="text-gray-900 font-semibold flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-gray-400" />{tenant.user?.phone ?? 'N/A'}</p>
             </div>
           </div>
-        ) : (
-          <p className="text-surface-500 text-sm">No emergency contact on file</p>
-        )}
+        </div>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2"><Home className="h-5 w-5 text-blue-500" />Room</h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Room Number</p>
+              <p className="text-gray-900 font-extrabold text-lg">{tenant.room?.roomNumber ?? 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Floor</p>
+              <p className="text-gray-900 font-semibold">{tenant.room?.floor?.label ?? 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Bed ID</p>
+              <p className="text-gray-900 font-mono font-bold text-sm">{tenant.bedId}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Documents Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Documents</h3>
+      {/* Emergency Contact */}
+      {(tenant.emergencyContact?.name || tenant.emergencyContact?.phone) && (
+        <div className="rounded-[var(--radius-lg)] border-2 border-orange-300 bg-orange-50 p-6 shadow-[4px_4px_0px_0px_#fdba74]">
+          <h3 className="font-black text-lg text-orange-800 mb-4 flex items-center gap-2"><Shield className="h-5 w-5" />Emergency Contact</h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div><p className="text-orange-600 text-xs font-bold uppercase tracking-wider">Name</p><p className="text-orange-900 font-extrabold">{tenant.emergencyContact.name ?? '—'}</p></div>
+            <div><p className="text-orange-600 text-xs font-bold uppercase tracking-wider">Phone</p><p className="text-orange-900 font-extrabold">{tenant.emergencyContact.phone ?? '—'}</p></div>
+            <div><p className="text-orange-600 text-xs font-bold uppercase tracking-wider">Relation</p><p className="text-orange-900 font-extrabold">{tenant.emergencyContact.relation ?? '—'}</p></div>
+          </div>
+        </div>
+      )}
+
+      {/* Documents */}
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="font-black text-lg text-gray-900 mb-4">Documents</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <DocumentUpload
-            tenantId={tenant._id}
-            docType="aadhaar"
-            currentUrl={tenant.documents?.aadhaarUrl}
-            onUploaded={(url) => {
-              setTenant((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      documents: { ...prev.documents, aadhaarUrl: url },
-                    }
-                  : prev,
-              );
-            }}
-          />
-          <DocumentUpload
-            tenantId={tenant._id}
-            docType="photo"
-            currentUrl={tenant.documents?.photoUrl}
-            onUploaded={(url) => {
-              setTenant((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      documents: { ...prev.documents, photoUrl: url },
-                    }
-                  : prev,
-              );
-            }}
-          />
+          <DocumentUpload tenantId={tenant._id} docType="aadhaar" currentUrl={tenant.documents?.aadhaarUrl} onUploaded={(url) => setTenant((prev) => prev ? { ...prev, documents: { ...prev.documents, aadhaarUrl: url } } : prev)} />
+          <DocumentUpload tenantId={tenant._id} docType="photo" currentUrl={tenant.documents?.photoUrl} onUploaded={(url) => setTenant((prev) => prev ? { ...prev, documents: { ...prev.documents, photoUrl: url } } : prev)} />
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+      {/* Actions */}
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="font-black text-lg text-gray-900 mb-4">Actions</h3>
         <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const phone = tenant.user?.phone ?? '';
-              const name = tenant.user?.name ?? 'Tenant';
-              const url = generateWhatsAppUrl(phone, `Hi ${name}, regarding your stay at our PG...`);
-              window.open(url, '_blank', 'noopener,noreferrer');
-            }}
-            disabled={!tenant.user?.phone}
-          >
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const text = `${tenant.user?.name ?? 'Tenant'} | ${tenant.user?.phone ?? ''} | Room ${tenant.room?.roomNumber ?? 'N/A'} | Bed ${tenant.bedId}`;
-              copyToClipboard(text);
-            }}
-          >
-            <Copy className="h-4 w-4" />
-            Copy Info
-          </Button>
+          <button onClick={() => { const p = tenant.user?.phone ?? ''; window.open(generateWhatsAppUrl(p, `Hi ${tenant.user?.name ?? 'Tenant'}, regarding your stay...`), '_blank', 'noopener,noreferrer'); }} disabled={!tenant.user?.phone} className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-emerald-600 bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0px_0px_#059669] transition-all hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] disabled:opacity-50 disabled:cursor-not-allowed">
+            <MessageCircle className="h-4 w-4" /> WhatsApp
+          </button>
+          <button onClick={() => copyToClipboard(`${tenant.user?.name ?? 'Tenant'} | ${tenant.user?.phone ?? ''} | Room ${tenant.room?.roomNumber ?? 'N/A'} | Bed ${tenant.bedId}`)} className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 shadow-[3px_3px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]">
+            <Copy className="h-4 w-4" /> Copy Info
+          </button>
           {tenant.isActive && (
-            <Button variant="danger" size="sm" onClick={handleCheckoutClick}>
-              <LogOut className="h-4 w-4" />
-              Check Out
-            </Button>
+            <button onClick={handleCheckoutClick} className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-red-600 bg-red-500 px-4 py-2.5 text-sm font-bold text-white shadow-[3px_3px_0px_0px_#dc2626] transition-all hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px]">
+              <LogOut className="h-4 w-4" /> Check Out
+            </button>
           )}
         </div>
       </div>
 
-      {/* Checkout Dues Modal */}
+      {/* Checkout Modal */}
       {showCheckoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-            <div className="mb-4 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-[color:var(--color-warning-600)]" />
-              <h3 className="font-display text-surface-900 text-lg font-bold">
-                Checkout {tenant.user?.name ?? 'Tenant'}
-              </h3>
-            </div>
-
+          <div className="w-full max-w-lg rounded-[var(--radius-lg)] border-2 border-gray-800 bg-white p-6 shadow-[6px_6px_0px_0px_#1f2937]">
+            <div className="mb-4 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" /><h3 className="font-black text-lg text-gray-900">Checkout {tenant.user?.name ?? 'Tenant'}</h3></div>
             {duesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="text-brand-500 h-6 w-6 animate-spin" />
-                <span className="text-surface-500 ml-2 text-sm">Loading dues summary...</span>
-              </div>
+              <div className="flex items-center justify-center py-8 gap-2"><Loader2 className="h-5 w-5 animate-spin text-amber-500" /><span className="text-gray-500 text-sm font-semibold">Loading dues...</span></div>
             ) : checkoutError ? (
-              <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-3 text-sm font-semibold">
-                {checkoutError}
-              </div>
+              <div className="rounded-[var(--radius-md)] border-2 border-red-300 bg-red-50 p-3 text-red-700 text-sm font-semibold shadow-[2px_2px_0px_0px_#fca5a5]">{checkoutError}</div>
             ) : duesData ? (
               <div className="space-y-4">
-                {/* Dues breakdown */}
-                <div className="bg-surface-50 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4">
+                <div className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-gray-50 p-4 shadow-[2px_2px_0px_0px_#d1d5db]">
                   <div className="flex items-center justify-between">
-                    <span className="text-surface-800 font-display text-sm font-semibold">
-                      Total Pending Dues
-                    </span>
-                    <span className="text-surface-900 font-display text-lg font-extrabold">
-                      ₹{duesData.totalDue.toLocaleString('en-IN')}
-                    </span>
+                    <span className="text-gray-800 font-bold text-sm">Total Pending Dues</span>
+                    <span className="text-gray-900 font-black text-lg">{formatCurrency(duesData.totalDue)}</span>
                   </div>
-                  <div className="text-surface-500 mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      Electricity: <span className="font-semibold">₹{duesData.electricityDues.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div>
-                      Deposit Held: <span className="font-semibold">₹{duesData.depositHeld.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div>
-                      Pending Payments: <span className="font-semibold">{duesData.pendingPayments}</span>
-                    </div>
+                  <div className="text-gray-500 mt-2 grid grid-cols-2 gap-2 text-xs font-semibold">
+                    <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
+                    <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
+                    <div>Pending Payments: {duesData.pendingPayments}</div>
                   </div>
                 </div>
-
-                {/* Unpaid invoices list */}
                 {duesData.unpaidInvoices.length > 0 && (
                   <div>
-                    <p className="text-surface-800 font-display mb-2 text-sm font-semibold">
-                      Unpaid Invoices ({duesData.unpaidInvoices.length})
-                    </p>
+                    <p className="text-gray-800 font-bold text-sm mb-2">Unpaid Invoices ({duesData.unpaidInvoices.length})</p>
                     <div className="max-h-40 overflow-y-auto space-y-1">
                       {duesData.unpaidInvoices.map((inv) => (
-                        <div
-                          key={inv._id}
-                          className="flex items-center justify-between rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-sm"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileText className="text-surface-400 h-3.5 w-3.5" />
-                            <span className="text-surface-700 font-mono text-xs">{inv.invoiceNumber}</span>
-                            <span className="text-surface-500 text-xs">{inv.month}</span>
-                          </div>
-                          <span className="text-surface-900 text-sm font-semibold">
-                            ₹{inv.totalAmount.toLocaleString('en-IN')}
-                          </span>
+                        <div key={inv._id} className="flex items-center justify-between rounded-[var(--radius-sm)] border-2 border-gray-200 px-3 py-2 text-sm">
+                          <div className="flex items-center gap-2"><FileText className="h-3.5 w-3.5 text-gray-400" /><span className="text-gray-700 font-mono text-xs font-bold">{inv.invoiceNumber}</span><span className="text-gray-400 text-xs">{inv.month}</span></div>
+                          <span className="text-gray-900 font-bold">{formatCurrency(inv.totalAmount)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
                 {duesData.totalDue === 0 && duesData.unpaidInvoices.length === 0 && (
-                  <div className="bg-success-50 text-success-700 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-success-300)] p-3 text-sm font-semibold">
-                    No pending dues. The tenant can be checked out without any outstanding balance.
-                  </div>
+                  <div className="rounded-[var(--radius-md)] border-2 border-emerald-300 bg-emerald-50 p-3 text-emerald-700 text-sm font-semibold shadow-[2px_2px_0px_0px_#6ee7b7]">No pending dues. Safe to checkout.</div>
                 )}
-
-                <p className="text-surface-500 text-xs">
-                  Checking out will free the bed, deactivate the tenant account, and set the move-out date.
-                </p>
               </div>
             ) : null}
-
-            {/* Modal actions */}
-            <div className="mt-6 flex justify-end gap-3 border-t-[length:var(--bw-default)] border-t-[color:var(--border-color)] pt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowCheckoutModal(false);
-                  setDuesData(null);
-                  setCheckoutError('');
-                }}
-                disabled={checkingOut}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleConfirmCheckout}
-                loading={checkingOut}
-                disabled={duesLoading}
-              >
-                <LogOut className="h-4 w-4" />
-                Confirm Checkout
-              </Button>
+            <div className="mt-6 flex justify-end gap-3 border-t-2 border-gray-200 pt-4">
+              <button onClick={() => { setShowCheckoutModal(false); setDuesData(null); setCheckoutError(''); }} disabled={checkingOut} className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-[2px_2px_0px_0px_#d1d5db] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50">Cancel</button>
+              <button onClick={handleConfirmCheckout} disabled={checkingOut || duesLoading} className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-red-600 bg-red-500 px-4 py-2 text-sm font-bold text-white shadow-[3px_3px_0px_0px_#dc2626] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all disabled:opacity-50">
+                {checkingOut && <Loader2 className="h-4 w-4 animate-spin" />}
+                <LogOut className="h-4 w-4" /> Confirm Checkout
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Activity Timeline */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Activity Timeline</h3>
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-6 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="font-black text-lg text-gray-900 mb-4">Activity Timeline</h3>
         <TenantActivityTimeline tenantId={tenant._id} />
       </div>
     </div>

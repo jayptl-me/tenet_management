@@ -10,29 +10,97 @@ import {
   Calendar,
   FileText,
   Receipt,
-  Image,
   CheckCircle,
   XCircle,
   MessageCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 
 interface PaymentDetail {
   _id: string;
-  tenant?: { _id: string; user?: { name: string }; room?: { _id: string; roomNumber: string } };
+  tenant?: { _id: string; user?: { name: string; phone?: string }; room?: { _id: string; roomNumber: string } };
   amount: number;
-  method: string;    // API sends 'method' not 'mode'
-  type: string;      // API sends 'type' not 'category'
+  method: string;
+  type: string;
   status: string;
   notes?: string;
-  paidAt?: string;   // API sends 'paidAt' not 'transactionDate'
+  paidAt?: string;
   createdAt: string;
   invoiceId?: string;
   invoiceNumber?: string;
   screenshotUrl?: string;
+}
+
+function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null) return '₹0';
+  try {
+    return '₹' + amount.toLocaleString('en-IN');
+  } catch {
+    return '₹' + amount;
+  }
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'N/A';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'N/A';
+  try {
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getStatusBadgeClasses(status: string): string {
+  switch (status) {
+    case 'verified':
+    case 'completed':
+    case 'paid':
+      return 'border-emerald-400 bg-emerald-50 text-emerald-700';
+    case 'pending_verification':
+    case 'pending':
+      return 'border-amber-300 bg-amber-50 text-amber-700';
+    case 'rejected':
+    case 'failed':
+      return 'border-red-400 bg-red-50 text-red-700';
+    default:
+      return 'border-gray-300 bg-gray-50 text-gray-700';
+  }
+}
+
+function getAmountBadgeClasses(status: string): string {
+  switch (status) {
+    case 'verified':
+    case 'completed':
+    case 'paid':
+      return 'border-emerald-400 bg-emerald-100 text-emerald-800';
+    case 'pending_verification':
+    case 'pending':
+      return 'border-amber-300 bg-amber-100 text-amber-800';
+    case 'rejected':
+    case 'failed':
+      return 'border-red-400 bg-red-100 text-red-800';
+    default:
+      return 'border-gray-300 bg-gray-100 text-gray-800';
+  }
 }
 
 export default function PaymentDetailPage() {
@@ -43,6 +111,7 @@ export default function PaymentDetailPage() {
   const [payment, setPayment] = useState<PaymentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -64,20 +133,22 @@ export default function PaymentDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
       </div>
     );
   }
 
   if (error || !payment) {
     return (
-      <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+      <div className="space-y-6">
+        <button
+          onClick={() => router.back()}
+          className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+        >
+          <ArrowLeft className="h-5 w-5 text-gray-700" />
+        </button>
+        <div className="rounded-[var(--radius-lg)] border-2 border-red-400 bg-red-50 p-5 text-red-800 font-semibold shadow-[4px_4px_0px_0px_#ef4444]">
           {error || 'Payment not found'}
         </div>
       </div>
@@ -86,122 +157,150 @@ export default function PaymentDetailPage() {
 
   const formatMethod = (method: string) => method.replace(/_/g, ' ');
   const formatType = (type: string) => type.charAt(0).toUpperCase() + type.slice(1);
-  const formatStatus = (status: string) =>
+  const formatStatusLabel = (status: string) =>
     status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   const formattedDate = payment.paidAt || payment.createdAt;
+  const statusClasses = getStatusBadgeClasses(payment.status);
+  const amountClasses = getAmountBadgeClasses(payment.status);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="rounded-[var(--radius-md)] border-2 border-gray-300 bg-white p-2 shadow-[2px_2px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
+          </button>
           <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">
+            <h2 className="font-black text-2xl text-gray-900 tracking-tight">
               Payment Details
             </h2>
-            <p className="text-surface-500 text-sm">Payment ID: {payment._id}</p>
+            <p className="text-gray-500 text-sm mt-0.5">Transaction ID: {payment._id}</p>
           </div>
         </div>
-        <StatusBadge
-          variant={statusToVariant(payment.status)}
-          label={formatStatus(payment.status)}
-        />
+        <span
+          className={`inline-flex items-center rounded-[var(--radius-md)] border-2 px-3 py-1 text-sm font-black uppercase tracking-wide shadow-[3px_3px_0px_0px_#d1d5db] ${statusClasses}`}
+        >
+          {formatStatusLabel(payment.status)}
+        </span>
       </div>
 
       {/* Amount Highlight */}
-      <div className="bg-brand-50 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-6 text-center shadow-[var(--shadow-card)]">
-        <p className="text-surface-800 font-display mb-1 text-sm font-semibold">Amount</p>
-        <p className="text-surface-900 font-display text-4xl font-extrabold">
-          ₹{payment.amount?.toLocaleString()}
-        </p>
+      <div
+        className={`rounded-[var(--radius-lg)] border-2 p-6 text-center shadow-[4px_4px_0px_0px_#d1d5db] ${amountClasses}`}
+      >
+        <p className="font-bold text-sm mb-1 uppercase tracking-wide opacity-80">Amount</p>
+        <p className="font-black text-4xl">{formatCurrency(payment.amount)}</p>
+        {payment.type && (
+          <p className="font-semibold text-sm mt-1 capitalize opacity-80">
+            {formatType(payment.type)}
+          </p>
+        )}
       </div>
 
-      {/* Payment Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
-          Payment Information
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Mode</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <CreditCard className="text-surface-400 h-3.5 w-3.5" />
-              <span className="capitalize">{formatMethod(payment.method)}</span>
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Category</p>
-            <p className="text-surface-700 text-sm">{formatType(payment.type)}</p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Status</p>
-            <StatusBadge
-              variant={statusToVariant(payment.status)}
-              label={formatStatus(payment.status)}
-            />
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Transaction Date</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Calendar className="text-surface-400 h-3.5 w-3.5" />
-              {new Date(formattedDate).toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </p>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Payment Information Card */}
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-gray-600" />
+            Payment Information
+          </h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Method</p>
+                <p className="font-semibold text-gray-900 text-sm mt-0.5 capitalize">
+                  {formatMethod(payment.method)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</p>
+                <p className="font-semibold text-gray-900 text-sm mt-0.5">
+                  {formatType(payment.type)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</p>
+                <span
+                  className={`mt-1 inline-block rounded-[var(--radius-md)] border-2 px-2 py-0.5 text-xs font-black uppercase tracking-wide ${statusClasses}`}
+                >
+                  {formatStatusLabel(payment.status)}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Transaction Date
+                </p>
+                <p className="font-semibold text-gray-900 text-sm mt-0.5 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                  {formatDate(formattedDate)}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Tenant Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Tenant Information</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Tenant Name</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <User className="text-surface-400 h-3.5 w-3.5" />
-              {payment.tenant?.user?.name ?? 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-surface-800 font-display text-sm font-semibold">Room</p>
-            <p className="text-surface-700 flex items-center gap-1 text-sm">
-              <Home className="text-surface-400 h-3.5 w-3.5" />
-              {payment.tenant?.room?.roomNumber ?? 'N/A'}
-            </p>
+        {/* Tenant Information Card */}
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+            <User className="h-5 w-5 text-gray-600" />
+            Tenant Information
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Name</p>
+              <p className="font-semibold text-gray-900 text-sm mt-0.5">
+                {payment.tenant?.user?.name ?? 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Room</p>
+              <p className="font-semibold text-gray-900 text-sm mt-0.5 flex items-center gap-1">
+                <Home className="h-3.5 w-3.5 text-gray-400" />
+                {payment.tenant?.room?.roomNumber ?? 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Created</p>
+              <p className="font-semibold text-gray-900 text-sm mt-0.5 flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                {formatDateTime(payment.createdAt)}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Invoice Reference Card */}
       {(payment.invoiceId || payment.invoiceNumber) && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-gray-600" />
             Invoice Reference
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {payment.invoiceNumber && (
               <div>
-                <p className="text-surface-800 font-display text-sm font-semibold">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Invoice Number
                 </p>
-                <p className="text-surface-700 flex items-center gap-1 text-sm">
-                  <Receipt className="text-surface-400 h-3.5 w-3.5" />
+                <p className="font-semibold text-gray-900 text-sm mt-0.5">
                   {payment.invoiceNumber}
                 </p>
               </div>
             )}
             {payment.invoiceId && (
               <div>
-                <p className="text-surface-800 font-display text-sm font-semibold">Invoice ID</p>
-                <p className="text-surface-700 font-mono text-sm text-xs">{payment.invoiceId}</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Invoice ID
+                </p>
+                <p className="font-mono text-xs text-gray-700 mt-0.5 break-all">
+                  {payment.invoiceId}
+                </p>
               </div>
             )}
           </div>
@@ -210,24 +309,29 @@ export default function PaymentDetailPage() {
 
       {/* Notes Card */}
       {payment.notes && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Notes</h3>
-          <p className="text-surface-700 flex items-start gap-1 text-sm">
-            <FileText className="text-surface-400 mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span className="whitespace-pre-wrap">{payment.notes}</span>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-gray-600" />
+            Notes
+          </h3>
+          <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">
+            {payment.notes}
           </p>
         </div>
       )}
 
       {/* Screenshot Card */}
       {payment.screenshotUrl && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Screenshot</h3>
+        <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+          <h3 className="font-black text-lg text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-gray-600" />
+            Payment Screenshot
+          </h3>
           <a
             href={payment.screenshotUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-surface-100 block max-w-sm overflow-hidden rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] ring-[color:var(--color-brand-500)] transition-shadow hover:ring-[length:var(--bw-default)]"
+            className="block max-w-sm overflow-hidden rounded-[var(--radius-md)] border-2 border-gray-300 shadow-[3px_3px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
           >
             <img
               src={payment.screenshotUrl}
@@ -236,14 +340,12 @@ export default function PaymentDetailPage() {
               onError={(e) => {
                 const target = e.currentTarget;
                 target.style.display = 'none';
-                target.parentElement!.classList.add(
-                  'flex',
-                  'items-center',
-                  'justify-center',
-                  'p-8',
-                );
-                target.parentElement!.innerHTML =
-                  '<span class="text-surface-400 flex flex-col items-center gap-2"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg><span class="text-xs">Image unavailable</span></span>';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.classList.add('flex', 'items-center', 'justify-center', 'p-10');
+                  parent.innerHTML =
+                    '<span class="text-gray-400 flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
+                }
               }}
             />
           </a>
@@ -251,52 +353,72 @@ export default function PaymentDetailPage() {
       )}
 
       {/* Actions Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-surface-900 mb-4 text-lg font-bold">Actions</h3>
+      <div className="rounded-[var(--radius-lg)] border-2 border-gray-300 bg-white p-5 shadow-[4px_4px_0px_0px_#d1d5db]">
+        <h3 className="font-black text-lg text-gray-900 mb-4">Actions</h3>
         <div className="flex flex-wrap gap-3">
           {payment.status === 'pending_verification' && (
             <>
-              <Button
-                variant="primary"
-                size="sm"
+              <button
+                type="button"
+                disabled={actionLoading === 'approve'}
                 onClick={async () => {
+                  setActionLoading('approve');
                   try {
                     await api.post(`payments/${payment._id}/verify`, { json: { approved: true } }).json();
                     window.location.reload();
-                  } catch { alert('Failed to verify payment'); }
+                  } catch {
+                    alert('Failed to verify payment');
+                  } finally {
+                    setActionLoading(null);
+                  }
                 }}
+                className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-emerald-500 bg-emerald-500 px-4 py-2.5 text-white font-black text-sm shadow-[3px_3px_0px_0px_#059669] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <CheckCircle className="h-4 w-4" /> Approve Payment
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
+                <CheckCircle className="h-4 w-4" />
+                {actionLoading === 'approve' ? 'Processing...' : 'Approve Payment'}
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading === 'reject'}
                 onClick={async () => {
+                  setActionLoading('reject');
                   try {
                     await api.post(`payments/${payment._id}/verify`, { json: { approved: false } }).json();
                     window.location.reload();
-                  } catch { alert('Failed to reject payment'); }
+                  } catch {
+                    alert('Failed to reject payment');
+                  } finally {
+                    setActionLoading(null);
+                  }
                 }}
+                className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-red-500 bg-red-500 px-4 py-2.5 text-white font-black text-sm shadow-[3px_3px_0px_0px_#dc2626] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <XCircle className="h-4 w-4" /> Reject Payment
-              </Button>
+                <XCircle className="h-4 w-4" />
+                {actionLoading === 'reject' ? 'Processing...' : 'Reject Payment'}
+              </button>
             </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={() => {
-              const phone = payment.tenant?.user?.name ? '' : '';
-              const text = `Payment of Rs.${payment.amount?.toLocaleString()} received. Status: ${formatStatus(payment.status)}`;
+              const phone = payment.tenant?.user?.phone ?? '';
+              const text = `Payment of ${formatCurrency(payment.amount)} received. Status: ${formatStatusLabel(payment.status)}`;
               const url = generateWhatsAppUrl(phone, text);
               if (phone) window.open(url, '_blank', 'noopener,noreferrer');
             }}
-            disabled={!payment.tenant?.user?.name}
+            disabled={!payment.tenant?.user?.phone}
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-2 border-gray-300 bg-white px-4 py-2.5 text-gray-900 font-black text-sm shadow-[3px_3px_0px_0px_#d1d5db] transition-all hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <MessageCircle className="h-4 w-4" /> Share via WhatsApp
-          </Button>
+            <MessageCircle className="h-4 w-4" />
+            Share via WhatsApp
+          </button>
         </div>
       </div>
+
+      {/* Footer Meta */}
+      <p className="text-gray-400 text-xs text-right">
+        Last updated: {formatDateTime(payment.paidAt || payment.createdAt)}
+      </p>
     </div>
   );
 }

@@ -146,6 +146,15 @@ invoices.get('/:id', authGuard, async (c) => {
     }
   }
 
+  // Compute paidAmount and balance from payments
+  const payments = (await Payment.find(
+    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id), status: 'paid' }),
+  ).lean()) as Array<Record<string, unknown>>;
+
+  const paidAmount = payments.reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
+  const totalAmount = (invoice.totalAmount as number) ?? 0;
+  const balance = totalAmount - paidAmount;
+
   const upiConfig = await getPgUpiConfig();
   const tenantInfo = invoice.tenantId as Record<string, unknown> | null;
   const userInfo = tenantInfo?.userId as Record<string, unknown> | null;
@@ -164,7 +173,7 @@ invoices.get('/:id', authGuard, async (c) => {
 
   return c.json({
     success: true,
-    data: { ...invoice, whatsAppUrl, shareText },
+    data: { ...invoice, paidAmount, balance, payments, whatsAppUrl, shareText },
   });
 });
 
