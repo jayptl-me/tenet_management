@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, Building2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Building2, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,6 +26,10 @@ export default function FloorsPage() {
   const router = useRouter();
   const [floors, setFloors] = useState<FloorRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(25);
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<FloorRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -33,17 +38,24 @@ export default function FloorsPage() {
     setIsLoading(true);
     setError('');
     try {
-      const res = await api.get('floors').json<{
+      const params = new URLSearchParams();
+      params.set('page', String(page));
+      params.set('limit', String(perPage));
+      if (search) params.set('search', search);
+
+      const res = await api.get(`floors?${params.toString()}`).json<{
         success: boolean;
         data: FloorRow[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
       }>();
       setFloors(res.data);
+      setTotal(res.meta?.total ?? res.data.length);
     } catch {
       setError('Failed to load floors');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [page, perPage, search]);
 
   useEffect(() => {
     fetchFloors();
@@ -55,7 +67,7 @@ export default function FloorsPage() {
     try {
       await api.delete(`floors/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      await fetchFloors();
+      fetchFloors();
     } catch {
       setError('Failed to delete floor');
     } finally {
@@ -66,7 +78,7 @@ export default function FloorsPage() {
   const columns: DataTableColumn<FloorRow>[] = [
     {
       header: 'Floor',
-      accessor: (row) => <span className="font-semibold text-[color:var(--color-surface-900)]">{row.label}</span>,
+      accessor: (row) => <span className="font-semibold text-[color:var(--color-text-primary)]">{row.label}</span>,
     },
     {
       header: 'Floor #',
@@ -94,7 +106,7 @@ export default function FloorsPage() {
               e.stopPropagation();
               router.push(`/floors/${row._id}`);
             }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -140,12 +152,26 @@ export default function FloorsPage() {
 
       <ErrorBanner message={error} />
 
+      {/* Search */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+          <Input
+            placeholder="Search floors..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
       <DataTable
         columns={columns}
         data={floors}
         keyExtractor={(row: FloorRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/floors/${row._id}`)}
+        pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
         emptyState={
           <EmptyState
             icon={<Building2 className="h-12 w-12" />}
@@ -170,7 +196,7 @@ export default function FloorsPage() {
             <div className="flex items-center gap-1 pt-1">
               <button
                 onClick={(e) => { e.stopPropagation(); router.push(`/floors/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors hover:bg-[color:var(--color-surface-100)]"
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
               >
                 <Eye className="h-3 w-3" /> View
               </button>
