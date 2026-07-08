@@ -66,11 +66,11 @@ export default function EditInvoicePage() {
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Invoice</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update invoice details</p>
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Invoice</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update invoice details</p>
         </div>
       </div>
-      {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Month" type="month" error={errors.month?.message} {...register('month')} />

@@ -118,13 +118,13 @@ export default function EditFloorPage() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Floor</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update floor details</p>
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Floor</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update floor details</p>
         </div>
       </div>
 
       {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
           {submitError}
         </div>
       )}
@@ -157,7 +157,7 @@ export default function EditFloorPage() {
           {/* Dynamic amenity count fields */}
           {perFloorAmenities.length > 0 && (
             <div>
-              <h4 className="font-display text-surface-900 mb-3 text-sm font-bold">Per-Floor Amenity Counts</h4>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] mb-3 text-sm font-bold">Per-Floor Amenity Counts</h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {perFloorAmenities.map((a) => (
                   <Input
@@ -173,7 +173,7 @@ export default function EditFloorPage() {
           )}
         </div>
 
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>

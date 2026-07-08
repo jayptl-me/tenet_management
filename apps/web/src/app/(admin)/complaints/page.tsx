@@ -62,7 +62,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-colors duration-[var(--transition-duration)] ${isOver ? 'ring-3 ring-brand-500 ring-offset-2' : ''}`}
+      className={`min-h-[200px] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'ring-[length:var(--bw-strong)] ring-[color:var(--color-brand-500)] ring-offset-2 scale-[1.01]' : ''}`}
     >
       <div
         className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}

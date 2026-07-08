@@ -79,11 +79,11 @@ export default function EditTenantPage() {
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Tenant</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update tenant details</p>
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Tenant</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update tenant details</p>
         </div>
       </div>
-      {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Name" error={errors.name?.message} {...register('name')} />
@@ -101,7 +101,7 @@ export default function EditTenantPage() {
             {...register('isActive')}
           />
         </div>
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
         </div>

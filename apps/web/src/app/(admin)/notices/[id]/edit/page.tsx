@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -62,25 +63,22 @@ export default function EditNoticePage() {
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Notice</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update notice details</p>
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Notice</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update notice details</p>
         </div>
       </div>
-      {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Title" error={errors.title?.message} {...register('title')} />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-surface-800 font-display text-sm font-semibold">Content</label>
-            <textarea rows={4} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter content..." {...register('content')} />
-          </div>
+          <Textarea label="Content" rows={4} error={errors.content?.message} placeholder="Enter content..." {...register('content')} />
           <Select label="Priority" options={priorityOptions} error={errors.priority?.message} {...register('priority')} />
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('isPublished')} className="text-brand-500 h-5 w-5 rounded border-[length:var(--bw-default)]" />
-            <span className="text-surface-700 text-sm font-semibold">Published</span>
+            <span className="text-[color:var(--color-text-primary)] text-sm font-semibold">Published</span>
           </label>
         </div>
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
         </div>
