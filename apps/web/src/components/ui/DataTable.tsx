@@ -38,6 +38,8 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   className?: string;
   animate?: boolean;
+  /** When provided, on mobile (<768px) render each row as a card instead of a table */
+  mobileCardRenderer?: (row: T) => React.ReactNode;
 }
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
@@ -61,6 +63,17 @@ function SkeletonRow({ columns }: { columns: number }) {
 
 // ── Component ──────────────────────────────────────────
 
+// ── Mobile Card Skeleton ───────────────────────────────
+
+function MobileCardSkeleton() {
+  return (
+    <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-xs)]">
+      <div className="mb-2 h-4 w-3/4 animate-pulse rounded bg-[color:var(--shimmer-base)]" />
+      <div className="h-3 w-1/2 animate-pulse rounded bg-[color:var(--shimmer-base)]" />
+    </div>
+  );
+}
+
 export function DataTable<T>({
   columns,
   data,
@@ -75,6 +88,7 @@ export function DataTable<T>({
   onRowClick,
   className,
   animate = true,
+  mobileCardRenderer,
 }: DataTableProps<T>) {
   const pages = pagination ? Math.ceil(pagination.total / pagination.perPage) : 0;
 
@@ -93,8 +107,48 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-[color:var(--border-color)] shadow-[var(--shadow-sm)]">
+      {/* Mobile Card View (only when mobileCardRenderer is provided) */}
+      {mobileCardRenderer && (
+        <div className="block md:hidden space-y-3">
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <MobileCardSkeleton key={`mobile-skel-${i}`} />
+            ))
+          ) : data.length === 0 ? (
+            <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
+              {emptyState ?? (
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
+                    No data found
+                  </p>
+                  <p className="text-[13px] text-[color:var(--color-text-muted)]">
+                    Try adjusting your search or filters
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            data.map((row) => (
+              <div
+                key={keyExtractor(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={clsx(
+                  'rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
+                  onRowClick && 'cursor-pointer hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
+                )}
+              >
+                {mobileCardRenderer(row)}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Desktop Table (hidden on mobile when card view is active) */}
+      <div className={clsx(
+        'overflow-x-auto rounded-xl border border-[color:var(--border-color)] shadow-[var(--shadow-sm)]',
+        mobileCardRenderer && 'hidden md:block',
+      )}>
         <table className="w-full border-collapse bg-[color:var(--color-surface-100)]">
           <thead>
             <tr className="bg-[color:var(--color-surface-50)]">

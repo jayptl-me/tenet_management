@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { triggerThemeUpdate } from '@/themes/ThemeProvider';
+import { applyColorScaleToDOM, removeCustomStylesFromDOM } from '@/lib/colorScale';
 import type { ThemeSettings, ThemePreset, ThemeMode } from '@pg/types';
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -75,14 +76,27 @@ export function useTheme() {
     const root = document.documentElement;
     const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
     const currentPreset = root.getAttribute('data-theme') as ThemePreset ?? 'saas';
-    const updated: ThemeSettings = { preset: currentPreset, mode: currentMode === 'dark' ? 'light' : 'dark' };
+    // Preserve any stored brandColor and fonts from localStorage
+    const stored = loadStoredTheme();
+    const updated: ThemeSettings = {
+      preset: currentPreset,
+      mode: currentMode === 'dark' ? 'light' : 'dark',
+      brandColor: stored?.brandColor,
+      fonts: stored?.fonts,
+    };
     applyAndPersist(updated);
   }, [applyAndPersist]);
 
   const setPreset = useCallback((preset: ThemePreset) => {
     const root = document.documentElement;
     const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
-    const updated: ThemeSettings = { preset, mode: currentMode };
+    const stored = loadStoredTheme();
+    const updated: ThemeSettings = {
+      preset,
+      mode: currentMode,
+      brandColor: stored?.brandColor,
+      fonts: stored?.fonts,
+    };
     applyAndPersist(updated);
   }, [applyAndPersist]);
 
@@ -98,23 +112,12 @@ export function applyThemeToDOM(settings: ThemeSettings) {
   root.setAttribute('data-theme', settings.preset);
   root.setAttribute('data-mode', settings.mode);
 
-  // Remove old custom token inline styles
-  const oldStyle = root.getAttribute('style');
-  if (oldStyle) {
-    const kept = oldStyle
-      .split(';')
-      .filter((s) => !s.trim().startsWith('--color-brand-') && !s.trim().startsWith('--font-'))
-      .join(';');
-    if (kept) {
-      root.setAttribute('style', kept);
-    } else {
-      root.removeAttribute('style');
-    }
-  }
+  // Remove old custom token inline styles via shared utility
+  removeCustomStylesFromDOM(root);
 
-  // Apply custom brand color
+  // Apply custom brand color as full 11-step scale (matches ThemeProvider)
   if (settings.brandColor) {
-    root.style.setProperty('--color-brand-500', settings.brandColor);
+    applyColorScaleToDOM(settings.brandColor, root);
   }
 
   // Apply custom fonts

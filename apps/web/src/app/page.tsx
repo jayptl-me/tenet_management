@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Menu,
@@ -16,10 +16,14 @@ import {
   Mail,
   Instagram,
   Facebook,
-  Award,
-  ExternalLink,
   ArrowRight,
-  ChevronDown,
+  ExternalLink,
+  Wifi,
+  Droplets,
+  Sparkles,
+  ChefHat,
+  BookOpen,
+  Lock,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +32,77 @@ import { fadeInUp, staggerContainer, fadeScaleIn } from '@/lib/animations';
 import type { IAppConfigPublic } from '@pg/types';
 
 const TENANT_APP_URL = process.env.NEXT_PUBLIC_TENANT_APP_URL ?? '';
+
+// ── Animated Hero Background (Geometric Floating Shapes) ──
+
+function HeroBackground() {
+  // Static geometry — no runtime random, stable across SSR/hydration
+  const shapes = useMemo(
+    () => [
+      { cx: 82, cy: 18, r: 40, opacity: 0.08, delay: 0 },
+      { cx: 12, cy: 72, r: 56, opacity: 0.06, delay: 0.3 },
+      { cx: 74, cy: 88, r: 28, opacity: 0.1, delay: 0.6 },
+      { cx: 94, cy: 42, r: 18, opacity: 0.07, delay: 0.9 },
+      // Rectangles
+      { x: 88, y: 12, w: 34, h: 34, rx: 8, opacity: 0.06, delay: 0.15 },
+      { x: 8, y: 48, w: 24, h: 24, rx: 6, opacity: 0.09, delay: 0.45 },
+      { x: 66, y: 64, w: 20, h: 20, rx: 4, opacity: 0.07, delay: 0.75 },
+    ],
+    [],
+  );
+
+  return (
+    <svg
+      className="absolute inset-0 h-full w-full"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {shapes.map((s, i) => {
+        if ('r' in s) {
+          return (
+            <motion.circle
+              key={i}
+              cx={s.cx}
+              cy={s.cy}
+              r={s.r}
+              fill="white"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: s.opacity, scale: [0.9, 1.1, 0.9] }}
+              transition={{
+                duration: 6 + i * 1.2,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut',
+                delay: s.delay,
+              }}
+            />
+          );
+        }
+        return (
+          <motion.rect
+            key={i}
+            x={s.x}
+            y={s.y}
+            width={s.w}
+            height={s.h}
+            rx={s.rx}
+            fill="white"
+            initial={{ opacity: 0, rotate: -10 }}
+            animate={{ opacity: s.opacity, rotate: [0, 8, -4, 0] }}
+            transition={{
+              duration: 8 + i * 1.5,
+              repeat: Infinity,
+              repeatType: 'reverse',
+              ease: 'easeInOut',
+              delay: s.delay,
+            }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
 
 // ── Section wrapper with stagger animation ─────────────
 
@@ -54,6 +129,24 @@ function Section({
   );
 }
 
+// ── Amenity icon resolver ──────────────────────────────
+
+function getAmenityIcon(label: string) {
+  const lower = label.toLowerCase();
+  if (lower.includes('wifi')) return <Wifi className="h-5 w-5" />;
+  if (lower.includes('water') || lower.includes('ro')) return <Droplets className="h-5 w-5" />;
+  if (lower.includes('food') || lower.includes('meal') || lower.includes('canteen'))
+    return <ChefHat className="h-5 w-5" />;
+  if (lower.includes('security') || lower.includes('cctv')) return <Lock className="h-5 w-5" />;
+  if (lower.includes('clean') || lower.includes('housekeeping'))
+    return <Sparkles className="h-5 w-5" />;
+  if (lower.includes('study') || lower.includes('library')) return <BookOpen className="h-5 w-5" />;
+  if (lower.includes('power') || lower.includes('electricity')) return <Zap className="h-5 w-5" />;
+  if (lower.includes('laundry') || lower.includes('washing'))
+    return <Shield className="h-5 w-5" />;
+  return <Check className="h-5 w-5" />;
+}
+
 // ── Landing Page ───────────────────────────────────────
 
 export default function LandingPage() {
@@ -63,6 +156,7 @@ export default function LandingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [config, setConfig] = useState<IAppConfigPublic | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'}/app-config`)
@@ -73,8 +167,16 @@ export default function LandingPage() {
       .catch(() => {});
   }, []);
 
+  // Navbar scroll effect
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const pgName = config?.pgName || 'Apex PG';
-  const headline = config?.landingHeroHeadline || 'Premium PG Living, Effortlessly Managed';
+  const headline =
+    config?.landingHeroHeadline || 'Premium PG Living, Effortlessly Managed';
   const subline =
     config?.landingHeroSubline ||
     'Safe, comfortable, and well-managed paying guest accommodations with transparent billing, real-time updates, and zero hassle.';
@@ -88,7 +190,14 @@ export default function LandingPage() {
   };
   const amenities = config?.amenities?.length
     ? config.amenities
-    : ['High-Speed WiFi', 'Washing Machine', 'Fridge', 'RO Water', 'Housekeeping', '24/7 Security'];
+    : [
+        'High-Speed WiFi',
+        'Washing Machine',
+        'Fridge',
+        'RO Water',
+        'Housekeeping',
+        '24/7 Security',
+      ];
   const roomPricing = config?.roomPricing || {
     sharing2: 8000,
     sharing3: 6500,
@@ -114,6 +223,7 @@ export default function LandingPage() {
       ];
   const mapsEmbedUrl = config?.googleMapsEmbedUrl;
   const social = config?.socialLinks;
+  const heroBgUrl = config?.heroImageUrl;
 
   const handleEnquireClick = (sharingType: string) => {
     setMessageText(
@@ -157,31 +267,19 @@ export default function LandingPage() {
     }
   };
 
-  const amenityIcons: Record<string, React.ReactNode> = {
-    wifi: <Zap className="h-5 w-5" />,
-    security: <Shield className="h-5 w-5" />,
-    meal: <Users className="h-5 w-5" />,
-    water: <Check className="h-5 w-5" />,
-    washing: <Award className="h-5 w-5" />,
-    fridge: <Award className="h-5 w-5" />,
-    housekeeping: <Check className="h-5 w-5" />,
-  };
-
-  const getAmenityIcon = (amenity: string) => {
-    const lower = amenity.toLowerCase();
-    for (const [key, icon] of Object.entries(amenityIcons)) {
-      if (lower.includes(key)) return icon;
-    }
-    return <Award className="h-5 w-5" />;
-  };
-
   return (
     <div className="min-h-screen bg-[color:var(--color-surface-50)] text-[color:var(--color-text-primary)] transition-colors duration-[var(--transition-duration)]">
       {/* ── Nav ──────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)]">
+      <header
+        className={`sticky top-0 z-50 border-b transition-all duration-[var(--transition-duration-slow)] ${
+          scrolled
+            ? 'border-b-[color:var(--border-color)] bg-[color:var(--glass-bg-strong)] backdrop-blur-[var(--glass-blur-strong)] shadow-[var(--shadow-sm)]'
+            : 'border-b-transparent bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)]'
+        }`}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
               <span className="font-bold text-white text-xs tracking-tight">A</span>
             </div>
             <span className="text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">
@@ -191,7 +289,7 @@ export default function LandingPage() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex">
-            {['amenities', 'rooms', 'about', 'testimonials', 'contact'].map((link) => (
+            {['amenities', 'rooms', 'gallery', 'testimonials', 'contact'].map((link) => (
               <a
                 key={link}
                 href={`#${link}`}
@@ -221,7 +319,7 @@ export default function LandingPage() {
         {/* Mobile nav */}
         {mobileOpen && (
           <div className="border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-4 space-y-1 md:hidden">
-            {['amenities', 'rooms', 'about', 'testimonials', 'contact'].map((link) => (
+            {['amenities', 'rooms', 'gallery', 'testimonials', 'contact'].map((link) => (
               <a
                 key={link}
                 href={`#${link}`}
@@ -250,30 +348,53 @@ export default function LandingPage() {
         )}
       </header>
 
-      {/* ── Hero ──────────────────────────────────── */}
+      {/* ── Hero (Theme-aware + Geometric Animated BG) ── */}
       <section className="relative overflow-hidden bg-[color:var(--color-brand-500)] border-b border-b-[color:var(--color-brand-600)]">
-        <div className="relative z-10 mx-auto max-w-3xl px-4 py-20 text-center md:py-28">
+        {/* Animated geometric background */}
+        <HeroBackground />
+
+        {/* Optional hero image overlay */}
+        {heroBgUrl && (
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-15"
+            style={{ backgroundImage: `url(${heroBgUrl})` }}
+          />
+        )}
+
+        <div className="relative z-10 mx-auto max-w-3xl px-4 py-20 text-center md:py-32">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5"
+          >
+            <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-400)] animate-pulse" />
+            <span className="text-xs font-semibold text-white/90">Now Open for Bookings</span>
+          </motion.div>
+
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-            className="text-3xl font-bold leading-tight tracking-tight text-white md:text-5xl"
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-3xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl"
           >
             {headline}
           </motion.h1>
+
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-[color:var(--color-brand-100)] md:text-base"
           >
             {subline}
           </motion.p>
+
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"
+            transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
             <a href="#contact">
               <Button variant="secondary" size="lg">
@@ -285,18 +406,48 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white/30 text-white hover:bg-white/10"
+                className="border-white/30 text-white hover:bg-white/10 hover:border-white/50"
               >
                 View Rooms & Pricing
               </Button>
             </a>
+            {TENANT_APP_URL && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-white/20 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/40"
+                onClick={handleTenantApp}
+              >
+                <ExternalLink className="h-4 w-4" />
+                App Login
+              </Button>
+            )}
+          </motion.div>
+
+          {/* Quick Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-12 grid grid-cols-3 gap-4 mx-auto max-w-md"
+          >
+            {[
+              { val: '99%', label: 'Occupancy' },
+              { val: '4.8', label: 'Avg Rating' },
+              { val: '24x7', label: 'Security' },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-white/10 bg-white/5 py-3 px-2 backdrop-blur-sm"
+              >
+                <p className="text-xl font-bold text-white tabular-nums">{s.val}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-brand-200)]">
+                  {s.label}
+                </p>
+              </div>
+            ))}
           </motion.div>
         </div>
-
-        {/* Decorative blobs */}
-        <div className="absolute right-12 top-12 h-20 w-20 rounded-full border border-white/10 bg-white/5" />
-        <div className="absolute bottom-16 left-16 h-28 w-28 rounded-full border border-white/10 bg-white/5" />
-        <div className="absolute right-1/4 bottom-8 h-12 w-12 rounded-full border border-white/10 bg-white/5" />
       </section>
 
       {/* ── Amenities ─────────────────────────────── */}
@@ -308,7 +459,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             Everything included
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Everything you need for a comfortable, stress-free stay at {pgName}.
           </p>
         </motion.div>
@@ -320,7 +471,7 @@ export default function LandingPage() {
               variants={fadeInUp}
               className="group rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5"
             >
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)] transition-colors group-hover:bg-[color:var(--color-brand-500)] group-hover:text-white">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)] group-hover:bg-[color:var(--color-brand-500)] group-hover:text-white group-hover:border-[color:var(--color-brand-500)]">
                 {getAmenityIcon(amenity)}
               </div>
               <h3 className="text-[13px] font-semibold tracking-tight">{amenity}</h3>
@@ -342,7 +493,7 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Transparent, affordable plans
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-[15px] text-[color:var(--color-text-secondary)]">
+            <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
               Flexible sharing options designed around your budget and comfort.
             </p>
           </motion.div>
@@ -381,7 +532,7 @@ export default function LandingPage() {
 
                   <div>
                     <h3 className="text-lg font-bold">{share} Sharing</h3>
-                    <p className="mt-1 text-[13px] text-[color:var(--color-text-muted)]">
+                    <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-muted)]">
                       {share === 2
                         ? 'Double sharing occupancy'
                         : share === 3
@@ -425,7 +576,7 @@ export default function LandingPage() {
       </Section>
 
       {/* ── Gallery ──────────────────────────────── */}
-      <Section className="mx-auto max-w-6xl px-4 py-20 md:py-28">
+      <Section id="gallery" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
           <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
             Gallery
@@ -433,7 +584,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             See it for yourself
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Take a virtual tour of our rooms, dining area, and facilities.
           </p>
         </motion.div>
@@ -441,21 +592,19 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[
             {
-              img: '/images/gallery-room.jpg',
+              img: '/images/gallery-suite.jpg',
               title: 'Premium Double-Sharing Suite',
               desc: 'Fully ventilated rooms with modern study desks and comfortable beds.',
-              bg: null,
             },
             {
-              img: null,
+              img: '/images/gallery-canteen.jpg',
               title: 'Feedback-Driven Canteen',
-              desc: 'Hygienic dining setup serving home-style meals.',
-              bg: 'bg-[color:var(--color-success-500)]',
+              desc: 'Hygienic dining setup serving home-style meals with daily feedback scoring.',
             },
             {
               img: null,
               title: 'Quiet Study Area',
-              desc: 'Dedicated space for high-productivity workflow.',
+              desc: 'Dedicated space for high-productivity workflow with 24/7 power backup.',
               bg: 'bg-[color:var(--color-brand-400)]',
             },
           ].map((item, i) => (
@@ -469,7 +618,7 @@ export default function LandingPage() {
                   <img
                     src={item.img}
                     alt={item.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-[var(--duration-glacial)] group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (
@@ -483,8 +632,10 @@ export default function LandingPage() {
                 )}
               </div>
               <div className="border-t border-t-[color:var(--border-color)] p-4">
-                <h3 className="text-[15px] font-bold">{item.title}</h3>
-                <p className="mt-1 text-[13px] text-[color:var(--color-text-muted)]">
+                <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-muted)]">
                   {item.desc}
                 </p>
               </div>
@@ -569,7 +720,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
             Loved by residents
           </h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Real feedback from working professionals and students at {pgName}.
           </p>
         </motion.div>
@@ -590,7 +741,9 @@ export default function LandingPage() {
                 &ldquo;{t.quote}&rdquo;
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-t-[color:var(--color-surface-200)] pt-4">
-                <span className="text-[13px] font-bold">{t.name}</span>
+                <span className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
+                  {t.name}
+                </span>
                 {t.occupation && (
                   <span className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
                     {t.occupation}
@@ -615,7 +768,7 @@ export default function LandingPage() {
                   Contact
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight">Get in touch</h2>
-                <p className="mt-2 text-[15px] text-[color:var(--color-text-secondary)]">
+                <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
                   Drop by for a visit! We are centrally located and easy to reach.
                 </p>
               </div>
@@ -632,7 +785,9 @@ export default function LandingPage() {
                 ) : (
                   <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center">
                     <MapPin className="mb-2 h-8 w-8 text-[color:var(--color-brand-500)]" />
-                    <span className="text-[13px] font-semibold">{address.line1}</span>
+                    <span className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                      {address.line1}
+                    </span>
                     <span className="mt-1 text-[12px] text-[color:var(--color-text-muted)]">
                       {address.city}, {address.state} - {address.pincode}
                     </span>
@@ -659,7 +814,7 @@ export default function LandingPage() {
                   <h3 className="mt-3 text-lg font-bold text-[color:var(--color-success-700)]">
                     Thank You!
                   </h3>
-                  <p className="mt-1 text-[13px] text-[color:var(--color-success-600)]">
+                  <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-success-600)]">
                     We have received your enquiry and will get back to you shortly.
                   </p>
                 </div>
@@ -721,7 +876,7 @@ export default function LandingPage() {
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <span className="text-lg font-bold text-white tracking-tight">{pgName}</span>
             <nav className="flex items-center gap-6 text-[13px] font-medium">
-              {['amenities', 'rooms', 'about', 'testimonials'].map((link) => (
+              {['amenities', 'rooms', 'gallery', 'testimonials'].map((link) => (
                 <a
                   key={link}
                   href={`#${link}`}
@@ -741,6 +896,8 @@ export default function LandingPage() {
                 <a
                   href={social.instagram}
                   className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <Instagram className="h-4 w-4" />
                 </a>
@@ -749,6 +906,8 @@ export default function LandingPage() {
                 <a
                   href={social.facebook}
                   className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <Facebook className="h-4 w-4" />
                 </a>
@@ -757,6 +916,8 @@ export default function LandingPage() {
                 <a
                   href={social.whatsapp}
                   className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   <Phone className="h-4 w-4" />
                 </a>

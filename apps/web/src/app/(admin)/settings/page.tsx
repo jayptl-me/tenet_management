@@ -141,6 +141,21 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [newAmenity, setNewAmenity] = useState('');
 
+  // Tab persistence via URL hash
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '') as TabKey;
+    if (hash && tabs.some((t) => t.key === hash)) {
+      setActiveTab(hash);
+    }
+  }, []);
+
+  const handleTabChange = (key: TabKey) => {
+    setActiveTab(key);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `#${key}`);
+    }
+  };
+
   useEffect(() => {
     api
       .get('app-config')
@@ -277,7 +292,7 @@ export default function SettingsPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
             className={`font-[family:var(--font-display)] flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
               activeTab === tab.key
                 ? 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'

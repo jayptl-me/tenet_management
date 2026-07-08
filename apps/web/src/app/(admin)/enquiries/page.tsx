@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, MessageSquareMore } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -152,21 +155,18 @@ export default function EnquiriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Enquiries</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Manage prospective tenant enquiries</p>
-        </div>
-        <Button onClick={() => router.push('/enquiries/new')}>
-          <Plus className="h-4 w-4" />
-          New Enquiry
-        </Button>
-      </div>
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <PageHeader
+        title="Enquiries"
+        description="Manage prospective tenant enquiries"
+        action={
+          <Button onClick={() => router.push('/enquiries/new')}>
+            <Plus className="h-4 w-4" />
+            New Enquiry
+          </Button>
+        }
+      />
+
+      <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
           options={[
@@ -201,6 +201,40 @@ export default function EnquiriesPage() {
             setPage(1);
           },
         }}
+        emptyState={
+          <EmptyState
+            icon={<MessageSquareMore className="h-12 w-12" />}
+            title="No enquiries yet"
+            description="When people reach out, you'll see them here"
+            action={{ label: 'New Enquiry', onClick: () => router.push('/enquiries/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {row.name}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <span>{row.phone}</span>
+              <span className="capitalize">{row.source}</span>
+              <span>{new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/enquiries/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/enquiries/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          </div>
+        )}
       />
       <ConfirmModal
         open={!!deleteTarget}

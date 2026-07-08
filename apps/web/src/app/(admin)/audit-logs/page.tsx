@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Shield, Search, Calendar, Filter } from 'lucide-react';
+import { Search, ScrollText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Select } from '@/components/ui/Select';
-import { Input } from '@/components/ui/Input';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 
 interface AuditLogRow {
@@ -142,25 +144,12 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="bg-surface-100 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
-            <Shield className="text-surface-600 h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">Audit Logs</h2>
-            <p className="text-surface-500 mt-0.5 text-sm">
-              Track all admin actions across the system
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Audit Logs"
+        description="Track all admin actions across the system"
+      />
 
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
@@ -216,6 +205,37 @@ export default function AuditLogsPage() {
           onPageChange: setPage,
           onPerPageChange: (pp) => { setPerPage(pp); setPage(1); },
         }}
+        emptyState={
+          <EmptyState
+            icon={<ScrollText className="h-12 w-12" />}
+            title="No audit logs yet"
+            description="Audit logs will appear here as actions are performed"
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <StatusBadge variant={formatActionVariant(row.action)} label={formatAction(row.action)} />
+              <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">
+                {new Date(row.timestamp).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[color:var(--color-text-muted)]">
+              <span className="font-semibold text-[color:var(--color-text-primary)]">{row.resource}</span>
+              <span className="font-mono text-[10px]">{row.resourceId?.slice(0, 12)}…</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-[color:var(--color-text-muted)]">
+              <span>{row.userId?.name ?? 'System'}</span>
+              <span className="lowercase">{row.userId?.role ?? '—'}</span>
+              <span className="font-mono">{row.ip ?? '—'}</span>
+            </div>
+          </div>
+        )}
       />
     </div>
   );

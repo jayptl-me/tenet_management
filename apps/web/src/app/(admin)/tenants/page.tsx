@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Users } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -145,20 +148,17 @@ export default function TenantsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Tenants</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Manage all PG residents</p>
-        </div>
-        <Button onClick={() => router.push('/tenants/new')}>
-          <Plus className="h-4 w-4" />
-          Add Tenant
-        </Button>
-      </div>
-
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{error}</div>
-      )}
+      <PageHeader
+        title="Tenants"
+        description="Manage all PG residents"
+        action={
+          <Button onClick={() => router.push('/tenants/new')}>
+            <Plus className="h-4 w-4" />
+            Add Tenant
+          </Button>
+        }
+      />
+      <ErrorBanner message={error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input placeholder="Search by name..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="max-w-xs" />
@@ -172,6 +172,51 @@ export default function TenantsPage() {
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/tenants/${row._id}`)}
         pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        emptyState={
+          <EmptyState
+            icon={<Users className="h-12 w-12" />}
+            title="No tenants yet"
+            description="Add your first tenant to get started"
+            action={{ label: 'Add Tenant', onClick: () => router.push('/tenants/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {row.user?.name ?? 'N/A'}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.isActive ? 'active' : 'checked_out')}
+                label={row.isActive ? 'Active' : 'Checked Out'}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <span>{row.room?.roomNumber ? `Room ${row.room.roomNumber}` : 'No Room'}</span>
+              <span>₹{row.monthlyRent.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); router.push(`/tenants/${row._id}`); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors hover:bg-[color:var(--color-surface-100)]"
+              >
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); router.push(`/tenants/${row._id}/edit`); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
+              >
+                <Trash2 className="h-3 w-3" /> Delete
+              </button>
+            </div>
+          </div>
+        )}
       />
 
       <ConfirmModal

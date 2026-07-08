@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -78,7 +79,7 @@ export default function EditNotificationPage() {
           <p className="text-surface-500 mt-0.5 text-sm">Update notification details</p>
         </div>
       </div>
-      {submitError && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <ErrorBanner message={submitError} />}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Title" error={errors.title?.message} {...register('title')} />

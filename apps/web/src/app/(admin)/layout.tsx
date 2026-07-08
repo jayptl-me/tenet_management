@@ -10,6 +10,7 @@ import { DarkModeToggle } from '@/components/admin/DarkModeToggle';
 import { EmergencyAlertButton } from '@/components/admin/EmergencyAlertButton';
 import { Breadcrumbs } from '@/components/admin/Breadcrumbs';
 import { CommandPalette } from '@/components/admin/CommandPalette';
+import { QuickCreate } from '@/components/admin/QuickCreate';
 import { useTheme } from '@/hooks/useTheme';
 import { motion } from 'motion/react';
 import { pageReveal } from '@/lib/animations';
@@ -140,6 +141,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onToggleTheme={handleToggleTheme}
         onLogout={handleLogout}
       />
+
+      {/* ── Quick Create FAB + Cmd+N ────────────── */}
+      <QuickCreate />
     </div>
   );
 }
