@@ -5,6 +5,7 @@ import { Save, Plus, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { triggerThemeUpdate } from '@/themes/ThemeProvider';
 import type { IAppConfig, IFeatureFlags, ITestimonial, ThemeSettings, AmenityDefinition } from '@pg/types';
 import AppearanceTab from '@/components/admin/AppearanceTab';
@@ -217,15 +218,15 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-t-[color:var(--color-brand-500)] border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
       </div>
     );
   }
 
   if (!config) {
     return (
-      <div className="border-danger-500 bg-danger-100 rounded-lg border-[length:var(--bw-strong)] p-6 text-center">
-        <p className="font-display text-danger-800 text-lg font-semibold">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-6 text-center">
+        <p className="font-[family:var(--font-display)] text-[color:var(--color-danger-800)] text-lg font-semibold">
           {error || 'Failed to load settings'}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
@@ -238,8 +239,8 @@ export default function SettingsPage() {
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
     <section className="space-y-4 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
       <div>
-        <h3 className="font-display text-surface-900 text-lg font-bold">{title}</h3>
-        <p className="text-surface-500 mt-0.5 text-sm">{description}</p>
+        <h3 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-lg font-bold">{title}</h3>
+        <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">{description}</p>
       </div>
       {content}
     </section>
@@ -249,8 +250,8 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Settings</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Settings</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">
             Configure PG brand, pricing, and features
           </p>
         </div>
@@ -261,26 +262,26 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] p-4 text-sm font-semibold">
           {error}
         </div>
       )}
       {saved && (
-        <div className="border-success-500 bg-success-100 text-success-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)] p-4 text-sm font-semibold">
           Settings saved successfully
         </div>
       )}
 
       {/* Tab bar */}
-      <div className="bg-surface-200 flex gap-1 overflow-x-auto rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] p-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`font-display flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+            className={`font-[family:var(--font-display)] flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
               activeTab === tab.key
-                ? 'text-surface-900 bg-[color:var(--color-surface-100)] shadow-[var(--shadow-button)]'
-                : 'text-surface-500 hover:text-surface-700'
+                ? 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
+                : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]'
             }`}
           >
             {tab.label}
@@ -332,7 +333,7 @@ export default function SettingsPage() {
                 placeholder="contact@pg.com"
               />
 
-              <h4 className="font-display text-surface-900 pt-2 text-sm font-bold">Address</h4>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Address</h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Address Line 1"
@@ -367,7 +368,7 @@ export default function SettingsPage() {
                 placeholder="https://www.google.com/maps/embed?..."
               />
 
-              <h4 className="font-display text-surface-900 pt-2 text-sm font-bold">Social Links</h4>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Social Links</h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Instagram"
@@ -395,7 +396,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <h4 className="font-display text-surface-900 pt-2 text-sm font-bold">Branding</h4>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Branding</h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Input
@@ -421,7 +422,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <h4 className="font-display text-surface-900 pt-2 text-sm font-bold">Landing Page</h4>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Landing Page</h4>
               <Input
                 label="Hero Headline"
                 value={config.landingHeroHeadline}
@@ -504,18 +505,18 @@ export default function SettingsPage() {
                 </Button>
               </div>
               {config.amenities.length === 0 ? (
-                <p className="text-surface-400 py-4 text-center text-sm">No amenities added yet</p>
+                <p className="text-[color:var(--color-text-muted)] py-4 text-center text-sm">No amenities added yet</p>
               ) : (
                 <div className="space-y-2">
                   {config.amenities.map((a, i) => (
                     <div
                       key={i}
-                      className="bg-surface-50 flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-4 py-2"
+                      className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2"
                     >
-                      <span className="text-surface-800 text-sm font-semibold">{a}</span>
+                      <span className="text-[color:var(--color-text-primary)] text-sm font-semibold">{a}</span>
                       <button
                         onClick={() => removeAmenity(i)}
-                        className="text-danger-500 hover:bg-danger-50 rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
+                        className="text-[color:var(--color-danger-500)] hover:bg-[color:var(--color-danger-50)] rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -539,22 +540,22 @@ export default function SettingsPage() {
             'Reviews displayed on the landing page',
             <div className="space-y-4">
               {config.testimonials.length === 0 ? (
-                <p className="text-surface-400 py-4 text-center text-sm">
+                <p className="text-[color:var(--color-text-muted)] py-4 text-center text-sm">
                   No testimonials added yet
                 </p>
               ) : (
                 config.testimonials.map((t, i) => (
                   <div
                     key={i}
-                    className="bg-surface-50 space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] p-4"
+                    className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-display text-surface-800 text-sm font-bold">
+                      <span className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-sm font-bold">
                         Testimonial #{i + 1}
                       </span>
                       <button
                         onClick={() => removeTestimonial(i)}
-                        className="text-danger-500 hover:bg-danger-50 rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
+                        className="text-[color:var(--color-danger-500)] hover:bg-[color:var(--color-danger-50)] rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -572,7 +573,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="font-body text-surface-700 mb-1 block text-sm font-semibold">
+                      <label className="font-[family:var(--font-body)] text-[color:var(--color-text-primary)] mb-1 block text-sm font-semibold">
                         Rating
                       </label>
                       <div className="flex gap-1">
@@ -581,7 +582,7 @@ export default function SettingsPage() {
                             key={star}
                             type="button"
                             onClick={() => updateTestimonial(i, { rating: star })}
-                            className={`p-0.5 transition-colors duration-[var(--transition-duration)] ${star <= t.rating ? 'text-warning-500' : 'text-surface-300'}`}
+                            className={`p-0.5 transition-colors duration-[var(--transition-duration)] ${star <= t.rating ? 'text-[color:var(--color-warning-500)]' : 'text-[color:var(--color-text-muted)]'}`}
                           >
                             <Star
                               className="h-5 w-5"
@@ -591,18 +592,13 @@ export default function SettingsPage() {
                         ))}
                       </div>
                     </div>
-                    <div>
-                      <label className="font-body text-surface-700 mb-1 block text-sm font-semibold">
-                        Quote
-                      </label>
-                      <textarea
-                        value={t.quote}
-                        onChange={(e) => updateTestimonial(i, { quote: e.target.value })}
-                        rows={2}
-                        className="font-body focus:border-brand-500 w-full resize-none rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-4 py-2 text-sm focus:outline-none"
-                        placeholder="Great place to stay..."
-                      />
-                    </div>
+                    <Textarea
+                      label="Quote"
+                      value={t.quote}
+                      onChange={(e) => updateTestimonial(i, { quote: e.target.value })}
+                      rows={2}
+                      placeholder="Great place to stay..."
+                    />
                   </div>
                 ))
               )}
@@ -620,9 +616,9 @@ export default function SettingsPage() {
               {(Object.keys(config.features) as (keyof IFeatureFlags)[]).map((key) => (
                 <label
                   key={key}
-                  className="border-surface-200 flex cursor-pointer items-center justify-between rounded-md border-[length:var(--bw-default)] px-3 py-2 transition-colors duration-[var(--transition-duration)] hover:border-[color:var(--border-color)]"
+                  className="flex cursor-pointer items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--color-surface-200)] px-3 py-2 transition-colors duration-[var(--transition-duration)] hover:border-[color:var(--border-color)]"
                 >
-                  <span className="text-surface-700 font-[family:var(--font-body)] text-sm font-semibold">
+                  <span className="text-[color:var(--color-text-primary)] font-[family:var(--font-body)] text-sm font-semibold">
                     {key
                       .replace(/([A-Z])/g, ' $1')
                       .replace(/^./, (s) => s.toUpperCase())
@@ -636,7 +632,7 @@ export default function SettingsPage() {
                         [key]: e.target.checked,
                       } as Partial<IFeatureFlags>)
                     }
-                    className="text-brand-500 focus:ring-brand-500 h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] focus:ring-[length:var(--bw-default)]"
+                    className="text-[color:var(--color-brand-500)] focus:ring-[color:var(--color-brand-500)] h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] focus:ring-[length:var(--bw-default)]"
                   />
                 </label>
               ))}
@@ -670,14 +666,11 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="font-body text-surface-700 mb-1 block text-sm font-semibold">
-                  Terms & Conditions
-                </label>
-                <textarea
+                <Textarea
+                  label="Terms & Conditions"
                   value={config.termsAndConditions}
                   onChange={(e) => update({ termsAndConditions: e.target.value })}
                   rows={6}
-                  className="font-body focus:border-brand-500 w-full resize-y rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:outline-none"
                   placeholder="Terms and conditions text (supports markdown)..."
                 />
               </div>
@@ -686,13 +679,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Bottom save */}
-      <div className="border-surface-200 flex items-center gap-3 border-t-2 pt-6">
+      <div className="flex items-center gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] pt-6">
         <Button onClick={handleSave} loading={isSaving} size="lg">
           <Save className="h-5 w-5" />
           Save All Settings
         </Button>
         {saved && (
-          <span className="text-success-600 font-display text-sm font-semibold">
+          <span className="text-[color:var(--color-success-600)] font-[family:var(--font-display)] text-sm font-semibold">
             Settings saved
           </span>
         )}
