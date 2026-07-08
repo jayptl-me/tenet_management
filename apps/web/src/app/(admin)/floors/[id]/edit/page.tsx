@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { IAppConfig } from '@pg/types';
 
 function buildSchema(perFloorAmenities: { key: string; label: string; maxPerFloor?: number }[]) {
@@ -123,11 +124,7 @@ export default function EditFloorPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form
         onSubmit={handleSubmit(onSubmit)}

@@ -3,9 +3,10 @@
 import { clsx } from 'clsx';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
-import { fadeInUp, staggerContainer } from '@/lib/animations';
+import { staggerContainer } from '@/lib/animations';
 import { Input } from './Input';
 import { Button } from './Button';
+import { ShimmerBlock } from '@/components/ui/Skeleton';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ function SkeletonRow({ columns }: { columns: number }) {
           key={j}
           className="border-b border-b-[color:var(--color-surface-200)] px-4 py-3"
         >
-          <div className="h-4 w-3/4 animate-pulse rounded-md bg-[color:var(--shimmer-base)]" />
+          <ShimmerBlock className="h-4 w-3/4" />
         </td>
       ))}
     </tr>
@@ -68,8 +69,8 @@ function SkeletonRow({ columns }: { columns: number }) {
 function MobileCardSkeleton() {
   return (
     <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-xs)]">
-      <div className="mb-2 h-4 w-3/4 animate-pulse rounded bg-[color:var(--shimmer-base)]" />
-      <div className="h-3 w-1/2 animate-pulse rounded bg-[color:var(--shimmer-base)]" />
+      <ShimmerBlock className="mb-2 h-4 w-3/4" />
+      <ShimmerBlock className="h-3 w-1/2" />
     </div>
   );
 }

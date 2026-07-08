@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -10,10 +10,11 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
-  tenantId: z.string().min(1, 'Tenant ID is required'),
+  tenantId: z.string().min(1, 'Tenant is required'),
   date: z.string().min(1, 'Date is required'),
   mealType: z.enum(['breakfast', 'lunch', 'dinner']),
   rating: z.coerce.number().min(1, 'Min 1').max(5, 'Max 5'),
@@ -36,18 +37,24 @@ const RATING_OPTIONS = [
   { value: '5', label: '5 Stars' },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface TenantOption { _id: string; user?: { name: string; phone: string }; room?: { roomNumber: string }; bedId?: string }
+
 export default function NewMealFeedbackPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { rating: 3, comment: '' },
   });
+
+  const err = errors as Record<string, { message?: string }>;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -80,11 +87,27 @@ export default function NewMealFeedbackPage() {
         className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
-          <Input
-            label="Tenant ID"
-            placeholder="Enter tenant ID"
-            error={errors.tenantId?.message}
-            {...register('tenantId')}
+          <Controller
+            name="tenantId"
+            control={control}
+            render={({ field }) => (
+              <ResourceSelect
+                label="Tenant"
+                endpoint="tenants?isActive=true"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Select tenant..."
+                error={err.tenantId?.message}
+                valueKey="_id"
+                labelKey={(item: TenantOption) =>
+                  item.user?.name ?? 'Unknown'
+                }
+                sublabelFn={(item: TenantOption) =>
+                  `Room ${item.room?.roomNumber ?? 'N/A'}`
+                }
+                dataPath="data"
+              />
+            )}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Input label="Date" type="date" error={errors.date?.message} {...register('date')} />

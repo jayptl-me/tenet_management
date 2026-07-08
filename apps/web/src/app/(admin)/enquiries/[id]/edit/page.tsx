@@ -32,9 +32,8 @@ const sourceOptions = [
 const statusOptions = [
   { value: 'new', label: 'New' },
   { value: 'contacted', label: 'Contacted' },
-  { value: 'follow_up', label: 'Follow Up' },
   { value: 'converted', label: 'Converted' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'lost', label: 'Lost' },
 ];
 
 export default function EditEnquiryPage() {
@@ -84,7 +83,7 @@ export default function EditEnquiryPage() {
           <Input label="Name" error={errors.name?.message} {...register('name')} />
           <Input label="Phone" error={errors.phone?.message} {...register('phone')} />
           <Input label="Email" type="email" error={errors.email?.message} {...register('email')} />
-          <Input label="Source" error={errors.source?.message} {...register('source')} />
+          <Select label="Source" options={sourceOptions} error={errors.source?.message} {...register('source')} />
           <div className="flex flex-col gap-1.5">
             <label className="text-surface-800 font-display text-sm font-semibold">Message</label>
             <textarea rows={3} className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]" placeholder="Enter message..." {...register('message')} />

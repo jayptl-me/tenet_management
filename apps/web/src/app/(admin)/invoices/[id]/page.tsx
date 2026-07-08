@@ -18,7 +18,9 @@ import {
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
+import { DonutChart } from '@/components/ui/DonutChart';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { Timeline } from '@/components/ui/Timeline';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { motion } from 'motion/react';
 import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
@@ -193,6 +195,50 @@ export default function InvoiceDetailPage() {
         <StatCard title="Due Date" value={formatDate(invoice.dueDate)} icon={<Calendar className="h-4 w-4" />} variant="default" />
       </motion.div>
 
+      {/* ── Payment Progress (DonutChart) ───────── */}
+      {invoice.totalAmount > 0 && (
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <CreditCard className="h-5 w-5 text-[color:var(--color-success-500)]" />
+            Payment Progress
+          </h3>
+          <div className="flex flex-col items-center sm:flex-row sm:items-start sm:gap-8">
+            <DonutChart
+              segments={[
+                { value: invoice.paidAmount, color: 'var(--color-success-400)', label: 'Paid' },
+                { value: invoice.balance, color: 'var(--color-danger-400)', label: 'Balance' },
+              ]}
+              centerLabel={`${Math.round((invoice.paidAmount / invoice.totalAmount) * 100)}%`}
+              sublabel="Paid"
+              size={160}
+              thickness={28}
+            />
+            <div className="mt-4 sm:mt-0 sm:self-center">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-success-400)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)]">
+                    Paid: {formatCurrency(invoice.paidAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-danger-400)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)]">
+                    Balance: {formatCurrency(invoice.balance)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-surface-300)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)]">
+                    Total: {formatCurrency(invoice.totalAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* ── Details Grid ────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Left: Breakdown & Line Items */}
@@ -285,6 +331,25 @@ export default function InvoiceDetailPage() {
                   </tbody>
                 </table>
               </div>
+            </motion.div>
+          )}
+
+          {/* ── Payment Timeline ──────────────────── */}
+          {invoice.payments && invoice.payments.length > 0 && (
+            <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+                <CreditCard className="h-5 w-5 text-[color:var(--color-brand-500)]" />
+                Payment Timeline
+              </h3>
+              <Timeline
+                events={invoice.payments.map((p) => ({
+                  id: p._id,
+                  date: p.paidAt ?? invoice.createdAt,
+                  title: `${formatCurrency(p.amount)} via ${p.method.replace(/_/g, ' ')}`,
+                  description: p.utrNumber ? `UTR: ${p.utrNumber}` : undefined,
+                  status: (p.status === 'paid' ? 'success' : 'warning') as 'success' | 'warning',
+                }))}
+              />
             </motion.div>
           )}
 

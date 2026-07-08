@@ -25,6 +25,25 @@ const createVisitorSchema = z.strictObject({
   notes: z.string().max(300, 'Notes cannot exceed 300 characters').optional(),
 });
 
+const updateVisitorSchema = z.strictObject({
+  name: z.string().min(2).max(100).optional(),
+  phone: z
+    .string()
+    .regex(/^\+91[6-9]\d{9}$/, 'Must be +91 format Indian mobile number')
+    .optional(),
+  purpose: z.enum(['delivery', 'guest', 'interview', 'maintenance', 'other']).optional(),
+  expectedVisitDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  expectedVisitTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
+  notes: z.string().max(300).optional(),
+  status: z.enum(['pending', 'approved', 'arrived', 'departed', 'cancelled']).optional(),
+});
+
 type CreateFunc = (doc: Record<string, unknown>) => Promise<{ _id: string }>;
 
 // ── POST /visitors ──────────────────────────────────────
@@ -142,26 +161,16 @@ visitors.post('/:id/depart', authGuard, async (c) => {
 });
 
 // ── PUT /visitors/:id ───────────────────────────────────
-visitors.put('/:id', authGuard, adminOnly, async (c) => {
+visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchema), async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid visitor ID');
 
-  let body: Record<string, unknown>;
-  try {
-    body = await c.req.json();
-  } catch {
-    return badRequest(c, 'Invalid JSON body');
-  }
+  const body = c.req.valid('json');
 
-  const allowedFields = ['name', 'phone', 'purpose', 'expectedVisitDate', 'expectedVisitTime', 'notes', 'status'];
-  const updateData: Record<string, unknown> = {};
-  for (const field of allowedFields) {
-    if (body[field] !== undefined) {
-      updateData[field] = body[field];
-    }
-  }
-
-  const visitor = await Visitor.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true }).lean();
+  const visitor = await Visitor.findByIdAndUpdate(id, body, {
+    returnDocument: 'after',
+    runValidators: true,
+  }).lean();
   if (!visitor) return notFound(c, 'Visitor');
 
   return c.json({ success: true, data: visitor });
@@ -182,7 +191,6 @@ visitors.get('/my', authGuard, tenantOnly, async (c) => {
 
   return c.json({ success: true, data });
 });
-
 
 // ── DELETE /visitors/:id ────────────────────────────────
 visitors.delete('/:id', authGuard, adminOnly, async (c) => {

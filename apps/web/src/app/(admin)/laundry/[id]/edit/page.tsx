@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   slotDate: z.string().min(1, 'Date is required'),
@@ -77,11 +78,7 @@ export default function EditLaundrySlotPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">

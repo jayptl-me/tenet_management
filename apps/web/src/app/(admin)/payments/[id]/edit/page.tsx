@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   amount: z.coerce.number().positive('Amount must be positive'),
@@ -60,7 +61,7 @@ export default function EditPaymentPage() {
           <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update payment details</p>
         </div>
       </div>
-      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <ErrorBanner message={submitError} />}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Input label="Amount" type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />

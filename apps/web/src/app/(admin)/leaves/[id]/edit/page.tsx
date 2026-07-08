@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
@@ -67,7 +68,7 @@ export default function EditLeavePage() {
           <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update leave details</p>
         </div>
       </div>
-      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <ErrorBanner message={submitError} />}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

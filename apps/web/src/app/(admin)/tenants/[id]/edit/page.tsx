@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const BED_OPTIONS = [
   { value: 'A', label: 'Bed A' },
@@ -144,11 +145,7 @@ export default function EditTenantPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form
         onSubmit={handleSubmit(onSubmit)}

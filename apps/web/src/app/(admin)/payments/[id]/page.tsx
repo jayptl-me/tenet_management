@@ -15,11 +15,13 @@ import {
   MessageCircle,
   Loader2,
   AlertTriangle,
+  History,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { Timeline } from '@/components/ui/Timeline';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { motion } from 'motion/react';
 import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
@@ -170,6 +172,28 @@ export default function PaymentDetailPage() {
             {formatType(payment.type)}
           </p>
         )}
+      </motion.div>
+
+      {/* ── Key Stats Grid ──────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          title="Amount"
+          value={formatCurrency(payment.amount)}
+          icon={<CreditCard className="h-4 w-4" />}
+          variant={payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed' ? 'success' : 'default'}
+        />
+        <StatCard
+          title="Method"
+          value={formatMethod(payment.method)}
+          icon={<Receipt className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Status"
+          value={payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+          icon={<CheckCircle className="h-4 w-4" />}
+          variant={payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed' ? 'success' : statusVariant === 'danger' ? 'danger' : 'warning'}
+        />
       </motion.div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -366,6 +390,42 @@ export default function PaymentDetailPage() {
             Share via WhatsApp
           </Button>
         </div>
+      </motion.div>
+
+      {/* ── Recent Activity ────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+          <History className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
+          Recent Activity
+        </h3>
+        {payment.createdAt ? (
+          <Timeline
+            events={[
+              {
+                id: `${payment._id}-created`,
+                date: payment.createdAt,
+                title: 'Payment Recorded',
+                description: `${formatCurrency(payment.amount)} via ${formatMethod(payment.method)}`,
+                status: 'info',
+              },
+              {
+                id: `${payment._id}-status`,
+                date: payment.paidAt ?? payment.createdAt,
+                title: `Status: ${payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}`,
+                description: payment.notes ?? undefined,
+                status: (payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed'
+                  ? 'success'
+                  : payment.status === 'rejected' || payment.status === 'cancelled'
+                    ? 'danger'
+                    : 'warning') as 'success' | 'warning' | 'danger',
+              },
+            ]}
+          />
+        ) : (
+          <p className="text-center text-sm font-semibold text-[color:var(--color-text-muted)]">
+            No activity recorded yet.
+          </p>
+        )}
       </motion.div>
 
       {/* ── Footer Meta ────────────────────────── */}
