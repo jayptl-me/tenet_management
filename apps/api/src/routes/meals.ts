@@ -21,6 +21,40 @@ const createFeedbackSchema = z.strictObject({
   comment: z.string().max(500, 'Comment cannot exceed 500 characters').optional(),
 });
 
+const adminCreateFeedbackSchema = z.strictObject({
+  tenantId: z.string().min(1, 'Tenant ID is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  mealType: z.enum(['breakfast', 'lunch', 'dinner']),
+  rating: z.number().int().min(1, 'Rating must be at least 1').max(5, 'Rating cannot exceed 5'),
+  comment: z.string().max(500, 'Comment cannot exceed 500 characters').optional(),
+});
+
+// ── POST /meals — admin records feedback for a tenant ─────
+meals.post('/', authGuard, adminOnly, zValidator('json', adminCreateFeedbackSchema), async (c) => {
+  const body = c.req.valid('json');
+
+  const tenant = await Tenant.findById(body.tenantId).lean();
+  if (!tenant) return notFound(c, 'Tenant profile');
+
+  const filter = {
+    tenantId: body.tenantId,
+    date: body.date,
+    mealType: body.mealType,
+  };
+
+  const feedback = await MealFeedback.findOneAndUpdate(
+    filter as Record<string, unknown>,
+    {
+      ...filter,
+      rating: body.rating,
+      comment: body.comment ?? '',
+    },
+    { upsert: true, returnDocument: 'after', runValidators: true },
+  ).lean();
+
+  return c.json({ success: true, data: feedback }, 201);
+});
+
 // ── POST /meals/feedback ────────────────────────────────
 meals.post(
   '/feedback',
@@ -157,7 +191,6 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
   });
 });
 
-
 // ── GET /meals/:id ──────────────────────────────────────
 meals.get('/:id', authGuard, adminOnly, async (c) => {
   const id = c.req.param('id');
@@ -179,18 +212,30 @@ meals.get('/:id', authGuard, adminOnly, async (c) => {
 });
 
 // ── PUT /meals/:id ──────────────────────────────────────
-meals.put('/:id', authGuard, adminOnly, zValidator('json', z.strictObject({
-  rating: z.number().int().min(1).max(5).optional(),
-  comment: z.string().max(500).optional(),
-  status: z.string().optional(),
-})), async (c) => {
-  const id = c.req.param('id');
-  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
-  const body = c.req.valid('json');
-  const feedback = await MealFeedback.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true }).lean();
-  if (!feedback) return notFound(c, 'Meal feedback');
-  return c.json({ success: true, data: feedback });
-});
+meals.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator(
+    'json',
+    z.strictObject({
+      rating: z.number().int().min(1).max(5).optional(),
+      comment: z.string().max(500).optional(),
+      status: z.string().optional(),
+    }),
+  ),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
+    const body = c.req.valid('json');
+    const feedback = await MealFeedback.findByIdAndUpdate(id, body, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+    if (!feedback) return notFound(c, 'Meal feedback');
+    return c.json({ success: true, data: feedback });
+  },
+);
 
 // ── DELETE /meals/:id ───────────────────────────────────
 meals.delete('/:id', authGuard, adminOnly, async (c) => {

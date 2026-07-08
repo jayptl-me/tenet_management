@@ -243,46 +243,53 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
 });
 
 // ── PUT /leaves/:id/reject — admin rejects ─────────────
-leaves.put('/:id/reject', authGuard, adminOnly, async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) return badRequest(c, 'Invalid leave ID');
+leaves.put(
+  '/:id/reject',
+  authGuard,
+  adminOnly,
+  zValidator(
+    'json',
+    z.strictObject({
+      adminNotes: z.string().max(500).optional(),
+    }),
+  ),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid leave ID');
 
-  const authUser = c.get('user');
+    const authUser = c.get('user');
+    const body = c.req.valid('json');
 
-  const leave = await LeaveApplication.findById(id);
-  if (!leave) return notFound(c, 'Leave application');
-  if (leave.status !== 'pending') {
-    return badRequest(c, `Leave is already ${leave.status}`, 'LEAVE_NOT_PENDING');
-  }
-
-  leave.status = 'rejected';
-  (leave as unknown as Record<string, unknown>).approvedBy = authUser.sub;
-  leave.approvedAt = new Date();
-
-  try {
-    const raw = await c.req.json();
-    if (raw.adminNotes) {
-      leave.adminNotes = raw.adminNotes;
+    const leave = await LeaveApplication.findById(id);
+    if (!leave) return notFound(c, 'Leave application');
+    if (leave.status !== 'pending') {
+      return badRequest(c, `Leave is already ${leave.status}`, 'LEAVE_NOT_PENDING');
     }
-  } catch {
-    // no body — ok
-  }
 
-  await leave.save();
+    leave.status = 'rejected';
+    (leave as unknown as Record<string, unknown>).approvedBy = authUser.sub;
+    leave.approvedAt = new Date();
 
-  const updated = await LeaveApplication.findById(id)
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'userId', select: 'name email phone' },
-    })
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
-    })
-    .populate('approvedBy', 'name')
-    .lean();
+    if (body.adminNotes) {
+      leave.adminNotes = body.adminNotes;
+    }
 
-  return c.json({ success: true, data: mapLeave(updated as unknown as Record<string, unknown>) });
-});
+    await leave.save();
+
+    const updated = await LeaveApplication.findById(id)
+      .populate({
+        path: 'tenantId',
+        populate: { path: 'userId', select: 'name email phone' },
+      })
+      .populate({
+        path: 'tenantId',
+        populate: { path: 'roomId', select: 'roomNumber' },
+      })
+      .populate('approvedBy', 'name')
+      .lean();
+
+    return c.json({ success: true, data: mapLeave(updated as unknown as Record<string, unknown>) });
+  },
+);
 
 export default leaves;

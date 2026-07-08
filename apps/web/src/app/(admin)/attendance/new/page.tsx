@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -10,10 +10,11 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
-  tenantId: z.string().min(1, 'Tenant ID is required'),
+  tenantId: z.string().min(1, 'Tenant is required'),
   date: z.string().min(1, 'Date is required'),
   status: z.enum(['present', 'absent', 'on_leave', 'not_returned']),
   checkIn: z.string().optional(),
@@ -37,17 +38,21 @@ const METHOD_OPTIONS = [
   { value: 'app', label: 'Mobile App' },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface TenantOption { _id: string; user?: { name: string; phone: string }; room?: { roomNumber: string }; bedId?: string }
+
 export default function NewAttendancePage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { checkIn: '', checkOut: '', notes: '' },
+    defaultValues: { checkIn: '', checkOut: '', notes: '', method: 'manual' },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -59,12 +64,14 @@ export default function NewAttendancePage() {
       notes: data.notes || undefined,
     };
     try {
-      await api.post('attendance', { json: payload }).json<{ success: boolean }>();
+      await api.post('attendance/manual', { json: payload }).json<{ success: boolean }>();
       router.push('/attendance');
     } catch {
       setSubmitError('Failed to record attendance. Please try again.');
     }
   };
+
+  const err = errors as Record<string, { message?: string }>;
 
   return (
     <div className="animate-fade-in-up space-y-6">
@@ -87,11 +94,27 @@ export default function NewAttendancePage() {
         className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
       >
         <div className="space-y-5">
-          <Input
-            label="Tenant ID"
-            placeholder="Enter tenant ID"
-            error={errors.tenantId?.message}
-            {...register('tenantId')}
+          <Controller
+            name="tenantId"
+            control={control}
+            render={({ field }) => (
+              <ResourceSelect
+                label="Tenant"
+                endpoint="tenants?isActive=true"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Select tenant..."
+                error={err.tenantId?.message}
+                valueKey="_id"
+                labelKey={(item: TenantOption) =>
+                  item.user?.name ?? 'Unknown'
+                }
+                sublabelFn={(item: TenantOption) =>
+                  `Room ${item.room?.roomNumber ?? 'N/A'} · Bed ${item.bedId ?? 'N/A'}`
+                }
+                dataPath="data"
+              />
+            )}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Date" type="date" error={errors.date?.message} {...register('date')} />

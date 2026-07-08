@@ -14,7 +14,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   date: z.string().min(1, 'Required'),
-  status: z.string().min(1, 'Required'),
+  status: z.enum(['present', 'absent', 'on_leave', 'not_returned']),
   checkInTime: z.string().optional(),
   checkOutTime: z.string().optional(),
   notes: z.string().optional(),
@@ -22,10 +22,10 @@ const schema = z.object({
 
 
 const statusOptions = [
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'present', label: 'Present' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'on_leave', label: 'On Leave' },
+  { value: 'not_returned', label: 'Not Returned' },
 ];
 
 type FormData = z.infer<typeof schema>;
@@ -94,7 +94,7 @@ export default function EditPage() {
         <div className="space-y-5">
           <Input
             label="Date"
-            type="string"
+            type="date"
             error={errors.date?.message}
             {...register('date')}
           />
@@ -106,19 +106,18 @@ export default function EditPage() {
           />
           <Input
             label="Check In Time"
-            type="string"
+            type="time"
             error={errors.checkInTime?.message}
             {...register('checkInTime')}
           />
           <Input
             label="Check Out Time"
-            type="string"
+            type="time"
             error={errors.checkOutTime?.message}
             {...register('checkOutTime')}
           />
           <Input
             label="Notes"
-            type="string"
             error={errors.notes?.message}
             {...register('notes')}
           />
