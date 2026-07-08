@@ -20,6 +20,84 @@ export interface IBrandTokens {
   easeInOutCubic: string;
 }
 
+// ── Status variant types ─────────────────────────────────
+
+export type StatusVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
+/**
+ * Centralized system-wide status → variant mapping.
+ * Every status from every domain maps to exactly one semantic variant.
+ * Used by StatusBadge and all status indicators across the admin panel.
+ */
+export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
+  // ── Tenant Status ──
+  active: 'success',
+  checked_out: 'neutral',
+  inactive: 'neutral',
+
+  // ── Payment Status ──
+  paid: 'success',
+  pending: 'warning',
+  pending_verification: 'info',
+  overdue: 'danger',
+  partial: 'warning',
+  cancelled: 'neutral',
+
+  // ── Invoice Status ──
+  sent: 'info',
+  draft: 'neutral',
+
+  // ── Complaint Status ──
+  open: 'danger',
+  in_progress: 'warning',
+  resolved: 'success',
+  dismissed: 'neutral',
+
+  // ── Complaint Severity ──
+  urgent: 'danger',
+  critical: 'danger',
+  high: 'warning',
+  medium: 'info',
+  low: 'neutral',
+
+  // ── Service Status ──
+  operational: 'success',
+  degraded: 'warning',
+  down: 'danger',
+
+  // ── Enquiry Status ──
+  new: 'warning',
+  contacted: 'info',
+  converted: 'success',
+  closed: 'neutral',
+
+  // ── Leave Status ──
+  approved: 'success',
+  rejected: 'danger',
+
+  // ── Attendance Status ──
+  present: 'success',
+  absent: 'danger',
+  on_leave: 'info',
+  not_returned: 'warning',
+
+  // ── Visitor Status ──
+  expected: 'info',
+  arrived: 'success',
+  departed: 'neutral',
+
+  // ── Asset Status ──
+  available: 'success',
+  in_use: 'info',
+  under_maintenance: 'warning',
+  damaged: 'danger',
+  retired: 'neutral',
+
+  // ── Laundry Slot Status ──
+  booked: 'info',
+  maintenance: 'warning',
+};
+
 export const DEFAULT_BRAND_TOKENS: IBrandTokens = {
   brandColorScale: {
     '50': '#FFFBEB',

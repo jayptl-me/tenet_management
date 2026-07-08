@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Megaphone } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useRouter } from 'next/navigation';
 
 interface NoticeRow {
@@ -152,21 +155,17 @@ export default function NoticesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Notices</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Post announcements for tenants</p>
-        </div>
-        <Button onClick={() => router.push('/notices/new')}>
-          <Plus className="h-4 w-4" />
-          Post Notice
-        </Button>
-      </div>
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <PageHeader
+        title="Notices"
+        description="Post announcements for tenants"
+        action={
+          <Button onClick={() => router.push('/notices/new')}>
+            <Plus className="h-4 w-4" />
+            Post Notice
+          </Button>
+        }
+      />
+      <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
           options={[
@@ -200,6 +199,47 @@ export default function NoticesPage() {
             setPage(1);
           },
         }}
+        emptyState={
+          <EmptyState
+            icon={<Megaphone className="h-12 w-12" />}
+            title="No notices yet"
+            description="Post your first announcement to get started"
+            action={{ label: 'Post Notice', onClick: () => router.push('/notices/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm truncate max-w-[70%]">
+                {row.title}
+              </span>
+              <StatusBadge
+                variant={
+                  row.priority === 'emergency' ? 'danger'
+                    : row.priority === 'high' ? 'warning'
+                    : row.priority === 'medium' ? 'info'
+                    : 'neutral'
+                }
+                label={row.priority}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <StatusBadge
+                variant={statusToVariant(row.isPublished ? 'published' : 'draft')}
+                label={row.isPublished ? 'Published' : 'Draft'}
+              />
+              <span>{new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/notices/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/notices/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          </div>
+        )}
       />
       <ConfirmModal
         open={!!deleteTarget}

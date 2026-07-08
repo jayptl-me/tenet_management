@@ -2,10 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, User, Home, Hash, FileText } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  User,
+  Home,
+  Hash,
+  FileText,
+  Pencil,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface LaundrySlotDetail {
   _id: string;
@@ -16,6 +30,19 @@ interface LaundrySlotDetail {
   status: string;
   notes?: string;
   createdAt: string;
+}
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
 }
 
 export default function LaundryDetailPage() {
@@ -39,137 +66,141 @@ export default function LaundryDetailPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-t-[color:var(--color-brand-500)] border-[color:var(--border-color)]" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
+  // ── Error / Not Found State ──────────────────
   if (error || !slot) {
     return (
       <div className="space-y-4">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
-          {error || 'Slot not found'}
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Slot not found'}</p>
         </div>
       </div>
     );
   }
 
+  const statusVariant = statusToVariant(slot.status);
+  const tenantName = slot.tenant?.user?.name ?? 'N/A';
+  const roomNumber = slot.tenant?.room?.roomNumber ?? 'N/A';
+  const itemsCount = slot.items ?? 0;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-4xl space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" /> Back
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h2 className="font-display text-2xl font-extrabold text-[color:var(--color-surface-900)]">
-              Laundry Slot
-            </h2>
-            <p className="text-sm text-[color:var(--color-surface-500)]">ID: {slot._id}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">Laundry Slot</h2>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              {tenantName} · Room {roomNumber}
+            </p>
           </div>
         </div>
-        <StatusBadge
-          variant={statusToVariant(slot.status)}
-          label={slot.status.replace(/_/g, ' ')}
-        />
-      </div>
+        <div className="flex items-center gap-2">
+          <StatusBadge variant={statusVariant} label={slot.status.replace(/_/g, ' ')} />
+          <Button variant="outline" size="icon" onClick={() => router.push(`/laundry/${slot._id}/edit`)} title="Edit slot">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Tenant Info */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display mb-4 text-lg font-bold text-[color:var(--color-surface-900)]">
-            <User className="mr-1 inline h-4 w-4" />
-            Tenant
+      {/* ── Stats Grid ─────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Date"
+          value={formatDate(slot.slotDate)}
+          icon={<Calendar className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Time Slot"
+          value={slot.slotTime}
+          icon={<Clock className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Items"
+          value={itemsCount.toString()}
+          icon={<Hash className="h-4 w-4" />}
+          variant={itemsCount > 0 ? 'brand' : 'default'}
+        />
+      </motion.div>
+
+      {/* ── Info Cards ──────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />Tenant Information
           </h3>
           <div className="space-y-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Name
-              </p>
-              <p className="text-sm font-semibold text-[color:var(--color-surface-900)]">
-                {slot.tenant?.user?.name ?? 'N/A'}
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
+              <p className="text-lg font-extrabold text-[color:var(--color-text-primary)]">{tenantName}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Room
-              </p>
-              <p className="flex items-center gap-1 text-sm text-[color:var(--color-surface-700)]">
-                <Home className="h-3.5 w-3.5" />
-                {slot.tenant?.room?.roomNumber ?? 'N/A'}
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Room</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{roomNumber}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Slot Info */}
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display mb-4 text-lg font-bold text-[color:var(--color-surface-900)]">
-            <Clock className="mr-1 inline h-4 w-4" />
-            Slot Details
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <Clock className="h-5 w-5 text-[color:var(--color-brand-500)]" />Slot Details
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Date
-              </p>
-              <p className="flex items-center gap-1 text-sm text-[color:var(--color-surface-700)]">
-                <Calendar className="h-3.5 w-3.5" />
-                {new Date(slot.slotDate).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })}
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Date</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDate(slot.slotDate)}
               </p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Time
-              </p>
-              <p className="flex items-center gap-1 text-sm text-[color:var(--color-surface-700)]">
-                <Clock className="h-3.5 w-3.5" />
-                {slot.slotTime}
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Time</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{slot.slotTime}
               </p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Items
-              </p>
-              <p className="flex items-center gap-1 text-sm text-[color:var(--color-surface-700)]">
-                <Hash className="h-3.5 w-3.5" />
-                {slot.items ?? '—'}
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Items</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{itemsCount}
               </p>
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-surface-500)]">
-                Status
-              </p>
-              <div className="mt-1">
-                <StatusBadge
-                  variant={statusToVariant(slot.status)}
-                  label={slot.status.replace(/_/g, ' ')}
-                />
-              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
+              <div className="mt-1"><StatusBadge variant={statusVariant} label={slot.status.replace(/_/g, ' ')} /></div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
+      {/* ── Notes ───────────────────────────────── */}
       {slot.notes && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display mb-4 text-lg font-bold text-[color:var(--color-surface-900)]">
-            <FileText className="mr-1 inline h-4 w-4" />
-            Notes
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-warning-800)]">
+            <FileText className="h-5 w-5" />Notes
           </h3>
-          <p className="whitespace-pre-wrap text-sm text-[color:var(--color-surface-700)]">{slot.notes}</p>
-        </div>
+          <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-warning-900)]">{slot.notes}</p>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

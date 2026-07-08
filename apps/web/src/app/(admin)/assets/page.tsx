@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Wrench } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,9 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -149,23 +152,17 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Assets</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">
-            Track PG furniture, appliances & equipment
-          </p>
-        </div>
-        <Button onClick={() => router.push('/assets/new')}>
-          <Plus className="h-4 w-4" />
-          Add Asset
-        </Button>
-      </div>
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <PageHeader
+        title="Assets"
+        description="Track PG furniture, appliances & equipment"
+        action={
+          <Button onClick={() => router.push('/assets/new')}>
+            <Plus className="h-4 w-4" />
+            Add Asset
+          </Button>
+        }
+      />
+      <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by name..."
@@ -208,6 +205,52 @@ export default function AssetsPage() {
             setPage(1);
           },
         }}
+        emptyState={
+          <EmptyState
+            icon={<Wrench className="h-12 w-12" />}
+            title="No assets yet"
+            description="Add your first asset to start tracking equipment"
+            action={{ label: 'Add Asset', onClick: () => router.push('/assets/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {row.name}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <span className="capitalize">{row.category}</span>
+              <span>{row.assignedTo?.user?.name ?? 'Unassigned'}</span>
+              {row.assignedTo?.room?.roomNumber && <span>Rm {row.assignedTo.room.roomNumber}</span>}
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); router.push(`/assets/${row._id}`); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors hover:bg-[color:var(--color-surface-100)]"
+              >
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); router.push(`/assets/${row._id}/edit`); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
+              >
+                <Trash2 className="h-3 w-3" /> Delete
+              </button>
+            </div>
+          </div>
+        )}
       />
       <ConfirmModal
         open={!!deleteTarget}

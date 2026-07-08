@@ -41,6 +41,43 @@
   --color-warning-700: #b45309;
   --color-warning-800: #92400e;
   --color-warning-900: #78350f;
+
+  /* Info — Blue */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* Accent — Fuchsia */
+  --color-accent-50: #fdf4ff;
+  --color-accent-100: #fae8ff;
+  --color-accent-200: #f5d0fe;
+  --color-accent-300: #f0abfc;
+  --color-accent-400: #e879f9;
+  --color-accent-500: #d946ef;
+  --color-accent-600: #c026d3;
+  --color-accent-700: #a21caf;
+  --color-accent-800: #86198f;
+  --color-accent-900: #701a75;
+
+  /* Neutral — True neutral gray (independent of surface) */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
   --color-danger-50: #fef2f2;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
@@ -52,10 +89,10 @@
   --color-danger-800: #991b1b;
   --color-danger-900: #7f1d1d;
 
-  /* Surface — Neutral zinc, warm enough to feel considered */
-  --color-surface-50: #fafafa;
-  --color-surface-100: #f4f4f5;
-  --color-surface-200: #e4e4e7;
+  /* Surface — Cool neutral with subtle blue undertone (Linear-inspired) */
+  --color-surface-50: #f8f8fa;
+  --color-surface-100: #f1f1f4;
+  --color-surface-200: #e4e4e8;
   --color-surface-300: #d4d4d8;
   --color-surface-400: #a1a1aa;
   --color-surface-500: #71717a;
@@ -182,8 +219,8 @@
   /* Surface — True dark (not washed out) */
   --color-surface-50: #09090b;
   --color-surface-100: #18181b;
-  --color-surface-200: #27272a;
-  --color-surface-300: #3f3f46;
+  --color-surface-200: #2c2c30;
+  --color-surface-300: #3d3d44;
   --color-surface-400: #52525b;
   --color-surface-500: #71717a;
   --color-surface-600: #a1a1aa;
@@ -191,6 +228,19 @@
   --color-surface-800: #e4e4e7;
   --color-surface-900: #f4f4f5;
   --color-surface-950: #fafafa;
+
+  /* Brand — Indigo (explicit dark override for completeness) */
+  --color-brand-50: #1e1b4b;
+  --color-brand-100: #312e81;
+  --color-brand-200: #3730a3;
+  --color-brand-300: #4338ca;
+  --color-brand-400: #4f46e5;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #818cf8;
+  --color-brand-700: #a5b4fc;
+  --color-brand-800: #c7d2fe;
+  --color-brand-900: #e0e7ff;
+  --color-brand-950: #eef2ff;
 
   /* Semantic — Dark-adjusted scales */
   --color-success-50: #022c22;
@@ -213,6 +263,43 @@
   --color-warning-700: #fcd34d;
   --color-warning-800: #fde68a;
   --color-warning-900: #fef3c7;
+
+  /* Info — Blue (inverted) */
+  --color-info-50: #172554;
+  --color-info-100: #172554;
+  --color-info-200: #1e3a8a;
+  --color-info-300: #1d4ed8;
+  --color-info-400: #3b82f6;
+  --color-info-500: #3b82f6;
+  --color-info-600: #60a5fa;
+  --color-info-700: #93c5fd;
+  --color-info-800: #bfdbfe;
+  --color-info-900: #dbeafe;
+
+  /* Accent — Fuchsia (inverted) */
+  --color-accent-50: #4a044e;
+  --color-accent-100: #4a044e;
+  --color-accent-200: #701a75;
+  --color-accent-300: #a21caf;
+  --color-accent-400: #d946ef;
+  --color-accent-500: #d946ef;
+  --color-accent-600: #e879f9;
+  --color-accent-700: #f0abfc;
+  --color-accent-800: #f5d0fe;
+  --color-accent-900: #fae8ff;
+
+  /* Neutral — True neutral gray (independent of surface) */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
   --color-danger-50: #450a0a;
   --color-danger-100: #450a0a;
   --color-danger-200: #7f1d1d;
@@ -228,6 +315,15 @@
   --bw-default: 1px;
   --bw-strong: 1.5px;
   --border-color: rgba(255, 255, 255, 0.08);
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
 
   /* Shadows — Deeper, atmospheric */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -245,6 +341,24 @@
   --shadow-modal: var(--shadow-2xl);
   --shadow-tooltip: 0 4px 16px rgba(0, 0, 0, 0.5);
 
+  /* Transition — polished micro-interactions */
+  --transition-duration: 150ms;
+  --transition-duration-slow: 250ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+
+  /* Behaviors — Subtle, never distracting */
+  --hover-lift: translateY(-1px);
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 1px;
+
   /* Glass — dark mode glass */
   --glass-bg: rgba(24, 24, 27, 0.72);
   --glass-bg-strong: rgba(24, 24, 27, 0.88);
@@ -255,6 +369,8 @@
   /* Tooltip */
   --tooltip-bg: var(--color-surface-800);
   --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
 
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);

@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Eye, Pencil, LayoutList, Columns3, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, LayoutList, Columns3, Loader2, Trash2, MessageSquareWarning } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 import {
@@ -399,11 +402,7 @@ export default function ComplaintsPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
       {isUpdatingStatus && (
         <div className="border-brand-500 bg-brand-100 text-brand-800 flex items-center gap-2 rounded-lg border-[length:var(--bw-strong)] p-3 text-sm font-semibold">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -446,6 +445,68 @@ export default function ComplaintsPage() {
                 setPage(1);
               },
             }}
+            emptyState={
+              <EmptyState
+                icon={<MessageSquareWarning className="h-12 w-12" />}
+                title="No complaints yet"
+                description="File your first complaint to get started"
+                action={{ label: 'New Complaint', onClick: () => router.push('/complaints/new') }}
+              />
+            }
+            mobileCardRenderer={(row) => (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-[color:var(--color-text-primary)] text-sm truncate max-w-[70%]">
+                    {row.title}
+                  </span>
+                  <StatusBadge
+                    variant={statusToVariant(row.status)}
+                    label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+                  />
+                </div>
+                <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+                  <span>{row.tenant?.user?.name ?? 'N/A'}</span>
+                  <StatusBadge
+                    variant={
+                      row.severity === 'critical' ? 'danger' : row.severity === 'high' ? 'warning' : 'info'
+                    }
+                    label={row.severity}
+                  />
+                </div>
+                <div className="flex items-center gap-1 pt-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/complaints/${row._id}`);
+                    }}
+                    className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                    title="View"
+                  >
+                    <Eye className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/complaints/${row._id}/edit`);
+                    }}
+                    className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(row);
+                    }}
+                    className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            )}
           />
         </>
       ) : (

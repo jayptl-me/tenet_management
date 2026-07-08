@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, ClipboardCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -97,15 +100,60 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div><h2 className="font-display text-surface-900 text-2xl font-extrabold">Attendance</h2><p className="text-surface-500 mt-0.5 text-sm">Track daily tenant attendance</p></div>
-        <Button onClick={() => router.push('/attendance/new')}><Plus className="h-4 w-4" /> Mark Attendance</Button>
-      </div>
-      {error && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{error}</div>}
+      <PageHeader
+        title="Attendance"
+        description="Track daily tenant attendance"
+        action={
+          <Button onClick={() => router.push('/attendance/new')}>
+            <Plus className="h-4 w-4" />
+            Mark Attendance
+          </Button>
+        }
+      />
+      <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select options={[{ value: '', label: 'All Statuses' }, { value: 'present', label: 'Present' }, { value: 'absent', label: 'Absent' }, { value: 'on_leave', label: 'On Leave' }, { value: 'late', label: 'Late' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[200px]" />
       </div>
-      <DataTable columns={columns} data={records} keyExtractor={(row: AttendanceRow) => row._id} isLoading={isLoading} onRowClick={(row) => router.push(`/attendance/${row._id}`)} pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }} />
+      <DataTable
+        columns={columns}
+        data={records}
+        keyExtractor={(row: AttendanceRow) => row._id}
+        isLoading={isLoading}
+        onRowClick={(row) => router.push(`/attendance/${row._id}`)}
+        pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        emptyState={
+          <EmptyState
+            icon={<ClipboardCheck className="h-12 w-12" />}
+            title="No attendance records yet"
+            description="Mark your first attendance record to get started"
+            action={{ label: 'Mark Attendance', onClick: () => router.push('/attendance/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {row.tenant?.user?.name ?? 'N/A'}
+              </span>
+              <StatusBadge variant={statusToVariant(row.status)} label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'} />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <span>{row.tenant?.room?.roomNumber ?? 'N/A'}</span>
+              <span>{new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+              {row.checkInTime && <span>In: {new Date(row.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+              {row.checkOutTime && <span>Out: {new Date(row.checkOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          </div>
+        )}
+      />
       <ConfirmModal open={!!deleteTarget} title="Delete Attendance Record" message="Are you sure you want to delete this attendance record? This action cannot be undone." loading={deleting} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
     </div>
   );
