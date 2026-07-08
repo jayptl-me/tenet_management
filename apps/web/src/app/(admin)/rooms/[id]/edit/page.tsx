@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import type { IAppConfig } from '@pg/types';
 
 const SHARING_OPTIONS = [
@@ -170,13 +171,13 @@ export default function EditRoomPage() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Room</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update room details</p>
+          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Room</h2>
+          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update room details</p>
         </div>
       </div>
 
       {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
+        <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
           {submitError}
         </div>
       )}
@@ -214,29 +215,21 @@ export default function EditRoomPage() {
               {...register('monthlyRent')}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-surface-800 font-display text-sm font-semibold">Description</label>
-            <textarea
-              rows={2}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)]"
-              placeholder="Optional description..."
-              {...register('description')}
-            />
-          </div>
+          <Textarea label="Description" rows={2} {...register('description')} />
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               {...register('isActive')}
               className="text-brand-500 h-5 w-5 rounded border-[length:var(--bw-default)]"
             />
-            <span className="text-surface-700 text-sm font-semibold">Active</span>
+            <span className="text-[color:var(--color-text-primary)] text-sm font-semibold">Active</span>
           </label>
 
           {/* Room-level amenity status */}
           {roomAmenityDefs.length > 0 && (
             <div>
-              <h4 className="font-display text-surface-900 mb-3 text-sm font-bold">Room Amenity Status</h4>
-              <p className="text-surface-500 mb-3 text-xs">Update the status of room-specific amenities</p>
+              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] mb-3 text-sm font-bold">Room Amenity Status</h4>
+              <p className="text-[color:var(--color-text-muted)] mb-3 text-xs">Update the status of room-specific amenities</p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {roomAmenityDefs.map((a) => {
                   const fieldName = `amenity_${a.key}`;
@@ -255,7 +248,7 @@ export default function EditRoomPage() {
           )}
         </div>
 
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
+        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] pt-5">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>
