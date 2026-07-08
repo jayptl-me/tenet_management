@@ -12,10 +12,15 @@ import {
   Pencil,
   Loader2,
   AlertTriangle,
+  User,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
+import { DonutChart } from '@/components/ui/DonutChart';
+import { StackedBarChart } from '@/components/ui/StackedBarChart';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { motion } from 'motion/react';
 import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
@@ -104,6 +109,9 @@ export default function RoomDetailPage() {
   const occupiedBeds = room.beds?.filter((b) => b.isOccupied).length ?? 0;
   const availableBeds = totalBeds - occupiedBeds;
   const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+  const amenityOperational = room.roomAmenities?.filter((a) => a.status === 'operational').length ?? 0;
+  const amenityDegraded = room.roomAmenities?.filter((a) => a.status === 'degraded').length ?? 0;
+  const amenityDown = room.roomAmenities?.filter((a) => a.status === 'down').length ?? 0;
 
   return (
     <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-4xl space-y-6">
@@ -141,6 +149,77 @@ export default function RoomDetailPage() {
         <StatCard title="Available" value={availableBeds.toString()} icon={<Users className="h-4 w-4" />} variant={availableBeds > 0 ? 'success' : 'warning'} />
         <StatCard title="Occupancy" value={`${occupancyPct}%`} icon={<Home className="h-4 w-4" />} variant="brand" />
       </motion.div>
+
+      {/* ── Bed Occupancy ───────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+          <Users className="h-5 w-5 text-[color:var(--color-brand-500)]" />
+          Bed Occupancy
+        </h3>
+        {room.beds && room.beds.length > 0 ? (
+          <div className="flex flex-col items-center sm:flex-row sm:items-start sm:gap-8">
+            <DonutChart
+              segments={[
+                { value: occupiedBeds, color: 'var(--color-brand-500)', label: 'Occupied' },
+                { value: availableBeds, color: 'var(--color-success-400)', label: 'Available' },
+              ]}
+              centerLabel={`${occupancyPct}%`}
+              sublabel="Occupied"
+              size={160}
+              thickness={28}
+            />
+            <div className="mt-4 sm:mt-0 sm:self-center">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)]">{occupiedBeds} Occupied</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[color:var(--color-success-500)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)]">{availableBeds} Available</span>
+                </div>
+                <div className="pt-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                  {totalBeds} Total Beds
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm font-semibold text-[color:var(--color-text-muted)]">No bed data available</p>
+        )}
+      </motion.div>
+
+      {/* ── Current Tenants ────────────────────── */}
+      {room.beds && room.beds.filter((b) => b.isOccupied).length > 0 && (
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />
+            Current Tenants
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-[color:var(--border-color)]">
+                  <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Bed</th>
+                  <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Tenant</th>
+                  <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--border-color)]">
+                {room.beds.filter((b) => b.isOccupied).map((bed) => (
+                  <tr key={bed.bedId}>
+                    <td className="py-3 font-mono text-sm font-bold text-[color:var(--color-text-primary)]">{bed.bedId}</td>
+                    <td className="py-3 font-semibold text-[color:var(--color-text-primary)]">{bed.tenantName ?? 'N/A'}</td>
+                    <td className="py-3 text-right">
+                      <StatusBadge variant="success" label="Occupied" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Beds Section ───────────────────────── */}
       <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
@@ -209,40 +288,21 @@ export default function RoomDetailPage() {
       {/* ── Room Amenities ──────────────────────── */}
       {room.roomAmenities && room.roomAmenities.length > 0 && (
         <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Room Amenities Status</h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {room.roomAmenities.map((a) => {
-              const colorMap: Record<string, { border: string; bg: string; text: string }> = {
-                operational: {
-                  border: 'border-[color:var(--color-success-200)]',
-                  bg: 'bg-[color:var(--color-success-50)]',
-                  text: 'text-[color:var(--color-success-700)]',
-                },
-                degraded: {
-                  border: 'border-[color:var(--color-warning-200)]',
-                  bg: 'bg-[color:var(--color-warning-50)]',
-                  text: 'text-[color:var(--color-warning-700)]',
-                },
-                down: {
-                  border: 'border-[color:var(--color-danger-200)]',
-                  bg: 'bg-[color:var(--color-danger-50)]',
-                  text: 'text-[color:var(--color-danger-700)]',
-                },
-              };
-              const colors = colorMap[a.status] ?? colorMap.operational;
-              return (
-                <div
-                  key={a.amenityKey}
-                  className={`rounded-xl border p-3 shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] ${colors.border} ${colors.bg}`}
-                >
-                  <p className={`text-sm font-bold capitalize ${colors.text}`}>
-                    {a.amenityKey.replace(/_/g, ' ')}
-                  </p>
-                  <p className={`mt-0.5 text-xs font-bold uppercase opacity-75 ${colors.text}`}>{a.status}</p>
-                </div>
-              );
-            })}
-          </div>
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <CheckCircle2 className="h-5 w-5 text-[color:var(--color-brand-500)]" />
+            Room Amenities Status
+          </h3>
+          <StackedBarChart
+            bars={[{
+              label: 'Amenities',
+              segments: [
+                { value: amenityOperational, color: 'var(--color-success-400)', label: 'Operational' },
+                { value: amenityDegraded, color: 'var(--color-warning-400)', label: 'Degraded' },
+                { value: amenityDown, color: 'var(--color-danger-400)', label: 'Down' },
+              ],
+            }]}
+            barHeight={36}
+          />
         </motion.div>
       )}
 

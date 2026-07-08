@@ -1,5 +1,6 @@
 import ky from 'ky';
 import { useApiLoadingStore } from '@/store/apiLoading';
+import { useAuthStore } from '@/store/auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
@@ -55,18 +56,8 @@ const rawApi = ky.create({
 
               const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-              // Update zustand store
-              try {
-                const raw = localStorage.getItem('pg-auth-storage');
-                if (raw) {
-                  const parsed = JSON.parse(raw);
-                  parsed.state.accessToken = accessToken;
-                  parsed.state.refreshToken = newRefreshToken;
-                  localStorage.setItem('pg-auth-storage', JSON.stringify(parsed));
-                }
-              } catch {
-                // fallback
-              }
+              // Update Zustand store (also persists to localStorage via middleware)
+              useAuthStore.getState().setTokens(accessToken, newRefreshToken);
 
               // Retry original request with new token
               const newRequest = new Request(_request);

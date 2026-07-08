@@ -11,7 +11,7 @@ interface SkeletonProps {
 
 // ── Base skeleton shimmer block ────────────────────────
 
-function ShimmerBlock({ className, style }: SkeletonProps) {
+export function ShimmerBlock({ className, style }: SkeletonProps) {
   return (
     <div
       className={clsx(

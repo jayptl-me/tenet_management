@@ -10,6 +10,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   mealType: z.string().min(1, 'Meal type is required'),
@@ -71,7 +72,7 @@ export default function EditMealPage() {
           <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update meal feedback details</p>
         </div>
       </div>
-      {submitError && <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{submitError}</div>}
+      {submitError && <ErrorBanner message={submitError} />}
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
         <div className="space-y-5">
           <Select label="Meal Type" options={mealTypeOptions} error={errors.mealType?.message} {...register('mealType')} />
@@ -80,7 +81,6 @@ export default function EditMealPage() {
           <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
         </div>
         <div className="border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 pt-5">
-++++++++ REPLACE
           <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
           <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
         </div>
