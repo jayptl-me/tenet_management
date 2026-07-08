@@ -102,13 +102,21 @@ export type {
 
 // ── Dashboard ──────────────────────────────────────────
 export type {
-  IOccupancyStats,
-  IRevenueStats,
-  IComplaintStats,
-  IServiceStats,
-  IEnquiryStats,
+  IDashboardOccupancyStats,
+  IDashboardRevenueStats,
+  IDashboardComplaintStats,
+  IDashboardServiceStats,
+  IDashboardEnquiryStats,
   IRevenueHistoryPoint,
+  IOccupancyHistoryPoint,
   IMealFeedbackTrendPoint,
+  IServiceHistoryEvent,
+  IComplaintByCategory,
+  IPaymentFunnelStage,
+  IAmenityHealthBreakdown,
+  IDashboardComplaintRecent,
+  IDashboardEnquiryRecent,
+  IDashboardRecent,
   IDashboardStats,
 } from './dashboard.js';
 

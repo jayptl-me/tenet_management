@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import type { IAppConfig } from '@pg/types';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const SHARING_OPTIONS = [
   { value: '2', label: '2 Sharing' },
@@ -133,11 +134,7 @@ export default function NewRoomPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form
         onSubmit={handleSubmit(onSubmit)}

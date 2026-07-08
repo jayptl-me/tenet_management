@@ -20,10 +20,10 @@
   --color-brand-950: #3b2f6e;
 
   /* Surface — Pale Lavender Gray */
-  --color-surface-50: #edeef2;
-  --color-surface-100: #e4e5ea;
-  --color-surface-200: #d1d3d9;
-  --color-surface-300: #b8bac2;
+  --color-surface-50: #edf0f2;
+  --color-surface-100: #e3e6eb;
+  --color-surface-200: #d0d3da;
+  --color-surface-300: #b7bac3;
   --color-surface-400: #9a9ca6;
   --color-surface-500: #7d7f8a;
   --color-surface-600: #636570;
@@ -64,6 +64,42 @@
   --color-warning-800: #92501a;
   --color-warning-900: #734219;
 
+  /* Info — Soft Muted Blue */
+  --color-info-50: #eff4ff;
+  --color-info-100: #dbe7ff;
+  --color-info-200: #b8cfff;
+  --color-info-300: #91b3fa;
+  --color-info-400: #6d95f0;
+  --color-info-500: #4c7ae0;
+  --color-info-600: #3a5fcc;
+  --color-info-700: #2c49b0;
+  --color-info-800: #1f348f;
+  --color-info-900: #162570;
+
+  /* Accent — Soft Coral / Pastel Pink */
+  --color-accent-50: #fff5f5;
+  --color-accent-100: #ffe7e5;
+  --color-accent-200: #ffceca;
+  --color-accent-300: #ffafa8;
+  --color-accent-400: #ff8a80;
+  --color-accent-500: #f26b66;
+  --color-accent-600: #db524d;
+  --color-accent-700: #b83f3c;
+  --color-accent-800: #942f2e;
+  --color-accent-900: #6b2222;
+
+  /* Neutral — Soft Lavender Gray */
+  --color-neutral-50: #f3f2f8;
+  --color-neutral-100: #eae8f2;
+  --color-neutral-200: #d8d6e8;
+  --color-neutral-300: #c2bfdb;
+  --color-neutral-400: #a7a3c9;
+  --color-neutral-500: #908bb5;
+  --color-neutral-600: #7a74a0;
+  --color-neutral-700: #625d8a;
+  --color-neutral-800: #4d4874;
+  --color-neutral-900: #3a365e;
+
   /* Borders — 0px (borderless; extrusion from paired shadows) */
   --bw-default: 0px;
   --bw-strong: 0px;
@@ -77,13 +113,13 @@
   --radius-full: 9999px;
 
   /* Shadows — Duotone pairs */
-  --shadow-card: 8px 8px 16px #d1d3d9, -8px -8px 16px #ffffff;
-  --shadow-card-hover: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
-  --shadow-button: 6px 6px 12px #d1d3d9, -6px -6px 12px #ffffff;
-  --shadow-button-pressed: inset 4px 4px 8px #d1d3d9, inset -4px -4px 8px #ffffff;
-  --shadow-dropdown: 12px 12px 24px #d1d3d9, -12px -12px 24px #ffffff;
-  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.15), -10px -10px 20px rgba(255, 255, 255, 0.8);
-  --shadow-input: inset 4px 4px 8px #d1d3d9, inset -4px -4px 8px #ffffff;
+  --shadow-card: 8px 8px 16px #c9ccd3, -8px -8px 16px #ffffff;
+  --shadow-card-hover: 6px 6px 12px #c9ccd3, -6px -6px 12px #ffffff;
+  --shadow-button: 6px 6px 12px #c9ccd3, -6px -6px 12px #ffffff;
+  --shadow-button-pressed: inset 4px 4px 8px #c9ccd3, inset -4px -4px 8px #ffffff;
+  --shadow-dropdown: 12px 12px 24px #c9ccd3, -12px -12px 24px #ffffff;
+  --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.15), -10px -10px 20px rgba(255, 255, 255, 0.7);
+  --shadow-input: inset 4px 4px 8px #c9ccd3, inset -4px -4px 8px #ffffff;
 
   /* Typography — Rounded geometric */
   --font-display: 'Poppins', sans-serif;
@@ -119,19 +155,31 @@
 
 /* ── Neumorphic Dark ────────────────────────────────────── */
 [data-theme='neumorphic'][data-mode='dark'] {
-  --color-surface-50: #12131a;
-  --color-surface-100: #1a1e28;
-  --color-surface-200: #242b38;
-  --color-surface-300: #2a3242;
-  --color-surface-400: #384254;
+  /* Brand — Soft Blue-Purple (dark-adapted) */
+  --color-brand-50: #1a1f4d;
+  --color-brand-100: #252c66;
+  --color-brand-200: #374199;
+  --color-brand-300: #4956cc;
+  --color-brand-400: #5c6bff;
+  --color-brand-500: #7c8aff;
+  --color-brand-600: #9ba2ff;
+  --color-brand-700: #bcc1ff;
+  --color-brand-800: #dde0ff;
+  --color-brand-900: #f0f1ff;
+  --color-brand-950: #f5f3ff;
+
+  /* Surface — Dark lavender gray */
+  --color-surface-50: #0f1018;
+  --color-surface-100: #151821;
+  --color-surface-200: #1f2332;
+  --color-surface-300: #282e40;
+  --color-surface-400: #353f52;
   --color-surface-500: #505a6e;
   --color-surface-600: #6e788c;
   --color-surface-700: #929cae;
   --color-surface-800: #b8bfcc;
   --color-surface-900: #dce0e8;
   --color-surface-950: #f0f2f5;
-
-  --color-brand-500: #7c8aff;
 
   /* Semantic — Dark-mode adjusted */
   --color-danger-50: #3b1118;
@@ -165,17 +213,79 @@
   --color-warning-800: #fce3b8;
   --color-warning-900: #fef3dc;
 
+  /* Info — Soft Muted Blue (Dark inverted) */
+  --color-info-50: #0d1428;
+  --color-info-100: #162570;
+  --color-info-200: #1f348f;
+  --color-info-300: #2c49b0;
+  --color-info-400: #3a5fcc;
+  --color-info-500: #4c7ae0;
+  --color-info-600: #6d95f0;
+  --color-info-700: #91b3fa;
+  --color-info-800: #b8cfff;
+  --color-info-900: #dbe7ff;
+
+  /* Accent — Soft Coral / Pastel Pink (Dark inverted) */
+  --color-accent-50: #3b1515;
+  --color-accent-100: #6b2222;
+  --color-accent-200: #942f2e;
+  --color-accent-300: #b83f3c;
+  --color-accent-400: #db524d;
+  --color-accent-500: #f26b66;
+  --color-accent-600: #ff8a80;
+  --color-accent-700: #ffafa8;
+  --color-accent-800: #ffceca;
+  --color-accent-900: #ffe7e5;
+
+  /* Neutral — Soft Lavender Gray (Dark inverted) */
+  --color-neutral-50: #1a1826;
+  --color-neutral-100: #3a365e;
+  --color-neutral-200: #4d4874;
+  --color-neutral-300: #625d8a;
+  --color-neutral-400: #7a74a0;
+  --color-neutral-500: #908bb5;
+  --color-neutral-600: #a7a3c9;
+  --color-neutral-700: #c2bfdb;
+  --color-neutral-800: #d8d6e8;
+  --color-neutral-900: #eae8f2;
+
   --bw-default: 0px;
   --bw-strong: 0px;
   --border-color: rgba(255, 255, 255, 0.08);
 
-  --shadow-card: 8px 8px 16px #0a0b11, -8px -8px 16px #242b38;
-  --shadow-card-hover: 6px 6px 12px #0a0b11, -6px -6px 12px #242b38;
-  --shadow-button: 6px 6px 12px #0a0b11, -6px -6px 12px #242b38;
-  --shadow-button-pressed: inset 4px 4px 8px #0a0b11, inset -4px -4px 8px #242b38;
-  --shadow-dropdown: 12px 12px 24px #0a0b11, -12px -12px 24px #242b38;
+  --shadow-card: 8px 8px 16px #0b0c14, -8px -8px 16px #2c3344;
+  --shadow-card-hover: 6px 6px 12px #0b0c14, -6px -6px 12px #2c3344;
+  --shadow-button: 6px 6px 12px #0b0c14, -6px -6px 12px #2c3344;
+  --shadow-button-pressed: inset 4px 4px 8px #0b0c14, inset -4px -4px 8px #2c3344;
+  --shadow-dropdown: 12px 12px 24px #0b0c14, -12px -12px 24px #2c3344;
   --shadow-modal: 20px 20px 40px rgba(0, 0, 0, 0.3), -10px -10px 20px rgba(255, 255, 255, 0.06);
-  --shadow-input: inset 4px 4px 8px #0a0b11, inset -4px -4px 8px #242b38;
+  --shadow-input: inset 4px 4px 8px #0b0c14, inset -4px -4px 8px #2c3344;
+
+  /* Radii — Same pillowy scale as light (must be repeated: dark mode resets) */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Typography — Same as light (must be repeated) */
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+
+  /* Layout — Same as light */
+  --sidebar-width: 280px;
+  --header-height: 60px;
+
+  /* Transition — Same as light */
+  --transition-duration: 300ms;
+  --transition-easing: ease-in-out;
+
+  /* Behaviors */
+  --hover-lift: none;
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 0px;
 
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
@@ -188,4 +298,10 @@
   --disabled-opacity: 0.35;
   --disabled-bg: var(--color-surface-300);
   --interactive-border: 1px solid rgba(255, 255, 255, 0.08);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-800);
+  --tooltip-text: var(--color-surface-100);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
 }

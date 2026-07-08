@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
+import { removeCustomStylesFromDOM, applyColorScaleToDOM } from '@/lib/colorScale';
 import type { ThemeSettings } from '@pg/types';
 
 const DEFAULT_THEME: ThemeSettings = {
@@ -44,27 +45,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.setAttribute('data-theme', settings.preset);
     root.setAttribute('data-mode', settings.mode);
 
-    // Remove old custom token inline styles
-    const oldStyle = root.getAttribute('style');
-    if (oldStyle) {
-      const kept = oldStyle
-        .split(';')
-        .filter((s) => !s.trim().startsWith('--color-brand-') && !s.trim().startsWith('--font-'))
-        .join(';');
-      root.setAttribute('style', kept);
-    }
+    // Remove old custom token inline styles via shared utility
+    removeCustomStylesFromDOM(root);
 
-    // Apply custom brand color overrides as inline styles
+    // Apply custom brand color as full 11-step scale (via shared utility)
     if (settings.brandColor) {
-      root.style.setProperty('--color-brand-500', settings.brandColor);
+      applyColorScaleToDOM(settings.brandColor, root);
     }
 
     // Apply custom font overrides
     if (settings.fonts?.display) {
-      root.style.setProperty(
-        '--font-display',
-        `'${settings.fonts.display}', sans-serif`,
-      );
+      root.style.setProperty('--font-display', `'${settings.fonts.display}', sans-serif`);
     }
     if (settings.fonts?.body) {
       root.style.setProperty('--font-body', `'${settings.fonts.body}', sans-serif`);

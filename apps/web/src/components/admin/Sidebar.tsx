@@ -31,10 +31,15 @@ import {
   ScrollText,
   Settings,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Search,
   Wifi,
+  Star,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
+import { useAppConfigPublic } from '@/hooks/useAppConfig';
+import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { motion, AnimatePresence } from 'motion/react';
 import { collapse } from '@/lib/animations';
 
@@ -45,6 +50,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  featureFlag?: string;
 }
 
 interface NavSection {
@@ -53,22 +59,46 @@ interface NavSection {
   items: NavItem[];
 }
 
-// ── Navigation Sections (categorized) ──────────────────
+// ── Feature Flag Check ─────────────────────────────────
+
+const FEATURE_DEFAULTS: Record<string, boolean> = {
+  attendanceEnabled: false,
+  laundryEnabled: true,
+  messFeedbackEnabled: true,
+  visitorManagementEnabled: true,
+  guardianPortalEnabled: true,
+  noticeBoardEnabled: true,
+  emergencyAlertsEnabled: true,
+};
+
+// ── Restructured Navigation Sections ──────────────────
 
 const navSections: NavSection[] = [
   {
-    id: 'core',
-    label: 'Core',
+    id: 'overview',
+    label: 'Overview',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { href: '/tenants', label: 'Tenants', icon: <Users className="h-4 w-4" /> },
-      { href: '/rooms', label: 'Rooms', icon: <BedDouble className="h-4 w-4" /> },
-      { href: '/floors', label: 'Floors', icon: <Building2 className="h-4 w-4" /> },
     ],
   },
   {
-    id: 'financial',
-    label: 'Financial',
+    id: 'residents',
+    label: 'Residents',
+    items: [
+      { href: '/tenants', label: 'Tenants', icon: <Users className="h-4 w-4" /> },
+      { href: '/rooms', label: 'Rooms', icon: <BedDouble className="h-4 w-4" /> },
+      { href: '/floors', label: 'Floors', icon: <Building2 className="h-4 w-4" /> },
+      {
+        href: '/guardians',
+        label: 'Guardians',
+        icon: <ShieldCheck className="h-4 w-4" />,
+        featureFlag: 'guardianPortalEnabled',
+      },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Finance',
     items: [
       { href: '/payments', label: 'Payments', icon: <CreditCard className="h-4 w-4" /> },
       { href: '/invoices', label: 'Invoices', icon: <Receipt className="h-4 w-4" /> },
@@ -76,45 +106,122 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    id: 'operations',
-    label: 'Operations',
+    id: 'facilities',
+    label: 'Facilities',
     items: [
-      { href: '/laundry', label: 'Laundry', icon: <Shirt className="h-4 w-4" /> },
-      { href: '/meals', label: 'Meals', icon: <Utensils className="h-4 w-4" /> },
-      { href: '/menus', label: 'Menus', icon: <ClipboardList className="h-4 w-4" /> },
       { href: '/services', label: 'Services', icon: <Wifi className="h-4 w-4" /> },
+      { href: '/complaints', label: 'Complaints', icon: <MessageSquare className="h-4 w-4" /> },
+      {
+        href: '/laundry',
+        label: 'Laundry',
+        icon: <Shirt className="h-4 w-4" />,
+        featureFlag: 'laundryEnabled',
+      },
+      {
+        href: '/meals',
+        label: 'Meals',
+        icon: <Utensils className="h-4 w-4" />,
+        featureFlag: 'messFeedbackEnabled',
+      },
+      { href: '/menus', label: 'Menus', icon: <ClipboardList className="h-4 w-4" /> },
       { href: '/assets', label: 'Assets', icon: <Package className="h-4 w-4" /> },
     ],
   },
   {
-    id: 'communication',
-    label: 'Communication',
+    id: 'engagement',
+    label: 'Engagement',
     items: [
-      { href: '/complaints', label: 'Complaints', icon: <MessageSquare className="h-4 w-4" /> },
-      { href: '/enquiries', label: 'Enquiries', icon: <PhoneCall className="h-4 w-4" /> },
-      { href: '/notices', label: 'Notices', icon: <Megaphone className="h-4 w-4" /> },
+      {
+        href: '/notices',
+        label: 'Notices',
+        icon: <Megaphone className="h-4 w-4" />,
+        featureFlag: 'noticeBoardEnabled',
+      },
       { href: '/notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
+      { href: '/enquiries', label: 'Enquiries', icon: <PhoneCall className="h-4 w-4" /> },
+      {
+        href: '/visitors',
+        label: 'Visitors',
+        icon: <DoorOpen className="h-4 w-4" />,
+        featureFlag: 'visitorManagementEnabled',
+      },
     ],
   },
   {
-    id: 'people',
-    label: 'People & Logs',
+    id: 'system',
+    label: 'System',
     items: [
-      { href: '/visitors', label: 'Visitors', icon: <DoorOpen className="h-4 w-4" /> },
-      { href: '/guardians', label: 'Guardians', icon: <ShieldCheck className="h-4 w-4" /> },
-      { href: '/leaves', label: 'Leaves', icon: <CalendarClock className="h-4 w-4" /> },
-      { href: '/attendance', label: 'Attendance', icon: <CalendarCheck className="h-4 w-4" /> },
-    ],
-  },
-  {
-    id: 'reports',
-    label: 'Reports',
-    items: [
+      {
+        href: '/attendance',
+        label: 'Attendance',
+        icon: <CalendarCheck className="h-4 w-4" />,
+        featureFlag: 'attendanceEnabled',
+      },
+      {
+        href: '/leaves',
+        label: 'Leaves',
+        icon: <CalendarClock className="h-4 w-4" />,
+        featureFlag: 'attendanceEnabled',
+      },
       { href: '/export', label: 'Export', icon: <FileSpreadsheet className="h-4 w-4" /> },
       { href: '/audit-logs', label: 'Audit Logs', icon: <ScrollText className="h-4 w-4" /> },
     ],
   },
 ];
+
+const PINNED_STORAGE_KEY = 'sidebar-pinned';
+const COLLAPSED_STORAGE_KEY = 'sidebar-collapsed';
+const MAX_PINNED = 4;
+
+// ── Helpers ────────────────────────────────────────────
+
+function loadPinned(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePinned(pinned: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinned));
+  } catch {
+    // localStorage full or disabled — silently ignore
+  }
+}
+
+function loadCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveCollapsed(collapsed: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
+  } catch {
+    // silently ignore
+  }
+}
+
+// ── Badge Pill ─────────────────────────────────────────
+
+function BadgePill({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white">
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 // ── Sidebar Component ──────────────────────────────────
 
@@ -122,16 +229,40 @@ export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { data: appConfig } = useAppConfigPublic();
+  const liveBadges = useSidebarBadges();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['core', 'financial', 'operations']),
+    new Set(['overview', 'residents', 'finance', 'facilities']),
   );
+  const [pinned, setPinned] = useState<string[]>(loadPinned);
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
+
+  // Feature flags from AppConfig or defaults
+  const features = useMemo(() => {
+    const flags = appConfig?.features;
+    return {
+      attendanceEnabled: flags?.attendanceEnabled ?? FEATURE_DEFAULTS.attendanceEnabled,
+      laundryEnabled: flags?.laundryEnabled ?? FEATURE_DEFAULTS.laundryEnabled,
+      messFeedbackEnabled: flags?.messFeedbackEnabled ?? FEATURE_DEFAULTS.messFeedbackEnabled,
+      visitorManagementEnabled:
+        flags?.visitorManagementEnabled ?? FEATURE_DEFAULTS.visitorManagementEnabled,
+      guardianPortalEnabled:
+        flags?.guardianPortalEnabled ?? FEATURE_DEFAULTS.guardianPortalEnabled,
+      noticeBoardEnabled: flags?.noticeBoardEnabled ?? FEATURE_DEFAULTS.noticeBoardEnabled,
+    };
+  }, [appConfig]);
 
   // Auto-expand section containing the active route
   useEffect(() => {
     for (const section of navSections) {
-      if (section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'))) {
+      if (
+        section.items.some(
+          (item) => pathname === item.href || pathname.startsWith(item.href + '/'),
+        )
+      ) {
         setExpandedSections((prev) => new Set([...prev, section.id]));
         break;
       }
@@ -150,37 +281,182 @@ export function Sidebar() {
     });
   }, []);
 
-  // Filter sections by search
+  // Toggle pin for a nav item
+  const togglePin = useCallback(
+    (href: string) => {
+      setPinned((prev) => {
+        let next: string[];
+        if (prev.includes(href)) {
+          next = prev.filter((h) => h !== href);
+        } else if (prev.length >= MAX_PINNED) {
+          return prev; // max reached — don't add
+        } else {
+          next = [...prev, href];
+        }
+        savePinned(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  // Toggle sidebar collapse
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      saveCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  // Build flat list of all valid nav items for pinned lookup
+  const allNavItems = useMemo(() => {
+    const items: NavItem[] = [];
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if (item.featureFlag) {
+          const flagKey = item.featureFlag as keyof typeof features;
+          if (!features[flagKey]) continue;
+        }
+        items.push(item);
+      }
+    }
+    return items;
+  }, [features]);
+
+  // Render pinned items (those that still exist in nav)
+  const pinnedItems = useMemo(() => {
+    return pinned
+      .map((href) => allNavItems.find((item) => item.href === href))
+      .filter(Boolean) as NavItem[];
+  }, [pinned, allNavItems]);
+
+  // Filter sections by feature flags and search
   const filteredSections = useMemo(() => {
-    if (!searchQuery.trim()) return navSections;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    const badgeMap: Record<string, number> = {
+      '/complaints': liveBadges.openComplaints,
+      '/notifications': liveBadges.unreadNotifications,
+      '/enquiries': liveBadges.pendingEnquiries,
+    };
     return navSections
-      .map((section) => ({
-        ...section,
-        items: section.items.filter(
-          (item) =>
-            item.label.toLowerCase().includes(q) ||
-            item.href.toLowerCase().includes(q),
-        ),
-      }))
+      .map((section) => {
+        const filteredItems = section.items.filter((item) => {
+          // Feature flag gate
+          if (item.featureFlag) {
+            const flagKey = item.featureFlag as keyof typeof features;
+            if (!features[flagKey]) return false;
+          }
+          // Search filter
+          if (q) {
+            return (
+              item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q)
+            );
+          }
+          return true;
+        }).map((item) => {
+          const count = badgeMap[item.href];
+          return count && count > 0 ? { ...item, badge: count } : item;
+        });
+        return { ...section, items: filteredItems };
+      })
       .filter((section) => section.items.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, features, liveBadges]);
 
   const handleLogout = () => {
     logout();
   };
 
+  // ── Render a single nav item ─────────────────────────
+  const renderNavItem = (item: NavItem, showPinButton = true) => {
+    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+    const isPinned = pinned.includes(item.href);
+
+    const linkContent = (
+      <>
+        {/* Active indicator bar */}
+        {isActive && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-[color:var(--color-brand-500)]" />
+        )}
+
+        <span
+          className={clsx(
+            'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
+            isActive
+              ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-xs)]'
+              : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)] group-hover:border-[color:var(--color-brand-200)] group-hover:bg-[color:var(--color-brand-50)] group-hover:text-[color:var(--color-brand-600)]',
+          )}
+        >
+          {item.icon}
+        </span>
+        {!collapsed && (
+          <>
+            <span className="truncate">{item.label}</span>
+            {item.badge != null && <BadgePill count={item.badge} />}
+          </>
+        )}
+      </>
+    );
+
+    return (
+      <div key={item.href} className="group relative flex items-center">
+        <Link
+          href={item.href}
+          title={collapsed ? item.label : undefined}
+          className={clsx(
+            'flex flex-1 items-center gap-2.5 rounded-lg border px-2.5 py-2 text-[13px] font-medium transition-all duration-[var(--transition-duration)]',
+            isActive
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-xs)]'
+              : 'border-transparent text-[color:var(--color-text-secondary)] hover:border-[color:var(--border-color)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] hover:shadow-[var(--shadow-xs)]',
+          )}
+        >
+          {linkContent}
+        </Link>
+
+        {/* Pin button — visible on hover when not collapsed */}
+        {!collapsed && showPinButton && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              togglePin(item.href);
+            }}
+            className={clsx(
+              'absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--transition-duration)] rounded p-0.5',
+              isPinned
+                ? 'text-[color:var(--color-warning-500)]'
+                : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-warning-500)]',
+            )}
+            title={isPinned ? 'Unpin' : 'Pin to top'}
+          >
+            <Star
+              className="h-3.5 w-3.5"
+              fill={isPinned ? 'currentColor' : 'none'}
+            />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   const sidebarContent = (
-    <nav className="flex h-full flex-col bg-[color:var(--color-surface-100)] border-r border-r-[color:var(--border-color)]">
+    <nav
+      className={clsx(
+        'flex h-full flex-col bg-[color:var(--color-surface-100)] border-r border-r-[color:var(--border-color)] transition-all duration-[var(--transition-duration-slow)]',
+        collapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]',
+      )}
+    >
       {/* Brand */}
       <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)] px-5 py-4">
         <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
             <span className="font-semibold text-white text-sm tracking-tight">A</span>
           </div>
-          <span className="font-semibold text-[color:var(--color-text-primary)] text-lg tracking-tight">
-            Apex PG
-          </span>
+          {!collapsed && (
+            <span className="font-semibold text-[color:var(--color-text-primary)] text-lg tracking-tight">
+              Apex PG
+            </span>
+          )}
         </Link>
         <button
           className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-1.5 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)] lg:hidden"
@@ -191,22 +467,47 @@ export function Sidebar() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-3 pb-1">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search pages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-[13px] font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:border-[color:var(--color-brand-300)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-brand-300)]"
-          />
+      {/* Search — hidden when collapsed */}
+      {!collapsed && (
+        <div className="px-3 pt-3 pb-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <input
+              type="text"
+              placeholder="Search pages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-[13px] font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:border-[color:var(--color-brand-300)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-brand-300)]"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Nav sections */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
+        {/* Pinned section */}
+        {!collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
+          <div>
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+                Pinned
+              </span>
+              <span className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+                {pinnedItems.length}/{MAX_PINNED}
+              </span>
+            </div>
+            <div className="space-y-0.5 mt-1">
+              {pinnedItems.map((item) => renderNavItem(item, true))}
+            </div>
+          </div>
+        )}
+
+        {collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
+          <div className="space-y-0.5">
+            {pinnedItems.map((item) => renderNavItem(item, false))}
+          </div>
+        )}
+
         {filteredSections.map((section) => {
           const isExpanded = expandedSections.has(section.id) || searchQuery.trim() !== '';
           const hasActiveChild = section.items.some(
@@ -215,8 +516,8 @@ export function Sidebar() {
 
           return (
             <div key={section.id}>
-              {/* Section header — only show when not searching */}
-              {!searchQuery.trim() && (
+              {/* Section header — hidden when collapsed or searching */}
+              {!collapsed && !searchQuery.trim() && (
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={clsx(
@@ -234,50 +535,28 @@ export function Sidebar() {
               )}
 
               {/* Section items */}
-              <AnimatePresence initial={false}>
-                {isExpanded && (
-                  <motion.div
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={collapse}
-                    className="space-y-0.5 mt-1"
-                  >
-                    {section.items.map((item) => {
-                      const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={clsx(
-                            'group relative flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-[13px] font-medium transition-all duration-[var(--transition-duration)]',
-                            isActive
-                              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-xs)]'
-                              : 'border-transparent text-[color:var(--color-text-secondary)] hover:border-[color:var(--border-color)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] hover:shadow-[var(--shadow-xs)]',
-                          )}
-                        >
-                          {/* Active indicator bar */}
-                          {isActive && (
-                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-[color:var(--color-brand-500)]" />
-                          )}
+              {!collapsed && (
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      variants={collapse}
+                      className="space-y-0.5 mt-1"
+                    >
+                      {section.items.map((item) => renderNavItem(item, true))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
 
-                          <span
-                            className={clsx(
-                              'flex h-6 w-6 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
-                              isActive
-                                ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-xs)]'
-                                : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)] group-hover:border-[color:var(--color-brand-200)] group-hover:bg-[color:var(--color-brand-50)] group-hover:text-[color:var(--color-brand-600)]',
-                            )}
-                          >
-                            {item.icon}
-                          </span>
-                          <span className="truncate">{item.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Collapsed: show items directly without sections */}
+              {collapsed && (
+                <div className="space-y-0.5">
+                  {section.items.map((item) => renderNavItem(item, false))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -294,6 +573,22 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-t-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)] px-3 py-3 space-y-1">
+        {/* Collapse toggle */}
+        <button
+          onClick={toggleCollapsed}
+          className="hidden lg:flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-[13px] font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-secondary)]"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </span>
+          {!collapsed && <span>Collapse</span>}
+        </button>
+
         {/* Settings */}
         <Link
           href="/settings"
@@ -303,33 +598,35 @@ export function Sidebar() {
               ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-xs)]'
               : 'border-transparent text-[color:var(--color-text-secondary)] hover:border-[color:var(--border-color)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] hover:shadow-[var(--shadow-xs)]',
           )}
+          title={collapsed ? 'Settings' : undefined}
         >
           <span
             className={clsx(
               'flex h-6 w-6 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
-              pathname === '/settings'
+              pathname === '/settings' || pathname.startsWith('/settings/')
                 ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-white'
                 : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]',
             )}
           >
             <Settings className="h-4 w-4" />
           </span>
-          <span>Settings</span>
+          {!collapsed && <span>Settings</span>}
         </Link>
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-[13px] font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-danger-200)] hover:bg-[color:var(--color-danger-50)] hover:text-[color:var(--color-danger-700)] hover:shadow-[var(--shadow-xs)]"
+          title={collapsed ? 'Logout' : undefined}
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
             <LogOut className="h-4 w-4" />
           </span>
-          <span>Logout</span>
+          {!collapsed && <span>Logout</span>}
         </button>
 
         {/* User info */}
-        {user && (
+        {user && !collapsed && (
           <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 mt-2">
             <p className="truncate text-[12px] font-semibold text-[color:var(--color-text-primary)]">
               {user.name}
@@ -355,7 +652,7 @@ export function Sidebar() {
       </button>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[var(--sidebar-width)] flex-shrink-0 lg:flex">
+      <aside className="sticky top-0 hidden h-screen flex-shrink-0 lg:flex">
         {sidebarContent}
       </aside>
 

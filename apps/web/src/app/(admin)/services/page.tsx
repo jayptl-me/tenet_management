@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { AmenityDefinition } from '@pg/types';
 
 // ── Dynamic icon resolution ──
@@ -277,6 +278,7 @@ export default function ServicesPage() {
         data={services}
         keyExtractor={(row: ServiceStatusRow) => row._id}
         isLoading={isLoading}
+        onRowClick={(row) => router.push(`/services/${row._id}`)}
         pagination={{
           page,
           perPage,
@@ -286,6 +288,76 @@ export default function ServicesPage() {
             setPerPage(pp);
             setPage(1);
           },
+        }}
+        emptyState={
+          <EmptyState
+            icon={<Wrench className="h-12 w-12" />}
+            title="No services yet"
+            description="Add your first service status to start monitoring"
+            action={{ label: 'Add Service', onClick: () => router.push('/services/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => {
+          const Icon = getIcon(row.serviceType);
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-[color:var(--color-text-muted)]" />
+                  <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                    {getLabel(row.serviceType)}
+                  </span>
+                </div>
+                <StatusBadge
+                  variant={statusVariant(row.status)}
+                  label={row.status.replace(/_/g, ' ')}
+                />
+              </div>
+              <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+                <span>{row.floor?.label ?? '—'}</span>
+                {row.lastUpdatedAt && (
+                  <span>
+                    {new Date(row.lastUpdatedAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                    })}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 pt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/services/${row._id}`);
+                  }}
+                  className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                  title="View"
+                >
+                  <Eye className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/services/${row._id}/edit`);
+                  }}
+                  className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                  title="Edit"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(row);
+                  }}
+                  className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          );
         }}
       />
 

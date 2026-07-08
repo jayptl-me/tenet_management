@@ -22,7 +22,7 @@ export function StatusBadge({ variant, label, className }: StatusBadgeProps) {
   return (
     <span
       className={clsx(
-        'font-display inline-flex items-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] px-2.5 py-0.5 text-xs font-semibold',
+        'font-display inline-flex items-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] px-2.5 py-0.5 text-xs font-semibold shadow-[var(--shadow-xs)]',
         variantStyles[variant],
         className,
       )}
@@ -45,27 +45,46 @@ export function statusToVariant(status: string | null | undefined): StatusVarian
     case 'present':
     case 'resolved':
     case 'available':
-    case 'open':
+    case 'operational':
     case 'published':
+    case 'converted':
+    case 'arrived':
       return 'success';
     case 'pending':
     case 'in_progress':
     case 'processing':
+    case 'partial':
     case 'partially_paid':
+    case 'degraded':
+    case 'new':
+    case 'contacted':
+    case 'expected':
+    case 'booked':
+    case 'in_use':
+    case 'under_maintenance':
+    case 'not_returned':
+    case 'on_leave':
       return 'warning';
+    case 'open':
     case 'overdue':
     case 'rejected':
     case 'cancelled':
     case 'absent':
+    case 'down':
     case 'blocked':
-    case 'maintenance':
     case 'closed':
+    case 'damaged':
+    case 'retired':
       return 'danger';
-    case 'occupied':
     case 'draft':
-    case 'on_leave':
     case 'sent':
+    case 'checked_out':
+    case 'maintenance':
       return 'info';
+    case 'dismissed':
+    case 'departed':
+    case 'inactive':
+      return 'neutral';
     default:
       return 'neutral';
   }

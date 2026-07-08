@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, ClipboardList } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -127,20 +130,56 @@ export default function MenusPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Daily Menus</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Plan daily meals for tenants</p>
-        </div>
-        <Button onClick={() => router.push('/menus/new')}>
-          <Plus className="h-4 w-4" /> Create Menu
-        </Button>
-      </div>
-      {error && <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">{error}</div>}
+      <PageHeader
+        title="Daily Menus"
+        description="Plan daily meals for tenants"
+        action={
+          <Button onClick={() => router.push('/menus/new')}>
+            <Plus className="h-4 w-4" /> Create Menu
+          </Button>
+        }
+      />
+      <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select options={[{ value: '', label: 'All Status' }, { value: 'true', label: 'Active' }, { value: 'false', label: 'Draft' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[160px]" />
       </div>
-      <DataTable columns={columns} data={menus} keyExtractor={(row: MenuRow) => row._id} isLoading={isLoading} onRowClick={(row) => router.push(`/menus/${row._id}`)} pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }} />
+      <DataTable
+        columns={columns}
+        data={menus}
+        keyExtractor={(row: MenuRow) => row._id}
+        isLoading={isLoading}
+        onRowClick={(row) => router.push(`/menus/${row._id}`)}
+        pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        emptyState={
+          <EmptyState
+            icon={<ClipboardList className="h-12 w-12" />}
+            title="No menus yet"
+            description="Create your first daily menu to get started"
+            action={{ label: 'Create Menu', onClick: () => router.push('/menus/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {new Date(row.date).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short' })}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.isActive ? 'active' : 'draft')}
+                label={row.isActive ? 'Active' : 'Draft'}
+              />
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+                <Eye className="h-3 w-3" /> View
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          </div>
+        )}
+      />
       <ConfirmModal open={!!deleteTarget} title="Delete Menu" message={`Are you sure you want to delete this menu? This action cannot be undone.`} loading={deleting} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
     </div>
   );

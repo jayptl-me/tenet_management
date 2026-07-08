@@ -138,6 +138,105 @@
   --glass-blur: blur(16px);
   --glass-blur-strong: blur(24px);
   --glass-border: rgba(0, 0, 0, 0.06);
+  /* Dark mode glass */
+  --glass-bg-dark: rgba(24, 24, 27, 0.5);
+  --glass-bg-strong-dark: rgba(24, 24, 27, 0.7);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+
+  /* ── Info color scale (NEW) ──────────────────────────── */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* ── Accent color scale (NEW) ──────────────────────────── */
+  --color-accent-50: #fdf4ff;
+  --color-accent-100: #fae8ff;
+  --color-accent-200: #f5d0fe;
+  --color-accent-300: #f0abfc;
+  --color-accent-400: #e879f9;
+  --color-accent-500: #d946ef;
+  --color-accent-600: #c026d3;
+  --color-accent-700: #a21caf;
+  --color-accent-800: #86198f;
+  --color-accent-900: #701a75;
+
+  /* ── Neutral color scale (NEW — true neutral for disabled/placeholder) ── */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  /* ── Elevation / Depth Scale ───────────────────────────── */
+  --elevation-flat: 0 0 0 0 transparent;
+  --elevation-raised: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --elevation-overlay: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --elevation-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --elevation-sticky: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* ── Depth Layer System (z-index + shadow mapping) ───── */
+  --depth-level-0: 0;    /* Page background, surface-50 + shadow-xs */
+  --depth-level-1: 10;   /* Cards, tables, stat cards — surface-100 + shadow-sm/card */
+  --depth-level-2: 50;   /* Dropdowns, popovers, tooltips — surface-100 + shadow-lg/dropdown */
+  --depth-level-3: 100;  /* Modals, drawers — surface-100 + shadow-modal */
+  --depth-level-4: 200;  /* Toasts, notifications — surface-800/900 + shadow-dropdown */
+
+  /* ── Interaction Speed Tokens (hierarchy by feel) ─────── */
+  --duration-press: 80ms;           /* Button press, active states, scale 0.98 */
+  --duration-hover: 120ms;          /* Tooltip reveal, overlay fade-in */
+  --duration-surface: 200ms;        /* Card depth shift, menu open, bg color transition */
+  --duration-page: 300ms;           /* Route change, modal enter/exit */
+
+  /* ── Refined Border Tokens (NEW — semantic naming) ────── */
+  --border-width-hairline: 0.5px;
+  --border-color-default: var(--color-surface-200);
+  --border-color-strong: var(--color-surface-300);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* ── Motion Duration Scale (NEW) ──────────────────────── */
+  --duration-instant: 50ms;
+  --duration-glacial: 700ms;
+
+  /* ── Motion Easing (NEW) ───────────────────────────────── */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ── Interaction Scale Tokens (NEW) ────────────────────── */
+  --scale-hover: 1.02;
+  --scale-press: 0.98;
+  --translate-hover: -2px;
+
+  /* ── Extended Typography Tokens (NEW) ──────────────────── */
+  --text-5xl: 3rem;
+  --text-2xs: 0.6875rem;
+  --text-body-lg: 1.0625rem;
+  --leading-tight: 1.2;
+  --leading-relaxed: 1.65;
+  --leading-loose: 1.8;
+
+  /* ── Semantic Spacing Tokens (NEW) ─────────────────────── */
+  --space-page-padding: var(--space-6);
+  --space-section-gap: var(--space-6);
+  --space-card-padding: var(--space-5);
+  --space-card-gap: var(--space-4);
+  --space-form-field-gap: var(--space-4);
+  --space-form-section-gap: var(--space-6);
+  --space-inline-gap: var(--space-2);
+  --space-stack-gap: var(--space-3);
 
   /* ── Cross-cutting tokens ──────────────────────────────── */
   /* Text roles — derived from surface scale */
@@ -192,6 +291,30 @@
   --tracking-wide: 0.02em;
   --tracking-wider: 0.05em;
   --tracking-widest: 0.1em;
+}
+
+/* ═════════════════════════════════════════════════════════
+   DARK MODE FALLBACK (universal — fills gaps when a theme
+   doesn't define every token in its dark block)
+   ═════════════════════════════════════════════════════════ */
+[data-mode='dark'] {
+  /* If a theme dark block doesn't define tooltip tokens, use these */
+  --tooltip-bg: var(--color-surface-800);
+  --tooltip-text: var(--color-surface-100);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* Dark-mode sensible glass defaults */
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-bg-strong: rgba(15, 23, 42, 0.8);
+  --glass-bg-dark: rgba(24, 24, 27, 0.5);
+  --glass-bg-strong-dark: rgba(24, 24, 27, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-dark: rgba(255, 255, 255, 0.08);
+
+  /* Border default for dark */
+  --border-color-default: rgba(255, 255, 255, 0.08);
+  --border-color-strong: rgba(255, 255, 255, 0.14);
 }
 
 /* ═════════════════════════════════════════════════════════
@@ -261,6 +384,39 @@
   --color-warning-700: var(--color-warning-700);
   --color-warning-800: var(--color-warning-800);
   --color-warning-900: var(--color-warning-900);
+
+  --color-info-50: var(--color-info-50);
+  --color-info-100: var(--color-info-100);
+  --color-info-200: var(--color-info-200);
+  --color-info-300: var(--color-info-300);
+  --color-info-400: var(--color-info-400);
+  --color-info-500: var(--color-info-500);
+  --color-info-600: var(--color-info-600);
+  --color-info-700: var(--color-info-700);
+  --color-info-800: var(--color-info-800);
+  --color-info-900: var(--color-info-900);
+
+  --color-accent-50: var(--color-accent-50);
+  --color-accent-100: var(--color-accent-100);
+  --color-accent-200: var(--color-accent-200);
+  --color-accent-300: var(--color-accent-300);
+  --color-accent-400: var(--color-accent-400);
+  --color-accent-500: var(--color-accent-500);
+  --color-accent-600: var(--color-accent-600);
+  --color-accent-700: var(--color-accent-700);
+  --color-accent-800: var(--color-accent-800);
+  --color-accent-900: var(--color-accent-900);
+
+  --color-neutral-50: var(--color-neutral-50);
+  --color-neutral-100: var(--color-neutral-100);
+  --color-neutral-200: var(--color-neutral-200);
+  --color-neutral-300: var(--color-neutral-300);
+  --color-neutral-400: var(--color-neutral-400);
+  --color-neutral-500: var(--color-neutral-500);
+  --color-neutral-600: var(--color-neutral-600);
+  --color-neutral-700: var(--color-neutral-700);
+  --color-neutral-800: var(--color-neutral-800);
+  --color-neutral-900: var(--color-neutral-900);
 
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);

@@ -13,10 +13,16 @@ import {
   Monitor,
   FileText,
   CheckCircle,
+  Pencil,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface AttendanceDetail {
   _id: string;
@@ -48,6 +54,48 @@ const methodLabels: Record<string, string> = {
   app: 'Mobile App',
 };
 
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function formatTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
 export default function AttendanceDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -69,238 +117,176 @@ export default function AttendanceDetailPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
-  if (error) {
+  // ── Error / Not Found State ──────────────────
+  if (error || !record) {
     return (
       <div className="space-y-4">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
+          <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="border-danger-500 bg-danger-100 rounded-lg border-[length:var(--bw-strong)] p-6 text-center">
-          <p className="font-display text-danger-800 text-lg font-semibold">{error}</p>
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Attendance record not found'}</p>
         </div>
       </div>
     );
   }
 
-  if (!record) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div className="border-danger-500 bg-danger-100 rounded-lg border-[length:var(--bw-strong)] p-6 text-center">
-          <p className="font-display text-danger-800 text-lg font-semibold">
-            Attendance record not found
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  const statusVariant = statusToVariant(record.status);
+  const tenantName = record.tenant?.user?.name ?? 'N/A';
+  const roomNumber = record.tenant?.room?.roomNumber ?? 'N/A';
   const methodIcon = record.method ? methodIcons[record.method] : <Monitor className="h-4 w-4" />;
   const methodLabel = record.method ? (methodLabels[record.method] ?? record.method) : 'Unknown';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-            Attendance Record
-          </h2>
-          <p className="text-surface-500 text-sm">View attendance details</p>
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-4xl space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">Attendance Record</h2>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              {tenantName} · Room {roomNumber}
+            </p>
+          </div>
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} />
+          <Button variant="outline" size="icon" onClick={() => router.push(`/attendance/${record._id}/edit`)} title="Edit record">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      </motion.div>
 
-      {/* Main card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Tenant & Room Info */}
-          <section className="space-y-4">
-            <h3 className="font-display text-surface-900 border-surface-200 border-b-2 pb-2 text-lg font-bold">
-              Tenant Information
-            </h3>
+      {/* ── Stats Grid ─────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Date"
+          value={formatDate(record.date)}
+          icon={<Calendar className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Status"
+          value={record.status.replace(/_/g, ' ')}
+          icon={<CheckCircle className="h-4 w-4" />}
+          variant={statusVariant === 'success' ? 'success' : statusVariant === 'warning' ? 'warning' : 'danger'}
+        />
+        <StatCard
+          title="Check-in"
+          value={formatTime(record.checkInTime)}
+          icon={<Clock className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Check-out"
+          value={formatTime(record.checkOutTime)}
+          icon={<Clock className="h-4 w-4" />}
+          variant="default"
+        />
+      </motion.div>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <User className="text-surface-400 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                    Tenant
-                  </p>
-                  <p className="text-surface-900 font-[family:var(--font-body)] text-base font-semibold">
-                    {record.tenant?.user?.name ?? 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="text-surface-400 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                    Room
-                  </p>
-                  <p className="text-surface-900 font-[family:var(--font-body)] text-base font-semibold">
-                    {record.tenant?.room?.roomNumber ?? 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Calendar className="text-surface-400 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                    Date
-                  </p>
-                  <p className="text-surface-900 font-[family:var(--font-body)] text-base font-semibold">
-                    {new Date(record.date).toLocaleDateString('en-IN', {
-                      weekday: 'long',
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </p>
-                </div>
-              </div>
+      {/* ── Info Cards ──────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />Tenant Information
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{tenantName}
+              </p>
             </div>
-          </section>
-
-          {/* Status & Times */}
-          <section className="space-y-4">
-            <h3 className="font-display text-surface-900 border-[color:var(--color-surface-200)] border-b-2 pb-2 text-lg font-bold">
-              Attendance Details
-            </h3>
-
-            <div className="space-y-3">
-              <div>
-                <p className="font-display text-surface-400 mb-1 text-xs uppercase tracking-wide">
-                  Status
-                </p>
-                <StatusBadge
-                  variant={statusToVariant(record.status)}
-                  label={record.status.replace(/_/g, ' ')}
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Clock className="text-surface-400 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                    Check-in Time
-                  </p>
-                  <p className="text-surface-900 font-[family:var(--font-body)] text-base font-semibold">
-                    {record.checkInTime
-                      ? new Date(record.checkInTime).toLocaleTimeString('en-IN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })
-                      : '—'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Clock className="text-surface-400 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                    Check-out Time
-                  </p>
-                  <p className="text-surface-900 font-[family:var(--font-body)] text-base font-semibold">
-                    {record.checkOutTime
-                      ? new Date(record.checkOutTime).toLocaleTimeString('en-IN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })
-                      : '—'}
-                  </p>
-                </div>
-              </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Room</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{roomNumber}
+              </p>
             </div>
-          </section>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Date</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDate(record.date)}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Method & Recorded By Section */}
-        <section className="border-surface-200 mt-6 border-t-2 pt-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="border-surface-200 bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] p-3">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <Clock className="h-5 w-5 text-[color:var(--color-brand-500)]" />Attendance Details
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
+              <div className="mt-1"><StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} /></div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Check-in Time</p>
+              <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{formatTime(record.checkInTime)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Check-out Time</p>
+              <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{formatTime(record.checkOutTime)}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Method & Recorded By ────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Recording Info</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
+            <div className="flex items-center gap-3">
               {methodIcon}
               <div>
-                <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                  Method
-                </p>
-                <p className="text-surface-900 font-[family:var(--font-body)] text-sm font-semibold">
-                  {methodLabel}
-                </p>
-              </div>
-            </div>
-
-            <div className="border-surface-200 bg-surface-50 flex items-center gap-3 rounded-md border-[length:var(--bw-default)] p-3">
-              <CheckCircle className="text-surface-400 h-5 w-5 shrink-0" />
-              <div>
-                <p className="font-display text-surface-400 text-xs uppercase tracking-wide">
-                  Recorded By
-                </p>
-                <p className="text-surface-900 font-[family:var(--font-body)] text-sm font-semibold">
-                  {record.recordedBy?.name ?? 'System'}
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Method</p>
+                <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{methodLabel}</p>
               </div>
             </div>
           </div>
-        </section>
-
-        {/* Notes Section */}
-        {record.notes && (
-          <section className="border-surface-200 mt-4 border-t-2 pt-4">
-            <div className="flex items-start gap-3">
-              <FileText className="text-surface-400 mt-0.5 h-5 w-5 shrink-0" />
+          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-[color:var(--color-text-muted)]" />
               <div>
-                <p className="font-display text-surface-400 mb-1 text-xs uppercase tracking-wide">
-                  Notes
-                </p>
-                <p className="text-surface-600 font-[family:var(--font-body)] text-sm leading-relaxed">
-                  {record.notes}
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Recorded By</p>
+                <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{record.recordedBy?.name ?? 'System'}</p>
               </div>
             </div>
-          </section>
-        )}
-      </div>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Metadata */}
-      <p className="text-surface-400 text-right text-xs">
-        Recorded{' '}
-        {new Date(record.createdAt).toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}{' '}
-        • Updated{' '}
-        {new Date(record.updatedAt).toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
+      {/* ── Notes ───────────────────────────────── */}
+      {record.notes && (
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-warning-800)]">
+            <FileText className="h-5 w-5" />Notes
+          </h3>
+          <p className="text-sm font-medium text-[color:var(--color-warning-900)]">{record.notes}</p>
+        </motion.div>
+      )}
+
+      {/* ── Meta ────────────────────────────────── */}
+      <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+        Recorded {formatDateTime(record.createdAt)} · Updated {formatDateTime(record.updatedAt)}
       </p>
-    </div>
+    </motion.div>
   );
 }

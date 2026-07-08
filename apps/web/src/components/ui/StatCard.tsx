@@ -15,10 +15,16 @@ export interface StatCardProps {
     direction: 'up' | 'down' | 'neutral';
     label?: string;
   };
+  delta?: {
+    value: string;
+    direction: 'up' | 'down' | 'neutral';
+    label: string;
+  };
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'brand';
   className?: string;
   onClick?: () => void;
   animate?: boolean;
+  children?: React.ReactNode;
 }
 
 // ── Style Maps ─────────────────────────────────────────
@@ -58,10 +64,12 @@ export function StatCard({
   value,
   icon,
   trend,
+  delta,
   variant = 'default',
   className,
   onClick,
   animate = true,
+  children,
 }: StatCardProps) {
   const isInteractive = !!onClick;
 
@@ -69,7 +77,8 @@ export function StatCard({
     <div
       className={clsx(
         'relative rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4 shadow-[var(--shadow-card)]',
-        'border-l-[3px]',
+        'border-l-[3px] transition-shadow duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+        'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-card-hover)]',
         accentBorders[variant],
         isInteractive && 'cursor-pointer',
         className,
@@ -118,6 +127,30 @@ export function StatCard({
           )}
         </div>
       )}
+
+      {/* Month-over-month delta (separate from trend) */}
+      {delta && (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span
+            className={clsx(
+              'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-bold',
+              trendStyles[delta.direction]?.base,
+            )}
+          >
+            {delta.direction === 'up' && '↑'}
+            {delta.direction === 'down' && '↓'}
+            {delta.value}
+          </span>
+          {delta.label && (
+            <span className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+              {delta.label}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Children slot (e.g., Sparkline, mini chart) */}
+      {children}
     </div>
   );
 

@@ -9,6 +9,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   month: z
@@ -58,11 +59,7 @@ export default function NewElectricityPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form
         onSubmit={handleSubmit(onSubmit)}

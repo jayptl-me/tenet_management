@@ -24,7 +24,7 @@ const createEnquirySchema = z.strictObject({
 });
 
 const updateStatusSchema = z.strictObject({
-  status: z.enum(['new', 'contacted', 'converted', 'closed']),
+  status: z.enum(['new', 'contacted', 'converted', 'lost']),
   notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional(),
 });
 
@@ -84,6 +84,17 @@ enquiries.get('/', authGuard, adminOnly, async (c) => {
       totalPages: Math.ceil(total / limit),
     },
   });
+});
+
+// ── GET /enquiries/:id ──────────────────────────────────
+enquiries.get('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid enquiry ID');
+
+  const enquiry = await Enquiry.findById(id).lean();
+  if (!enquiry) return notFound(c, 'Enquiry');
+
+  return c.json({ success: true, data: enquiry });
 });
 
 // ── PUT /enquiries/:id/status ───────────────────────────

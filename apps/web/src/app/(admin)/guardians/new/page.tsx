@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
@@ -66,11 +67,7 @@ export default function NewGuardianPage() {
         </div>
       </div>
 
-      {submitError && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {submitError}
-        </div>
-      )}
+      {submitError && <ErrorBanner message={submitError} />}
 
       <form
         onSubmit={handleSubmit(onSubmit)}

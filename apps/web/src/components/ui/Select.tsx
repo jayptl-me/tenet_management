@@ -54,10 +54,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={clsx(
-              'w-full appearance-none rounded-lg border bg-[color:var(--color-surface-50)] py-2 pl-3.5 pr-9 text-sm font-medium text-[color:var(--color-text-primary)]',
-              'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-              'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:border-[color:var(--color-brand-500)]',
-              'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
+            'w-full appearance-none rounded-lg border bg-[color:var(--color-surface-50)] py-2 pl-3.5 pr-9 text-sm font-medium text-[color:var(--color-text-primary)]',
+            'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+            'hover:bg-[color:var(--color-surface-100)]',
+            'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:bg-[color:var(--color-surface-50)] focus:border-[color:var(--color-brand-500)]',
+            'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
               error
                 ? 'border-[color:var(--color-danger-400)] focus:ring-[color:var(--color-danger-400)]'
                 : 'border-[color:var(--border-color)] hover:border-[color:var(--color-surface-300)]',

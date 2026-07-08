@@ -7,12 +7,13 @@ import {
   CreditCard,
   Receipt,
   AlertTriangle,
-  FileSpreadsheet,
   Check,
   Loader2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
 type ExportResource = 'tenants' | 'payments' | 'invoices' | 'complaints';
 
@@ -147,25 +148,12 @@ export default function ExportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="bg-brand-100 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
-            <FileSpreadsheet className="text-brand-600 h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="font-display text-surface-900 text-2xl font-extrabold">Data Export</h2>
-            <p className="text-surface-500 mt-0.5 text-sm">
-              Download system data as CSV files for reporting
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Data Export"
+        description="Download system data as CSV files for reporting"
+      />
 
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {exportOptions.map((option) => (

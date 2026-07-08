@@ -2,10 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Wifi, Calendar, Info, Building, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  Wifi,
+  Calendar,
+  Building,
+  User,
+  Pencil,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatCard } from '@/components/ui/StatCard';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { motion } from 'motion/react';
+import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface ServiceDetail {
   _id: string;
@@ -29,12 +41,18 @@ const serviceLabels: Record<string, string> = {
   geyser: 'Geyser',
 };
 
-function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-  switch (status) {
-    case 'operational': return 'success';
-    case 'degraded': return 'warning';
-    case 'down': return 'danger';
-    default: return 'neutral';
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
   }
 }
 
@@ -54,150 +72,165 @@ export default function ServiceDetailPage() {
     api
       .get(`services/${id}`)
       .json<{ success: boolean; data: ServiceDetail }>()
-      .then((res) => {
-        setService(res.data);
-      })
-      .catch(() => {
-        setError('Failed to load service details');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      .then((res) => setService(res.data))
+      .catch(() => setError('Failed to load service details'))
+      .finally(() => setIsLoading(false));
   }, [id]);
 
+  // ── Loading State ────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-[color:var(--color-brand-500)] h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
       </div>
     );
   }
 
+  // ── Error / Not Found State ──────────────────
   if (error || !service) {
     return (
       <div className="space-y-4">
         <Button variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error || 'Service not found'}
+        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
+          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
+          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Service not found'}</p>
         </div>
       </div>
     );
   }
 
+  const statusVariant = statusToVariant(service.status);
+  const label = serviceLabels[service.serviceType] ?? service.serviceType;
+  const floorLabel = service.floor?.label ?? 'N/A';
+  const openCount = service.openComplaintCount ?? 0;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-4xl space-y-6">
+
+      {/* ── Header ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" /> Back
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h2 className="font-display text-[color:var(--color-surface-900)] text-2xl font-extrabold">
-              {serviceLabels[service.serviceType] ?? service.serviceType}
-            </h2>
-            <p className="text-[color:var(--color-surface-500)] text-sm">ID: {service._id}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">{label}</h2>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              {floorLabel}{service.floor?.floorNumber != null ? ` (Floor #${service.floor.floorNumber})` : ''}
+            </p>
           </div>
         </div>
-        <StatusBadge
-          variant={statusVariant(service.status)}
-          label={service.status.replace(/_/g, ' ')}
+        <div className="flex items-center gap-2">
+          <StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} />
+          <Button variant="outline" size="icon" onClick={() => router.push(`/services/${service._id}/edit`)} title="Edit service">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* ── Stats Grid ─────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Floor"
+          value={floorLabel}
+          icon={<Building className="h-4 w-4" />}
+          variant="default"
         />
-      </div>
+        <StatCard
+          title="Status"
+          value={service.status.replace(/_/g, ' ')}
+          icon={<Wifi className="h-4 w-4" />}
+          variant={statusVariant === 'success' ? 'success' : statusVariant === 'warning' ? 'warning' : 'danger'}
+        />
+        <StatCard
+          title="Open Complaints"
+          value={openCount.toString()}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          variant={openCount > 0 ? 'danger' : 'success'}
+        />
+      </motion.div>
 
-      {/* Service Info Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-        <h3 className="font-display text-[color:var(--color-surface-900)] mb-4 text-lg font-bold">
-          <Wifi className="mr-1 inline h-4 w-4" />
-          Service Information
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-[color:var(--color-surface-500)] text-xs font-semibold uppercase tracking-wider">
-              Service Type
-            </p>
-            <p className="text-[color:var(--color-surface-900)] mt-1 text-sm font-semibold">
-              {serviceLabels[service.serviceType] ?? service.serviceType}
-            </p>
-          </div>
-          <div>
-            <p className="text-[color:var(--color-surface-500)] text-xs font-semibold uppercase tracking-wider">
-              Status
-            </p>
-            <p className="mt-1">
-              <StatusBadge
-                variant={statusVariant(service.status)}
-                label={service.status.replace(/_/g, ' ')}
-              />
-            </p>
-          </div>
-          <div>
-            <p className="text-[color:var(--color-surface-500)] text-xs font-semibold uppercase tracking-wider">
-              Floor
-            </p>
-            <p className="text-[color:var(--color-surface-700)] mt-1 flex items-center gap-1 text-sm">
-              <Building className="h-3.5 w-3.5" />
-              {service.floor?.label ?? 'N/A'}
-              {service.floor?.floorNumber != null && ` (#${service.floor.floorNumber})`}
-            </p>
-          </div>
-          <div>
-            <p className="text-[color:var(--color-surface-500)] text-xs font-semibold uppercase tracking-wider">
-              Last Updated
-            </p>
-            <p className="text-[color:var(--color-surface-700)] mt-1 flex items-center gap-1 text-sm">
-              <Calendar className="h-3.5 w-3.5" />
-              {service.lastUpdatedAt
-                ? new Date(service.lastUpdatedAt).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : '—'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Open Complaints Card */}
-      {service.openComplaintCount !== undefined && service.openComplaintCount > 0 && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-[color:var(--color-danger-800)] mb-2 text-lg font-bold">
-            {service.openComplaintCount} Open Complaint{service.openComplaintCount > 1 ? 's' : ''}
+      {/* ── Info Cards ──────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <Wifi className="h-5 w-5 text-[color:var(--color-brand-500)]" />Service Information
           </h3>
-          <p className="text-[color:var(--color-danger-600)] text-sm">
-            There {service.openComplaintCount === 1 ? 'is' : 'are'} currently {service.openComplaintCount} unresolved complaint{service.openComplaintCount > 1 ? 's' : ''} related to this service on this floor.
-          </p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Type</p>
+              <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{label}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
+              <div className="mt-1"><StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} /></div>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Floor</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{floorLabel}{service.floor?.floorNumber != null ? ` #${service.floor.floorNumber}` : ''}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Last Updated</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDateTime(service.lastUpdatedAt || service.updatedAt)}
+              </p>
+            </div>
+          </div>
         </div>
+
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
+            <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />Last Updated By
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
+              <p className="text-lg font-extrabold text-[color:var(--color-text-primary)]">{service.lastUpdatedBy?.name ?? 'System'}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Timestamp</p>
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDateTime(service.lastUpdatedAt || service.updatedAt)}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Open Complaints Warning ─────────────── */}
+      {openCount > 0 && (
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-danger-800)]">
+            <AlertTriangle className="h-5 w-5" />
+            {openCount} Open Complaint{openCount > 1 ? 's' : ''}
+          </h3>
+          <p className="text-[13px] font-semibold text-[color:var(--color-danger-600)]">
+            There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved complaint{openCount > 1 ? 's' : ''} related to this service on this floor.
+          </p>
+        </motion.div>
       )}
 
-      {/* Updated By Card */}
-      {service.lastUpdatedBy && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-[color:var(--color-surface-900)] mb-4 text-lg font-bold">
-            <User className="mr-1 inline h-4 w-4" />
-            Last Updated By
-          </h3>
-          <p className="text-[color:var(--color-surface-700)] text-sm">
-            {service.lastUpdatedBy.name ?? 'Unknown'}
-          </p>
-        </div>
-      )}
-
-      {/* Note Card */}
+      {/* ── Notes ───────────────────────────────── */}
       {service.note && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="font-display text-[color:var(--color-surface-900)] mb-4 text-lg font-bold">
-            <Info className="mr-1 inline h-4 w-4" />
-            Notes
-          </h3>
-          <p className="text-[color:var(--color-surface-700)] whitespace-pre-wrap text-sm">{service.note}</p>
-        </div>
+        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-6 shadow-[var(--shadow-card)]">
+          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-warning-800)]">Notes</h3>
+          <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-warning-900)]">{service.note}</p>
+        </motion.div>
       )}
-    </div>
+
+      {/* ── Actions ─────────────────────────────── */}
+      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Actions</h3>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="primary" onClick={() => router.push(`/services/${service._id}/edit`)}>
+            <Pencil className="h-4 w-4" /> Edit Service
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

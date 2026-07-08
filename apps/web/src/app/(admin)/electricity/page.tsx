@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 
 interface RoomEntry {
@@ -159,24 +162,18 @@ export default function ElectricityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-            Electricity Bills
-          </h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Track electricity usage and billing by month</p>
-        </div>
-        <Button onClick={() => router.push('/electricity/new')}>
-          <Plus className="h-4 w-4" />
-          Record Bill
-        </Button>
-      </div>
+      <PageHeader
+        title="Electricity Bills"
+        description="Track electricity usage and billing by month"
+        action={
+          <Button onClick={() => router.push('/electricity/new')}>
+            <Plus className="h-4 w-4" />
+            Record Bill
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="border-danger-500 bg-danger-100 text-danger-800 rounded-lg border-[length:var(--bw-strong)] p-4 text-sm font-semibold">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
@@ -200,6 +197,7 @@ export default function ElectricityPage() {
         data={bills}
         keyExtractor={(row: ElectricityBillRow) => row._id}
         isLoading={isLoading}
+        onRowClick={(row) => router.push(`/electricity/${row._id}`)}
         pagination={{
           page,
           perPage,
@@ -210,6 +208,63 @@ export default function ElectricityPage() {
             setPage(1);
           },
         }}
+        emptyState={
+          <EmptyState
+            icon={<Zap className="h-12 w-12" />}
+            title="No electricity bills yet"
+            description="Record your first electricity bill to get started"
+            action={{ label: 'Record Bill', onClick: () => router.push('/electricity/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                {row.month}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <span>₹{row.totalBillAmount.toLocaleString()}</span>
+              <span>{row.roomEntries?.length ?? 0} rooms</span>
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/electricity/${row._id}`);
+                }}
+                className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                title="View"
+              >
+                <Eye className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/electricity/${row._id}/edit`);
+                }}
+                className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                title="Edit"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteTarget(row);
+                }}
+                className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
       />
 
       <ConfirmModal
