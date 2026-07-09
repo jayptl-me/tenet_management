@@ -226,7 +226,7 @@ export function CommandPalette({ open, onClose, isDark, onToggleTheme, onLogout 
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 mx-4 w-full max-w-lg rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-modal)] overflow-hidden"
+            className="relative z-10 mx-4 w-full max-w-lg rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)] overflow-hidden"
           >
             {/* Search input */}
             <div className="flex items-center gap-3 border-b border-b-[color:var(--border-color)] px-4 py-3">

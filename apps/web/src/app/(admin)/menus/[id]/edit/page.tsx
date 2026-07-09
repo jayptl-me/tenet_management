@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
-
-interface MealSection {
-  mealType: 'breakfast' | 'lunch' | 'dinner';
-  items: { name: string; description?: string }[];
-}
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { surfaceNestedClass } from '@/lib/field-styles';
+import { clsx } from 'clsx';
 
 interface MenuFormState {
   date: string;
@@ -36,7 +36,9 @@ export default function EditMenuPage() {
 
   useEffect(() => {
     if (!id) return;
-    api.get(`menus/${id}`).json<{ success: boolean; data: MenuFormState }>()
+    api
+      .get(`menus/${id}`)
+      .json<{ success: boolean; data: MenuFormState }>()
       .then((res) => {
         const d = res.data;
         setForm({
@@ -49,16 +51,24 @@ export default function EditMenuPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => { setError('Failed to load menu'); setIsLoading(false); });
+      .catch(() => {
+        setError('Failed to load menu');
+        setIsLoading(false);
+      });
   }, [id]);
 
-  const updateMealItem = (mealKey: 'breakfast' | 'lunch' | 'dinner', itemIndex: number, field: 'name' | 'description', value: string) => {
+  const updateMealItem = (
+    mealKey: 'breakfast' | 'lunch' | 'dinner',
+    itemIndex: number,
+    field: 'name' | 'description',
+    value: string,
+  ) => {
     setForm((prev) => ({
       ...prev,
       meals: {
         ...prev.meals,
         [mealKey]: prev.meals[mealKey].map((item, i) =>
-          i === itemIndex ? { ...item, [field]: value } : item
+          i === itemIndex ? { ...item, [field]: value } : item,
         ),
       },
     }));
@@ -89,7 +99,7 @@ export default function EditMenuPage() {
     setError('');
 
     const hasEmpty = Object.values(form.meals).some((items) =>
-      items.some((item) => !item.name.trim())
+      items.some((item) => !item.name.trim()),
     );
     if (hasEmpty) {
       setError('All meal items must have a name or be removed.');
@@ -101,18 +111,24 @@ export default function EditMenuPage() {
       const payload = {
         date: form.date,
         meals: {
-          breakfast: form.meals.breakfast.filter((i) => i.name.trim()).map((i) => ({
-            name: i.name.trim(),
-            ...(i.description?.trim() ? { description: i.description.trim() } : {}),
-          })),
-          lunch: form.meals.lunch.filter((i) => i.name.trim()).map((i) => ({
-            name: i.name.trim(),
-            ...(i.description?.trim() ? { description: i.description.trim() } : {}),
-          })),
-          dinner: form.meals.dinner.filter((i) => i.name.trim()).map((i) => ({
-            name: i.name.trim(),
-            ...(i.description?.trim() ? { description: i.description.trim() } : {}),
-          })),
+          breakfast: form.meals.breakfast
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
+          lunch: form.meals.lunch
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
+          dinner: form.meals.dinner
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
         },
       };
 
@@ -125,71 +141,103 @@ export default function EditMenuPage() {
     }
   };
 
-  const mealSections: { key: 'breakfast' | 'lunch' | 'dinner'; label: string }[] = [
-    { key: 'breakfast', label: 'Breakfast' },
-    { key: 'lunch', label: 'Lunch' },
-    { key: 'dinner', label: 'Dinner' },
+  const mealSections: {
+    key: 'breakfast' | 'lunch' | 'dinner';
+    label: string;
+    description: string;
+  }[] = [
+    { key: 'breakfast', label: 'Breakfast', description: 'Morning meal items' },
+    { key: 'lunch', label: 'Lunch', description: 'Midday meal items' },
+    { key: 'dinner', label: 'Dinner', description: 'Evening meal items' },
   ];
 
-  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-
   return (
-    <div className="max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Daily Menu</h2>
-          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update menu meals and date</p>
-        </div>
-      </div>
-      {error && <ErrorBanner message={error} />}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <Input label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-        </section>
+    <FormPage
+      title="Edit Daily Menu"
+      description="Update menu meals and date"
+      backHref="/menus"
+      error={error}
+      isLoading={isLoading}
+      maxWidth="3xl"
+    >
+      <FormCard
+        onSubmit={handleSubmit}
+        footer={
+          <FormActions
+            loading={isSaving}
+            cancelHref="/menus"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
+      >
+        <FormSection title="Date" description="Day this menu applies to">
+          <FormGrid>
+            <Input
+              label="Date"
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              required
+            />
+          </FormGrid>
+        </FormSection>
 
-        {mealSections.map(({ key, label }) => (
-          <section key={key} className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-            <h3 className="font-display text-[color:var(--color-surface-900)] text-lg font-bold capitalize">{label}</h3>
-            <div className="space-y-2">
+        {mealSections.map(({ key, label, description }) => (
+          <FormSection
+            key={key}
+            title={label}
+            description={description}
+            divided
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={() => addMealItem(key)}>
+                <Plus className="h-4 w-4" /> Add item
+              </Button>
+            }
+          >
+            <div className="space-y-3">
+              {form.meals[key].length === 0 && (
+                <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-6 text-center text-sm text-[color:var(--color-text-secondary)]">
+                  No items yet. Add an item to begin.
+                </p>
+              )}
               {form.meals[key].map((item, itemIdx) => (
-                <div key={itemIdx} className="flex items-start gap-2">
-                  <div className="flex-1 space-y-1">
-                    <Input
-                      placeholder="Item name"
-                      value={item.name}
-                      onChange={(e) => updateMealItem(key, itemIdx, 'name', e.target.value)}
-                    />
-                    <Input
-                      placeholder="Description (optional)"
-                      value={item.description ?? ''}
-                      onChange={(e) => updateMealItem(key, itemIdx, 'description', e.target.value)}
-                    />
+                <div
+                  key={itemIdx}
+                  className={clsx(
+                    surfaceNestedClass,
+                    'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end',
+                  )}
+                >
+                  <Input
+                    label="Item name"
+                    placeholder="Item name"
+                    value={item.name}
+                    onChange={(e) => updateMealItem(key, itemIdx, 'name', e.target.value)}
+                  />
+                  <Input
+                    label="Description"
+                    placeholder="Description (optional)"
+                    value={item.description ?? ''}
+                    onChange={(e) => updateMealItem(key, itemIdx, 'description', e.target.value)}
+                  />
+                  <div className="flex justify-end sm:pb-0.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={`Remove ${label} item ${itemIdx + 1}`}
+                      onClick={() => removeMealItem(key, itemIdx)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeMealItem(key, itemIdx)}
-                    className="text-[color:var(--color-danger-500)] hover:bg-[color:var(--color-danger-50)] rounded-md p-2 mt-1 transition-colors"
-                    title="Remove item"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               ))}
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => addMealItem(key)}>
-              <Plus className="h-4 w-4" /> Add Item
-            </Button>
-          </section>
+          </FormSection>
         ))}
-
-        <div className="flex items-center gap-4">
-          <Button type="submit" loading={isSaving} size="lg">
-            <Save className="h-5 w-5" /> Save Changes
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => router.back()}>Cancel</Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

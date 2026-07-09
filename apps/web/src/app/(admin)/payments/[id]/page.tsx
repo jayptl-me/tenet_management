@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
-  ArrowLeft,
   CreditCard,
   User,
   Home,
@@ -13,8 +12,6 @@ import {
   CheckCircle,
   XCircle,
   MessageCircle,
-  Loader2,
-  AlertTriangle,
   History,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -22,13 +19,17 @@ import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { Timeline } from '@/components/ui/Timeline';
+import { FormPage } from '@/components/ui/FormPage';
+import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
-import { motion } from 'motion/react';
-import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 
 interface PaymentDetail {
   _id: string;
-  tenant?: { _id: string; user?: { name: string; phone?: string }; room?: { _id: string; roomNumber: string } };
+  tenant?: {
+    _id: string;
+    user?: { name: string; phone?: string };
+    room?: { _id: string; roomNumber: string };
+  };
   amount: number;
   method: string;
   type: string;
@@ -86,9 +87,12 @@ function formatType(type: string) {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function PaymentDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [payment, setPayment] = useState<PaymentDetail | null>(null);
@@ -114,324 +118,312 @@ export default function PaymentDetailPage() {
       });
   }, [id]);
 
-  // ── Loading State ────────────────────────────
-  if (isLoading) {
+  if (!isLoading && (error || !payment)) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
-      </div>
+      <FormPage
+        title="Payment Details"
+        description="View payment information"
+        backHref="/payments"
+        error={error || 'Payment not found'}
+        maxWidth="4xl"
+      />
     );
   }
 
-  // ── Error / Not Found State ──────────────────
-  if (error || !payment) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
-          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
-          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Payment not found'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const formattedDate = payment.paidAt || payment.createdAt;
-  const statusVariant = statusToVariant(payment.status);
+  const formattedDate = payment?.paidAt || payment?.createdAt;
+  const statusVariant = payment ? statusToVariant(payment.status) : 'neutral';
 
   return (
-    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6 pb-8">
-
-      {/* ── Header ─────────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
-              Payment Details
-            </h2>
-            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">Transaction ID: {payment._id}</p>
-          </div>
-        </div>
-        <StatusBadge
-          variant={statusVariant}
-          label={payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-        />
-      </motion.div>
-
-      {/* ── Amount Highlight ────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 text-center shadow-[var(--shadow-card)]">
-        <p className="mb-1 text-sm font-bold uppercase tracking-wide text-[color:var(--color-text-muted)]">Amount</p>
-        <p className="text-4xl font-bold text-[color:var(--color-text-primary)]">{formatCurrency(payment.amount)}</p>
-        {payment.type && (
-          <p className="mt-1 text-sm font-semibold capitalize text-[color:var(--color-text-secondary)]">
-            {formatType(payment.type)}
-          </p>
-        )}
-      </motion.div>
-
-      {/* ── Key Stats Grid ──────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Amount"
-          value={formatCurrency(payment.amount)}
-          icon={<CreditCard className="h-4 w-4" />}
-          variant={payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed' ? 'success' : 'default'}
-        />
-        <StatCard
-          title="Method"
-          value={formatMethod(payment.method)}
-          icon={<Receipt className="h-4 w-4" />}
-          variant="default"
-        />
-        <StatCard
-          title="Status"
-          value={payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-          icon={<CheckCircle className="h-4 w-4" />}
-          variant={payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed' ? 'success' : statusVariant === 'danger' ? 'danger' : 'warning'}
-        />
-      </motion.div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* ── Payment Information ──────────────── */}
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <CreditCard className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-            Payment Information
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Method</p>
-              <p className="mt-0.5 text-sm font-semibold capitalize text-[color:var(--color-text-primary)]">
-                {formatMethod(payment.method)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Category</p>
-              <p className="mt-0.5 text-sm font-semibold text-[color:var(--color-text-primary)]">
-                {formatType(payment.type)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
-              <div className="mt-1">
-                <StatusBadge variant={statusVariant} label={payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} />
-              </div>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Transaction Date</p>
-              <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-[color:var(--color-text-primary)]">
-                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                {formatDate(formattedDate)}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Tenant Information ────────────────── */}
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <User className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-            Tenant Information
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
-              <p className="mt-0.5 text-sm font-semibold text-[color:var(--color-text-primary)]">
-                {payment.tenant?.user?.name ?? 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Room</p>
-              <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-[color:var(--color-text-primary)]">
-                <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                {payment.tenant?.room?.roomNumber ?? 'N/A'}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Created</p>
-              <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-[color:var(--color-text-primary)]">
-                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                {formatDateTime(payment.createdAt)}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── Invoice Reference ───────────────────── */}
-      {(payment.invoiceId || payment.invoiceNumber) && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <Receipt className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-            Invoice Reference
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {payment.invoiceNumber && (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Invoice Number</p>
-                <p className="mt-0.5 text-sm font-semibold text-[color:var(--color-text-primary)]">{payment.invoiceNumber}</p>
-              </div>
-            )}
-            {payment.invoiceId && (
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Invoice ID</p>
-                <p className="mt-0.5 break-all font-mono text-xs text-[color:var(--color-text-secondary)]">{payment.invoiceId}</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Notes ──────────────────────────────── */}
-      {payment.notes && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <FileText className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-            Notes
-          </h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">{payment.notes}</p>
-        </motion.div>
-      )}
-
-      {/* ── Screenshot ─────────────────────────── */}
-      {payment.screenshotUrl && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <FileText className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-            Payment Screenshot
-          </h3>
-          <a
-            href={payment.screenshotUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block max-w-sm overflow-hidden rounded-xl border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
-          >
-            <img
-              src={payment.screenshotUrl}
-              alt="Payment Screenshot"
-              className="w-full object-cover"
-              onError={(e) => {
-                const target = e.currentTarget;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.classList.add('flex', 'items-center', 'justify-center', 'p-10');
-                  parent.innerHTML =
-                    '<span class="text-[color:var(--color-text-muted)] flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
-                }
-              }}
-            />
-          </a>
-        </motion.div>
-      )}
-
-      {/* ── Actions ────────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Actions</h3>
-        <div className="flex flex-wrap gap-3">
-          {payment.status === 'pending_verification' && (
-            <>
-              <Button
-                variant="primary"
-                disabled={actionLoading === 'approve'}
-                loading={actionLoading === 'approve'}
-                onClick={async () => {
-                  setActionLoading('approve');
-                  try {
-                    await api.post(`payments/${payment._id}/verify`, { json: { approved: true } }).json();
-                    window.location.reload();
-                  } catch {
-                    alert('Failed to verify payment');
-                  } finally {
-                    setActionLoading(null);
-                  }
-                }}
-              >
-                <CheckCircle className="h-4 w-4" />
-                Approve Payment
-              </Button>
-              <Button
-                variant="danger"
-                disabled={actionLoading === 'reject'}
-                loading={actionLoading === 'reject'}
-                onClick={async () => {
-                  setActionLoading('reject');
-                  try {
-                    await api.post(`payments/${payment._id}/verify`, { json: { approved: false } }).json();
-                    window.location.reload();
-                  } catch {
-                    alert('Failed to reject payment');
-                  } finally {
-                    setActionLoading(null);
-                  }
-                }}
-              >
-                <XCircle className="h-4 w-4" />
-                Reject Payment
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              const phone = payment.tenant?.user?.phone ?? '';
-              const text = `Payment of ${formatCurrency(payment.amount)} received. Status: ${payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}`;
-              const url = generateWhatsAppUrl(phone, text);
-              if (phone) window.open(url, '_blank', 'noopener,noreferrer');
-            }}
-            disabled={!payment.tenant?.user?.phone}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Share via WhatsApp
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* ── Recent Activity ────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-          <History className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-          Recent Activity
-        </h3>
-        {payment.createdAt ? (
-          <Timeline
-            events={[
-              {
-                id: `${payment._id}-created`,
-                date: payment.createdAt,
-                title: 'Payment Recorded',
-                description: `${formatCurrency(payment.amount)} via ${formatMethod(payment.method)}`,
-                status: 'info',
-              },
-              {
-                id: `${payment._id}-status`,
-                date: payment.paidAt ?? payment.createdAt,
-                title: `Status: ${payment.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}`,
-                description: payment.notes ?? undefined,
-                status: (payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed'
-                  ? 'success'
-                  : payment.status === 'rejected' || payment.status === 'cancelled'
-                    ? 'danger'
-                    : 'warning') as 'success' | 'warning' | 'danger',
-              },
-            ]}
+    <FormPage
+      title="Payment Details"
+      description={payment ? `Transaction ID: ${payment._id}` : undefined}
+      backHref="/payments"
+      isLoading={isLoading}
+      maxWidth="4xl"
+      badge={
+        payment ? (
+          <StatusBadge
+            variant={statusVariant}
+            label={formatStatusLabel(payment.status)}
           />
-        ) : (
-          <p className="text-center text-sm font-semibold text-[color:var(--color-text-muted)]">
-            No activity recorded yet.
-          </p>
-        )}
-      </motion.div>
+        ) : undefined
+      }
+    >
+      {payment && (
+        <div className="space-y-6">
+          <DetailCard title="Amount" icon={<CreditCard />}>
+            <div className="text-center">
+              <p className="text-4xl font-bold text-[color:var(--color-text-primary)]">
+                {formatCurrency(payment.amount)}
+              </p>
+              {payment.type && (
+                <p className="mt-1 text-sm font-semibold capitalize text-[color:var(--color-text-secondary)]">
+                  {formatType(payment.type)}
+                </p>
+              )}
+            </div>
+          </DetailCard>
 
-      {/* ── Footer Meta ────────────────────────── */}
-      <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
-        Last updated: {formatDateTime(payment.paidAt || payment.createdAt)}
-      </p>
-    </motion.div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard
+              title="Amount"
+              value={formatCurrency(payment.amount)}
+              icon={<CreditCard className="h-4 w-4" />}
+              variant={
+                payment.status === 'paid' ||
+                payment.status === 'approved' ||
+                payment.status === 'completed'
+                  ? 'success'
+                  : 'default'
+              }
+            />
+            <StatCard
+              title="Method"
+              value={formatMethod(payment.method)}
+              icon={<Receipt className="h-4 w-4" />}
+              variant="default"
+            />
+            <StatCard
+              title="Status"
+              value={formatStatusLabel(payment.status)}
+              icon={<CheckCircle className="h-4 w-4" />}
+              variant={
+                payment.status === 'paid' ||
+                payment.status === 'approved' ||
+                payment.status === 'completed'
+                  ? 'success'
+                  : statusVariant === 'danger'
+                    ? 'danger'
+                    : 'warning'
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DetailCard title="Payment Information" icon={<CreditCard />}>
+              <DetailList>
+                <DetailRow
+                  label="Method"
+                  value={
+                    <span className="capitalize">{formatMethod(payment.method)}</span>
+                  }
+                />
+                <DetailRow label="Category" value={formatType(payment.type)} />
+                <DetailRow
+                  label="Status"
+                  value={
+                    <StatusBadge
+                      variant={statusVariant}
+                      label={formatStatusLabel(payment.status)}
+                    />
+                  }
+                />
+                <DetailRow
+                  label="Transaction Date"
+                  value={
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {formatDate(formattedDate)}
+                    </span>
+                  }
+                />
+              </DetailList>
+            </DetailCard>
+
+            <DetailCard title="Tenant Information" icon={<User />}>
+              <DetailList>
+                <DetailRow
+                  label="Name"
+                  value={payment.tenant?.user?.name ?? 'N/A'}
+                />
+                <DetailRow
+                  label="Room"
+                  value={
+                    <span className="inline-flex items-center gap-1">
+                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {payment.tenant?.room?.roomNumber ?? 'N/A'}
+                    </span>
+                  }
+                />
+                <DetailRow
+                  label="Created"
+                  value={
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {formatDateTime(payment.createdAt)}
+                    </span>
+                  }
+                />
+              </DetailList>
+            </DetailCard>
+          </div>
+
+          {(payment.invoiceId || payment.invoiceNumber) && (
+            <DetailCard title="Invoice Reference" icon={<Receipt />}>
+              <DetailList>
+                {payment.invoiceNumber && (
+                  <DetailRow label="Invoice Number" value={payment.invoiceNumber} />
+                )}
+                {payment.invoiceId && (
+                  <DetailRow
+                    label="Invoice ID"
+                    value={
+                      <span className="break-all font-mono text-xs">
+                        {payment.invoiceId}
+                      </span>
+                    }
+                  />
+                )}
+              </DetailList>
+            </DetailCard>
+          )}
+
+          {payment.notes && (
+            <DetailCard title="Notes" icon={<FileText />}>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+                {payment.notes}
+              </p>
+            </DetailCard>
+          )}
+
+          {payment.screenshotUrl && (
+            <DetailCard title="Payment Screenshot" icon={<FileText />}>
+              <a
+                href={payment.screenshotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block max-w-sm overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
+              >
+                <img
+                  src={payment.screenshotUrl}
+                  alt="Payment Screenshot"
+                  className="w-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.classList.add(
+                        'flex',
+                        'items-center',
+                        'justify-center',
+                        'p-10',
+                      );
+                      parent.innerHTML =
+                        '<span class="text-[color:var(--color-text-muted)] flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
+                    }
+                  }}
+                />
+              </a>
+            </DetailCard>
+          )}
+
+          <DetailCard title="Actions" icon={<CheckCircle />}>
+            <div className="flex flex-wrap gap-3">
+              {payment.status === 'pending_verification' && (
+                <>
+                  <Button
+                    variant="primary"
+                    disabled={actionLoading === 'approve'}
+                    loading={actionLoading === 'approve'}
+                    onClick={async () => {
+                      setActionLoading('approve');
+                      try {
+                        await api
+                          .post(`payments/${payment._id}/verify`, {
+                            json: { approved: true },
+                          })
+                          .json();
+                        window.location.reload();
+                      } catch {
+                        alert('Failed to verify payment');
+                      } finally {
+                        setActionLoading(null);
+                      }
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Approve Payment
+                  </Button>
+                  <Button
+                    variant="danger"
+                    disabled={actionLoading === 'reject'}
+                    loading={actionLoading === 'reject'}
+                    onClick={async () => {
+                      setActionLoading('reject');
+                      try {
+                        await api
+                          .post(`payments/${payment._id}/verify`, {
+                            json: { approved: false },
+                          })
+                          .json();
+                        window.location.reload();
+                      } catch {
+                        alert('Failed to reject payment');
+                      } finally {
+                        setActionLoading(null);
+                      }
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Reject Payment
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const phone = payment.tenant?.user?.phone ?? '';
+                  const text = `Payment of ${formatCurrency(payment.amount)} received. Status: ${formatStatusLabel(payment.status)}`;
+                  const url = generateWhatsAppUrl(phone, text);
+                  if (phone) window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                disabled={!payment.tenant?.user?.phone}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Share via WhatsApp
+              </Button>
+            </div>
+          </DetailCard>
+
+          <DetailCard title="Recent Activity" icon={<History />}>
+            {payment.createdAt ? (
+              <Timeline
+                events={[
+                  {
+                    id: `${payment._id}-created`,
+                    date: payment.createdAt,
+                    title: 'Payment Recorded',
+                    description: `${formatCurrency(payment.amount)} via ${formatMethod(payment.method)}`,
+                    status: 'info',
+                  },
+                  {
+                    id: `${payment._id}-status`,
+                    date: payment.paidAt ?? payment.createdAt,
+                    title: `Status: ${formatStatusLabel(payment.status)}`,
+                    description: payment.notes ?? undefined,
+                    status: (payment.status === 'paid' ||
+                    payment.status === 'approved' ||
+                    payment.status === 'completed'
+                      ? 'success'
+                      : payment.status === 'rejected' || payment.status === 'cancelled'
+                        ? 'danger'
+                        : 'warning') as 'success' | 'warning' | 'danger',
+                  },
+                ]}
+              />
+            ) : (
+              <p className="text-center text-sm font-semibold text-[color:var(--color-text-muted)]">
+                No activity recorded yet.
+              </p>
+            )}
+          </DetailCard>
+
+          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+            Last updated: {formatDateTime(payment.paidAt || payment.createdAt)}
+          </p>
+        </div>
+      )}
+    </FormPage>
   );
 }

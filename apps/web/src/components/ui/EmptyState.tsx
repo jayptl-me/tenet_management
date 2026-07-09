@@ -33,7 +33,7 @@ export function EmptyState({
       initial="hidden"
       animate="visible"
       className={clsx(
-        'flex flex-col items-center justify-center rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-8 py-12 text-center shadow-[var(--shadow-card)]',
+        'flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-8 py-12 text-center shadow-[var(--shadow-card)]',
         className,
       )}
     >

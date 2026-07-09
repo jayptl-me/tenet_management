@@ -251,8 +251,8 @@ export function ServiceStatusIndicator({
             title={`${getLabel(s.serviceType)}: ${s.status}`}
           >
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${colors.dot}`} />
-            <Icon className="h-3 w-3 text-[color:var(--color-surface-600)]" />
-            <span className="hidden sm:inline text-[color:var(--color-surface-700)]">
+            <Icon className="h-3 w-3 text-[color:var(--color-text-secondary)]" />
+            <span className="hidden text-[color:var(--color-text-secondary)] sm:inline">
               {getLabel(s.serviceType)}
             </span>
           </div>

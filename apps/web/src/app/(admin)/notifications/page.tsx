@@ -26,6 +26,7 @@ import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { toast } from 'sonner';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 import type { INotification, INotificationType } from '@pg/types';
@@ -158,23 +159,19 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-5xl space-y-6">
-      <div>
-        <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-          Notifications
-        </h2>
-        <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-          Broadcast announcements and manage notification history
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        title="Notifications"
+        description="Broadcast announcements and manage notification history"
+      />
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] p-1 shadow-[var(--shadow-button)]">
+      <div className="mb-6 flex gap-1 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-1 shadow-[var(--shadow-xs)]">
         <button
           onClick={() => setActiveTab('compose')}
           className={`font-[family:var(--font-display)] flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'compose'
-              ? 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
+              ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
           }`}
         >
@@ -185,7 +182,7 @@ export default function NotificationsPage() {
           onClick={() => setActiveTab('history')}
           className={`font-[family:var(--font-display)] flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'history'
-              ? 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
+              ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
           }`}
         >
@@ -196,7 +193,7 @@ export default function NotificationsPage() {
 
       {/* Compose Tab */}
       {activeTab === 'compose' && (
-        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
           <div className="grid gap-5">
             {/* Target Type */}
             <div>
@@ -212,7 +209,7 @@ export default function NotificationsPage() {
                     className={`flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all duration-[var(--transition-duration)] active:scale-[var(--active-press-scale)] ${
                       form.targetType === key
                         ? 'bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-button)]'
-                        : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-50)]'
+                        : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
                     }`}
                   >
                     {targetIcons[key]}
@@ -260,8 +257,8 @@ export default function NotificationsPage() {
                     onClick={() => setForm({ ...form, type: opt.value })}
                     className={`flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all duration-[var(--transition-duration)] active:scale-[var(--active-press-scale)] ${
                       form.type === opt.value
-                        ? 'bg-[color:var(--color-surface-900)] text-white shadow-[var(--shadow-button)]'
-                        : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-50)]'
+                        ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)] shadow-[var(--shadow-button)]'
+                        : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
                     }`}
                   >
                     {typeIconsMap[opt.value]}
@@ -361,7 +358,7 @@ export default function NotificationsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div className="rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)]">
+        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]">
           {/* Filters */}
           <div className="flex items-center gap-3 border-b-[length:var(--bw-strong)] border-b-[color:var(--color-surface-200)] p-4">
             <Filter className="h-4 w-4 text-[color:var(--color-text-muted)]" />

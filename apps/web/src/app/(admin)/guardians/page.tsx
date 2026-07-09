@@ -82,7 +82,7 @@ export default function GuardiansPage() {
   const columns: DataTableColumn<GuardianRow>[] = [
     {
       header: 'Name',
-      accessor: (row) => <span className="text-surface-900 font-semibold">{row.name}</span>,
+      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.name}</span>,
     },
     {
       header: 'Phone',
@@ -123,7 +123,7 @@ export default function GuardiansPage() {
               e.stopPropagation();
               router.push(`/guardians/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -133,7 +133,7 @@ export default function GuardiansPage() {
               e.stopPropagation();
               router.push(`/guardians/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -143,7 +143,7 @@ export default function GuardiansPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -219,7 +219,7 @@ export default function GuardiansPage() {
               <span>{row.tenant?.user?.name ?? 'N/A'}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/guardians/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/guardians/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
                 <Eye className="h-3 w-3" /> View
               </button>
               <button onClick={(e) => { e.stopPropagation(); router.push(`/guardians/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">

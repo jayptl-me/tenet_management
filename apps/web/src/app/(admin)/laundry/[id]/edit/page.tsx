@@ -5,12 +5,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 
 const schema = z.object({
   slotDate: z.string().min(1, 'Date is required'),
@@ -35,13 +37,20 @@ export default function EditLaundrySlotPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   useEffect(() => {
     if (!id) return;
-    api.get(`laundry-slots/${id}`).json<{ success: boolean; data: FormData & { _id: string } }>()
+    api
+      .get(`laundry-slots/${id}`)
+      .json<{ success: boolean; data: FormData & { _id: string } }>()
       .then((res) => {
         const d = res.data;
         reset({
@@ -53,7 +62,10 @@ export default function EditLaundrySlotPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => { setSubmitError('Failed to load laundry slot'); setIsLoading(false); });
+      .catch(() => {
+        setSubmitError('Failed to load laundry slot');
+        setIsLoading(false);
+      });
   }, [id, reset]);
 
   const onSubmit = async (data: FormData) => {
@@ -66,40 +78,71 @@ export default function EditLaundrySlotPage() {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <div>
-          <h2 className="font-display text-[color:var(--color-surface-900)] text-2xl font-extrabold">Edit Laundry Slot</h2>
-          <p className="text-[color:var(--color-surface-500)] mt-0.5 text-sm">Update laundry slot details</p>
-        </div>
-      </div>
+    <FormPage
+      title="Edit Laundry Slot"
+      description="Update booking time, item count, and status"
+      backHref="/laundry"
+      error={submitError}
+      isLoading={isLoading}
+    >
+      <FormCard
+        onSubmit={handleSubmit(onSubmit)}
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/laundry"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
+      >
+        <FormSection
+          title="Slot details"
+          description="When the laundry slot is booked and how many items"
+        >
+          <FormGrid>
+            <Input
+              label="Slot date"
+              type="date"
+              error={errors.slotDate?.message}
+              {...register('slotDate')}
+            />
+            <Input
+              label="Slot time"
+              type="time"
+              error={errors.slotTime?.message}
+              {...register('slotTime')}
+            />
+            <Input
+              label="Items"
+              type="number"
+              error={errors.items?.message}
+              {...register('items')}
+            />
+            <Select
+              label="Status"
+              options={STATUS_OPTIONS}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+          </FormGrid>
+        </FormSection>
 
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Slot Date" type="date" error={errors.slotDate?.message} {...register('slotDate')} />
-            <Input label="Slot Time" type="time" error={errors.slotTime?.message} {...register('slotTime')} />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Items" type="number" error={errors.items?.message} {...register('items')} />
-            <Select label="Status" options={STATUS_OPTIONS} error={errors.status?.message} {...register('status')} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[color:var(--color-surface-800)] font-display text-sm font-semibold">Notes</label>
-            <textarea rows={3} className="font-[family:var(--font-body)] focus:ring-[length:var(--bw-strong)] focus:ring-[color:var(--color-brand-500)] w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base text-[color:var(--color-surface-900)] focus:outline-none focus:ring-offset-2" placeholder="Optional notes..." {...register('notes')} />
-          </div>
-        </div>
-        <div className="border-t-[length:var(--bw-default)] border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
-        </div>
-      </form>
-    </div>
+        <FormSection title="Notes" description="Optional remarks for this booking" divided>
+          <FormGrid cols={1}>
+            <FormFullWidth>
+              <Textarea
+                label="Notes"
+                rows={3}
+                placeholder="Optional notes..."
+                error={errors.notes?.message}
+                {...register('notes')}
+              />
+            </FormFullWidth>
+          </FormGrid>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

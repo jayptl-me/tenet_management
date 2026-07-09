@@ -75,10 +75,17 @@
 | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | [apps/web/src/app/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/)               | Next.js App Router layout, page definitions, and routing         |
 | [apps/web/src/components/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/) | Reusable Radix UI & styled Tailwind React components             |
+| [apps/web/src/components/ui/FormPage.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormPage.tsx) | Shared shell for create/edit admin pages (header, loading, error) |
+| [apps/web/src/components/ui/FormCard.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormCard.tsx) | Elevated form surface with optional footer actions |
+| [apps/web/src/components/ui/FormSection.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormSection.tsx) | Multi-block form sections + FormGrid |
+| [apps/web/src/components/ui/FormActions.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormActions.tsx) | Standard Cancel/Save form footer |
+| [apps/web/src/components/ui/Surface.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/Surface.tsx) | Token-driven elevated surfaces (card/nested/glass) |
+| [apps/web/src/components/ui/Checkbox.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/Checkbox.tsx) | Token-driven labeled checkbox control |
+| [apps/web/src/lib/field-styles.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/lib/field-styles.ts) | Shared field/control class fragments (theme-agnostic) |
 | [apps/web/src/hooks/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/hooks/)           | Custom React hooks for global queries and mutations              |
 | [apps/web/src/lib/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/lib/)               | Ky HTTP client instances and API endpoint configurations         |
 | [apps/web/src/store/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/store/)           | Zustand state stores (authentication, configurations, UI states) |
-| [apps/web/src/themes/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/themes/)         | Next-themes provider and light/dark mode setup                   |
+| [apps/web/src/themes/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/themes/)         | Multi-preset design systems (saas, brutalist, neumorphic, soft-ui) + light/dark tokens |
 
 ### packages/types (Shared Typings Workspace)
 

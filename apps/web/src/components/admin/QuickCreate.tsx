@@ -100,7 +100,7 @@ export function QuickCreate() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed bottom-24 right-6 z-50 w-80 rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-modal)] overflow-hidden"
+              className="fixed bottom-24 right-6 z-50 w-80 rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)] overflow-hidden"
             >
               {/* Search bar */}
               <div className="flex items-center gap-2 border-b border-[color:var(--border-color)] px-4 py-3">

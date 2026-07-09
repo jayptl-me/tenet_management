@@ -61,13 +61,13 @@ export function FunnelChart({
                 className="transition-all duration-700 ease-out"
                 style={{ transitionDelay: `${i * 100}ms` }}
               />
-              {/* Value label inside bar (right-aligned, white text on colored bars) */}
+              {/* Value label inside bar */}
               <text
                 x={x + width - 12}
                 y={y + barHeight / 2}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fill="var(--color-text-inverted, #fff)"
+                fill="var(--chart-on-fill)"
                 fontSize={11}
                 fontFamily="var(--font-mono)"
                 fontWeight={700}

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft,
   FileDown,
   MessageCircle,
   CreditCard,
@@ -12,8 +11,8 @@ import {
   Calendar,
   User,
   Building,
-  Loader2,
-  AlertTriangle,
+  Pencil,
+  FileText,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -22,8 +21,8 @@ import { DonutChart } from '@/components/ui/DonutChart';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { Timeline } from '@/components/ui/Timeline';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
-import { motion } from 'motion/react';
-import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
+import { FormPage } from '@/components/ui/FormPage';
+import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
@@ -135,306 +134,351 @@ export default function InvoiceDetailPage() {
     fetchInvoice();
   }, [params.id]);
 
-  // ── Loading State ────────────────────────────
-  if (isLoading) {
+  if (!isLoading && (error || !invoice)) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
-      </div>
+      <FormPage
+        title="Invoice Details"
+        description="View invoice information"
+        backHref="/invoices"
+        error={error || 'Invoice not found'}
+        maxWidth="4xl"
+      />
     );
   }
 
-  // ── Error / Not Found State ──────────────────
-  if (error || !invoice) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
-          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
-          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Invoice not found'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const tenantName = invoice.tenantId?.userId?.name ?? 'N/A';
-  const roomNumber = invoice.tenantId?.roomId?.roomNumber ?? 'N/A';
-  const floorName = invoice.tenantId?.roomId?.floor?.name ?? 'N/A';
-  const tenantPhone = invoice.tenantId?.userId?.phone;
-  const statusLabel = invoice.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-  const statusVariant = statusToVariant(invoice.status);
+  const tenantName = invoice?.tenantId?.userId?.name ?? 'N/A';
+  const roomNumber = invoice?.tenantId?.roomId?.roomNumber ?? 'N/A';
+  const floorName = invoice?.tenantId?.roomId?.floor?.name ?? 'N/A';
+  const tenantPhone = invoice?.tenantId?.userId?.phone;
+  const statusLabel = invoice
+    ? invoice.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : '';
+  const statusVariant = invoice ? statusToVariant(invoice.status) : 'neutral';
 
   return (
-    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-5xl space-y-6">
-
-      {/* ── Header ─────────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
+    <FormPage
+      title={invoice?.invoiceNumber ?? 'Invoice Details'}
+      description={
+        invoice
+          ? `${formatMonth(invoice.month)} · Created ${formatDate(invoice.createdAt)}`
+          : 'View invoice information'
+      }
+      backHref="/invoices"
+      isLoading={isLoading}
+      maxWidth="4xl"
+      badge={
+        invoice ? (
+          <StatusBadge variant={statusVariant} label={statusLabel} />
+        ) : undefined
+      }
+      actions={
+        invoice ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
           </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
-              {invoice.invoiceNumber}
-            </h2>
-            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
-              {formatMonth(invoice.month)} · Created {formatDate(invoice.createdAt)}
-            </p>
-          </div>
-        </div>
-        <StatusBadge variant={statusVariant} label={statusLabel} />
-      </motion.div>
-
-      {/* ── Summary Stats Grid ─────────────────── */}
-      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Amount" value={formatCurrency(invoice.totalAmount)} icon={<ReceiptText className="h-4 w-4" />} variant="default" />
-        <StatCard title="Paid" value={formatCurrency(invoice.paidAmount)} icon={<CreditCard className="h-4 w-4" />} variant="success" />
-        <StatCard title="Balance" value={formatCurrency(invoice.balance)} icon={<IndianRupee className="h-4 w-4" />} variant={invoice.balance > 0 ? 'danger' : 'success'} />
-        <StatCard title="Due Date" value={formatDate(invoice.dueDate)} icon={<Calendar className="h-4 w-4" />} variant="default" />
-      </motion.div>
-
-      {/* ── Payment Progress (DonutChart) ───────── */}
-      {invoice.totalAmount > 0 && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <CreditCard className="h-5 w-5 text-[color:var(--color-success-500)]" />
-            Payment Progress
-          </h3>
-          <div className="flex flex-col items-center sm:flex-row sm:items-start sm:gap-8">
-            <DonutChart
-              segments={[
-                { value: invoice.paidAmount, color: 'var(--color-success-400)', label: 'Paid' },
-                { value: invoice.balance, color: 'var(--color-danger-400)', label: 'Balance' },
-              ]}
-              centerLabel={`${Math.round((invoice.paidAmount / invoice.totalAmount) * 100)}%`}
-              sublabel="Paid"
-              size={160}
-              thickness={28}
+        ) : undefined
+      }
+    >
+      {invoice && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Amount"
+              value={formatCurrency(invoice.totalAmount)}
+              icon={<ReceiptText className="h-4 w-4" />}
+              variant="default"
             />
-            <div className="mt-4 sm:mt-0 sm:self-center">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-success-400)]" />
-                  <span className="font-semibold text-[color:var(--color-text-primary)]">
-                    Paid: {formatCurrency(invoice.paidAmount)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-danger-400)]" />
-                  <span className="font-semibold text-[color:var(--color-text-primary)]">
-                    Balance: {formatCurrency(invoice.balance)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-[color:var(--color-surface-300)]" />
-                  <span className="font-semibold text-[color:var(--color-text-primary)]">
-                    Total: {formatCurrency(invoice.totalAmount)}
-                  </span>
+            <StatCard
+              title="Paid"
+              value={formatCurrency(invoice.paidAmount)}
+              icon={<CreditCard className="h-4 w-4" />}
+              variant="success"
+            />
+            <StatCard
+              title="Balance"
+              value={formatCurrency(invoice.balance)}
+              icon={<IndianRupee className="h-4 w-4" />}
+              variant={invoice.balance > 0 ? 'danger' : 'success'}
+            />
+            <StatCard
+              title="Due Date"
+              value={formatDate(invoice.dueDate)}
+              icon={<Calendar className="h-4 w-4" />}
+              variant="default"
+            />
+          </div>
+
+          {invoice.totalAmount > 0 && (
+            <DetailCard title="Payment Progress" icon={<CreditCard />}>
+              <div className="flex flex-col items-center sm:flex-row sm:items-start sm:gap-8">
+                <DonutChart
+                  segments={[
+                    {
+                      value: invoice.paidAmount,
+                      color: 'var(--color-success-400)',
+                      label: 'Paid',
+                    },
+                    {
+                      value: invoice.balance,
+                      color: 'var(--color-danger-400)',
+                      label: 'Balance',
+                    },
+                  ]}
+                  centerLabel={`${Math.round((invoice.paidAmount / invoice.totalAmount) * 100)}%`}
+                  sublabel="Paid"
+                  size={160}
+                  thickness={28}
+                />
+                <div className="mt-4 sm:mt-0 sm:self-center">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-[color:var(--color-success-400)]" />
+                      <span className="font-semibold text-[color:var(--color-text-primary)]">
+                        Paid: {formatCurrency(invoice.paidAmount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-[color:var(--color-danger-400)]" />
+                      <span className="font-semibold text-[color:var(--color-text-primary)]">
+                        Balance: {formatCurrency(invoice.balance)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-[color:var(--color-surface-300)]" />
+                      <span className="font-semibold text-[color:var(--color-text-primary)]">
+                        Total: {formatCurrency(invoice.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </DetailCard>
+          )}
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="space-y-6 lg:col-span-3">
+              <DetailCard title="Breakdown" icon={<IndianRupee />}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand-600)]">
+                      Rent
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-[color:var(--color-brand-900)]">
+                      {formatCurrency(invoice.rentAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-warning-600)]">
+                      Electricity
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-[color:var(--color-warning-900)]">
+                      {formatCurrency(invoice.electricityAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      Other
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-[color:var(--color-text-primary)]">
+                      {formatCurrency(invoice.otherCharges)}
+                    </p>
+                  </div>
+                </div>
+              </DetailCard>
+
+              {invoice.lineItems && invoice.lineItems.length > 0 && (
+                <DetailCard title="Line Items" icon={<ReceiptText />}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-[color:var(--border-color)]">
+                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                            Description
+                          </th>
+                          <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                            Amount
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[color:var(--border-color)]">
+                        {invoice.lineItems.map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="py-3 font-semibold text-[color:var(--color-text-primary)]">
+                              {item.description}
+                            </td>
+                            <td className="py-3 text-right font-bold text-[color:var(--color-text-primary)]">
+                              {formatCurrency(item.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-[color:var(--border-color)]">
+                          <td className="pt-3 text-right text-base font-bold uppercase text-[color:var(--color-text-primary)]">
+                            Total
+                          </td>
+                          <td className="pt-3 text-right text-base font-bold text-[color:var(--color-text-primary)]">
+                            {formatCurrency(invoice.totalAmount)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </DetailCard>
+              )}
+
+              {invoice.payments && invoice.payments.length > 0 && (
+                <DetailCard title="Payment History" icon={<CreditCard />}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-[color:var(--border-color)]">
+                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                            Amount
+                          </th>
+                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                            Method
+                          </th>
+                          <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">
+                            UTR
+                          </th>
+                          <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">
+                            Date
+                          </th>
+                          <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[color:var(--border-color)]">
+                        {invoice.payments.map((p) => (
+                          <tr key={p._id}>
+                            <td className="py-3 font-bold text-[color:var(--color-text-primary)]">
+                              {formatCurrency(p.amount)}
+                            </td>
+                            <td className="py-3 capitalize text-[color:var(--color-text-secondary)]">
+                              {p.method.replace('_', ' ')}
+                            </td>
+                            <td className="hidden py-3 font-mono text-xs text-[color:var(--color-text-secondary)] sm:table-cell">
+                              {p.utrNumber ?? '—'}
+                            </td>
+                            <td className="hidden py-3 text-[color:var(--color-text-secondary)] sm:table-cell">
+                              {formatDate(p.paidAt)}
+                            </td>
+                            <td className="py-3 text-right">
+                              <StatusBadge
+                                variant={statusToVariant(p.status)}
+                                label={p.status.replace('_', ' ')}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </DetailCard>
+              )}
+
+              {invoice.payments && invoice.payments.length > 0 && (
+                <DetailCard title="Payment Timeline" icon={<CreditCard />}>
+                  <Timeline
+                    events={invoice.payments.map((p) => ({
+                      id: p._id,
+                      date: p.paidAt ?? invoice.createdAt,
+                      title: `${formatCurrency(p.amount)} via ${p.method.replace(/_/g, ' ')}`,
+                      description: p.utrNumber ? `UTR: ${p.utrNumber}` : undefined,
+                      status: (p.status === 'paid' ? 'success' : 'warning') as
+                        | 'success'
+                        | 'warning',
+                    }))}
+                  />
+                </DetailCard>
+              )}
+
+              {invoice.notes && (
+                <DetailCard title="Notes" icon={<FileText />} variant="warning">
+                  <p className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                    {invoice.notes}
+                  </p>
+                </DetailCard>
+              )}
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <DetailCard title="Tenant" icon={<User />}>
+                <DetailList>
+                  <DetailRow label="Name" value={tenantName} />
+                  <DetailRow
+                    label="Room"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <Building className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+                        {roomNumber}
+                      </span>
+                    }
+                  />
+                  <DetailRow label="Floor" value={floorName} />
+                </DetailList>
+              </DetailCard>
+
+              <DetailCard title="Actions" icon={<FileDown />}>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      window.open(
+                        `${API_BASE_URL}/invoices/${invoice._id}/pdf`,
+                        '_blank',
+                      )
+                    }
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                  {tenantPhone && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const text = [
+                          `Invoice ${invoice.invoiceNumber}`,
+                          `Amount: ${formatCurrency(invoice.totalAmount)}`,
+                          `Balance: ${formatCurrency(invoice.balance)}`,
+                          `Download: ${API_BASE_URL}/invoices/${invoice._id}/pdf`,
+                        ].join('\n');
+                        window.open(
+                          generateWhatsAppUrl(tenantPhone, text),
+                          '_blank',
+                          'noopener,noreferrer',
+                        );
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Share via WhatsApp
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
+                  >
+                    Edit Invoice
+                  </Button>
+                </div>
+              </DetailCard>
             </div>
           </div>
-        </motion.div>
-      )}
 
-      {/* ── Details Grid ────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        {/* Left: Breakdown & Line Items */}
-        <div className="space-y-6 lg:col-span-3">
-          {/* Rent Breakdown */}
-          <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-              <IndianRupee className="h-5 w-5 text-[color:var(--color-brand-500)]" />
-              Breakdown
-            </h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4 shadow-[var(--shadow-sm)]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand-600)]">Rent</p>
-                <p className="mt-1 text-xl font-bold text-[color:var(--color-brand-900)]">{formatCurrency(invoice.rentAmount)}</p>
-              </div>
-              <div className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-4 shadow-[var(--shadow-sm)]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-warning-600)]">Electricity</p>
-                <p className="mt-1 text-xl font-bold text-[color:var(--color-warning-900)]">{formatCurrency(invoice.electricityAmount)}</p>
-              </div>
-              <div className="rounded-xl border border-[color:var(--color-surface-300)] bg-[color:var(--color-surface-50)] p-4 shadow-[var(--shadow-sm)]">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Other</p>
-                <p className="mt-1 text-xl font-bold text-[color:var(--color-text-primary)]">{formatCurrency(invoice.otherCharges)}</p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Line Items */}
-          {invoice.lineItems && invoice.lineItems.length > 0 && (
-            <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-              <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Line Items</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[color:var(--border-color)]">
-                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Description</th>
-                      <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--border-color)]">
-                    {invoice.lineItems.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="py-3 font-semibold text-[color:var(--color-text-primary)]">{item.description}</td>
-                        <td className="py-3 text-right font-bold text-[color:var(--color-text-primary)]">{formatCurrency(item.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-[color:var(--border-color)]">
-                      <td className="pt-3 text-right text-base font-bold uppercase text-[color:var(--color-text-primary)]">Total</td>
-                      <td className="pt-3 text-right text-base font-bold text-[color:var(--color-text-primary)]">{formatCurrency(invoice.totalAmount)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Payment History */}
-          {invoice.payments && invoice.payments.length > 0 && (
-            <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-                <CreditCard className="h-5 w-5 text-[color:var(--color-success-500)]" />
-                Payment History
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[color:var(--border-color)]">
-                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Amount</th>
-                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Method</th>
-                      <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">UTR</th>
-                      <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">Date</th>
-                      <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--border-color)]">
-                    {invoice.payments.map((p) => (
-                      <tr key={p._id}>
-                        <td className="py-3 font-bold text-[color:var(--color-text-primary)]">{formatCurrency(p.amount)}</td>
-                        <td className="py-3 capitalize text-[color:var(--color-text-secondary)]">{p.method.replace('_', ' ')}</td>
-                        <td className="hidden py-3 font-mono text-xs text-[color:var(--color-text-secondary)] sm:table-cell">{p.utrNumber ?? '—'}</td>
-                        <td className="hidden py-3 text-[color:var(--color-text-secondary)] sm:table-cell">{formatDate(p.paidAt)}</td>
-                        <td className="py-3 text-right">
-                          <span className={`inline-block rounded-[var(--radius-sm)] border px-2 py-0.5 text-[10px] font-bold capitalize ${p.status === 'paid' ? 'border-[color:var(--color-success-200)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]' : 'border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]'}`}>
-                            {p.status.replace('_', ' ')}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── Payment Timeline ──────────────────── */}
-          {invoice.payments && invoice.payments.length > 0 && (
-            <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-                <CreditCard className="h-5 w-5 text-[color:var(--color-brand-500)]" />
-                Payment Timeline
-              </h3>
-              <Timeline
-                events={invoice.payments.map((p) => ({
-                  id: p._id,
-                  date: p.paidAt ?? invoice.createdAt,
-                  title: `${formatCurrency(p.amount)} via ${p.method.replace(/_/g, ' ')}`,
-                  description: p.utrNumber ? `UTR: ${p.utrNumber}` : undefined,
-                  status: (p.status === 'paid' ? 'success' : 'warning') as 'success' | 'warning',
-                }))}
-              />
-            </motion.div>
-          )}
-
-          {/* Notes */}
-          {invoice.notes && (
-            <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-5 shadow-[var(--shadow-card)]">
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-warning-600)]">Notes</p>
-              <p className="font-semibold text-[color:var(--color-warning-900)]">{invoice.notes}</p>
-            </motion.div>
+          {invoice.updatedAt && (
+            <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+              Last updated: {new Date(invoice.updatedAt).toLocaleString('en-IN')}
+            </p>
           )}
         </div>
-
-        {/* Right: Tenant Info + Actions */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Tenant Card */}
-          <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-              <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />
-              Tenant
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
-                <p className="mt-0.5 text-lg font-bold text-[color:var(--color-text-primary)]">{tenantName}</p>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                    <Building className="h-3 w-3" /> Room
-                  </p>
-                  <p className="mt-0.5 font-bold text-[color:var(--color-text-primary)]">{roomNumber}</p>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Floor</p>
-                  <p className="mt-0.5 font-bold text-[color:var(--color-text-primary)]">{floorName}</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Actions Card */}
-          <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-            <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Actions</h3>
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="primary"
-                onClick={() => window.open(`${API_BASE_URL}/invoices/${invoice._id}/pdf`, '_blank')}
-              >
-                <FileDown className="h-4 w-4" />
-                Download PDF
-              </Button>
-              {tenantPhone && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const text = [
-                      `Invoice ${invoice.invoiceNumber}`,
-                      `Amount: ${formatCurrency(invoice.totalAmount)}`,
-                      `Balance: ${formatCurrency(invoice.balance)}`,
-                      `Download: ${API_BASE_URL}/invoices/${invoice._id}/pdf`,
-                    ].join('\n');
-                    window.open(generateWhatsAppUrl(tenantPhone, text), '_blank', 'noopener,noreferrer');
-                  }}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Share via WhatsApp
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
-              >
-                Edit Invoice
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* ── Last Updated ────────────────────────── */}
-      {invoice.updatedAt && (
-        <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
-          Last updated: {new Date(invoice.updatedAt).toLocaleString('en-IN')}
-        </p>
       )}
-    </motion.div>
+    </FormPage>
   );
 }

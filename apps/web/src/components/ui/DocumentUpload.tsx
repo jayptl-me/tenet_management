@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { FileUp, FileText, Loader2 } from 'lucide-react';
+import { FileUp, FileText, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
+import { surfaceNestedClass } from '@/lib/field-styles';
+import { clsx } from 'clsx';
 
 interface DocumentUploadProps {
   tenantId: string;
@@ -26,14 +28,11 @@ export function DocumentUpload({ tenantId, docType, currentUrl, onUploaded }: Do
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset error
     setError('');
 
-    // Validate file size
     if (file.size > MAX_SIZE_BYTES) {
       setError(`File must be under ${MAX_SIZE_MB}MB`);
       toast.error(`File too large — must be under ${MAX_SIZE_MB}MB`);
-      // Reset input so the same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -56,7 +55,6 @@ export function DocumentUpload({ tenantId, docType, currentUrl, onUploaded }: Do
       toast.error(`Failed to upload ${docType === 'aadhaar' ? 'Aadhaar' : 'Photo'}`);
     } finally {
       setIsUploading(false);
-      // Reset input so the same file can be re-selected after an error
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -64,9 +62,9 @@ export function DocumentUpload({ tenantId, docType, currentUrl, onUploaded }: Do
   const label = docType === 'aadhaar' ? 'Aadhaar' : 'Photo';
 
   return (
-    <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-card)]">
-      <p className="text-surface-800 font-display mb-2 text-sm font-semibold">
-        <FileText className="text-surface-400 mr-1 inline h-3.5 w-3.5" />
+    <div className={clsx(surfaceNestedClass, 'p-4')}>
+      <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[color:var(--color-text-primary)]">
+        <FileText className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
         {label}
       </p>
 
@@ -75,12 +73,13 @@ export function DocumentUpload({ tenantId, docType, currentUrl, onUploaded }: Do
           href={currentUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-brand-600 hover:text-brand-800 mb-2 block text-sm underline"
+          className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
         >
           View {label}
+          <ExternalLink className="h-3 w-3" />
         </a>
       ) : (
-        <p className="text-surface-400 mb-2 text-sm">Not uploaded</p>
+        <p className="mb-3 text-sm text-[color:var(--color-text-muted)]">Not uploaded</p>
       )}
 
       <input
@@ -112,7 +111,9 @@ export function DocumentUpload({ tenantId, docType, currentUrl, onUploaded }: Do
       </Button>
 
       {error && (
-        <p className="text-danger-600 mt-2 text-xs font-semibold">{error}</p>
+        <p className="mt-2 text-xs font-semibold text-[color:var(--color-danger-600)]" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );

@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Plus, Save, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { fieldControlBase, fieldControlBorderOk, fieldLabelClass, surfaceNestedClass } from '@/lib/field-styles';
 import { roomLabel } from '@/lib/resource-select-presets';
+import { clsx } from 'clsx';
 
 interface RoomOption {
   _id: string;
@@ -125,120 +131,144 @@ export default function EditElectricityPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-            Edit Electricity Bill
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-            Status: {status} · units and amounts recompute on save
-          </p>
-        </div>
-      </div>
-      {submitError && <ErrorBanner message={submitError} />}
-      <form
+    <FormPage
+      title="Edit Electricity Bill"
+      description={`Status: ${status} · units and amounts recompute on save`}
+      backHref="/electricity"
+      error={submitError}
+      isLoading={isLoading}
+      maxWidth="4xl"
+    >
+      <FormCard
         onSubmit={onSubmit}
-        className="space-y-6 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Month" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <Input
-            label="Total Bill Amount"
-            type="number"
-            step="0.01"
-            value={totalBillAmount}
-            onChange={(e) => setTotalBillAmount(Number(e.target.value))}
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/electricity"
+            submitLabel="Save Changes"
+            divided={false}
           />
-        </div>
+        }
+      >
+        <div className="space-y-6">
+          <FormSection
+            title="Bill details"
+            description="Billing month and total amount for this cycle"
+          >
+            <FormGrid>
+              <Input label="Month" value={month} onChange={(e) => setMonth(e.target.value)} />
+              <Input
+                label="Total bill amount"
+                type="number"
+                step="0.01"
+                value={totalBillAmount}
+                onChange={(e) => setTotalBillAmount(Number(e.target.value))}
+              />
+            </FormGrid>
+          </FormSection>
 
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-base font-bold">Room Readings</h3>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setEntries((p) => [
-                  ...p,
-                  { roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 },
-                ])
-              }
-            >
-              <Plus className="h-4 w-4" /> Add
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {entries.map((entry, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-[color:var(--border-color)] p-4 sm:grid-cols-2 lg:grid-cols-5"
+          <FormSection
+            title="Room readings"
+            divided
+            description="Per-room meter readings for this billing period"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setEntries((p) => [
+                    ...p,
+                    { roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 },
+                  ])
+                }
               >
-                <select
-                  className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-                  value={entry.roomId}
-                  onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
+                <Plus className="h-4 w-4" /> Add room
+              </Button>
+            }
+          >
+            <div className="space-y-3">
+              {entries.length === 0 && (
+                <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-8 text-center text-sm text-[color:var(--color-text-secondary)]">
+                  No room readings yet. Add a room to begin.
+                </p>
+              )}
+              {entries.map((entry, idx) => (
+                <div
+                  key={idx}
+                  className={clsx(
+                    surfaceNestedClass,
+                    'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
+                  )}
                 >
-                  <option value="">Room...</option>
-                  {rooms.map((r) => (
-                    <option key={r._id} value={r._id}>
-                      {roomLabel(r)}
-                    </option>
-                  ))}
-                </select>
-                <Input
-                  label="Previous"
-                  type="number"
-                  value={entry.previousReading}
-                  onChange={(e) => updateEntry(idx, { previousReading: Number(e.target.value) })}
-                />
-                <Input
-                  label="Current"
-                  type="number"
-                  value={entry.currentReading}
-                  onChange={(e) => updateEntry(idx, { currentReading: Number(e.target.value) })}
-                />
-                <Input
-                  label="Rate"
-                  type="number"
-                  step="0.01"
-                  value={entry.ratePerUnit}
-                  onChange={(e) => updateEntry(idx, { ratePerUnit: Number(e.target.value) })}
-                />
-                <div className="flex items-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEntries((p) => p.filter((_, i) => i !== idx))}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                    <label className={fieldLabelClass} htmlFor={`elec-room-${idx}`}>
+                      Room
+                    </label>
+                    <select
+                      id={`elec-room-${idx}`}
+                      className={clsx(fieldControlBase, fieldControlBorderOk, 'appearance-none')}
+                      value={entry.roomId}
+                      onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
+                    >
+                      <option value="">Select room...</option>
+                      {rooms.map((r) => (
+                        <option key={r._id} value={r._id}>
+                          {roomLabel(r)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    label="Previous"
+                    type="number"
+                    inputMode="numeric"
+                    value={entry.previousReading}
+                    onChange={(e) => updateEntry(idx, { previousReading: Number(e.target.value) })}
+                  />
+                  <Input
+                    label="Current"
+                    type="number"
+                    inputMode="numeric"
+                    value={entry.currentReading}
+                    onChange={(e) => updateEntry(idx, { currentReading: Number(e.target.value) })}
+                  />
+                  <Input
+                    label="Rate / unit"
+                    type="number"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={entry.ratePerUnit}
+                    onChange={(e) => updateEntry(idx, { ratePerUnit: Number(e.target.value) })}
+                  />
+                  <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={`Remove room reading ${idx + 1}`}
+                      onClick={() => setEntries((p) => p.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </FormSection>
 
-        <Input label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-
-        <div className="flex justify-end gap-3 border-t border-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" /> Save Changes
-          </Button>
+          <FormSection title="Notes" divided>
+            <Textarea
+              label="Notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Optional notes..."
+            />
+          </FormSection>
         </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }
