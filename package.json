@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --filter '@pg/api' dev & bun --filter '@pg/web' dev",
+    "dev": "bun run --cwd apps/api dev & bun run --cwd apps/web dev & wait",
     "build": "bun --filter '*' build",
     "lint": "bun --filter '*' lint",
     "typecheck": "bun --filter '*' typecheck",

@@ -1,120 +1,128 @@
 'use client';
 
+import { chartTokens } from '@/lib/chart-theme';
+
 /**
- * FunnelChart — SVG horizontal funnel chart.
- * Shows stages as nested horizontal bars, each narrower than the last.
- * Perfect for visualizing payment collection pipeline, conversion funnels, etc.
+ * FunnelChart — horizontal stage bars for pipelines (payments, conversion).
+ * Labels sit in a fixed left column so they never clip outside the viewBox.
+ * Fully token-driven for light/dark SaaS.
  */
 export function FunnelChart({
   stages,
-  maxWidth = 100,
   barHeight = 32,
-  barGap = 6,
+  barGap = 8,
   className,
 }: {
   stages: Array<{ label: string; value: number; color: string }>;
+  /** @deprecated Ignored — layout uses a fixed plot width with label column. */
   maxWidth?: number;
   barHeight?: number;
   barGap?: number;
   className?: string;
 }) {
+  if (stages.length === 0) {
+    return (
+      <div className={className} role="img" aria-label="No funnel data">
+        <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+          No data to display
+        </p>
+      </div>
+    );
+  }
+
   const maxValue = Math.max(...stages.map((s) => s.value), 1);
+  const padLeft = 108;
+  const padRight = 52;
+  const chartW = 420;
+  const usableW = chartW - padLeft - padRight;
   const totalHeight = stages.length * (barHeight + barGap) - barGap;
+  const corner = Math.min(barHeight / 2, 8);
 
   return (
     <div className={className}>
       <svg
-        viewBox={`0 0 ${maxWidth} ${totalHeight}`}
+        viewBox={`0 0 ${chartW} ${totalHeight}`}
         className="w-full overflow-visible"
-        style={{ height: totalHeight, maxHeight: totalHeight }}
+        style={{ height: totalHeight, maxHeight: totalHeight + 4 }}
         role="img"
         aria-label={stages.map((s) => `${s.label}: ${s.value}`).join(', ')}
       >
         {stages.map((stage, i) => {
           const y = i * (barHeight + barGap);
-          const width = (stage.value / maxValue) * maxWidth;
-          const x = (maxWidth - width) / 2; // center each bar
-          const rx = barHeight / 2;
+          const width = Math.max((stage.value / maxValue) * usableW, stage.value > 0 ? 8 : 0);
+          const x = padLeft;
 
           return (
             <g key={stage.label}>
-              {/* Bar background */}
+              {/* Track */}
+              <rect
+                x={padLeft}
+                y={y}
+                width={usableW}
+                height={barHeight}
+                rx={corner}
+                fill={chartTokens.track}
+                opacity={0.85}
+              />
+              {/* Fill */}
               <rect
                 x={x}
                 y={y}
                 width={width}
                 height={barHeight}
-                rx={rx}
-                ry={rx}
+                rx={corner}
                 fill={stage.color}
-                opacity={0.15}
-              />
-              {/* Bar fill with animated width */}
-              <rect
-                x={x}
-                y={y}
-                width={width}
-                height={barHeight}
-                rx={rx}
-                ry={rx}
-                fill={stage.color}
-                className="transition-all duration-700 ease-out"
-                style={{ transitionDelay: `${i * 100}ms` }}
-              />
-              {/* Value label inside bar */}
+                className="transition-[width] duration-500 ease-out motion-reduce:transition-none"
+              >
+                <title>{`${stage.label}: ${stage.value}`}</title>
+              </rect>
+              {/* Stage label */}
               <text
-                x={x + width - 12}
+                x={padLeft - 10}
                 y={y + barHeight / 2}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fill="var(--chart-on-fill)"
+                fill={chartTokens.label}
                 fontSize={11}
-                fontFamily="var(--font-mono)"
+                fontFamily={chartTokens.fontBody}
+                fontWeight={600}
+              >
+                {stage.label.length > 12
+                  ? `${stage.label.slice(0, 11)}…`
+                  : stage.label}
+              </text>
+              {/* Value */}
+              <text
+                x={
+                  width > 44
+                    ? x + width - 10
+                    : padLeft + Math.max(width, 4) + 8
+                }
+                y={y + barHeight / 2}
+                textAnchor={width > 44 ? 'end' : 'start'}
+                dominantBaseline="middle"
+                fill={width > 44 ? chartTokens.onFill : chartTokens.axis}
+                fontSize={11}
+                fontFamily={chartTokens.fontMono}
                 fontWeight={700}
               >
                 {stage.value}
               </text>
-              {/* Stage label to the left (or below if narrow) */}
-              <text
-                x={x - 8}
-                y={y + barHeight / 2}
-                textAnchor="end"
-                dominantBaseline="middle"
-                fill="var(--color-text-secondary)"
-                fontSize={11}
-                fontFamily="var(--font-body)"
-                fontWeight={600}
-              >
-                {stage.label}
-              </text>
-              {/* Trend arrow between stages */}
-              {i < stages.length - 1 && (
-                <text
-                  x={maxWidth / 2}
-                  y={y + barHeight + barGap / 2}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="var(--color-text-muted)"
-                  fontSize={8}
-                >
-                  ▼
-                </text>
-              )}
             </g>
           );
         })}
       </svg>
 
-      {/* Legend */}
-      <div className="mt-3 flex flex-wrap justify-center gap-3">
+      <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {stages.map((stage) => (
           <div
             key={stage.label}
             className="flex items-center gap-1.5 text-[11px] font-semibold"
           >
             <span
-              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+              className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: stage.color }}
+              aria-hidden
             />
             <span className="text-[color:var(--color-text-secondary)]">
               {stage.label}

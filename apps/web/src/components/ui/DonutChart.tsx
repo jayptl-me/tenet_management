@@ -94,8 +94,8 @@ export function DonutChart({
             strokeDasharray={`${seg.arcLength} ${fullCircumference - seg.arcLength}`}
             strokeDashoffset={seg.offset}
             transform={`rotate(${(seg.startAngle * 180) / Math.PI + 90}, ${center}, ${center})`}
-            className="transition-all duration-700 ease-out"
-            style={{ transitionDelay: `${seg.i * 100}ms` }}
+            className="transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none"
+            style={{ transitionDelay: `${seg.i * 80}ms` }}
           />
         ))}
 
@@ -121,7 +121,7 @@ export function DonutChart({
               y={center + (centerLabel ? size * 0.12 : 0)}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="var(--color-text-muted)"
+              fill="var(--color-text-secondary)"
               fontSize={size * 0.09}
               fontFamily="var(--font-body)"
               fontWeight={500}
@@ -133,15 +133,16 @@ export function DonutChart({
       </svg>
 
       {/* Legend */}
-      <div className="mt-3 flex flex-wrap justify-center gap-3">
+      <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {segments.map((segment) => (
           <div
             key={segment.label}
             className="flex items-center gap-1.5 text-[11px] font-semibold"
           >
             <span
-              className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+              className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: segment.color }}
+              aria-hidden
             />
             <span className="text-[color:var(--color-text-secondary)]">
               {segment.label}

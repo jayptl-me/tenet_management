@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { Save, AlertCircle, User, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
@@ -253,61 +255,22 @@ export default function ComplaintDetailPage() {
 
           <DetailCard title="Update Status" icon={<FileText />}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="status"
-                  className="text-sm font-bold text-[color:var(--color-text-primary)]"
-                >
-                  Status
-                </label>
-                <select
-                  id="status"
-                  className={`w-full rounded-xl border px-4 py-2.5 text-base font-semibold text-[color:var(--color-text-primary)] bg-[color:var(--color-field-bg)] transition-all duration-[var(--transition-duration)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                    errors.status
-                      ? 'border-[color:var(--color-danger-300)] shadow-[var(--shadow-sm)]'
-                      : 'border-[color:var(--border-color)] shadow-[var(--shadow-sm)]'
-                  }`}
-                  {...register('status')}
-                >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.status && (
-                  <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">
-                    {errors.status.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="adminNotes"
-                  className="text-sm font-bold text-[color:var(--color-text-primary)]"
-                >
-                  Admin Notes
-                </label>
-                <textarea
-                  id="adminNotes"
-                  rows={4}
-                  className={`w-full rounded-xl border px-4 py-2.5 text-base font-medium text-[color:var(--color-text-primary)] bg-[color:var(--color-field-bg)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-2 ${
-                    errors.adminNotes
-                      ? 'border-[color:var(--color-danger-300)] shadow-[var(--shadow-sm)]'
-                      : 'border-[color:var(--border-color)] shadow-[var(--shadow-sm)]'
-                  }`}
-                  placeholder="Add internal notes about this complaint..."
-                  {...register('adminNotes')}
-                />
-                {errors.adminNotes && (
-                  <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">
-                    {errors.adminNotes.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end">
+              <Select
+                id="status"
+                label="Status"
+                options={STATUS_OPTIONS}
+                error={errors.status?.message}
+                {...register('status')}
+              />
+              <Textarea
+                id="adminNotes"
+                label="Admin Notes"
+                rows={4}
+                placeholder="Add internal notes about this complaint..."
+                error={errors.adminNotes?.message}
+                {...register('adminNotes')}
+              />
+              <div className="flex justify-end border-t border-[color:var(--border-color)] pt-4">
                 <Button
                   type="submit"
                   variant="primary"

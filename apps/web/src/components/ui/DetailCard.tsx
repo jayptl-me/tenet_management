@@ -3,7 +3,6 @@
 import { clsx } from 'clsx';
 import { motion } from 'motion/react';
 import { fadeScaleIn } from '@/lib/animations';
-import { surfaceCardClass } from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -23,26 +22,27 @@ export interface DetailCardProps {
 
 // ── Style Maps ─────────────────────────────────────────
 
+/** Full surface + semantic tint. Avoid stacking surfaceCardClass + bg override (Tailwind conflict). */
 const variantStyles: Record<DetailCardVariant, string> = {
   default: clsx(
-    'bg-[color:var(--color-card-bg)]',
-    'border-[color:var(--border-color)]',
+    'rounded-[var(--radius-xl)] border border-[color:var(--border-color)]',
+    'bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]',
   ),
   warning: clsx(
-    'bg-[color:var(--color-warning-50)]',
-    'border-[color:var(--color-warning-200)]',
+    'rounded-[var(--radius-xl)] border border-[color:var(--color-warning-200)]',
+    'bg-[color:var(--color-warning-50)] shadow-[var(--shadow-card)]',
   ),
   danger: clsx(
-    'bg-[color:var(--color-danger-50)]',
-    'border-[color:var(--color-danger-200)]',
+    'rounded-[var(--radius-xl)] border border-[color:var(--color-danger-200)]',
+    'bg-[color:var(--color-danger-50)] shadow-[var(--shadow-card)]',
   ),
   success: clsx(
-    'bg-[color:var(--color-success-50)]',
-    'border-[color:var(--color-success-200)]',
+    'rounded-[var(--radius-xl)] border border-[color:var(--color-success-200)]',
+    'bg-[color:var(--color-success-50)] shadow-[var(--shadow-card)]',
   ),
   info: clsx(
-    'bg-[color:var(--color-info-50)]',
-    'border-[color:var(--color-info-200)]',
+    'rounded-[var(--radius-xl)] border border-[color:var(--color-info-200)]',
+    'bg-[color:var(--color-info-50)] shadow-[var(--shadow-card)]',
   ),
 };
 
@@ -52,6 +52,18 @@ const headerBorder: Record<DetailCardVariant, string> = {
   danger: 'border-[color:var(--color-danger-200)]',
   success: 'border-[color:var(--color-success-200)]',
   info: 'border-[color:var(--color-info-200)]',
+};
+
+const iconTone: Record<DetailCardVariant, string> = {
+  default:
+    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
+  warning:
+    'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
+  danger:
+    'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
+  success:
+    'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
+  info: 'bg-[color:var(--color-info-100)] text-[color:var(--color-info-700)]',
 };
 
 // ── Component ──────────────────────────────────────────
@@ -70,12 +82,7 @@ export function DetailCard({
       variants={fadeScaleIn}
       initial="hidden"
       animate="visible"
-      className={clsx(
-        surfaceCardClass,
-        'overflow-hidden',
-        variantStyles[variant],
-        className,
-      )}
+      className={clsx(variantStyles[variant], 'overflow-hidden', className)}
     >
       <div
         className={clsx(
@@ -86,11 +93,16 @@ export function DetailCard({
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {icon && (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+            <span
+              className={clsx(
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] [&_svg]:h-4 [&_svg]:w-4',
+                iconTone[variant],
+              )}
+            >
               {icon}
             </span>
           )}
-          <h3 className="truncate text-sm font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="truncate text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {title}
           </h3>
         </div>
@@ -119,7 +131,9 @@ export function DetailRow({
         className,
       )}
     >
-      <dt className="text-xs font-medium text-[color:var(--color-text-muted)]">{label}</dt>
+      <dt className="text-xs font-medium text-[color:var(--color-text-secondary)]">
+        {label}
+      </dt>
       <dd className="text-sm font-semibold text-[color:var(--color-text-primary)] sm:text-right">
         {value ?? '—'}
       </dd>
@@ -134,5 +148,5 @@ export function DetailList({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <dl className={clsx('divide-y-0', className)}>{children}</dl>;
+  return <dl className={clsx(className)}>{children}</dl>;
 }
