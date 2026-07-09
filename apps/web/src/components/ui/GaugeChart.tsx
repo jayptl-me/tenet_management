@@ -35,7 +35,7 @@ export function GaugeChart({
         <path
           d={`M ${strokeW / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeW / 2} ${size / 2}`}
           fill="none"
-          stroke="var(--border-color)"
+          stroke="var(--chart-track)"
           strokeWidth={strokeW}
           strokeLinecap="round"
         />

@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { clsx } from 'clsx';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import {
+  fieldControlBase,
+  fieldControlBorderError,
+  fieldControlBorderOk,
+  fieldErrorClass,
+  fieldHelperClass,
+  fieldLabelClass,
+} from '@/lib/field-styles';
 
 interface ResourceOption {
   value: string;
@@ -10,31 +19,45 @@ interface ResourceOption {
   sublabel?: string;
 }
 
-interface ResourceSelectProps {
+interface ResourceSelectProps<T extends Record<string, unknown> = Record<string, unknown>> {
   label?: string;
   endpoint: string;
   value?: string;
   onChange?: (value: string) => void;
   error?: string;
+  helperText?: string;
   placeholder?: string;
   className?: string;
   /** Param name to use as the value from fetched data */
-  valueKey?: string;
+  valueKey?: keyof T & string | string;
   /** Param name or function to derive the label */
-  labelKey?: string | ((item: any) => string);
+  labelKey?: (keyof T & string) | string | ((item: T) => string);
   /** Optional function to derive a sublabel */
-  sublabelFn?: (item: any) => string;
+  sublabelFn?: (item: T) => string;
   /** Data path in the response (e.g., 'data' for { success, data }) */
   dataPath?: string;
   disabled?: boolean;
+  name?: string;
+  id?: string;
 }
 
-export function ResourceSelect({
+function getByPath(obj: unknown, path: string): unknown {
+  if (!path) return obj;
+  return path.split('.').reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === 'object' && key in (acc as Record<string, unknown>)) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
+}
+
+export function ResourceSelect<T extends Record<string, unknown> = Record<string, unknown>>({
   label,
   endpoint,
   value,
   onChange,
   error,
+  helperText,
   placeholder = 'Select...',
   className,
   valueKey = '_id',
@@ -42,7 +65,9 @@ export function ResourceSelect({
   sublabelFn,
   dataPath = 'data',
   disabled = false,
-}: ResourceSelectProps) {
+  name,
+  id,
+}: ResourceSelectProps<T>) {
   const [options, setOptions] = useState<ResourceOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -50,21 +75,34 @@ export function ResourceSelect({
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setFetchError('');
+
     api
       .get(endpoint)
-      .json<{ success: boolean; data: any[] }>()
+      .json<unknown>()
       .then((res) => {
         if (cancelled) return;
-        const data = dataPath ? (res as any)[dataPath] ?? res.data ?? [] : res.data ?? [];
-        const items = Array.isArray(data) ? data : [];
+        const raw = getByPath(res, dataPath);
+        const items = Array.isArray(raw)
+          ? raw
+          : Array.isArray((res as { data?: unknown }).data)
+            ? ((res as { data: unknown[] }).data)
+            : [];
 
-        const mapped: ResourceOption[] = items.map((item: any) => {
-          const val = item[valueKey]?.toString() ?? '';
+        const mapped: ResourceOption[] = items.map((item) => {
+          const record = item as T;
+          const val = String(record[valueKey] ?? '');
           const lbl =
             typeof labelKey === 'function'
-              ? labelKey(item)
-              : (item[labelKey] ?? item.name ?? item.roomNumber ?? item.floorNumber ?? val);
-          const sub = sublabelFn ? sublabelFn(item) : undefined;
+              ? labelKey(record)
+              : String(
+                  record[labelKey] ??
+                    record.name ??
+                    record.roomNumber ??
+                    record.floorNumber ??
+                    val,
+                );
+          const sub = sublabelFn ? sublabelFn(record) : undefined;
           return { value: val, label: lbl, sublabel: sub };
         });
 
@@ -80,24 +118,32 @@ export function ResourceSelect({
     return () => {
       cancelled = true;
     };
-  }, [endpoint, valueKey, labelKey, dataPath, sublabelFn]);
+    // labelKey/sublabelFn may be inline functions; endpoint is the real dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint, valueKey, dataPath]);
 
-  const selectId = label?.toLowerCase().replace(/\s+/g, '-');
+  const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
   return (
-    <div className={`flex flex-col gap-1.5 ${className ?? ''}`}>
+    <div className={clsx('flex flex-col gap-1.5', className)}>
       {label && (
-        <label htmlFor={selectId} className="text-surface-800 font-display text-sm font-semibold">
+        <label htmlFor={selectId} className={fieldLabelClass}>
           {label}
         </label>
       )}
       <div className="relative">
         <select
           id={selectId}
+          name={name}
           value={value ?? ''}
           onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled || isLoading}
-          className={`text-surface-900 font-body w-full appearance-none rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 pr-10 text-base transition-shadow focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-[color:var(--color-brand-500)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${error ? 'border-danger-500 focus:ring-danger-500' : ''}`}
+          className={clsx(
+            fieldControlBase,
+            'appearance-none pr-9',
+            error ? fieldControlBorderError : fieldControlBorderOk,
+          )}
+          aria-invalid={error ? true : undefined}
         >
           <option value="">{isLoading ? 'Loading...' : placeholder}</option>
           {options.map((opt) => (
@@ -107,24 +153,25 @@ export function ResourceSelect({
             </option>
           ))}
         </select>
-        {isLoading && (
+        {isLoading ? (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className="text-surface-400 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-[color:var(--color-text-muted)]" />
           </div>
-        )}
-        {!isLoading && (
-          <svg
-            className="text-surface-500 pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+        ) : (
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
         )}
       </div>
-      {fetchError && !isLoading && <p className="text-warning-600 text-xs font-medium">{fetchError}</p>}
-      {error && <p className="text-danger-600 text-sm font-medium">{error}</p>}
+      {fetchError && !isLoading && (
+        <p className="text-[12px] font-medium text-[color:var(--color-warning-600)]">{fetchError}</p>
+      )}
+      {error && (
+        <p className={fieldErrorClass} role="alert">
+          {error}
+        </p>
+      )}
+      {helperText && !error && !fetchError && (
+        <p className={fieldHelperClass}>{helperText}</p>
+      )}
     </div>
   );
 }

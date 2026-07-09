@@ -5,12 +5,13 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 
 const schema = z.object({
   date: z.string().min(1, 'Required'),
@@ -19,7 +20,6 @@ const schema = z.object({
   checkOutTime: z.string().optional(),
   notes: z.string().optional(),
 });
-
 
 const statusOptions = [
   { value: 'present', label: 'Present' },
@@ -65,73 +65,52 @@ export default function EditPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Edit Attendance</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Update details</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="Edit attendance"
+      description="Update attendance status and check-in times"
+      backHref="/attendance"
+      error={submitError}
+      isLoading={isLoading}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/attendance"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
       >
-        <div className="space-y-5">
-          <Input
-            label="Date"
-            type="date"
-            error={errors.date?.message}
-            {...register('date')}
-          />
-          <Select
-            label="Status"
-            options={statusOptions}
-            error={errors.status?.message}
-            {...register('status')}
-          />
-          <Input
-            label="Check In Time"
-            type="time"
-            error={errors.checkInTime?.message}
-            {...register('checkInTime')}
-          />
-          <Input
-            label="Check Out Time"
-            type="time"
-            error={errors.checkOutTime?.message}
-            {...register('checkOutTime')}
-          />
-          <Input
-            label="Notes"
-            error={errors.notes?.message}
-            {...register('notes')}
-          />
-        </div>
-
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" /> Save Changes
-          </Button>
-        </div>
-      </form>
-    </div>
+        <FormSection title="Attendance" description="Date and presence status">
+          <FormGrid>
+            <Input label="Date" type="date" error={errors.date?.message} {...register('date')} />
+            <Select
+              label="Status"
+              options={statusOptions}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+            <Input
+              label="Check-in time"
+              type="time"
+              error={errors.checkInTime?.message}
+              {...register('checkInTime')}
+            />
+            <Input
+              label="Check-out time"
+              type="time"
+              error={errors.checkOutTime?.message}
+              {...register('checkOutTime')}
+            />
+            <FormFullWidth>
+              <Input label="Notes" error={errors.notes?.message} {...register('notes')} />
+            </FormFullWidth>
+          </FormGrid>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

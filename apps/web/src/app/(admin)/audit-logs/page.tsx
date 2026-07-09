@@ -95,8 +95,8 @@ export default function AuditLogsPage() {
       header: 'Resource',
       accessor: (row) => (
         <div>
-          <span className="text-surface-900 font-semibold">{row.resource}</span>
-          <p className="text-surface-400 font-mono text-[10px]">{row.resourceId?.slice(0, 12)}…</p>
+          <span className="font-semibold text-[color:var(--color-text-primary)]">{row.resource}</span>
+          <p className="font-mono text-[10px] text-[color:var(--color-text-muted)]">{row.resourceId?.slice(0, 12)}…</p>
         </div>
       ),
     },
@@ -104,17 +104,17 @@ export default function AuditLogsPage() {
       header: 'User',
       accessor: (row) => (
         <div>
-          <span className="text-surface-800 text-sm font-semibold">
+          <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
             {row.userId?.name ?? 'System'}
           </span>
-          <p className="text-surface-400 text-xs">{row.userId?.email ?? '—'}</p>
+          <p className="text-xs text-[color:var(--color-text-muted)]">{row.userId?.email ?? '—'}</p>
         </div>
       ),
     },
     {
       header: 'Role',
       accessor: (row) => (
-        <span className="text-surface-600 text-xs font-semibold capitalize">
+        <span className="text-xs font-semibold capitalize text-[color:var(--color-text-secondary)]">
           {row.userId?.role ?? '—'}
         </span>
       ),
@@ -122,7 +122,7 @@ export default function AuditLogsPage() {
     {
       header: 'Timestamp',
       accessor: (row) => (
-        <span className="text-surface-600 text-xs whitespace-nowrap">
+        <span className="whitespace-nowrap text-xs text-[color:var(--color-text-secondary)]">
           {new Date(row.timestamp).toLocaleString('en-IN', {
             day: '2-digit',
             month: 'short',
@@ -137,7 +137,7 @@ export default function AuditLogsPage() {
     {
       header: 'IP',
       accessor: (row) => (
-        <span className="text-surface-400 font-mono text-[11px]">{row.ip ?? '—'}</span>
+        <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">{row.ip ?? '—'}</span>
       ),
     },
   ];

@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormGrid } from '@/components/ui/FormSection';
 import { tenantDisplayName, tenantRoomNumber } from '@/lib/api-shapes';
 
 const schema = z.object({
@@ -161,26 +163,22 @@ export default function NewPaymentPage() {
   }));
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-            Record Offline Payment
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-            Cash, bank transfer, or other methods linked to an invoice
-          </p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="Record Offline Payment"
+      description="Cash, bank transfer, or other methods linked to an invoice"
+      backHref="/payments"
+      error={submitError}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/payments"
+            submitLabel="Record Payment"
+            divided={false}
+          />
+        }
       >
         <div className="space-y-5">
           <Controller
@@ -195,12 +193,13 @@ export default function NewPaymentPage() {
                 placeholder="Select tenant..."
                 error={errors.tenantId?.message}
                 valueKey="_id"
-                labelKey={(item: { user?: { name?: string }; room?: { roomNumber?: string }; monthlyRent?: number }) =>
+                labelKey={(item) =>
                   `${tenantDisplayName(item as never)} — Room ${tenantRoomNumber(item as never)}`
                 }
-                sublabelFn={(item: { monthlyRent?: number }) =>
-                  item.monthlyRent != null ? `₹${item.monthlyRent}/mo` : ''
-                }
+                sublabelFn={(item) => {
+                  const rent = (item as { monthlyRent?: number }).monthlyRent;
+                  return rent != null ? `₹${rent}/mo` : '';
+                }}
               />
             )}
           />
@@ -225,7 +224,7 @@ export default function NewPaymentPage() {
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormGrid>
             <Input
               label="Amount (₹)"
               type="number"
@@ -239,7 +238,7 @@ export default function NewPaymentPage() {
               error={errors.method?.message}
               {...register('method')}
             />
-          </div>
+          </FormGrid>
 
           <Input
             label="Paid At"
@@ -248,32 +247,14 @@ export default function NewPaymentPage() {
             {...register('paidAt')}
           />
 
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="notes"
-              className="text-sm font-semibold text-[color:var(--color-text-primary)]"
-            >
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              rows={3}
-              className="w-full rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2.5 text-base text-[color:var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-500)]"
-              placeholder="Optional notes..."
-              {...register('notes')}
-            />
-          </div>
+          <Textarea
+            label="Notes"
+            rows={3}
+            placeholder="Optional notes..."
+            {...register('notes')}
+          />
         </div>
-        <div className="mt-8 flex items-center justify-end gap-3 border-t border-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" />
-            Record Payment
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

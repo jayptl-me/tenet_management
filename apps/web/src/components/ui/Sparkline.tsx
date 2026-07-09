@@ -36,7 +36,7 @@ export function Sparkline({
           y1={height / 2}
           x2={width}
           y2={height / 2}
-          stroke="var(--color-surface-200)"
+          stroke="var(--chart-grid)"
           strokeWidth={1}
           strokeDasharray="2,2"
         />

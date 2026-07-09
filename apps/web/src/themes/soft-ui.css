@@ -143,6 +143,13 @@
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-400);
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: var(--color-surface-100);
+  --color-elevated: var(--color-surface-100);
+  --color-field-bg: var(--color-surface-50);
+  --color-field-bg-hover: var(--color-surface-100);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: var(--color-brand-500);
@@ -291,6 +298,13 @@
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-400);
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: var(--color-surface-100);
+  --color-elevated: var(--color-surface-100);
+  --color-field-bg: var(--color-surface-50);
+  --color-field-bg-hover: var(--color-surface-200);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: var(--color-brand-500);

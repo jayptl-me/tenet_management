@@ -2,7 +2,7 @@
 
 import { AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { modalOverlay, modalContent } from '@/lib/animations';
+import { modalContent } from '@/lib/animations';
 import { Button } from '@/components/ui/Button';
 
 // ── Types ──────────────────────────────────────────────
@@ -66,7 +66,7 @@ export function ConfirmModal({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 mx-4 w-full max-w-md rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-modal)]"
+            className="relative z-10 mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
@@ -87,7 +87,7 @@ export function ConfirmModal({
               </div>
               <button
                 onClick={onCancel}
-                className="flex-shrink-0 rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] hover:text-[color:var(--color-text-secondary)] transition-colors"
+                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-secondary)]"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

@@ -3,13 +3,13 @@
 import { useApiLoadingStore } from '@/store/apiLoading';
 
 export default function ServerWakeupOverlay() {
-  const isSlowLoading = useApiLoadingStore((s) => s.isSlowLoading);
+  const isServerWaking = useApiLoadingStore((s) => s.isServerWaking);
 
-  if (!isSlowLoading) return null;
+  if (!isServerWaking) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]">
-      <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 text-center shadow-[var(--shadow-card)]">
+      <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 text-center shadow-[var(--shadow-card)]">
         {/* Loading Spinner */}
         <div className="bg-brand-100 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]">
           <svg className="text-brand-600 h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -34,16 +34,15 @@ export default function ServerWakeupOverlay() {
           Waking Up Server...
         </h3>
         <p className="font-body text-surface-600 text-sm leading-relaxed">
-          Render&apos;s Free Tier container automatically goes to sleep after 15 minutes of
-          inactivity. It can take about <strong>50–70 seconds</strong> to boot the server. Thank you
-          for your patience!
+          The server is currently starting up after a period of inactivity. This usually takes{' '}
+          <strong>30–60 seconds</strong>. Thank you for your patience!
         </p>
 
         {/* Shimmer Pulse Indicator */}
         <div className="mt-5 flex items-center justify-center gap-1.5">
           <span className="bg-brand-500 h-2 w-2 animate-pulse rounded-full" />
           <span className="text-brand-600 font-mono text-xs font-semibold uppercase tracking-wider">
-            Connecting to MongoDB...
+            Establishing connection...
           </span>
         </div>
       </div>

@@ -42,10 +42,26 @@ type ViewMode = 'table' | 'kanban';
 const KANBAN_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as const;
 
 const kanbanMeta: Record<string, { label: string; color: string }> = {
-  open: { label: 'Open', color: 'border-l-brand-500 bg-brand-50' },
-  in_progress: { label: 'In Progress', color: 'border-l-warning-500 bg-warning-50' },
-  resolved: { label: 'Resolved', color: 'border-l-success-500 bg-success-50' },
-  dismissed: { label: 'Dismissed', color: 'border-l-surface-400 bg-surface-50' },
+  open: {
+    label: 'Open',
+    color:
+      'border-l-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)]',
+  },
+  in_progress: {
+    label: 'In Progress',
+    color:
+      'border-l-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)]',
+  },
+  resolved: {
+    label: 'Resolved',
+    color:
+      'border-l-[color:var(--color-success-500)] bg-[color:var(--color-success-50)]',
+  },
+  dismissed: {
+    label: 'Dismissed',
+    color:
+      'border-l-[color:var(--color-surface-400)] bg-[color:var(--color-field-bg)]',
+  },
 };
 
 // ── Kanban Sub-Components ───────────────────────────────
@@ -60,28 +76,32 @@ function KanbanColumn({
   onComplaintClick: (row: ComplaintRow) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  const meta = kanbanMeta[status] ?? { label: status, color: 'border-l-surface-300 bg-surface-50' };
+  const meta = kanbanMeta[status] ?? {
+    label: status,
+    color:
+      'border-l-[color:var(--color-surface-300)] bg-[color:var(--color-field-bg)]',
+  };
 
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'ring-[length:var(--bw-strong)] ring-[color:var(--color-brand-500)] ring-offset-2 scale-[1.01]' : ''}`}
+      className={`min-h-[200px] rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'ring-2 ring-[color:var(--color-brand-500)] ring-offset-2 ring-offset-[color:var(--focus-ring-offset-bg)] scale-[1.01]' : ''}`}
     >
       <div
         className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-surface-900 text-sm font-bold capitalize">
+          <h3 className="font-display text-sm font-bold capitalize text-[color:var(--color-text-primary)]">
             {meta.label}
           </h3>
-          <span className="bg-surface-900 rounded-full px-2 py-0.5 font-mono text-xs font-bold text-[color:var(--color-surface-50)]">
+          <span className="rounded-full bg-[color:var(--color-text-primary)] px-2 py-0.5 font-mono text-xs font-bold text-[color:var(--color-card-bg)]">
             {complaints.length}
           </span>
         </div>
       </div>
       <div className="max-h-[500px] space-y-2 overflow-y-auto p-3">
         {complaints.length === 0 ? (
-          <p className="text-surface-400 py-6 text-center text-xs">No complaints</p>
+          <p className="py-6 text-center text-xs text-[color:var(--color-text-muted)]">No complaints</p>
         ) : (
           complaints.map((c) => (
             <KanbanCard key={c._id} complaint={c} onClick={() => onComplaintClick(c)} />
@@ -116,16 +136,16 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
       {...attributes}
       style={style}
       onClick={onClick}
-      className={`bg-surface-50 cursor-grab rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-3 shadow-[var(--shadow-button)] transition-all hover:shadow-[var(--shadow-card)] active:cursor-grabbing ${isDragging ? 'rotate-1 opacity-50' : ''}`}
+      className={`cursor-grab rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-3 shadow-[var(--shadow-button)] transition-all hover:shadow-[var(--shadow-card)] active:cursor-grabbing ${isDragging ? 'rotate-1 opacity-50' : ''}`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="font-display text-surface-900 flex-1 truncate text-sm font-bold">
+        <p className="font-display flex-1 truncate text-sm font-bold text-[color:var(--color-text-primary)]">
           {complaint.title}
         </p>
         <StatusBadge variant={priorityVariant} label={complaint.severity} />
       </div>
-      <p className="text-surface-500 mb-2 line-clamp-2 text-xs">{complaint.description}</p>
-      <div className="text-surface-400 flex items-center justify-between text-[10px]">
+      <p className="mb-2 line-clamp-2 text-xs text-[color:var(--color-text-muted)]">{complaint.description}</p>
+      <div className="flex items-center justify-between text-[10px] text-[color:var(--color-text-muted)]">
         <span className="flex items-center gap-1">
           <span>{complaint.tenant?.user?.name ?? 'N/A'}</span>
           {complaint.tenant?.room?.roomNumber && (
@@ -292,7 +312,9 @@ export default function ComplaintsPage() {
   const columns: DataTableColumn<ComplaintRow>[] = [
     {
       header: 'Title',
-      accessor: (row) => <span className="text-surface-900 font-semibold">{row.title}</span>,
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
+      ),
     },
     {
       header: 'Tenant',
@@ -331,7 +353,7 @@ export default function ComplaintsPage() {
               e.stopPropagation();
               router.push(`/complaints/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -341,7 +363,7 @@ export default function ComplaintsPage() {
               e.stopPropagation();
               router.push(`/complaints/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -351,7 +373,7 @@ export default function ComplaintsPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -366,18 +388,18 @@ export default function ComplaintsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">Complaints</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Track and resolve tenant complaints</p>
+          <h2 className="font-display text-2xl font-extrabold text-[color:var(--color-text-primary)]">Complaints</h2>
+          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">Track and resolve tenant complaints</p>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex overflow-hidden rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)]">
+          <div className="flex overflow-hidden rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]">
             <button
               onClick={() => setViewMode('table')}
               className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
                 viewMode === 'table'
-                  ? 'bg-surface-900 text-white'
-                  : 'text-surface-600 hover:bg-surface-100 bg-[color:var(--color-surface-100)]'
+                  ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
+                  : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
               }`}
             >
               <LayoutList className="mr-1 inline h-3.5 w-3.5" />
@@ -387,8 +409,8 @@ export default function ComplaintsPage() {
               onClick={() => setViewMode('kanban')}
               className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
                 viewMode === 'kanban'
-                  ? 'bg-surface-900 text-white'
-                  : 'text-surface-600 hover:bg-surface-100 bg-[color:var(--color-surface-100)]'
+                  ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
+                  : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
               }`}
             >
               <Columns3 className="mr-1 inline h-3.5 w-3.5" />
@@ -404,7 +426,7 @@ export default function ComplaintsPage() {
 
       {error && <ErrorBanner message={error} />}
       {isUpdatingStatus && (
-        <div className="border-brand-500 bg-brand-100 text-brand-800 flex items-center gap-2 rounded-lg border-[length:var(--bw-strong)] p-3 text-sm font-semibold">
+        <div className="flex items-center gap-2 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-100)] p-3 text-sm font-semibold text-[color:var(--color-brand-800)]">
           <Loader2 className="h-4 w-4 animate-spin" />
           Updating complaint status...
         </div>
@@ -529,11 +551,11 @@ export default function ComplaintsPage() {
               </div>
               <DragOverlay>
                 {activeComplaint ? (
-                  <div className="bg-brand-50 w-64 rotate-2 rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] p-3 shadow-[var(--shadow-card)]">
-                    <p className="font-display text-surface-900 truncate text-sm font-bold">
+                  <div className="w-64 rotate-2 rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] p-3 shadow-[var(--shadow-card)]">
+                    <p className="font-display truncate text-sm font-bold text-[color:var(--color-text-primary)]">
                       {activeComplaint.title}
                     </p>
-                    <p className="text-surface-400 mt-1 text-xs">
+                    <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
                       {activeComplaint.tenant?.user?.name ?? 'N/A'}
                     </p>
                   </div>

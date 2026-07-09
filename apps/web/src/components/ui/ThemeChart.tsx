@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
+import { chartTokens } from '@/lib/chart-theme';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -20,45 +21,15 @@ export interface BarChartProps {
   variant?: 'stacked' | 'grouped' | 'single';
   secondaryLabel?: string;
   primaryLabel?: string;
-}
-
-// ── Helper: get computed theme colors ─────────────────
-
-function getThemeColors() {
-  if (typeof document === 'undefined') {
-    return {
-      brand: '#6366f1',
-      surface: '#a1a1aa',
-      surfaceDark: '#27272a',
-      grid: '#e4e4e7',
-      text: '#18181b',
-      muted: '#a1a1aa',
-      danger: '#ef4444',
-      success: '#22c55e',
-      warning: '#f59e0b',
-      bg: '#fafafa',
-      cardBg: '#f4f4f5',
-    };
-  }
-  const root = document.documentElement;
-  const style = getComputedStyle(root);
-  return {
-    brand: style.getPropertyValue('--color-brand-500').trim() || '#6366f1',
-    surface: style.getPropertyValue('--color-surface-400').trim() || '#a1a1aa',
-    surfaceDark: style.getPropertyValue('--color-surface-700').trim() || '#27272a',
-    grid: style.getPropertyValue('--color-surface-200').trim() || '#e4e4e7',
-    text: style.getPropertyValue('--color-surface-900').trim() || '#18181b',
-    muted: style.getPropertyValue('--color-surface-400').trim() || '#a1a1aa',
-    danger: style.getPropertyValue('--color-danger-500').trim() || '#ef4444',
-    success: style.getPropertyValue('--color-success-500').trim() || '#22c55e',
-    warning: style.getPropertyValue('--color-warning-500').trim() || '#f59e0b',
-    bg: style.getPropertyValue('--color-surface-50').trim() || '#fafafa',
-    cardBg: style.getPropertyValue('--color-surface-100').trim() || '#f4f4f5',
-  };
+  className?: string;
 }
 
 // ── Bar Chart ─────────────────────────────────────────
 
+/**
+ * Vertical bar chart driven entirely by CSS design tokens.
+ * Theme switches (light/dark / brand) update without re-reading getComputedStyle.
+ */
 export function BarChart({
   data,
   height = 240,
@@ -68,21 +39,23 @@ export function BarChart({
   variant = 'single',
   secondaryLabel,
   primaryLabel,
+  className,
 }: BarChartProps) {
-  const colors = getThemeColors();
+  const uid = useId().replace(/:/g, '');
   const maxVal = Math.max(...data.map((d) => Math.max(d.value, d.secondaryValue ?? 0)), 1);
-  const padTop = 20;
-  const padBottom = 30;
+
+  const padTop = 24;
+  const padBottom = 36;
   const padLeft = 8;
   const padRight = 8;
   const chartW = 100;
   const chartH = height - padTop - padBottom;
-  const barGap = 2;
-  const barCount = data.length;
+  const barGap = 2.5;
+  const barCount = Math.max(data.length, 1);
   const barTotalWidth = (chartW - barGap * (barCount - 1)) / barCount;
 
   const gridLines = useMemo(() => {
-    const lines = [];
+    const lines: Array<{ y: number; value: number }> = [];
     const steps = 4;
     for (let i = 0; i <= steps; i++) {
       const y = padTop + (chartH / steps) * i;
@@ -91,14 +64,40 @@ export function BarChart({
     return lines;
   }, [maxVal, chartH]);
 
+  // CSS handles reduced motion via motion-reduce utilities where available;
+  // keep SVG SMIL optional for progressive enhancement only.
+  const doAnimate = animated;
+
   return (
     <svg
       viewBox={`0 0 ${chartW + padLeft + padRight} ${height}`}
-      className="w-full"
+      className={className ?? 'w-full'}
       style={{ height, maxHeight: height }}
       preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={
+        primaryLabel
+          ? `${primaryLabel} bar chart`
+          : `Bar chart with ${data.length} categories`
+      }
     >
-      {/* Grid lines */}
+      <defs>
+        <clipPath id={`bar-clip-${uid}`}>
+          <rect x={padLeft} y={padTop} width={chartW} height={chartH} />
+        </clipPath>
+      </defs>
+
+      {/* Track background */}
+      <rect
+        x={padLeft}
+        y={padTop}
+        width={chartW}
+        height={chartH}
+        fill={chartTokens.track}
+        rx={2}
+        opacity={0.45}
+      />
+
       {showGrid &&
         gridLines.map((gl, i) => (
           <g key={i}>
@@ -107,18 +106,18 @@ export function BarChart({
               y1={gl.y}
               x2={chartW + padLeft}
               y2={gl.y}
-              stroke={colors.grid}
-              strokeWidth={0.5}
-              strokeDasharray={i === 0 ? '' : '3,3'}
+              stroke={i === gridLines.length - 1 ? chartTokens.gridStrong : chartTokens.grid}
+              strokeWidth={0.35}
+              strokeDasharray={i === gridLines.length - 1 ? undefined : '2 2'}
             />
             {showValues && (
               <text
-                x={padLeft - 4}
-                y={gl.y + 3}
+                x={padLeft - 1.5}
+                y={gl.y + 1.5}
                 textAnchor="end"
-                fill={colors.muted}
-                fontSize="6"
-                fontFamily="var(--font-mono, monospace)"
+                fill={chartTokens.axis}
+                fontSize="5"
+                fontFamily={chartTokens.fontMono}
               >
                 {Math.round(gl.value)}
               </text>
@@ -126,108 +125,143 @@ export function BarChart({
           </g>
         ))}
 
-      {/* Bars */}
-      {data.map((point, i) => {
-        const x = padLeft + i * (barTotalWidth + barGap);
-        const barH = (point.value / maxVal) * chartH;
-        const barY = padTop + chartH - barH;
+      <g clipPath={`url(#bar-clip-${uid})`}>
+        {data.map((point, i) => {
+          const x = padLeft + i * (barTotalWidth + barGap);
+          const barH = (point.value / maxVal) * chartH;
+          const barY = padTop + chartH - barH;
+          const secH = point.secondaryValue
+            ? (point.secondaryValue / maxVal) * chartH
+            : 0;
+          const secY =
+            variant === 'stacked' ? barY - secH : padTop + chartH - secH;
+          const primaryFill = point.color ?? chartTokens.bar;
+          const secondaryFill = chartTokens.barSecondary;
+          const primaryX =
+            variant === 'grouped' && point.secondaryValue !== undefined
+              ? x + barTotalWidth * 0.52
+              : x + barTotalWidth * 0.12;
+          const primaryW =
+            variant === 'grouped' && point.secondaryValue !== undefined
+              ? barTotalWidth * 0.36
+              : barTotalWidth * 0.76;
 
-        // Secondary bar (for stacked/grouped)
-        const secH = point.secondaryValue
-          ? (point.secondaryValue / maxVal) * chartH
-          : 0;
-        const secY = variant === 'stacked' ? barY - secH : padTop + chartH - secH;
+          return (
+            <g key={`${point.label}-${i}`}>
+              {point.secondaryValue !== undefined && (
+                <rect
+                  x={variant === 'grouped' ? x + barTotalWidth * 0.12 : x + barTotalWidth * 0.12}
+                  y={secY}
+                  width={
+                    variant === 'grouped' ? barTotalWidth * 0.36 : barTotalWidth * 0.76
+                  }
+                  height={Math.max(secH, 0)}
+                  fill={secondaryFill}
+                  rx={1.5}
+                  ry={1.5}
+                  opacity={variant === 'stacked' ? 0.85 : 1}
+                >
+                  {doAnimate && (
+                    <animate
+                      attributeName="height"
+                      from="0"
+                      to={String(Math.max(secH, 0))}
+                      dur="0.45s"
+                      begin={`${i * 0.04}s`}
+                      fill="freeze"
+                      calcMode="spline"
+                      keySplines="0.16 1 0.3 1"
+                      keyTimes="0;1"
+                    />
+                  )}
+                </rect>
+              )}
 
-        return (
-          <g key={i}>
-            {/* Secondary bar */}
-            {point.secondaryValue !== undefined && (
               <rect
-                x={variant === 'grouped' ? x + barTotalWidth * 0.15 : x}
-                y={secY}
-                width={variant === 'grouped' ? barTotalWidth * 0.4 : barTotalWidth}
-                height={secH}
-                fill={point.color ?? colors.surface}
-                rx={1}
-                opacity={0.6}
-                className={animated ? 'animate-fade-in-up' : ''}
+                x={primaryX}
+                y={barY}
+                width={primaryW}
+                height={Math.max(barH, point.value > 0 ? 1 : 0)}
+                fill={primaryFill}
+                rx={1.5}
+                ry={1.5}
               >
-                {animated && (
+                {doAnimate && (
                   <animate
                     attributeName="height"
                     from="0"
-                    to={secH}
-                    dur="0.4s"
-                    begin={`${i * 0.05}s`}
+                    to={String(Math.max(barH, point.value > 0 ? 1 : 0))}
+                    dur="0.45s"
+                    begin={`${i * 0.04}s`}
                     fill="freeze"
+                    calcMode="spline"
+                    keySplines="0.16 1 0.3 1"
+                    keyTimes="0;1"
                   />
                 )}
               </rect>
-            )}
 
-            {/* Primary bar */}
-            <rect
-              x={variant === 'grouped' && point.secondaryValue !== undefined
-                ? x + barTotalWidth * 0.55
-                : x + barTotalWidth * 0.1}
-              y={barY}
-              width={variant === 'grouped' ? barTotalWidth * 0.4 : barTotalWidth * 0.8}
-              height={barH}
-              fill={point.color ?? colors.brand}
-              rx={1.5}
-              className={animated ? 'animate-fade-in-up' : ''}
-            >
-              {animated && (
-                <animate
-                  attributeName="height"
-                  from="0"
-                  to={barH}
-                  dur="0.4s"
-                  begin={`${i * 0.05}s`}
-                  fill="freeze"
-                />
+              {showValues && point.value > 0 && (
+                <text
+                  x={x + barTotalWidth / 2}
+                  y={barY - 3}
+                  textAnchor="middle"
+                  fill={chartTokens.label}
+                  fontSize="5"
+                  fontFamily={chartTokens.fontMono}
+                  fontWeight={600}
+                >
+                  {point.value}
+                </text>
               )}
-            </rect>
 
-            {/* Value label on bar */}
-            {showValues && (
               <text
                 x={x + barTotalWidth / 2}
-                y={barY - 4}
+                y={height - 10}
                 textAnchor="middle"
-                fill={colors.text}
-                fontSize="5"
-                fontFamily="var(--font-body, sans-serif)"
-                fontWeight="600"
+                fill={chartTokens.axis}
+                fontSize="5.5"
+                fontFamily={chartTokens.fontBody}
+                fontWeight={500}
               >
-                {point.value}
+                {point.label.length > 8
+                  ? `${point.label.slice(0, 7)}…`
+                  : point.label}
               </text>
-            )}
+            </g>
+          );
+        })}
+      </g>
 
-            {/* X-axis label */}
-            <text
-              x={x + barTotalWidth / 2}
-              y={height - 4}
-              textAnchor="middle"
-              fill={colors.muted}
-              fontSize="5.5"
-              fontFamily="var(--font-body, sans-serif)"
-            >
-              {point.label}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Legend */}
       {primaryLabel && secondaryLabel && (
-        <g transform={`translate(${chartW - 60}, 4)`}>
-          <rect x={0} y={0} width={6} height={6} fill={colors.brand} rx={1} />
-          <text x={8} y={5} fill={colors.text} fontSize="5.5" fontFamily="var(--font-body, sans-serif)">
+        <g transform={`translate(${padLeft}, 6)`}>
+          <rect x={0} y={0} width={5} height={5} fill={chartTokens.bar} rx={1} />
+          <text
+            x={7}
+            y={4}
+            fill={chartTokens.label}
+            fontSize="5.5"
+            fontFamily={chartTokens.fontBody}
+            fontWeight={600}
+          >
             {primaryLabel}
           </text>
-          <rect x={0} y={10} width={6} height={6} fill={colors.surface} rx={1} opacity={0.6} />
-          <text x={8} y={15} fill={colors.text} fontSize="5.5" fontFamily="var(--font-body, sans-serif)">
+          <rect
+            x={primaryLabel.length * 3.2 + 14}
+            y={0}
+            width={5}
+            height={5}
+            fill={chartTokens.barSecondary}
+            rx={1}
+          />
+          <text
+            x={primaryLabel.length * 3.2 + 21}
+            y={4}
+            fill={chartTokens.label}
+            fontSize="5.5"
+            fontFamily={chartTokens.fontBody}
+            fontWeight={600}
+          >
             {secondaryLabel}
           </text>
         </g>
@@ -236,7 +270,7 @@ export function BarChart({
   );
 }
 
-// ── Mini Sparkline ────────────────────────────────────
+// ── Mini Sparkline (legacy export from ThemeChart) ────
 
 export interface SparklineProps {
   data: number[];
@@ -255,14 +289,13 @@ export function Sparkline({
   strokeWidth = 2,
   showDot = true,
 }: SparklineProps) {
-  const colors = getThemeColors();
-  const lineColor = color ?? colors.brand;
+  const lineColor = color ?? chartTokens.bar;
 
   if (data.length < 2) {
     return (
       <div
         style={{ width, height }}
-        className="flex items-center justify-center text-[color:var(--color-text-muted)] text-[10px]"
+        className="flex items-center justify-center text-[10px] text-[color:var(--color-text-muted)]"
       >
         —
       </div>
@@ -281,18 +314,15 @@ export function Sparkline({
     return `${x},${y}`;
   });
 
-  const polyline = points.join(' ');
-
   return (
-    <svg width={width} height={height} className="overflow-visible">
+    <svg width={width} height={height} className="overflow-visible" role="img" aria-label="Sparkline">
       <polyline
-        points={polyline}
+        points={points.join(' ')}
         fill="none"
         stroke={lineColor}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="animate-fade-in-up"
       />
       {showDot && (
         <circle
@@ -300,7 +330,7 @@ export function Sparkline({
           cy={Number(points[points.length - 1].split(',')[1])}
           r={3}
           fill={lineColor}
-          stroke="var(--color-surface-50, white)"
+          stroke="var(--color-card-bg)"
           strokeWidth={1.5}
         />
       )}
@@ -308,7 +338,7 @@ export function Sparkline({
   );
 }
 
-// ── Donut / Ring Chart ────────────────────────────────
+// ── Donut / Ring Chart (single-value) ─────────────────
 
 export interface DonutChartProps {
   value: number;
@@ -331,7 +361,6 @@ export function DonutChart({
   label,
   sublabel,
 }: DonutChartProps) {
-  const colors = getThemeColors();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const pct = Math.min(value / max, 1);
@@ -340,43 +369,37 @@ export function DonutChart({
 
   return (
     <div className="inline-flex flex-col items-center gap-1">
-      <svg width={size} height={size} className="-rotate-90">
-        {/* Background circle */}
+      <svg width={size} height={size} className="-rotate-90" role="img" aria-label={`${value} of ${max}`}>
         <circle
           cx={center}
           cy={center}
           r={radius}
           fill="none"
-          stroke={bgColor ?? colors.grid}
+          stroke={bgColor ?? chartTokens.grid}
           strokeWidth={strokeWidth}
         />
-        {/* Value circle */}
         <circle
           cx={center}
           cy={center}
           r={radius}
           fill="none"
-          stroke={color ?? colors.brand}
+          stroke={color ?? chartTokens.bar}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="animate-fade-in-up"
-        >
-          <animate
-            attributeName="stroke-dashoffset"
-            from={circumference}
-            to={offset}
-            dur="0.6s"
-            fill="freeze"
-          />
-        </circle>
+          className="transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none"
+        />
       </svg>
       {label && (
-        <span className="text-surface-900 font-display text-sm font-bold">{label}</span>
+        <span className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+          {label}
+        </span>
       )}
       {sublabel && (
-        <span className="text-surface-400 font-body text-xs">{sublabel}</span>
+        <span className="font-[family:var(--font-body)] text-xs text-[color:var(--color-text-muted)]">
+          {sublabel}
+        </span>
       )}
     </div>
   );

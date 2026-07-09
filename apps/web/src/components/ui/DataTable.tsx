@@ -53,7 +53,7 @@ function SkeletonRow({ columns }: { columns: number }) {
       {Array.from({ length: columns }).map((_, j) => (
         <td
           key={j}
-          className="border-b border-b-[color:var(--color-surface-200)] px-4 py-3"
+          className="border-b border-b-[color:var(--border-color)] px-4 py-3"
         >
           <ShimmerBlock className="h-4 w-3/4" />
         </td>
@@ -68,7 +68,7 @@ function SkeletonRow({ columns }: { columns: number }) {
 
 function MobileCardSkeleton() {
   return (
-    <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-xs)]">
+    <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-xs)]">
       <ShimmerBlock className="mb-2 h-4 w-3/4" />
       <ShimmerBlock className="h-3 w-1/2" />
     </div>
@@ -116,7 +116,7 @@ export function DataTable<T>({
               <MobileCardSkeleton key={`mobile-skel-${i}`} />
             ))
           ) : data.length === 0 ? (
-            <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
+            <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
               {emptyState ?? (
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
@@ -134,7 +134,7 @@ export function DataTable<T>({
                 key={keyExtractor(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={clsx(
-                  'rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
+                  'rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
                   onRowClick && 'cursor-pointer hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
                 )}
               >
@@ -147,12 +147,12 @@ export function DataTable<T>({
 
       {/* Desktop Table (hidden on mobile when card view is active) */}
       <div className={clsx(
-        'overflow-x-auto rounded-xl border border-[color:var(--border-color)] shadow-[var(--shadow-sm)]',
+        'overflow-x-auto rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
         mobileCardRenderer && 'hidden md:block',
       )}>
-        <table className="w-full border-collapse bg-[color:var(--color-surface-100)]">
+        <table className="w-full border-collapse bg-[color:var(--color-card-bg)]">
           <thead>
-            <tr className="bg-[color:var(--color-surface-50)]">
+            <tr className="bg-[color:var(--color-field-bg)]">
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -192,11 +192,11 @@ export function DataTable<T>({
                   key={keyExtractor(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={clsx(
-                    'border-b border-b-[color:var(--color-surface-200)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
+                    'border-b border-b-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
                     onRowClick && 'cursor-pointer hover:bg-[color:var(--color-brand-50)]',
                     rowIdx % 2 === 0
-                      ? 'bg-[color:var(--color-surface-100)]'
-                      : 'bg-[color:var(--color-surface-50)]',
+                      ? 'bg-[color:var(--color-card-bg)]'
+                      : 'bg-[color:var(--color-field-bg)]',
                   )}
                 >
                   {columns.map((col, colIdx) => (
@@ -229,7 +229,7 @@ export function DataTable<T>({
             <select
               value={pagination.perPage}
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
-              className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-2.5 py-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+              className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"
             >
               {PER_PAGE_OPTIONS.map((n) => (
                 <option key={n} value={n}>

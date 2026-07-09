@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
+import { chartTokens, heatmapLevel, heatmapRamp, type HeatmapScale } from '@/lib/chart-theme';
 
 /**
- * HeatmapCalendar -- GitHub-style contribution grid.
- * Renders a calendar month as colored cells where intensity maps to value.
- * Theme-aware via var() tokens. Zero dependencies.
+ * HeatmapCalendar — month contribution grid.
+ * Color intensity uses solid token ramps (brand / success / danger) for light + dark.
  */
 export function HeatmapCalendar({
   data,
@@ -14,14 +14,14 @@ export function HeatmapCalendar({
   colorScale = 'brand',
   customColors,
   maxValue,
-  size = 14,
+  size = 16,
   onDayClick,
   className,
 }: {
   data: Record<string, number>;
   year: number;
   month: number;
-  colorScale?: 'brand' | 'success' | 'danger' | 'custom';
+  colorScale?: HeatmapScale;
   customColors?: string[];
   maxValue?: number;
   size?: number;
@@ -30,19 +30,15 @@ export function HeatmapCalendar({
 }) {
   const dayNames = ['Mon', '', 'Wed', '', 'Fri', '', ''];
 
-  // Build grid of weeks for the given month
   const weeks = useMemo(() => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     let startDow = firstDay.getDay();
-    // Convert to Monday-based: 0 = Mon, 6 = Sun
     startDow = startDow === 0 ? 6 : startDow - 1;
 
     const cells: Array<{ date: string; day: number; count: number; inMonth: boolean }> = [];
 
-    // Leading empty cells
     for (let i = 0; i < startDow; i++) {
       cells.push({ date: '', day: -1, count: 0, inMonth: false });
     }
@@ -52,87 +48,92 @@ export function HeatmapCalendar({
       cells.push({ date: dateStr, day: d, count: data[dateStr] ?? 0, inMonth: true });
     }
 
-    // Chunk into weeks (rows of 7)
     const chunked: typeof cells[] = [];
     for (let i = 0; i < cells.length; i += 7) {
       chunked.push(cells.slice(i, i + 7));
     }
+    // Pad final week
+    const last = chunked[chunked.length - 1];
+    if (last && last.length < 7) {
+      while (last.length < 7) {
+        last.push({ date: '', day: -1, count: 0, inMonth: false });
+      }
+    }
     return chunked;
   }, [data, year, month]);
 
-  const computedMax = maxValue ?? Math.max(1, ...weeks.flat().map((c) => c.count));
+  const computedMax =
+    maxValue ?? Math.max(1, ...weeks.flat().map((c) => c.count));
 
-  // Build color ramp
-  const colors = useMemo(() => {
-    if (colorScale === 'custom' && customColors && customColors.length >= 4) {
-      return customColors;
-    }
-    let base: string;
-    switch (colorScale) {
-      case 'success': base = 'var(--color-success-500)'; break;
-      case 'danger': base = 'var(--color-danger-500)'; break;
-      default: base = 'var(--color-brand-500)'; break;
-    }
-    return [
-      'var(--color-surface-200)',
-      `color-mix(in srgb, ${base} 25%, transparent)`,
-      `color-mix(in srgb, ${base} 50%, transparent)`,
-      `color-mix(in srgb, ${base} 75%, transparent)`,
-      base,
-    ];
-  }, [colorScale, customColors]);
-
-  const getCellColor = (count: number): string => {
-    if (count <= 0) return colors[0];
-    const pct = count / computedMax;
-    if (pct <= 0.25) return colors[1];
-    if (pct <= 0.5) return colors[2];
-    if (pct <= 0.75) return colors[3];
-    return colors[4];
-  };
+  const colors = useMemo(
+    () => heatmapRamp(colorScale, customColors),
+    [colorScale, customColors],
+  );
 
   const cellSize = size;
-  const cellGap = 3;
-  const totalW = weeks[0]?.length ? weeks[0].length * (cellSize + cellGap) : 200;
-  const totalH = weeks.length * (cellSize + cellGap) + 20;
-  const labelW = 28;
+  const cellGap = 4;
+  const labelW = 30;
+  const weekCount = weeks.length;
+  const totalW = labelW + weekCount * (cellSize + cellGap);
+  const totalH = 7 * (cellSize + cellGap) + 22;
+  const clickable = !!onDayClick;
+
+  const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
 
   return (
     <div className={className}>
       <svg
-        viewBox={`0 0 ${totalW + labelW} ${totalH}`}
-        className="w-full overflow-visible"
-        style={{ height: totalH, maxHeight: totalH }}
+        viewBox={`0 0 ${totalW} ${totalH}`}
+        className="mx-auto w-full max-w-md overflow-visible"
+        style={{ height: Math.max(totalH, 120) }}
         role="img"
-        aria-label="Calendar heatmap"
+        aria-label={`Activity heatmap for ${monthLabel}`}
       >
-        {/* Day labels */}
-        {dayNames.map((name, i) => (
+        {dayNames.map((name, i) =>
           name ? (
             <text
-              key={i}
-              x={4}
-              y={i * (cellSize + cellGap) + cellSize / 2 + 4}
+              key={`day-${i}`}
+              x={2}
+              y={i * (cellSize + cellGap) + cellSize / 2 + 1}
               textAnchor="start"
               dominantBaseline="middle"
-              fill="var(--color-text-muted)"
+              fill={chartTokens.axis}
               fontSize={9}
-              fontFamily="var(--font-body)"
+              fontFamily={chartTokens.fontBody}
               fontWeight={600}
             >
               {name}
             </text>
-          ) : null
-        ))}
+          ) : null,
+        )}
 
-        {/* Cells */}
         {weeks.map((week, weekIdx) =>
           week.map((cell, dayIdx) => {
-            if (!cell.inMonth) return null;
             const x = labelW + weekIdx * (cellSize + cellGap);
-            const y = dayIdx * (cellSize + cellGap) + 2;
-            const color = getCellColor(cell.count);
-            const clickable = !!onDayClick;
+            const y = dayIdx * (cellSize + cellGap);
+
+            if (!cell.inMonth) {
+              return (
+                <rect
+                  key={`empty-${weekIdx}-${dayIdx}`}
+                  x={x}
+                  y={y}
+                  width={cellSize}
+                  height={cellSize}
+                  rx={3}
+                  fill="transparent"
+                  stroke={chartTokens.cellBorder}
+                  strokeWidth={0.5}
+                  opacity={0.35}
+                />
+              );
+            }
+
+            const level = heatmapLevel(cell.count, computedMax);
+            const fill = colors[level] ?? colors[0];
 
             return (
               <g key={cell.date}>
@@ -142,41 +143,61 @@ export function HeatmapCalendar({
                   width={cellSize}
                   height={cellSize}
                   rx={3}
-                  fill={color}
-                  className="transition-all duration-300"
-                  style={clickable ? { cursor: 'pointer' } : undefined}
-                  onClick={clickable ? () => onDayClick?.(cell.date, cell.count) : undefined}
+                  fill={fill}
+                  stroke={level === 0 ? chartTokens.cellBorder : 'transparent'}
+                  strokeWidth={level === 0 ? 1 : 0}
+                  className={
+                    clickable
+                      ? 'cursor-pointer transition-opacity duration-150 hover:opacity-80 focus:outline-none'
+                      : 'transition-opacity duration-150'
+                  }
+                  tabIndex={clickable ? 0 : undefined}
+                  role={clickable ? 'button' : undefined}
+                  aria-label={`${cell.date}: ${cell.count}`}
+                  onClick={
+                    clickable
+                      ? () => onDayClick?.(cell.date, cell.count)
+                      : undefined
+                  }
+                  onKeyDown={
+                    clickable
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onDayClick?.(cell.date, cell.count);
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   <title>{`${cell.date}: ${cell.count}`}</title>
                 </rect>
               </g>
             );
-          })
+          }),
         )}
 
-        {/* Month label */}
         <text
           x={labelW}
           y={totalH - 4}
           textAnchor="start"
-          dominantBaseline="alphabetic"
-          fill="var(--color-text-muted)"
+          fill={chartTokens.axis}
           fontSize={10}
-          fontFamily="var(--font-body)"
+          fontFamily={chartTokens.fontBody}
           fontWeight={700}
         >
-          {new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+          {monthLabel}
         </text>
       </svg>
 
-      {/* Legend */}
-      <div className="mt-2 flex items-center justify-end gap-1.5 text-[10px]">
+      <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] font-medium">
         <span className="text-[color:var(--color-text-muted)]">Less</span>
         {colors.map((c, i) => (
           <div
             key={i}
-            className="h-2.5 w-2.5 rounded-sm"
+            className="h-2.5 w-2.5 rounded-[var(--chart-cell-radius)] border border-[color:var(--chart-cell-border)]"
             style={{ backgroundColor: c }}
+            aria-hidden
           />
         ))}
         <span className="text-[color:var(--color-text-muted)]">More</span>

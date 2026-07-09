@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { AmenityDefinition } from '@pg/types';
 
 // ── Dynamic icon resolution ──
@@ -139,11 +141,11 @@ export default function ServicesPage() {
         const Icon = getIcon(row.serviceType);
         return (
           <div className="flex items-center gap-2">
-            <span className="flex-shrink-0 text-[color:var(--color-surface-500)]">
+            <span className="flex-shrink-0 text-[color:var(--color-text-muted)]">
               <Icon className="h-5 w-5" />
             </span>
             <div>
-              <span className="text-[color:var(--color-surface-900)] font-semibold">
+              <span className="font-semibold text-[color:var(--color-text-primary)]">
                 {getLabel(row.serviceType)}
               </span>
               {row.openComplaintCount ? (
@@ -188,7 +190,7 @@ export default function ServicesPage() {
     {
       header: 'Note',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-surface-500)]">
+        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
           {row.note ?? '—'}
         </span>
       ),
@@ -202,7 +204,7 @@ export default function ServicesPage() {
               e.stopPropagation();
               router.push(`/services/${row._id}`);
             }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -235,26 +237,18 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-surface-900)]">
-            Service Status
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-surface-500)]">
-            Monitor and update service health across floors
-          </p>
-        </div>
-        <Button onClick={() => router.push('/services/new')}>
-          <Plus className="h-4 w-4" />
-          Add Service
-        </Button>
-      </div>
+      <PageHeader
+        title="Service Status"
+        description="Monitor and update service health across floors"
+        action={
+          <Button onClick={() => router.push('/services/new')}>
+            <Plus className="h-4 w-4" />
+            Add Service
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
@@ -330,7 +324,7 @@ export default function ServicesPage() {
                     e.stopPropagation();
                     router.push(`/services/${row._id}`);
                   }}
-                  className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                  className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-field-bg-hover)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
                   title="View"
                 >
                   <Eye className="h-3 w-3" />

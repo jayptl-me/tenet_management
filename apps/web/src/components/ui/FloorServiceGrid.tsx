@@ -209,11 +209,11 @@ export function FloorServiceGrid({
             return (
               <div
                 key={svc.serviceType}
-                className="group relative inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[color:var(--color-surface-700)]"
+                className="group relative inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[color:var(--color-text-secondary)]"
                 title={`${resolveLabel(svc.serviceType)}: ${cfg.label}${svc.openComplaintCount ? ` (${svc.openComplaintCount} open complaints)` : ''}`}
               >
                 <span className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
-                <Icon className="hidden h-3 w-3 text-[color:var(--color-surface-500)] sm:inline" />
+                <Icon className="hidden h-3 w-3 text-[color:var(--color-text-muted)] sm:inline" />
                 <span className="hidden sm:inline">
                   {resolveLabel(svc.serviceType)}
                 </span>
@@ -231,7 +231,7 @@ export function FloorServiceGrid({
                 e.stopPropagation();
                 setExpanded(!expanded);
               }}
-              className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[color:var(--color-surface-400)] hover:text-[color:var(--color-surface-600)] transition-colors duration-[var(--transition-duration)]"
+              className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:text-[color:var(--color-text-secondary)]"
             >
               +{perFloorServices.length - visibleCount} more{' '}
               <ChevronDown className="h-3 w-3" />
@@ -241,7 +241,7 @@ export function FloorServiceGrid({
 
         {/* Expanded details */}
         {expanded && (
-          <div className="mt-2 space-y-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-2">
+          <div className="mt-2 space-y-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-2">
             {perFloorServices.map((svc) => {
               const cfg = STATUS_CONFIG[svc.status] ?? STATUS_CONFIG.operational;
               const Icon = getIcon(svc.serviceType);
@@ -252,8 +252,8 @@ export function FloorServiceGrid({
                 >
                   <div className="flex items-center gap-1.5">
                     <span className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
-                    <Icon className="h-3 w-3 text-[color:var(--color-surface-500)]" />
-                    <span className="font-semibold text-[color:var(--color-surface-800)]">
+                    <Icon className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+                    <span className="font-semibold text-[color:var(--color-text-primary)]">
                       {resolveLabel(svc.serviceType)}
                     </span>
                   </div>
@@ -294,7 +294,7 @@ export function FloorServiceGrid({
       {/* Header with health summary */}
       {floorLabel && (
         <div className="flex items-center gap-2">
-          <h4 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-surface-900)]">
+          <h4 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
             {floorLabel}
           </h4>
           {anyDown ? (

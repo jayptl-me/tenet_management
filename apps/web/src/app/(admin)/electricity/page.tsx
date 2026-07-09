@@ -90,13 +90,13 @@ export default function ElectricityPage() {
     {
       header: 'Month',
       accessor: (row) => (
-        <span className="text-surface-900 font-semibold">{row.month}</span>
+        <span className="text-[color:var(--color-text-primary)] font-semibold">{row.month}</span>
       ),
     },
     {
       header: 'Total Amount',
       accessor: (row) => (
-        <span className="text-surface-900 font-semibold">₹{row.totalBillAmount.toLocaleString()}</span>
+        <span className="text-[color:var(--color-text-primary)] font-semibold">₹{row.totalBillAmount.toLocaleString()}</span>
       ),
     },
     {
@@ -115,7 +115,7 @@ export default function ElectricityPage() {
     {
       header: 'Notes',
       accessor: (row) => (
-        <span className="text-surface-500 block max-w-[200px] truncate text-xs">
+        <span className="text-[color:var(--color-text-muted)] block max-w-[200px] truncate text-xs">
           {row.notes ?? '—'}
         </span>
       ),
@@ -129,7 +129,7 @@ export default function ElectricityPage() {
               e.stopPropagation();
               router.push(`/electricity/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -139,7 +139,7 @@ export default function ElectricityPage() {
               e.stopPropagation();
               router.push(`/electricity/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -149,7 +149,7 @@ export default function ElectricityPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />

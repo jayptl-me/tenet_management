@@ -3,6 +3,7 @@
 import { clsx } from 'clsx';
 import { motion } from 'motion/react';
 import { cardHover } from '@/lib/animations';
+import { surfaceCardClass } from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -29,12 +30,13 @@ export interface StatCardProps {
 
 // ── Style Maps ─────────────────────────────────────────
 
-const accentBorders: Record<string, string> = {
-  default: 'border-l-[color:var(--color-surface-400)]',
-  success: 'border-l-[color:var(--color-success-500)]',
-  warning: 'border-l-[color:var(--color-warning-500)]',
-  danger: 'border-l-[color:var(--color-danger-500)]',
-  brand: 'border-l-[color:var(--color-brand-500)]',
+/** Top accent bar (avoids side-stripe anti-pattern). */
+const accentBars: Record<string, string> = {
+  default: 'bg-[color:var(--color-surface-300)]',
+  success: 'bg-[color:var(--color-success-500)]',
+  warning: 'bg-[color:var(--color-warning-500)]',
+  danger: 'bg-[color:var(--color-danger-500)]',
+  brand: 'bg-[color:var(--color-brand-500)]',
 };
 
 const trendStyles: Record<string, Record<string, string>> = {
@@ -76,14 +78,21 @@ export function StatCard({
   const cardContent = (
     <div
       className={clsx(
-        'relative rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4 shadow-[var(--shadow-card)]',
-        'border-l-[3px] transition-shadow duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+        surfaceCardClass,
+        'relative overflow-hidden px-5 py-4',
+        'transition-shadow duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
         'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-card-hover)]',
-        accentBorders[variant],
         isInteractive && 'cursor-pointer',
         className,
       )}
     >
+      <div
+        className={clsx(
+          'absolute inset-x-0 top-0 h-0.5',
+          accentBars[variant],
+        )}
+        aria-hidden
+      />
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

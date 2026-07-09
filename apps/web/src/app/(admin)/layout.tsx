@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [logout]);
 
   return (
-    <div className="flex min-h-screen bg-[color:var(--color-surface-50)]">
+    <div className="flex min-h-screen bg-[color:var(--color-page-bg)]">
       <Sidebar />
 
       <main className="flex min-w-0 flex-1 flex-col">
@@ -107,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Cmd+K hint */}
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-text-secondary)] hover:shadow-[var(--shadow-sm)]"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-text-secondary)] hover:shadow-[var(--shadow-sm)]"
             >
               <Search className="h-3 w-3" />
               <span>Search</span>

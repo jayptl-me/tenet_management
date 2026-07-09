@@ -63,11 +63,11 @@ export function PageHeader({
           </Button>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-[color:var(--color-text-primary)]">
+          <h1 className="font-[family:var(--font-display)] text-balance text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {title}
           </h1>
           {description && (
-            <p className="mt-1 text-sm text-[color:var(--color-text-muted)]">
+            <p className="mt-1 max-w-2xl text-sm font-medium leading-relaxed text-[color:var(--color-text-secondary)]">
               {description}
             </p>
           )}

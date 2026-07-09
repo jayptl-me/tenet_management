@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-md"
       >
-        <div className="rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-8 shadow-[var(--shadow-card)]">
+        <div className="rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 shadow-[var(--shadow-card)]">
           {/* Brand Icon */}
           <motion.div
             variants={brandIcon}

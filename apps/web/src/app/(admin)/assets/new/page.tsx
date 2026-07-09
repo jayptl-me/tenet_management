@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormGrid } from '@/components/ui/FormSection';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -65,25 +67,25 @@ export default function NewAssetPage() {
   };
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">New Asset</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Add a new asset to inventory</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Asset"
+      description="Add a new asset to inventory"
+      backHref="/assets"
+      error={submitError}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/assets"
+            submitLabel="Save Asset"
+            divided={false}
+          />
+        }
       >
         <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormGrid>
             <Input
               label="Name"
               placeholder="Asset name"
@@ -96,14 +98,14 @@ export default function NewAssetPage() {
               error={errors.category?.message}
               {...register('category')}
             />
-          </div>
+          </FormGrid>
           <Input
             label="Location"
             placeholder="e.g. Floor 1, Common Area"
             error={errors.location?.message}
             {...register('location')}
           />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <FormGrid cols={3}>
             <Input
               label="Quantity"
               type="number"
@@ -122,36 +124,22 @@ export default function NewAssetPage() {
               error={errors.status?.message}
               {...register('status')}
             />
-          </div>
+          </FormGrid>
           <Input
             label="Purchase Date"
             type="date"
             error={errors.purchasedDate?.message}
             {...register('purchasedDate')}
           />
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="notes" className="text-surface-800 font-display text-sm font-semibold">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              rows={3}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
-              placeholder="Optional notes..."
-              {...register('notes')}
-            />
-          </div>
+          <Textarea
+            label="Notes"
+            rows={3}
+            placeholder="Optional notes..."
+            error={errors.notes?.message}
+            {...register('notes')}
+          />
         </div>
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" />
-            Save Asset
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

@@ -2,6 +2,15 @@
 
 import { forwardRef } from 'react';
 import { clsx } from 'clsx';
+import {
+  fieldControlBase,
+  fieldControlBorderError,
+  fieldControlBorderOk,
+  fieldErrorClass,
+  fieldHelperClass,
+  fieldHintClass,
+  fieldLabelClass,
+} from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -20,50 +29,35 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     return (
       <div className="flex flex-col gap-1.5">
-        {/* Label + hint */}
         {label && (
           <div className="flex items-center justify-between gap-2">
-            <label
-              htmlFor={textareaId}
-              className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
-            >
+            <label htmlFor={textareaId} className={fieldLabelClass}>
               {label}
             </label>
-            {hint && (
-              <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
-                {hint}
-              </span>
-            )}
+            {hint && <span className={fieldHintClass}>{hint}</span>}
           </div>
         )}
 
-        {/* Textarea */}
         <textarea
           ref={ref}
           id={textareaId}
           rows={rows}
           className={clsx(
-            'w-full resize-y rounded-lg border bg-[color:var(--color-surface-50)] px-3.5 py-2.5 text-sm font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)]',
-            'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-            'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:border-[color:var(--color-brand-500)]',
-            'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
-            error
-              ? 'border-[color:var(--color-danger-400)] focus:ring-[color:var(--color-danger-400)]'
-              : 'border-[color:var(--border-color)] hover:border-[color:var(--color-surface-300)]',
+            fieldControlBase,
+            'min-h-[5.5rem] resize-y py-2.5',
+            error ? fieldControlBorderError : fieldControlBorderOk,
             className,
           )}
+          aria-invalid={error ? true : undefined}
           {...props}
         />
 
-        {/* Error / helper */}
         {error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
-            {helperText}
+          <p className={fieldErrorClass} role="alert">
+            {error}
           </p>
         )}
+        {helperText && !error && <p className={fieldHelperClass}>{helperText}</p>}
       </div>
     );
   },

@@ -1,4 +1,4 @@
-import type { MealType } from './meal.js';
+import type { MealType } from './meal';
 
 export interface IMenuItem {
   name: string;

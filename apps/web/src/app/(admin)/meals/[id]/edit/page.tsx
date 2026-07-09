@@ -5,12 +5,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 
 const schema = z.object({
   mealType: z.string().min(1, 'Meal type is required'),
@@ -61,30 +63,59 @@ export default function EditMealPage() {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Meal Feedback</h2>
-          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update meal feedback details</p>
-        </div>
-      </div>
-      {submitError && <ErrorBanner message={submitError} />}
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <div className="space-y-5">
-          <Select label="Meal Type" options={mealTypeOptions} error={errors.mealType?.message} {...register('mealType')} />
-          <Input label="Rating (1-5)" type="number" min={1} max={5} error={errors.rating?.message} {...register('rating')} />
-          <Input label="Comment" error={errors.comment?.message} {...register('comment')} />
-          <Select label="Status" options={statusOptions} error={errors.status?.message} {...register('status')} />
-        </div>
-        <div className="border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
-        </div>
-      </form>
-    </div>
+    <FormPage
+      title="Edit meal feedback"
+      description="Update rating, comment, and handling status"
+      backHref="/meals"
+      error={submitError}
+      isLoading={isLoading}
+    >
+      <FormCard
+        onSubmit={handleSubmit(onSubmit)}
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/meals"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
+      >
+        <FormSection title="Feedback" description="Tenant meal rating and staff follow-up">
+          <FormGrid>
+            <Select
+              label="Meal type"
+              options={mealTypeOptions}
+              error={errors.mealType?.message}
+              {...register('mealType')}
+            />
+            <Input
+              label="Rating (1–5)"
+              type="number"
+              min={1}
+              max={5}
+              inputMode="numeric"
+              error={errors.rating?.message}
+              {...register('rating')}
+            />
+            <Select
+              label="Status"
+              options={statusOptions}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+            <FormFullWidth>
+              <Textarea
+                label="Comment"
+                rows={3}
+                error={errors.comment?.message}
+                {...register('comment')}
+              />
+            </FormFullWidth>
+          </FormGrid>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

@@ -83,7 +83,7 @@ export default function AssetsPage() {
   const columns: DataTableColumn<AssetRow>[] = [
     {
       header: 'Name',
-      accessor: (row) => <span className="text-surface-900 font-semibold">{row.name}</span>,
+      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.name}</span>,
     },
     {
       header: 'Category',
@@ -119,7 +119,7 @@ export default function AssetsPage() {
               e.stopPropagation();
               router.push(`/assets/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -129,7 +129,7 @@ export default function AssetsPage() {
               e.stopPropagation();
               router.push(`/assets/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -139,7 +139,7 @@ export default function AssetsPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -232,7 +232,7 @@ export default function AssetsPage() {
             <div className="flex items-center gap-1 pt-1">
               <button
                 onClick={(e) => { e.stopPropagation(); router.push(`/assets/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors hover:bg-[color:var(--color-surface-100)]"
+                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
               >
                 <Eye className="h-3 w-3" /> View
               </button>

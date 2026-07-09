@@ -159,15 +159,15 @@ export default function ExportPage() {
         {exportOptions.map((option) => (
           <div
             key={option.resource}
-            className="flex flex-col rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]"
+            className="flex flex-col rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)]"
           >
-            <div className="text-brand-600 mb-4 flex items-center gap-2">
-              <div className="bg-brand-100 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] p-2">
+            <div className="mb-4 flex items-center gap-2 text-[color:var(--color-brand-600)]">
+              <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-100)] p-2">
                 {option.icon}
               </div>
-              <h3 className="font-display text-surface-900 text-lg font-bold">{option.label}</h3>
+              <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">{option.label}</h3>
             </div>
-            <p className="text-surface-600 font-[family:var(--font-body)] mb-5 flex-1 text-sm">
+            <p className="mb-5 flex-1 font-[family:var(--font-body)] text-sm text-[color:var(--color-text-secondary)]">
               {option.description}
             </p>
             <Button
@@ -185,7 +185,7 @@ export default function ExportPage() {
                 </>
               ) : success === option.resource ? (
                 <>
-                  <Check className="h-4 w-4 text-success-600" />
+                  <Check className="h-4 w-4 text-[color:var(--color-success-600)]" />
                   Exported Successfully
                 </>
               ) : (

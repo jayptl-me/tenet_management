@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import type { IAppConfig } from '@pg/types';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { floorLabel } from '@/lib/resource-select-presets';
 
 const SHARING_OPTIONS = [
@@ -29,7 +31,7 @@ const STATUS_OPTIONS = [
 
 type RoomAmenityDef = { key: string; label: string; icon: string; category: string };
 
-export default function NewRoomPage() {
+function NewRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillFloorId = searchParams.get('floorId') ?? '';
@@ -57,7 +59,6 @@ export default function NewRoomPage() {
       .finally(() => setLoadingDefs(false));
   }, []);
 
-  // Build a flat schema dynamically with all amenity fields
   const schema = z.object({
     roomNumber: z.string().min(1, 'Room number is required'),
     floorId: z.string().min(1, 'Floor is required'),
@@ -116,38 +117,35 @@ export default function NewRoomPage() {
     }
   };
 
-  if (loadingDefs) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
-      </div>
-    );
-  }
-
   const err = errors as Record<string, { message?: string }>;
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">New Room</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Add a new room to the PG</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Room"
+      description="Add a new room to the PG"
+      backHref="/rooms"
+      error={submitError}
+      isLoading={loadingDefs}
+      maxWidth="3xl"
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/rooms"
+            submitLabel="Save Room"
+            divided={false}
+          />
+        }
       >
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormSection
+          title="Room details"
+          description="Number, floor, sharing, and rent"
+        >
+          <FormGrid>
             <Input
-              label="Room Number"
+              label="Room number"
               placeholder="e.g. 101, G2"
               error={err.roomNumber?.message}
               {...register('roomNumber')}
@@ -167,69 +165,64 @@ export default function NewRoomPage() {
                 />
               )}
             />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
-              label="Sharing Type"
+              label="Sharing type"
               options={SHARING_OPTIONS}
               error={err.sharingType?.message}
               {...register('sharingType')}
             />
             <Input
-              label="Monthly Rent (₹)"
+              label="Monthly rent (₹)"
               type="number"
               error={err.monthlyRent?.message}
               {...register('monthlyRent')}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="description"
-              className="text-surface-800 font-display text-sm font-semibold"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
+          </FormGrid>
+          <div className="mt-4">
+            <Textarea
+              label="Description"
               rows={3}
-              className="text-surface-900 font-[family:var(--font-body)] focus:ring-brand-500 w-full rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-base focus:outline-none focus:ring-[length:var(--bw-strong)] focus:ring-offset-2"
               placeholder="Optional description..."
               {...register('description')}
             />
           </div>
+        </FormSection>
 
-          {/* Room-level amenity status */}
-          {roomAmenityDefs.length > 0 && (
-            <div>
-              <h4 className="font-display text-surface-900 mb-3 text-sm font-bold">Room Amenity Status</h4>
-              <p className="text-surface-500 mb-3 text-xs">Set the initial status for room-specific amenities</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {roomAmenityDefs.map((a) => {
-                  const fieldName = `amenity_${a.key}`;
-                  return (
-                    <Select
-                      key={a.key}
-                      label={a.label}
-                      options={STATUS_OPTIONS}
-                      error={err[fieldName]?.message}
-                      {...register(fieldName)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="border-surface-200 mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" />
-            Save Room
-          </Button>
-        </div>
-      </form>
-    </div>
+        {roomAmenityDefs.length > 0 && (
+          <FormSection
+            title="Room amenity status"
+            description="Set the initial status for room-specific amenities"
+            divided
+          >
+            <FormGrid cols={3}>
+              {roomAmenityDefs.map((a) => {
+                const fieldName = `amenity_${a.key}`;
+                return (
+                  <Select
+                    key={a.key}
+                    label={a.label}
+                    options={STATUS_OPTIONS}
+                    error={err[fieldName]?.message}
+                    {...register(fieldName)}
+                  />
+                );
+              })}
+            </FormGrid>
+          </FormSection>
+        )}
+      </FormCard>
+    </FormPage>
+  );
+}
+
+export default function NewRoomPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+      </div>
+    }>
+      <NewRoomForm />
+    </Suspense>
   );
 }

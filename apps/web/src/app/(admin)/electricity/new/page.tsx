@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { roomLabel } from '@/lib/resource-select-presets';
 
 interface RoomOption {
@@ -118,161 +122,147 @@ export default function NewElectricityPage() {
   }));
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-            New Electricity Bill
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-            Monthly bill with per-room meter readings
-          </p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Electricity Bill"
+      description="Monthly bill with per-room meter readings"
+      backHref="/electricity"
+      error={submitError}
+      maxWidth="4xl"
+    >
+      <FormCard
         onSubmit={onSubmit}
-        className="space-y-6 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/electricity"
+            submitLabel="Save Bill"
+            divided={false}
+          />
+        }
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label="Month"
-            placeholder="YYYY-MM"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
-          <Input
-            label="Total Bill Amount (₹)"
-            type="number"
-            min={0}
-            step="0.01"
-            value={totalBillAmount}
-            onChange={(e) => setTotalBillAmount(Number(e.target.value))}
-          />
-        </div>
+        <FormSection
+          title="Bill details"
+          description="Billing month and total amount for this cycle"
+        >
+          <FormGrid>
+            <Input
+              label="Month"
+              placeholder="YYYY-MM"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+            <Input
+              label="Total bill amount (₹)"
+              type="number"
+              min={0}
+              step="0.01"
+              value={totalBillAmount}
+              onChange={(e) => setTotalBillAmount(Number(e.target.value))}
+            />
+          </FormGrid>
+        </FormSection>
 
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-base font-bold text-[color:var(--color-text-primary)]">
-              Room Readings
-            </h3>
+        <FormSection
+          title="Room readings"
+          description="Per-room meter readings for this billing period"
+          divided
+          action={
             <Button type="button" variant="outline" size="sm" onClick={addEntry}>
-              <Plus className="h-4 w-4" /> Add Room
+              <Plus className="h-4 w-4" /> Add room
             </Button>
-          </div>
-          <div className="space-y-4">
+          }
+        >
+          <div className="space-y-3">
             {entries.map((entry, idx) => {
               const units = Math.max(0, entry.currentReading - entry.previousReading);
               const amount = units * entry.ratePerUnit;
               return (
                 <div
                   key={idx}
-                  className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4"
+                  className="grid grid-cols-1 gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]"
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
-                      Entry {idx + 1}
-                    </span>
+                  <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                    <label
+                      className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+                      htmlFor={`elec-new-room-${idx}`}
+                    >
+                      Room
+                    </label>
+                    <select
+                      id={`elec-new-room-${idx}`}
+                      className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)]"
+                      value={entry.roomId}
+                      onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
+                      required
+                    >
+                      <option value="">Select room...</option>
+                      {roomOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    label="Previous"
+                    type="number"
+                    min={0}
+                    value={entry.previousReading}
+                    onChange={(e) =>
+                      updateEntry(idx, { previousReading: Number(e.target.value) })
+                    }
+                  />
+                  <Input
+                    label="Current"
+                    type="number"
+                    min={0}
+                    value={entry.currentReading}
+                    onChange={(e) =>
+                      updateEntry(idx, { currentReading: Number(e.target.value) })
+                    }
+                  />
+                  <Input
+                    label="Rate / unit"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={entry.ratePerUnit}
+                    onChange={(e) =>
+                      updateEntry(idx, { ratePerUnit: Number(e.target.value) })
+                    }
+                  />
+                  <div className="flex flex-col items-end justify-end gap-1 sm:col-span-2 lg:col-span-1">
                     {entries.length > 1 && (
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Remove room reading ${idx + 1}`}
                         onClick={() => removeEntry(idx)}
-                        className="text-[color:var(--color-danger-600)]"
-                        aria-label="Remove entry"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     )}
+                    <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                      {units} units · ₹{amount.toLocaleString('en-IN')}
+                    </p>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                        Room
-                      </label>
-                      <select
-                        className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-                        value={entry.roomId}
-                        onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
-                        required
-                      >
-                        <option value="">Select room...</option>
-                        {roomOptions.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Input
-                      label="Previous reading"
-                      type="number"
-                      min={0}
-                      value={entry.previousReading}
-                      onChange={(e) =>
-                        updateEntry(idx, { previousReading: Number(e.target.value) })
-                      }
-                    />
-                    <Input
-                      label="Current reading"
-                      type="number"
-                      min={0}
-                      value={entry.currentReading}
-                      onChange={(e) =>
-                        updateEntry(idx, { currentReading: Number(e.target.value) })
-                      }
-                    />
-                    <Input
-                      label="Rate / unit (₹)"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={entry.ratePerUnit}
-                      onChange={(e) =>
-                        updateEntry(idx, { ratePerUnit: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-                  <p className="mt-2 text-xs font-medium text-[color:var(--color-text-muted)]">
-                    Units: {units} · Amount: ₹{amount.toLocaleString('en-IN')}
-                  </p>
                 </div>
               );
             })}
           </div>
-        </div>
+        </FormSection>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="notes"
-            className="text-sm font-semibold text-[color:var(--color-text-primary)]"
-          >
-            Notes
-          </label>
-          <textarea
-            id="notes"
+        <FormSection title="Notes" description="Optional remarks for this bill" divided>
+          <Textarea
+            label="Notes"
             rows={3}
-            className="w-full rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2.5 text-base"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Optional notes..."
           />
-        </div>
-
-        <div className="flex items-center justify-end gap-3 border-t border-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" />
-            Save Bill
-          </Button>
-        </div>
-      </form>
-    </div>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

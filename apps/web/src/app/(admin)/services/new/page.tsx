@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
 import type { IAppConfig } from '@pg/types';
 
@@ -84,29 +86,25 @@ export default function NewServicePage() {
   };
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-            New Service
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-            Floor-level service status from AppConfig amenity definitions
-          </p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Service"
+      description="Floor-level service status from AppConfig amenity definitions"
+      backHref="/services"
+      error={submitError}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/services"
+            submitLabel="Save Service"
+            divided={false}
+          />
+        }
       >
         <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormGrid>
             <Controller
               name="floorId"
               control={control}
@@ -132,38 +130,21 @@ export default function NewServicePage() {
               error={errors.serviceType?.message}
               {...register('serviceType')}
             />
-          </div>
+          </FormGrid>
           <Select
             label="Status"
             options={STATUS_OPTIONS}
             error={errors.status?.message}
             {...register('status')}
           />
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="note"
-              className="text-sm font-semibold text-[color:var(--color-text-primary)]"
-            >
-              Note
-            </label>
-            <textarea
-              id="note"
-              rows={3}
-              className="w-full rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2.5 text-base"
-              placeholder="Optional note..."
-              {...register('note')}
-            />
-          </div>
+          <Textarea
+            label="Note"
+            rows={3}
+            placeholder="Optional note..."
+            {...register('note')}
+          />
         </div>
-        <div className="mt-8 flex items-center justify-end gap-3 border-t border-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" /> Save Service
-          </Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

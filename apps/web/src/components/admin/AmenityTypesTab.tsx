@@ -211,7 +211,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
       {/* ── Add / Edit Form ── */}
       {isEditing && (
-        <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center justify-between">
             <h4 className="font-display text-surface-900 text-sm font-bold">
               {isAdding ? 'New Amenity' : 'Edit Amenity'}
@@ -273,7 +273,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                 </button>
 
                 {showIconPicker && (
-                  <div className="absolute z-10 mt-1 w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-dropdown)]">
+                  <div className="absolute z-10 mt-1 w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
                     <div className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] p-2">
                       <div className="relative">
                         <Search className="text-surface-400 absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
@@ -300,7 +300,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                             className={`flex flex-col items-center gap-0.5 rounded-[var(--radius-sm)] p-1.5 text-center transition-colors ${
                               formData.icon === opt.name
                                 ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
-                                : 'hover:bg-[color:var(--color-surface-100)] text-surface-500 hover:text-surface-700'
+                                : 'hover:bg-[color:var(--color-card-bg)] text-surface-500 hover:text-surface-700'
                             }`}
                             title={opt.name}
                           >
@@ -430,7 +430,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
       {/* ── Table ── */}
       {definitions.length === 0 && !isEditing ? (
-        <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-10 text-center shadow-[var(--shadow-card)]">
+        <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-10 text-center shadow-[var(--shadow-card)]">
           <div className="text-surface-300 mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
             <Wrench className="h-8 w-8" />
           </div>
@@ -446,7 +446,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-card)]">
+        <div className="overflow-x-auto rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]">
           <table className="w-full">
             <thead>
               <tr className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
@@ -508,7 +508,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
                         def.showAsStatusLabel
                           ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-600)]'
-                          : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-surface-400)]'
+                          : 'bg-[color:var(--color-card-bg)] text-[color:var(--color-surface-400)]'
                       }`}
                     >
                       {def.showAsStatusLabel ? '✓' : '—'}
@@ -519,7 +519,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
                         def.isPerFloor
                           ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]'
-                          : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-surface-400)]'
+                          : 'bg-[color:var(--color-card-bg)] text-[color:var(--color-surface-400)]'
                       }`}
                     >
                       {def.isPerFloor ? '✓' : '—'}

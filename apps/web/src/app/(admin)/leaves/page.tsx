@@ -79,20 +79,20 @@ export default function LeavesPage() {
   const columns: DataTableColumn<LeaveRow>[] = [
     {
       header: 'Tenant',
-      accessor: (row) => <span className="text-surface-900 font-semibold">{row.tenant?.user?.name ?? 'N/A'}</span>,
+      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.tenant?.user?.name ?? 'N/A'}</span>,
     },
     { header: 'Room', accessor: (row) => row.tenant?.room?.roomNumber ?? 'N/A' },
     { header: 'Start', accessor: (row) => new Date(row.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
     { header: 'End', accessor: (row) => new Date(row.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
-    { header: 'Reason', accessor: (row) => <span className="text-surface-500 block max-w-[200px] truncate text-xs">{row.reason ?? '—'}</span> },
+    { header: 'Reason', accessor: (row) => <span className="text-[color:var(--color-text-muted)] block max-w-[200px] truncate text-xs">{row.reason ?? '—'}</span> },
     { header: 'Status', accessor: (row) => <StatusBadge variant={statusToVariant(row.status)} label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'} /> },
     {
       header: 'Actions',
       accessor: (row) => (
         <div className="flex items-center gap-1">
-          <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}`); }} className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="View"><Eye className="h-3 w-3" /></button>
-          <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}/edit`); }} className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Edit"><Pencil className="h-3 w-3" /></button>
-          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }} className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Delete"><Trash2 className="h-3 w-3" /></button>
+          <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}`); }} className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="View"><Eye className="h-3 w-3" /></button>
+          <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}/edit`); }} className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Edit"><Pencil className="h-3 w-3" /></button>
+          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }} className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Delete"><Trash2 className="h-3 w-3" /></button>
         </div>
       ),
       className: 'w-[130px]',
@@ -144,7 +144,7 @@ export default function LeavesPage() {
               <span>{new Date(row.endDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
                 <Eye className="h-3 w-3" /> View
               </button>
               <button onClick={(e) => { e.stopPropagation(); router.push(`/leaves/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">

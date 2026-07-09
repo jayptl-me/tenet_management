@@ -21,44 +21,47 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 // ── Style Maps ─────────────────────────────────────────
 
+const focusRing =
+  'focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--focus-ring-offset-bg)]';
+
 const variantStyles: Record<ButtonVariant, string> = {
   primary: [
-    'bg-[color:var(--color-brand-500)] text-white',
+    'bg-[color:var(--color-brand-500)] text-[color:var(--color-text-inverted)]',
     'border border-[color:var(--color-brand-600)]',
     'shadow-[var(--shadow-button)]',
     'hover:bg-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-md)]',
     'active:bg-[color:var(--color-brand-700)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-400)] focus-visible:ring-offset-2',
+    focusRing,
   ].join(' '),
   secondary: [
-    'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)]',
+    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-primary)]',
     'border border-[color:var(--border-color)]',
     'shadow-[var(--shadow-xs)]',
-    'hover:bg-[color:var(--color-surface-200)] hover:shadow-[var(--shadow-sm)]',
-    'active:bg-[color:var(--color-surface-300)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-400)] focus-visible:ring-offset-2',
+    'hover:bg-[color:var(--color-field-bg-hover)] hover:border-[color:var(--color-field-border-hover)] hover:shadow-[var(--shadow-sm)]',
+    'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
+    focusRing,
   ].join(' '),
   danger: [
-    'bg-[color:var(--color-danger-500)] text-white',
+    'bg-[color:var(--color-danger-500)] text-[color:var(--color-text-inverted)]',
     'border border-[color:var(--color-danger-600)]',
     'shadow-[var(--shadow-button)]',
     'hover:bg-[color:var(--color-danger-600)] hover:shadow-[var(--shadow-md)]',
     'active:bg-[color:var(--color-danger-700)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-danger-400)] focus-visible:ring-offset-2',
+    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-danger-400)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--focus-ring-offset-bg)]',
   ].join(' '),
   ghost: [
     'bg-transparent text-[color:var(--color-text-secondary)]',
     'border border-transparent',
-    'hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]',
+    'hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)]',
     'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-400)] focus-visible:ring-offset-2',
+    focusRing,
   ].join(' '),
   outline: [
-    'bg-transparent text-[color:var(--color-text-primary)]',
+    'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)]',
     'border border-[color:var(--border-color)]',
-    'hover:bg-[color:var(--color-surface-100)] hover:border-[color:var(--color-brand-300)]',
-    'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-400)] focus-visible:ring-offset-2',
+    'hover:bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-400)]',
+    'active:bg-[color:var(--color-field-bg-hover)] active:scale-[0.98]',
+    focusRing,
   ].join(' '),
   glass: [
     'bg-[color:var(--glass-bg)] text-[color:var(--color-text-primary)]',
@@ -67,15 +70,15 @@ const variantStyles: Record<ButtonVariant, string> = {
     'shadow-[var(--shadow-sm)]',
     'hover:bg-[color:var(--glass-bg-strong)] hover:shadow-[var(--shadow-md)]',
     'active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-400)] focus-visible:ring-offset-2',
+    focusRing,
   ].join(' '),
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-[13px] font-semibold rounded-lg gap-1.5',
-  md: 'px-4 py-2 text-sm font-semibold rounded-lg gap-2',
-  lg: 'px-6 py-2.5 text-[15px] font-bold rounded-xl gap-2',
-  icon: 'p-2 rounded-lg flex items-center justify-center',
+  sm: 'min-h-9 px-3 py-1.5 text-[13px] font-semibold rounded-[var(--radius-md)] gap-1.5',
+  md: 'min-h-10 px-4 py-2 text-sm font-semibold rounded-[var(--radius-md)] gap-2',
+  lg: 'min-h-11 px-6 py-2.5 text-[15px] font-bold rounded-[var(--radius-lg)] gap-2',
+  icon: 'h-10 w-10 min-h-10 min-w-10 p-0 rounded-[var(--radius-md)] flex items-center justify-center',
 };
 
 // ── Component ──────────────────────────────────────────

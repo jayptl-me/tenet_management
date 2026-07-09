@@ -172,7 +172,7 @@ export default function PaymentsPage() {
               e.stopPropagation();
               router.push(`/payments/${row._id}`);
             }}
-            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors hover:bg-[color:var(--color-surface-100)]"
+            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />

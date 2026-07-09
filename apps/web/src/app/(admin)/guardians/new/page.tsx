@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormGrid } from '@/components/ui/FormSection';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
@@ -57,22 +58,22 @@ export default function NewGuardianPage() {
   };
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">New Guardian</h2>
-          <p className="text-surface-500 mt-0.5 text-sm">Add a guardian for a tenant</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Guardian"
+      description="Add a guardian for a tenant"
+      backHref="/guardians"
+      error={submitError}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/guardians"
+            submitLabel="Save Guardian"
+            divided={false}
+          />
+        }
       >
         <div className="space-y-5">
           <Controller
@@ -88,24 +89,20 @@ export default function NewGuardianPage() {
                 error={errors.tenantId?.message}
                 valueKey="_id"
                 labelKey={tenantLabel}
-                sublabelFn={tenantSublabel}
+                sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
               />
             )}
           />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormGrid>
             <Input label="Name" placeholder="Full name" error={errors.name?.message} {...register('name')} />
             <Input label="Phone" placeholder="10-digit number" error={errors.phone?.message} {...register('phone')} />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          </FormGrid>
+          <FormGrid>
             <Input label="Email" type="email" placeholder="email@example.com" error={errors.email?.message} {...register('email')} />
             <Select label="Relation" options={RELATION_OPTIONS} error={errors.relation?.message} {...register('relation')} />
-          </div>
+          </FormGrid>
         </div>
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" />Save Guardian</Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

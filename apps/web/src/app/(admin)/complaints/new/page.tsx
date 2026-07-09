@@ -5,10 +5,15 @@ import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormGrid } from '@/components/ui/FormSection';
 
 const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
@@ -37,11 +42,31 @@ interface Room {
   floorId?: string | { _id: string };
 }
 
+const CATEGORY_OPTIONS = [
+  { value: 'wifi', label: 'Wi-Fi' },
+  { value: 'water', label: 'Water' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'food_quality', label: 'Food Quality' },
+  { value: 'cleaning_room', label: 'Cleaning - Room' },
+  { value: 'cleaning_washroom', label: 'Cleaning - Washroom' },
+  { value: 'washing_machine', label: 'Washing Machine' },
+  { value: 'fridge', label: 'Fridge' },
+  { value: 'lights', label: 'Lights' },
+  { value: 'noise', label: 'Noise' },
+  { value: 'other', label: 'Other' },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
+
 function ComplaintForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledCategory = searchParams.get('category') || '';
-  const prefilledFloorId = searchParams.get('floorId') || '';
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -140,177 +165,84 @@ function ComplaintForm() {
 
   const getTenantName = (t: Tenant) => t.name || t.user?.name || t._id;
 
+  const tenantOptions = tenants.map((t) => ({
+    value: t._id,
+    label: getTenantName(t),
+  }));
+
+  const roomOptions = rooms.map((r) => ({
+    value: r._id,
+    label: r.roomNumber,
+  }));
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div>
-          <h2 className="font-display text-surface-900 text-2xl font-extrabold">
-            New Complaint
-          </h2>
-          <p className="text-surface-500 text-sm">Report an issue</p>
-        </div>
-      </div>
+    <FormPage
+      title="New Complaint"
+      description="Report an issue"
+      backHref="/complaints"
+    >
+      <FormCard
+        onSubmit={handleSubmit(onSubmit)}
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/complaints"
+            submitLabel="Submit Complaint"
+            divided={false}
+          />
+        }
+      >
+        <div className="space-y-5">
+          <Select
+            label="Tenant"
+            options={isLoadingTenants ? [] : tenantOptions}
+            placeholder={isLoadingTenants ? 'Loading tenants...' : 'Select a tenant'}
+            error={errors.tenantId?.message}
+            disabled={isLoadingTenants}
+            {...register('tenantId')}
+          />
 
-      {/* Form Card */}
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Tenant */}
-          <div>
-            <label htmlFor="tenantId" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Tenant <span className="text-danger-500">*</span>
-            </label>
-            {isLoadingTenants ? (
-              <div className="border-t-brand-500 h-5 w-5 animate-spin rounded-full border-[length:var(--bw-default)]" />
-            ) : (
-              <select
-                id="tenantId"
-                {...register('tenantId')}
-                className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-              >
-                <option value="">Select a tenant</option>
-                {tenants.map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {getTenantName(t)}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.tenantId && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.tenantId.message}</p>
-            )}
-          </div>
+          <Select
+            label="Room"
+            options={isLoadingRooms ? [] : roomOptions}
+            placeholder={isLoadingRooms ? 'Loading rooms...' : 'Select a room'}
+            error={errors.roomId?.message}
+            disabled={isLoadingRooms}
+            {...register('roomId')}
+          />
 
-          {/* Room */}
-          <div>
-            <label htmlFor="roomId" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Room <span className="text-danger-500">*</span>
-            </label>
-            {isLoadingRooms ? (
-              <div className="border-t-brand-500 h-5 w-5 animate-spin rounded-full border-[length:var(--bw-default)]" />
-            ) : (
-              <select
-                id="roomId"
-                {...register('roomId')}
-                className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-              >
-                <option value="">Select a room</option>
-                {rooms.map((r) => (
-                  <option key={r._id} value={r._id}>
-                    {r.roomNumber}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.roomId && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.roomId.message}</p>
-            )}
-          </div>
-
-          {/* Category */}
-          <div>
-            <label htmlFor="category" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Category <span className="text-danger-500">*</span>
-            </label>
-            <select
-              id="category"
+          <FormGrid>
+            <Select
+              label="Category"
+              options={CATEGORY_OPTIONS}
+              error={errors.category?.message}
               {...register('category')}
-              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-            >
-              <option value="">Select a category</option>
-              <option value="wifi">Wi-Fi</option>
-              <option value="water">Water</option>
-              <option value="electricity">Electricity</option>
-              <option value="food_quality">Food Quality</option>
-              <option value="cleaning_room">Cleaning - Room</option>
-              <option value="cleaning_washroom">Cleaning - Washroom</option>
-              <option value="washing_machine">Washing Machine</option>
-              <option value="fridge">Fridge</option>
-              <option value="lights">Lights</option>
-              <option value="noise">Noise</option>
-              <option value="other">Other</option>
-            </select>
-            {errors.category && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.category.message}</p>
-            )}
-          </div>
-
-          {/* Priority */}
-          <div>
-            <label htmlFor="priority" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Priority <span className="text-danger-500">*</span>
-            </label>
-            <select
-              id="priority"
+            />
+            <Select
+              label="Priority"
+              options={PRIORITY_OPTIONS}
+              error={errors.priority?.message}
               {...register('priority')}
-              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-            {errors.priority && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.priority.message}</p>
-            )}
-          </div>
-
-          {/* Title */}
-          <div>
-            <label htmlFor="title" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Title <span className="text-danger-500">*</span>
-            </label>
-            <input
-              id="title"
-              type="text"
-              {...register('title')}
-              placeholder="Brief title for the complaint"
-              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm placeholder:text-surface-400"
             />
-            {errors.title && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.title.message}</p>
-            )}
-          </div>
+          </FormGrid>
 
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="text-surface-800 font-display mb-1.5 block text-sm font-semibold">
-              Description <span className="text-danger-500">*</span>
-            </label>
-            <textarea
-              id="description"
-              {...register('description')}
-              rows={4}
-              placeholder="Describe the issue in detail"
-              className="w-full rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm placeholder:text-surface-400 resize-y"
-            />
-            {errors.description && (
-              <p className="text-danger-600 mt-1 text-xs font-medium">{errors.description.message}</p>
-            )}
-          </div>
+          <Input
+            label="Title"
+            placeholder="Brief title for the complaint"
+            error={errors.title?.message}
+            {...register('title')}
+          />
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={isSubmitting}>
-              <Send className="h-4 w-4" />
-              Submit Complaint
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <Textarea
+            label="Description"
+            rows={4}
+            placeholder="Describe the issue in detail"
+            error={errors.description?.message}
+            {...register('description')}
+          />
+        </div>
+      </FormCard>
+    </FormPage>
   );
 }
 
@@ -318,9 +250,9 @@ export default function NewComplaintPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
-        </div>
+        <FormPage title="New Complaint" description="Report an issue" backHref="/complaints" isLoading>
+          {null}
+        </FormPage>
       }
     >
       <ComplaintForm />

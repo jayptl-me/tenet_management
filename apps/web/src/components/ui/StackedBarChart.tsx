@@ -1,14 +1,15 @@
 'use client';
 
+import { chartTokens } from '@/lib/chart-theme';
+
 /**
- * StackedBarChart -- SVG horizontal stacked bar chart.
- * Each bar shows proportional segments left-to-right.
- * Theme-aware via var() tokens. Zero dependencies.
+ * StackedBarChart — horizontal stacked bars using design tokens.
+ * Segment colors should be CSS vars (e.g. var(--color-success-500)).
  */
 export function StackedBarChart({
   bars,
-  barHeight = 32,
-  barGap = 8,
+  barHeight = 28,
+  barGap = 10,
   showLegend = true,
   className,
 }: {
@@ -21,16 +22,21 @@ export function StackedBarChart({
   showLegend?: boolean;
   className?: string;
 }) {
-  const maxTotal = Math.max(...bars.map((b) => b.segments.reduce((s, seg) => s + seg.value, 0)), 1);
-  const totalHeight = bars.length * (barHeight + barGap) - barGap;
-  const padLeft = 100;
-  const chartW = 600;
-  const usableW = chartW - padLeft - 16;
+  const safeBars = bars.length > 0 ? bars : [];
+  const maxTotal = Math.max(
+    ...safeBars.map((b) => b.segments.reduce((s, seg) => s + seg.value, 0)),
+    1,
+  );
+  const totalHeight = Math.max(safeBars.length * (barHeight + barGap) - barGap, barHeight);
+  const padLeft = 108;
+  const padRight = 40;
+  const chartW = 640;
+  const usableW = chartW - padLeft - padRight;
+  const corner = Math.min(6, barHeight / 2);
 
-  // Collect unique segment labels for legend
   const legendSeen = new Set<string>();
   const legendItems: Array<{ label: string; color: string }> = [];
-  for (const bar of bars) {
+  for (const bar of safeBars) {
     for (const seg of bar.segments) {
       if (!legendSeen.has(seg.label)) {
         legendSeen.add(seg.label);
@@ -39,68 +45,96 @@ export function StackedBarChart({
     }
   }
 
+  if (safeBars.length === 0) {
+    return (
+      <div
+        className={className}
+        role="img"
+        aria-label="No stacked bar data"
+      >
+        <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+          No data to display
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
       <svg
         viewBox={`0 0 ${chartW} ${totalHeight}`}
         className="w-full overflow-visible"
-        style={{ height: totalHeight, maxHeight: totalHeight }}
+        style={{ height: totalHeight, maxHeight: totalHeight + 4 }}
         role="img"
         aria-label="Stacked bar chart"
       >
-        {bars.map((bar, i) => {
+        {safeBars.map((bar, i) => {
           const y = i * (barHeight + barGap);
           const total = bar.segments.reduce((s, seg) => s + seg.value, 0);
           const totalW = (total / maxTotal) * usableW;
           let currentX = padLeft;
+          const activeSegs = bar.segments.filter((s) => s.value > 0);
 
           return (
-            <g key={bar.label}>
-              {/* Bar label */}
+            <g key={`${bar.label}-${i}`}>
+              {/* Track */}
+              <rect
+                x={padLeft}
+                y={y}
+                width={usableW}
+                height={barHeight}
+                rx={corner}
+                fill={chartTokens.track}
+                opacity={0.7}
+              />
+
               <text
-                x={padLeft - 8}
+                x={padLeft - 10}
                 y={y + barHeight / 2}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fill="var(--color-text-secondary)"
+                fill={chartTokens.label}
                 fontSize={11}
-                fontFamily="var(--font-body)"
+                fontFamily={chartTokens.fontBody}
                 fontWeight={600}
               >
-                {bar.label}
+                {bar.label.length > 14 ? `${bar.label.slice(0, 13)}…` : bar.label}
               </text>
 
-              {/* Segments */}
-              {bar.segments.map((seg, j) => {
+              {activeSegs.map((seg, j) => {
                 const segW = total > 0 ? (seg.value / total) * totalW : 0;
                 if (segW <= 0) return null;
                 const x = currentX;
                 currentX += segW;
-                const rx = j === bar.segments.length - 1 ? barHeight / 2 : 0;
-                const lx = j === 0 ? barHeight / 2 : 0;
+                const isFirst = j === 0;
+                const isLast = j === activeSegs.length - 1;
+                // Clip rounded ends only on outer segments
+                const rx = isFirst || isLast ? corner : 0;
 
                 return (
-                  <g key={seg.label}>
+                  <g key={`${seg.label}-${j}`}>
                     <rect
                       x={x}
                       y={y}
                       width={Math.max(segW, 0)}
                       height={barHeight}
-                      rx={lx > 0 ? lx : rx}
+                      rx={rx}
                       fill={seg.color}
-                      className="transition-all duration-500 ease-out"
-                      style={{ transitionDelay: `${j * 80}ms` }}
-                    />
-                    {segW > 40 && (
+                      className="transition-opacity duration-200 hover:opacity-90"
+                    >
+                      <title>{`${seg.label}: ${seg.value}`}</title>
+                    </rect>
+                    {segW > 36 && (
                       <text
                         x={x + segW / 2}
                         y={y + barHeight / 2}
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fill="var(--color-surface-950)"
+                        fill={chartTokens.onFill}
                         fontSize={10}
-                        fontFamily="var(--font-mono)"
+                        fontFamily={chartTokens.fontMono}
                         fontWeight={700}
+                        style={{ paintOrder: 'stroke', stroke: 'var(--chart-cell-border)', strokeWidth: 0.5 }}
                       >
                         {seg.value}
                       </text>
@@ -109,16 +143,15 @@ export function StackedBarChart({
                 );
               })}
 
-              {/* Total on the right */}
               <text
-                x={padLeft + totalW + 8}
+                x={padLeft + Math.max(totalW, 4) + 8}
                 y={y + barHeight / 2}
                 textAnchor="start"
                 dominantBaseline="middle"
-                fill="var(--color-text-muted)"
+                fill={chartTokens.axis}
                 fontSize={10}
-                fontFamily="var(--font-mono)"
-                fontWeight={500}
+                fontFamily={chartTokens.fontMono}
+                fontWeight={600}
               >
                 {total}
               </text>
@@ -128,12 +161,16 @@ export function StackedBarChart({
       </svg>
 
       {showLegend && legendItems.length > 0 && (
-        <div className="mt-3 flex flex-wrap justify-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           {legendItems.map((item) => (
-            <div key={item.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
+            <div
+              key={item.label}
+              className="flex items-center gap-1.5 text-[11px] font-semibold"
+            >
               <span
-                className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
                 style={{ backgroundColor: item.color }}
+                aria-hidden
               />
               <span className="text-[color:var(--color-text-secondary)]">{item.label}</span>
             </div>

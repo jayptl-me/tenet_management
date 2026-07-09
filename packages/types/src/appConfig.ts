@@ -1,5 +1,5 @@
-import type { IAddress, ISocialLinks } from './common.js';
-import type { IBrandTokens } from './tokens.js';
+import type { IAddress, ISocialLinks } from './common';
+import type { IBrandTokens } from './tokens';
 
 // ── Amenity Definition ─────────────────────────────────
 export type AmenityCategory = 'essential' | 'appliance' | 'furnishing' | 'other';

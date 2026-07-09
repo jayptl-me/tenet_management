@@ -3,6 +3,15 @@
 import { forwardRef, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { Eye, EyeOff } from 'lucide-react';
+import {
+  fieldControlBase,
+  fieldControlBorderError,
+  fieldControlBorderOk,
+  fieldErrorClass,
+  fieldHelperClass,
+  fieldHintClass,
+  fieldLabelClass,
+} from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -26,28 +35,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className="flex flex-col gap-1.5">
-        {/* Label + hint */}
         {label && (
           <div className="flex items-center justify-between gap-2">
-            <label
-              htmlFor={inputId}
-              className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
-            >
+            <label htmlFor={inputId} className={fieldLabelClass}>
               {label}
             </label>
-            {hint && (
-              <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
-                {hint}
-              </span>
-            )}
+            {hint && <span className={fieldHintClass}>{hint}</span>}
           </div>
         )}
 
-        {/* Input wrapper */}
         <div className="relative">
-          {/* Left icon */}
           {leftIcon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)]">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
               {leftIcon}
             </span>
           )}
@@ -57,27 +56,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={resolvedType}
             className={clsx(
-              'w-full rounded-lg border bg-[color:var(--color-surface-50)] py-2 px-3.5 text-sm font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)]',
-              'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-              'hover:bg-[color:var(--color-surface-100)]',
-              'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:bg-[color:var(--color-surface-50)] focus:border-[color:var(--color-brand-500)]',
-              'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
-              error
-                ? 'border-[color:var(--color-danger-400)] focus:ring-[color:var(--color-danger-400)]'
-                : 'border-[color:var(--border-color)] hover:border-[color:var(--color-surface-300)]',
+              fieldControlBase,
+              error ? fieldControlBorderError : fieldControlBorderOk,
               leftIcon && 'pl-9',
               (rightIcon || isPassword) && 'pr-9',
               className,
             )}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={
+              error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
+            }
             {...props}
           />
 
-          {/* Password toggle */}
           {isPassword && (
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
               tabIndex={-1}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -85,20 +81,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </button>
           )}
 
-          {/* Right icon (non-password) */}
           {rightIcon && !isPassword && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)]">
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
               {rightIcon}
             </span>
           )}
         </div>
 
-        {/* Error / helper */}
         {error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">{error}</p>
+          <p id={`${inputId}-error`} className={fieldErrorClass} role="alert">
+            {error}
+          </p>
         )}
         {helperText && !error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
+          <p id={`${inputId}-helper`} className={fieldHelperClass}>
             {helperText}
           </p>
         )}

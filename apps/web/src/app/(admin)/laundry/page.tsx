@@ -96,10 +96,10 @@ export default function LaundryPage() {
       header: 'Tenant',
       accessor: (row) => (
         <div>
-          <span className="text-surface-900 font-semibold">
+          <span className="text-[color:var(--color-text-primary)] font-semibold">
             {row.tenant?.user?.name ?? 'N/A'}
           </span>
-          <p className="text-surface-400 text-xs">
+          <p className="text-[color:var(--color-text-muted)] text-xs">
             Room {row.tenant?.room?.roomNumber ?? '—'}
           </p>
         </div>
@@ -139,7 +139,7 @@ export default function LaundryPage() {
               e.stopPropagation();
               router.push(`/laundry/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -149,7 +149,7 @@ export default function LaundryPage() {
               e.stopPropagation();
               router.push(`/laundry/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -173,7 +173,7 @@ export default function LaundryPage() {
                 e.stopPropagation();
                 handleStatusUpdate(row._id, 'cancelled');
               }}
-              className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+              className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
               title="Cancel slot"
               disabled={isUpdating}
             >
@@ -185,7 +185,7 @@ export default function LaundryPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -267,7 +267,7 @@ export default function LaundryPage() {
               <span>{row.items != null ? `${row.items} items` : '—'}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/laundry/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] hover:bg-[color:var(--color-surface-100)]">
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/laundry/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
                 <Eye className="h-3 w-3" /> View
               </button>
               <button onClick={(e) => { e.stopPropagation(); router.push(`/laundry/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
