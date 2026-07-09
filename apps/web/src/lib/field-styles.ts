@@ -31,13 +31,13 @@ export const fieldLabelClass =
   'text-[13px] font-semibold text-[color:var(--color-text-primary)]';
 
 export const fieldHintClass =
-  'text-[11px] font-medium text-[color:var(--color-text-muted)]';
+  'text-[11px] font-medium text-[color:var(--color-text-secondary)]';
 
 export const fieldErrorClass =
   'text-[12px] font-medium text-[color:var(--color-danger-600)]';
 
 export const fieldHelperClass =
-  'text-[12px] font-medium text-[color:var(--color-text-muted)]';
+  'text-[12px] font-medium text-[color:var(--color-text-secondary)]';
 
 /** Elevated card surface used by forms, tables, detail panels, dashboard panels. */
 export const surfaceCardClass = clsx(

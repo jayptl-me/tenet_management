@@ -116,7 +116,7 @@ export function DataTable<T>({
               <MobileCardSkeleton key={`mobile-skel-${i}`} />
             ))
           ) : data.length === 0 ? (
-            <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
+            <div className="rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
               {emptyState ?? (
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
@@ -147,7 +147,7 @@ export function DataTable<T>({
 
       {/* Desktop Table (hidden on mobile when card view is active) */}
       <div className={clsx(
-        'overflow-x-auto rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
+        'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
         mobileCardRenderer && 'hidden md:block',
       )}>
         <table className="w-full border-collapse bg-[color:var(--color-card-bg)]">

@@ -1,11 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
-import { chartTokens, heatmapLevel, heatmapRamp, type HeatmapScale } from '@/lib/chart-theme';
+import { useMemo, useState } from 'react';
+import { clsx } from 'clsx';
+import {
+  chartTokens,
+  chartTooltipClass,
+  heatmapLevel,
+  heatmapRamp,
+  type HeatmapScale,
+} from '@/lib/chart-theme';
 
 /**
  * HeatmapCalendar — month contribution grid.
  * Color intensity uses solid token ramps (brand / success / danger) for light + dark.
+ * Empty cells use --chart-heatmap-0 with a visible border (not washed transparent overlays).
  */
 export function HeatmapCalendar({
   data,
@@ -29,6 +37,12 @@ export function HeatmapCalendar({
   className?: string;
 }) {
   const dayNames = ['Mon', '', 'Wed', '', 'Fri', '', ''];
+  const [tip, setTip] = useState<{
+    date: string;
+    count: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const weeks = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -37,7 +51,12 @@ export function HeatmapCalendar({
     let startDow = firstDay.getDay();
     startDow = startDow === 0 ? 6 : startDow - 1;
 
-    const cells: Array<{ date: string; day: number; count: number; inMonth: boolean }> = [];
+    const cells: Array<{
+      date: string;
+      day: number;
+      count: number;
+      inMonth: boolean;
+    }> = [];
 
     for (let i = 0; i < startDow; i++) {
       cells.push({ date: '', day: -1, count: 0, inMonth: false });
@@ -45,14 +64,18 @@ export function HeatmapCalendar({
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      cells.push({ date: dateStr, day: d, count: data[dateStr] ?? 0, inMonth: true });
+      cells.push({
+        date: dateStr,
+        day: d,
+        count: data[dateStr] ?? 0,
+        inMonth: true,
+      });
     }
 
-    const chunked: typeof cells[] = [];
+    const chunked: (typeof cells)[] = [];
     for (let i = 0; i < cells.length; i += 7) {
       chunked.push(cells.slice(i, i + 7));
     }
-    // Pad final week
     const last = chunked[chunked.length - 1];
     if (last && last.length < 7) {
       while (last.length < 7) {
@@ -71,32 +94,38 @@ export function HeatmapCalendar({
   );
 
   const cellSize = size;
-  const cellGap = 4;
-  const labelW = 30;
+  const cellGap = 3;
+  const labelW = 28;
   const weekCount = weeks.length;
   const totalW = labelW + weekCount * (cellSize + cellGap);
-  const totalH = 7 * (cellSize + cellGap) + 22;
+  const totalH = 7 * (cellSize + cellGap) + 28;
   const clickable = !!onDayClick;
+  const cellRx = 3;
 
   const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
     month: 'short',
     year: 'numeric',
   });
 
+  const totalActivity = weeks
+    .flat()
+    .filter((c) => c.inMonth)
+    .reduce((s, c) => s + c.count, 0);
+
   return (
-    <div className={className}>
+    <div className={clsx('relative', className)}>
       <svg
         viewBox={`0 0 ${totalW} ${totalH}`}
         className="mx-auto w-full max-w-md overflow-visible"
-        style={{ height: Math.max(totalH, 120) }}
+        style={{ height: Math.max(totalH, 128) }}
         role="img"
-        aria-label={`Activity heatmap for ${monthLabel}`}
+        aria-label={`Activity heatmap for ${monthLabel}. ${totalActivity} total.`}
       >
         {dayNames.map((name, i) =>
           name ? (
             <text
               key={`day-${i}`}
-              x={2}
+              x={0}
               y={i * (cellSize + cellGap) + cellSize / 2 + 1}
               textAnchor="start"
               dominantBaseline="middle"
@@ -123,10 +152,8 @@ export function HeatmapCalendar({
                   y={y}
                   width={cellSize}
                   height={cellSize}
-                  rx={3}
-                  fill="transparent"
-                  stroke={chartTokens.cellBorder}
-                  strokeWidth={0.5}
+                  rx={cellRx}
+                  fill={chartTokens.track}
                   opacity={0.35}
                 />
               );
@@ -134,6 +161,7 @@ export function HeatmapCalendar({
 
             const level = heatmapLevel(cell.count, computedMax);
             const fill = colors[level] ?? colors[0];
+            const isEmpty = level === 0;
 
             return (
               <g key={cell.date}>
@@ -142,18 +170,18 @@ export function HeatmapCalendar({
                   y={y}
                   width={cellSize}
                   height={cellSize}
-                  rx={3}
+                  rx={cellRx}
                   fill={fill}
-                  stroke={level === 0 ? chartTokens.cellBorder : 'transparent'}
-                  strokeWidth={level === 0 ? 1 : 0}
-                  className={
-                    clickable
-                      ? 'cursor-pointer transition-opacity duration-150 hover:opacity-80 focus:outline-none'
-                      : 'transition-opacity duration-150'
-                  }
+                  stroke={isEmpty ? chartTokens.cellBorder : 'transparent'}
+                  strokeWidth={isEmpty ? 1 : 0}
+                  className={clsx(
+                    'transition-opacity duration-150 motion-reduce:transition-none',
+                    clickable &&
+                      'cursor-pointer hover:opacity-85 focus:outline-none',
+                  )}
                   tabIndex={clickable ? 0 : undefined}
                   role={clickable ? 'button' : undefined}
-                  aria-label={`${cell.date}: ${cell.count}`}
+                  aria-label={`${cell.date}: ${cell.count}${cell.count === 1 ? ' event' : ' events'}`}
                   onClick={
                     clickable
                       ? () => onDayClick?.(cell.date, cell.count)
@@ -169,6 +197,31 @@ export function HeatmapCalendar({
                         }
                       : undefined
                   }
+                  onMouseEnter={(e) => {
+                    const svg = e.currentTarget.ownerSVGElement;
+                    if (!svg) return;
+                    const rect = svg.getBoundingClientRect();
+                    setTip({
+                      date: cell.date,
+                      count: cell.count,
+                      x: e.clientX - rect.left,
+                      y: e.clientY - rect.top,
+                    });
+                  }}
+                  onMouseLeave={() => setTip(null)}
+                  onFocus={(e) => {
+                    const svg = e.currentTarget.ownerSVGElement;
+                    if (!svg) return;
+                    const bbox = e.currentTarget.getBoundingClientRect();
+                    const rect = svg.getBoundingClientRect();
+                    setTip({
+                      date: cell.date,
+                      count: cell.count,
+                      x: bbox.left - rect.left + bbox.width / 2,
+                      y: bbox.top - rect.top,
+                    });
+                  }}
+                  onBlur={() => setTip(null)}
                 >
                   <title>{`${cell.date}: ${cell.count}`}</title>
                 </rect>
@@ -179,28 +232,57 @@ export function HeatmapCalendar({
 
         <text
           x={labelW}
-          y={totalH - 4}
+          y={totalH - 6}
           textAnchor="start"
           fill={chartTokens.axis}
-          fontSize={10}
+          fontSize={11}
           fontFamily={chartTokens.fontBody}
           fontWeight={700}
         >
           {monthLabel}
         </text>
+        <text
+          x={totalW}
+          y={totalH - 6}
+          textAnchor="end"
+          fill={chartTokens.axis}
+          fontSize={10}
+          fontFamily={chartTokens.fontMono}
+          fontWeight={600}
+        >
+          {totalActivity} total
+        </text>
       </svg>
 
+      {tip && (
+        <div
+          className={clsx(chartTooltipClass, 'absolute text-[11px]')}
+          style={{
+            left: tip.x,
+            top: tip.y,
+            transform: 'translate(-50%, calc(-100% - 10px))',
+          }}
+          role="tooltip"
+        >
+          <p className="font-bold tabular-nums">{tip.date}</p>
+          <p className="mt-0.5 opacity-90">
+            {tip.count} {tip.count === 1 ? 'event' : 'events'}
+          </p>
+        </div>
+      )}
+
       <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] font-medium">
-        <span className="text-[color:var(--color-text-muted)]">Less</span>
+        <span className="mr-0.5 text-[color:var(--color-text-muted)]">Less</span>
         {colors.map((c, i) => (
           <div
             key={i}
             className="h-2.5 w-2.5 rounded-[var(--chart-cell-radius)] border border-[color:var(--chart-cell-border)]"
             style={{ backgroundColor: c }}
             aria-hidden
+            title={`Level ${i}`}
           />
         ))}
-        <span className="text-[color:var(--color-text-muted)]">More</span>
+        <span className="ml-0.5 text-[color:var(--color-text-muted)]">More</span>
       </div>
     </div>
   );
