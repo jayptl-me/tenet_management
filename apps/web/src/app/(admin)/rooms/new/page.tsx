@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import type { IAppConfig } from '@pg/types';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { floorLabel } from '@/lib/resource-select-presets';
 
 const SHARING_OPTIONS = [
   { value: '2', label: '2 Sharing' },
@@ -30,6 +31,8 @@ type RoomAmenityDef = { key: string; label: string; icon: string; category: stri
 
 export default function NewRoomPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillFloorId = searchParams.get('floorId') ?? '';
   const [submitError, setSubmitError] = useState('');
   const [roomAmenityDefs, setRoomAmenityDefs] = useState<RoomAmenityDef[]>([]);
   const [loadingDefs, setLoadingDefs] = useState(true);
@@ -80,6 +83,7 @@ export default function NewRoomPage() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      floorId: prefillFloorId,
       sharingType: 2,
       monthlyRent: 0,
       description: '',
@@ -158,6 +162,7 @@ export default function NewRoomPage() {
                   value={field.value}
                   onChange={field.onChange}
                   placeholder="Select floor..."
+                  labelKey={floorLabel}
                   error={err.floorId?.message}
                 />
               )}

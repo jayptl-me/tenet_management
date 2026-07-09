@@ -13,10 +13,15 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
+import {
+  tenantDisplayName,
+  tenantRoomNumber,
+  type PopulatedTenantRef,
+} from '@/lib/api-shapes';
 
 interface PaymentRow {
   _id: string;
-  tenant?: { user?: { name: string }; room?: { roomNumber: string } };
+  tenantId?: PopulatedTenantRef | string;
   amount: number;
   method: string;
   type: string;
@@ -26,6 +31,32 @@ interface PaymentRow {
   createdAt: string;
 }
 
+const METHOD_FILTERS = [
+  { value: '', label: 'All methods' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'other', label: 'Other' },
+];
+
+const TYPE_FILTERS = [
+  { value: '', label: 'All types' },
+  { value: 'rent', label: 'Rent' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'laundry', label: 'Laundry' },
+  { value: 'other', label: 'Other' },
+];
+
+const STATUS_FILTERS = [
+  { value: '', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'pending_verification', label: 'Pending verification' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
 export default function PaymentsPage() {
   const router = useRouter();
   const [payments, setPayments] = useState<PaymentRow[]>([]);
@@ -33,8 +64,9 @@ export default function PaymentsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [modeFilter, setModeFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [methodFilter, setMethodFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<PaymentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -46,8 +78,9 @@ export default function PaymentsPage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
-      if (modeFilter) params.set('mode', modeFilter);
-      if (categoryFilter) params.set('category', categoryFilter);
+      if (methodFilter) params.set('method', methodFilter);
+      if (typeFilter) params.set('type', typeFilter);
+      if (statusFilter) params.set('status', statusFilter);
 
       const res = await api.get(`payments?${params.toString()}`).json<{
         success: boolean;
@@ -61,7 +94,7 @@ export default function PaymentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, modeFilter, categoryFilter]);
+  }, [page, perPage, methodFilter, typeFilter, statusFilter]);
 
   useEffect(() => {
     fetchPayments();
@@ -85,29 +118,31 @@ export default function PaymentsPage() {
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="text-surface-900 font-semibold">{row.tenant?.user?.name ?? 'N/A'}</span>
-      ),
-    },
-    {
-      header: 'Room',
-      accessor: (row) => row.tenant?.room?.roomNumber ?? 'N/A',
-    },
-    {
-      header: 'Amount',
-      accessor: (row) => (
-        <span className="text-surface-900 font-semibold">₹{row.amount.toLocaleString()}</span>
-      ),
-    },
-    {
-      header: 'Mode',
-      accessor: (row) => (
-        <span className="capitalize">
-          {row.method ? row.method.replace(/_/g, ' ') : 'N/A'}
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          {tenantDisplayName(row.tenantId)}
         </span>
       ),
     },
     {
-      header: 'Category',
+      header: 'Room',
+      accessor: (row) => tenantRoomNumber(row.tenantId),
+    },
+    {
+      header: 'Amount',
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          ₹{row.amount.toLocaleString('en-IN')}
+        </span>
+      ),
+    },
+    {
+      header: 'Method',
+      accessor: (row) => (
+        <span className="capitalize">{row.method ? row.method.replace(/_/g, ' ') : 'N/A'}</span>
+      ),
+    },
+    {
+      header: 'Type',
       accessor: (row) => <span className="capitalize">{row.type ?? 'N/A'}</span>,
     },
     {
@@ -137,7 +172,7 @@ export default function PaymentsPage() {
               e.stopPropagation();
               router.push(`/payments/${row._id}`);
             }}
-            className="text-surface-700 hover:bg-surface-100 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors hover:bg-[color:var(--color-surface-100)]"
             title="View"
           >
             <Eye className="h-3 w-3" />
@@ -147,7 +182,7 @@ export default function PaymentsPage() {
               e.stopPropagation();
               router.push(`/payments/${row._id}/edit`);
             }}
-            className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
             title="Edit"
           >
             <Pencil className="h-3 w-3" />
@@ -157,14 +192,13 @@ export default function PaymentsPage() {
               e.stopPropagation();
               setDeleteTarget(row);
             }}
-            className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
           </button>
         </div>
       ),
-      className: 'w-[130px]',
     },
   ];
 
@@ -172,7 +206,7 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Payments"
-        description="Track all rent and service payments"
+        description="Track rent and other payments across tenants"
         action={
           <Button onClick={() => router.push('/payments/new')}>
             <Plus className="h-4 w-4" />
@@ -181,113 +215,76 @@ export default function PaymentsPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      {error && <ErrorBanner message={error} />}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Select
-          options={[
-            { value: '', label: 'All Modes' },
-            { value: 'cash', label: 'Cash' },
-            { value: 'upi', label: 'UPI' },
-            { value: 'bank_transfer', label: 'Bank Transfer' },
-          ]}
-          value={modeFilter}
-          onChange={(e) => {
-            setModeFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[180px]"
-        />
-        <Select
-          options={[
-            { value: '', label: 'All Categories' },
-            { value: 'rent', label: 'Rent' },
-            { value: 'deposit', label: 'Deposit' },
-            { value: 'electricity', label: 'Electricity' },
-            { value: 'maintenance', label: 'Maintenance' },
-            { value: 'laundry', label: 'Laundry' },
-            { value: 'other', label: 'Other' },
-          ]}
-          value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[200px]"
-        />
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-44">
+          <Select
+            label="Method"
+            options={METHOD_FILTERS}
+            value={methodFilter}
+            onChange={(e) => {
+              setMethodFilter(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="w-44">
+          <Select
+            label="Type"
+            options={TYPE_FILTERS}
+            value={typeFilter}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="w-48">
+          <Select
+            label="Status"
+            options={STATUS_FILTERS}
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={payments}
-        keyExtractor={(row: PaymentRow) => row._id}
-        isLoading={isLoading}
-        onRowClick={(row) => router.push(`/payments/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: (p) => setPage(p),
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
-        emptyState={
-          <EmptyState
-            icon={<Receipt className="h-12 w-12" />}
-            title="No payments yet"
-            description="Record your first payment to get started"
-            action={{ label: 'Record Payment', onClick: () => router.push('/payments/new') }}
-          />
-        }
-        mobileCardRenderer={(row) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
-                ₹{row.amount.toLocaleString()}
-              </span>
-              <StatusBadge
-                variant={statusToVariant(row.status)}
-                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
-              />
-            </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span>{row.tenant?.user?.name ?? 'N/A'}</span>
-              <span>{row.tenant?.room?.roomNumber ?? 'N/A'}</span>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span className="capitalize">{row.method ? row.method.replace(/_/g, ' ') : 'N/A'}</span>
-              <span>{new Date(row.paidAt || row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-            </div>
-            <div className="flex items-center gap-1 pt-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/payments/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-surface-700)] transition-colors hover:bg-[color:var(--color-surface-100)]"
-              >
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/payments/${row._id}/edit`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
-              >
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </button>
-            </div>
-          </div>
-        )}
-      />
+      {!isLoading && payments.length === 0 ? (
+        <EmptyState
+          icon={<Receipt className="h-10 w-10" />}
+          title="No payments found"
+          description="Record an offline payment or wait for UPI submissions."
+          action={{
+            label: 'Record Payment',
+            onClick: () => router.push('/payments/new'),
+          }}
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={payments}
+          keyExtractor={(row) => row._id}
+          isLoading={isLoading}
+          pagination={{
+            page,
+            perPage,
+            total,
+            onPageChange: setPage,
+            onPerPageChange: setPerPage,
+          }}
+          onRowClick={(row) => router.push(`/payments/${row._id}`)}
+        />
+      )}
 
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Payment"
-        message={`Are you sure you want to delete this payment? This action cannot be undone.`}
+        title="Delete payment?"
+        message="This cannot be undone. Paid payments may be blocked by the API."
+        confirmLabel="Delete"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

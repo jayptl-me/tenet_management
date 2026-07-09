@@ -115,7 +115,7 @@ const electricityBillSchema = new Schema<IElectricityBillDocument>(
 // ── Pre-save: derive unitsConsumed and amount ──────────
 electricityBillSchema.pre('save', function (this: IElectricityBillDocument) {
   for (const entry of this.roomEntries) {
-    entry.unitsConsumed = entry.currentReading - entry.previousReading;
+    entry.unitsConsumed = Math.max(0, entry.currentReading - entry.previousReading);
     entry.amount = entry.unitsConsumed * entry.ratePerUnit;
   }
 });

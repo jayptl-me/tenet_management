@@ -14,7 +14,7 @@ import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 
-const BED_OPTIONS = [
+const ALL_BEDS = [
   { value: 'A', label: 'Bed A' },
   { value: 'B', label: 'Bed B' },
   { value: 'C', label: 'Bed C' },
@@ -53,8 +53,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface RoomOption { _id: string; roomNumber: string; sharingType: number; monthlyRent: number; floor?: { label: string; floorNumber?: number } }
+interface RoomOption {
+  _id: string;
+  roomNumber: string;
+  sharingType: number;
+  monthlyRent: number;
+  floor?: { label: string; floorNumber?: number };
+  beds?: Array<{ bedId: string; isOccupied: boolean; tenantId?: string | null }>;
+}
 
 export default function EditTenantPage() {
   const router = useRouter();
@@ -63,27 +69,79 @@ export default function EditTenantPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [tenantData, setTenantData] = useState<Record<string, unknown> | null>(null);
+  const [bedOptions, setBedOptions] = useState(ALL_BEDS);
+  const [currentBedId, setCurrentBedId] = useState('');
 
-  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
+  const roomIdWatch = watch('roomId');
+
+  const loadBedOptions = async (roomId: string, keepBedId: string) => {
+    if (!roomId) {
+      setBedOptions(ALL_BEDS);
+      return;
+    }
+    try {
+      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+      const room = res.data;
+      const maxBeds = room.sharingType ?? 4;
+      const beds = ALL_BEDS.slice(0, maxBeds).map((b) => {
+        const bedMeta = room.beds?.find((x) => x.bedId === b.value);
+        const occupiedByOther =
+          !!bedMeta?.isOccupied &&
+          String(bedMeta.tenantId ?? '') !== String(id) &&
+          b.value !== keepBedId;
+        return {
+          value: b.value,
+          label: occupiedByOther ? `${b.label} (Occupied)` : b.label,
+          disabled: occupiedByOther,
+        };
+      });
+      // Select only allows value/label — filter out disabled for options list but keep current
+      setBedOptions(
+        beds
+          .filter((b) => !b.disabled || b.value === keepBedId)
+          .map(({ value, label }) => ({ value, label })),
+      );
+      if (room.monthlyRent) {
+        // only auto-fill if rent empty? Keep existing rent on load; on room change update
+      }
+    } catch {
+      setBedOptions(ALL_BEDS.slice(0, 4));
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
-    api.get(`tenants/${id}`).json<{ success: boolean; data: Record<string, unknown> }>()
-      .then((res) => {
+    api
+      .get(`tenants/${id}`)
+      .json<{ success: boolean; data: Record<string, unknown> }>()
+      .then(async (res) => {
         const d = res.data;
         setTenantData(d);
         const user = (d.user ?? {}) as Record<string, unknown>;
         const room = (d.room ?? {}) as Record<string, unknown>;
         const ec = (d.emergencyContact ?? {}) as Record<string, string>;
+        const roomId = (room._id as string) ?? (d.roomId as string) ?? '';
+        const bedId = (d.bedId as string) ?? '';
+        setCurrentBedId(bedId);
 
         reset({
           name: (user.name as string) ?? '',
           phone: (user.phone as string) ?? '',
           email: (user.email as string) ?? '',
-          roomId: (room._id as string) ?? (d.roomId as string) ?? '',
-          bedId: (d.bedId as string) ?? '',
+          roomId,
+          bedId,
           monthlyRent: (d.monthlyRent as number) ?? 0,
           depositPaid: (d.depositPaid as number) ?? 0,
           isActive: (d.isActive as boolean) ? 'true' : 'false',
@@ -92,10 +150,30 @@ export default function EditTenantPage() {
           emergencyPhone: (ec.phone as string)?.replace('+91', '') ?? '',
           emergencyRelation: ec.relation ?? '',
         });
+        await loadBedOptions(roomId, bedId);
         setIsLoading(false);
       })
-      .catch(() => { setSubmitError('Failed to load tenant'); setIsLoading(false); });
+      .catch(() => {
+        setSubmitError('Failed to load tenant');
+        setIsLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per tenant id
   }, [id, reset]);
+
+  const onRoomChange = async (roomId: string) => {
+    setValue('roomId', roomId);
+    const keepBed = roomId === ((tenantData?.room as { _id?: string } | undefined)?._id ?? tenantData?.roomId)
+      ? currentBedId
+      : '';
+    if (!keepBed) setValue('bedId', '');
+    try {
+      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+      if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
+    } catch {
+      /* ignore */
+    }
+    await loadBedOptions(roomId, keepBed);
+  };
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -173,7 +251,10 @@ export default function EditTenantPage() {
                   label="Room"
                   endpoint="rooms?isActive=true"
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(val) => {
+                    field.onChange(val);
+                    void onRoomChange(val);
+                  }}
                   placeholder="Select room..."
                   error={err.roomId?.message}
                   valueKey="_id"
@@ -187,8 +268,18 @@ export default function EditTenantPage() {
                 />
               )}
             />
-            <Select label="Bed" options={BED_OPTIONS} error={err.bedId?.message} {...register('bedId')} />
+            <Select
+              label="Bed"
+              options={bedOptions}
+              error={err.bedId?.message}
+              {...register('bedId')}
+            />
           </div>
+          {roomIdWatch && (
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              Only free beds (plus this tenant&apos;s current bed) are listed for the selected room.
+            </p>
+          )}
         </div>
 
         {/* ── Financial ──────────────────────────── */}

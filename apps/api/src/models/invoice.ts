@@ -16,6 +16,8 @@ export interface IInvoiceDocument extends Document {
   electricityAmount: number;
   otherCharges: number;
   totalAmount: number;
+  /** Due date for payment; defaults to 5th of billing month (or next month if past). */
+  dueDate: Date | null;
   status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;
@@ -74,6 +76,13 @@ const invoiceSchema = new Schema<IInvoiceDocument>(
       type: Number,
       required: [true, 'Total amount is required'],
       min: [0, 'Total amount cannot be negative'],
+    },
+    dueDate: {
+      type: Date,
+      // Optional at schema level so historical docs load; generation always sets it.
+      // Offline payment path falls back to 5th of month when missing.
+      required: false,
+      default: null,
     },
     status: {
       type: String,

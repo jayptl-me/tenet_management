@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Phone, Mail, User, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, User, Loader2, AlertTriangle, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -66,11 +66,27 @@ export default function GuardianDetailPage() {
     <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="space-y-6">
 
       {/* Header */}
-      <motion.div variants={fadeScaleIn} className="flex items-center gap-3">
-        <Button variant="outline" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">{guardian.name}</h2>
-          <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">Guardian Details</p>
+      <motion.div variants={fadeScaleIn} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">{guardian.name}</h2>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">Guardian Details</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge
+            variant={statusToVariant(guardian.isActive ? 'active' : 'inactive')}
+            label={guardian.isActive ? 'Active' : 'Inactive'}
+          />
+          <Button variant="outline" size="sm" onClick={() => router.push(`/guardians/${guardian._id}/edit`)}>
+            <Pencil className="h-4 w-4" /> Edit
+          </Button>
+          {guardian.tenant?._id && (
+            <Button variant="outline" size="sm" onClick={() => router.push(`/tenants/${guardian.tenant!._id}`)}>
+              View Tenant
+            </Button>
+          )}
         </div>
       </motion.div>
 

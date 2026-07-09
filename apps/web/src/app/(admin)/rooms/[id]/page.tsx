@@ -40,7 +40,7 @@ interface RoomAmenityStatusDoc {
 interface RoomDetail {
   _id: string;
   roomNumber: string;
-  floor?: { _id: string; label: string; floorNumber?: number };
+  floor?: { _id?: string; id?: string; label: string; floorNumber?: number };
   sharingType: number;
   monthlyRent: number;
   description?: string;
@@ -127,7 +127,20 @@ export default function RoomDetailPage() {
               Room {room.roomNumber}
             </h2>
             <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
-              {room.floor?.label ?? 'No floor'} · {room.sharingType} Sharing
+              {room.floor?._id || room.floor?.id ? (
+                <button
+                  type="button"
+                  className="text-[color:var(--color-brand-600)] hover:underline"
+                  onClick={() =>
+                    router.push(`/floors/${room.floor!._id ?? room.floor!.id}`)
+                  }
+                >
+                  {room.floor.label ?? 'Floor'}
+                </button>
+              ) : (
+                room.floor?.label ?? 'No floor'
+              )}{' '}
+              · {room.sharingType} Sharing
             </p>
           </div>
         </div>

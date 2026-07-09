@@ -225,9 +225,6 @@ async function seedSampleData(adminId: string): Promise<void> {
     await user.save();
 
     const room = rooms[data.roomIdx];
-    room.beds[data.bedIdx].isOccupied = true;
-    room.beds[data.bedIdx].tenantId = user._id;
-    await room.save();
 
     const tenant = new Tenant({
       userId: user._id,
@@ -245,12 +242,18 @@ async function seedSampleData(adminId: string): Promise<void> {
     });
     await tenant.save();
 
+    // beds.tenantId must reference Tenant, not User
+    room.beds[data.bedIdx].isOccupied = true;
+    room.beds[data.bedIdx].tenantId = tenant._id;
+    await room.save();
+
     tenantPairs.push({ userId: user.id, tenantId: tenant.id });
   }
   logger.info({ count: sampleTenants.length }, 'Tenants + Users seeded');
 
   // ── Invoices ────────────────────────────────────────
   const month = '2026-06';
+  const invoiceDueDate = new Date(2026, 5, 5); // 5th of billing month
   const invoiceDocs: any[] = [];
   for (let i = 0; i < tenantPairs.length; i++) {
     invoiceDocs.push({
@@ -262,6 +265,7 @@ async function seedSampleData(adminId: string): Promise<void> {
       electricityAmount: 0,
       otherCharges: 0,
       totalAmount: 6500,
+      dueDate: invoiceDueDate,
       status: 'sent',
     });
   }

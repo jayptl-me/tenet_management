@@ -11,6 +11,21 @@ import { Tenant } from '../models/tenant.js';
 import { generateUpiQr, generateTransactionRef, getPgUpiConfig } from '../lib/upi.js';
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { logger } from '../lib/logger.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+
+/** Default due date: 5th of the invoice billing month. */
+function dueDateForMonth(month: string): Date {
+  const [year, monthNum] = month.split('-').map(Number);
+  return new Date(year!, monthNum! - 1, 5);
+}
+
+function resolveInvoiceDueDate(invoice: Record<string, unknown>): Date {
+  if (invoice.dueDate) {
+    const d = new Date(invoice.dueDate as string | Date);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return dueDateForMonth(String(invoice.month ?? ''));
+}
 
 // ── Cast helpers (Mongoose 9) ───────────────────────────
 type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
@@ -109,10 +124,14 @@ payments.get('/', authGuard, adminOnly, async (c) => {
   const month = c.req.query('month');
   const tenantId = c.req.query('tenantId');
   const roomId = c.req.query('roomId');
+  const method = c.req.query('method');
+  const type = c.req.query('type');
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
   if (month) filter.month = month;
+  if (method) filter.method = method;
+  if (type) filter.type = type;
   if (tenantId) {
     const parsed = parseId(tenantId);
     if (!parsed) return badRequest(c, 'Invalid tenantId');
@@ -131,7 +150,13 @@ payments.get('/', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+      .populate({
+        path: 'tenantId',
+        populate: [
+          { path: 'userId', select: 'name email phone' },
+          { path: 'roomId', select: 'roomNumber floorId' },
+        ],
+      })
       .populate('invoiceId')
       .lean() as unknown,
     paymentCountDocs(safeFilter(filter)),
@@ -187,6 +212,8 @@ payments.get('/my', authGuard, tenantOnly, async (c) => {
 });
 
 // ── POST /payments/offline ──────────────────────────────
+// Records an admin offline payment. Reconciles the pending Payment row
+// created by generateSingleInvoice so summary "expected" is not double-counted.
 payments.post(
   '/offline',
   authGuard,
@@ -196,35 +223,156 @@ payments.post(
     const body = c.req.valid('json');
     const adminId = c.get('user').sub;
 
+    if (!parseId(body.tenantId) || !parseId(body.invoiceId)) {
+      return badRequest(c, 'Invalid tenantId or invoiceId');
+    }
+
     const invoiceRaw = await invoiceFindOne(
       safeFilter({ _id: new mongoose.Types.ObjectId(body.invoiceId) }),
     );
     if (!invoiceRaw) return notFound(c, 'Invoice');
 
     const invoice = invoiceRaw as Record<string, unknown>;
+    const invoiceTenantId = String(invoice.tenantId ?? '');
 
-    const payment = await paymentCreate({
-      tenantId: new mongoose.Types.ObjectId(body.tenantId),
-      invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-      amount: body.amount,
-      type: 'rent',
-      method: body.method,
-      status: 'paid',
-      month: invoice.month,
-      dueDate: invoice.dueDate,
-      paidAt: new Date(body.paidAt),
-      verifiedBy: new mongoose.Types.ObjectId(adminId),
-      notes: body.notes,
-    });
+    if (invoiceTenantId !== body.tenantId) {
+      return badRequest(
+        c,
+        'tenantId does not match the invoice tenant',
+        'TENANT_INVOICE_MISMATCH',
+      );
+    }
+
+    const invoiceStatus = String(invoice.status ?? '');
+    // draft included: admin may collect cash before formal send
+    const payableStatuses = new Set(['draft', 'sent', 'partial', 'overdue']);
+    if (!payableStatuses.has(invoiceStatus)) {
+      return badRequest(
+        c,
+        `Cannot record offline payment on invoice with status "${invoiceStatus}"`,
+        'INVOICE_NOT_PAYABLE',
+      );
+    }
+
+    const invoiceTotal = (invoice.totalAmount as number) ?? 0;
+    const paidRows = (await paymentFind(
+      safeFilter({
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        status: 'paid',
+      }),
+    )) as Array<Record<string, unknown>>;
+    const alreadyPaid = paidRows.reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
+    const balance = Math.max(0, invoiceTotal - alreadyPaid);
+
+    if (body.amount > balance + 0.001) {
+      return badRequest(
+        c,
+        `Amount exceeds remaining balance of ₹${balance.toFixed(2)}`,
+        'AMOUNT_EXCEEDS_BALANCE',
+      );
+    }
+
+    const dueDate = resolveInvoiceDueDate(invoice);
+    const paidAt = new Date(body.paidAt);
+    if (Number.isNaN(paidAt.getTime())) {
+      return badRequest(c, 'paidAt must be a valid ISO 8601 datetime', 'INVALID_PAID_AT');
+    }
+
+    const openPayments = (await Payment.find(
+      safeFilter({
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        status: { $in: ['pending', 'pending_verification'] },
+      }),
+    )
+      .sort({ createdAt: 1 })
+      .exec()) as unknown as Array<{
+      _id: mongoose.Types.ObjectId;
+      amount: number;
+      method: string;
+      status: string;
+      paidAt: Date | null;
+      verifiedBy: mongoose.Types.ObjectId | null;
+      notes?: string;
+      dueDate: Date;
+      save: () => Promise<unknown>;
+    }>;
+
+    let paymentResult: unknown;
+
+    if (openPayments.length > 0) {
+      const primary = openPayments[0]!;
+      primary.amount = body.amount;
+      primary.method = body.method;
+      primary.status = 'paid';
+      primary.paidAt = paidAt;
+      primary.verifiedBy = new mongoose.Types.ObjectId(adminId);
+      primary.dueDate = dueDate;
+      if (body.notes !== undefined) primary.notes = body.notes;
+      await primary.save();
+      paymentResult = primary;
+
+      for (const extra of openPayments.slice(1)) {
+        extra.status = 'cancelled';
+        await extra.save();
+      }
+
+      const remaining = Math.max(0, balance - body.amount);
+      if (remaining > 0.01) {
+        await paymentCreate({
+          tenantId: new mongoose.Types.ObjectId(body.tenantId),
+          invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+          amount: remaining,
+          type: 'rent',
+          method: 'upi',
+          status: 'pending',
+          month: invoice.month,
+          dueDate,
+        });
+      }
+    } else {
+      paymentResult = await paymentCreate({
+        tenantId: new mongoose.Types.ObjectId(body.tenantId),
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        amount: body.amount,
+        type: 'rent',
+        method: body.method,
+        status: 'paid',
+        month: invoice.month,
+        dueDate,
+        paidAt,
+        verifiedBy: new mongoose.Types.ObjectId(adminId),
+        notes: body.notes,
+      });
+    }
 
     await updateInvoicePaymentStatus(body.invoiceId);
 
+    const paymentId = String(
+      (paymentResult as Record<string, unknown>)?._id ??
+        (paymentResult as Record<string, unknown>)?.id ??
+        '',
+    );
+
+    await writeAuditLog({
+      userId: adminId,
+      action: 'payment_verify',
+      resource: 'payment',
+      resourceId: paymentId,
+      details: {
+        invoiceId: body.invoiceId,
+        tenantId: body.tenantId,
+        amount: body.amount,
+        method: body.method,
+        source: 'offline',
+      },
+    });
+
     logger.info(
-      { paymentId: (payment as Record<string, unknown>)._id, tenantId: body.tenantId },
+      { paymentId, tenantId: body.tenantId, invoiceId: body.invoiceId },
       'Offline payment recorded',
     );
 
-    return c.json({ success: true, data: payment }, 201);
+    return c.json({ success: true, data: paymentResult }, 201);
   },
 );
 
