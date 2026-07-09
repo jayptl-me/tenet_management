@@ -2,17 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { Textarea } from '@/components/ui/Textarea';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
+import { floorLabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
+  floorId: z.string().min(1, 'Floor is required'),
   serviceType: z.string().min(1, 'Service type is required'),
   status: z.string().min(1, 'Status is required'),
   note: z.string().optional(),
@@ -22,9 +26,9 @@ type FormData = z.infer<typeof schema>;
 
 const serviceTypeOptions = [
   { value: 'wifi', label: 'WiFi' },
-  { value: 'water_supply', label: 'Water Supply' },
+  { value: 'water_supply', label: 'Water supply' },
   { value: 'power', label: 'Power' },
-  { value: 'ac', label: 'Air Conditioning' },
+  { value: 'ac', label: 'Air conditioning' },
   { value: 'laundry', label: 'Laundry' },
   { value: 'cleaning', label: 'Cleaning' },
   { value: 'security', label: 'Security' },
@@ -46,15 +50,29 @@ export default function EditServicePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   useEffect(() => {
     if (!id) return;
-    api.get(`services/${id}`).json<{ success: boolean; data: FormData }>()
-      .then((res) => { reset(res.data); setIsLoading(false); })
-      .catch(() => { setSubmitError('Failed to load service'); setIsLoading(false); });
+    api
+      .get(`services/${id}`)
+      .json<{ success: boolean; data: FormData }>()
+      .then((res) => {
+        reset(res.data);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setSubmitError('Failed to load service');
+        setIsLoading(false);
+      });
   }, [id, reset]);
 
   const onSubmit = async (data: FormData) => {
@@ -67,29 +85,76 @@ export default function EditServicePage() {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Service Status</h2>
-          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update service status details</p>
-        </div>
-      </div>
-      {submitError && <ErrorBanner message={submitError} />}
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <div className="space-y-5">
-          <Select label="Service Type" options={serviceTypeOptions} error={errors.serviceType?.message} {...register('serviceType')} />
-          <Select label="Status" options={serviceStatusOptions} error={errors.status?.message} {...register('status')} />
-          <Input label="Note" error={errors.note?.message} {...register('note')} />
-        </div>
-        <div className="border-t-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
-        </div>
-      </form>
-    </div>
+    <FormPage
+      title="Edit Service Status"
+      description="Update floor-level service status and notes"
+      backHref="/services"
+      error={submitError}
+      isLoading={isLoading}
+    >
+      <FormCard
+        onSubmit={handleSubmit(onSubmit)}
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/services"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
+      >
+        <FormSection
+          title="Service"
+          description="Floor, service type, and current operational status"
+        >
+          <FormGrid>
+            <Controller
+              name="floorId"
+              control={control}
+              render={({ field }) => (
+                <ResourceSelect
+                  label="Floor"
+                  endpoint="floors"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select floor..."
+                  error={errors.floorId?.message}
+                  valueKey="_id"
+                  labelKey={floorLabel}
+                  dataPath="data"
+                />
+              )}
+            />
+            <Select
+              label="Service type"
+              options={serviceTypeOptions}
+              error={errors.serviceType?.message}
+              {...register('serviceType')}
+            />
+            <Select
+              label="Status"
+              options={serviceStatusOptions}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+          </FormGrid>
+        </FormSection>
+
+        <FormSection title="Notes" description="Optional context for staff" divided>
+          <FormGrid cols={1}>
+            <FormFullWidth>
+              <Textarea
+                label="Note"
+                rows={3}
+                placeholder="Optional note..."
+                error={errors.note?.message}
+                {...register('note')}
+              />
+            </FormFullWidth>
+          </FormGrid>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

@@ -5,13 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Shield, UserPlus } from 'lucide-react';
+import { Shield, UserPlus } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 
 const BED_OPTIONS = ['A', 'B', 'C', 'D'].map((b) => ({ value: b, label: `Bed ${b}` }));
 
@@ -138,41 +140,58 @@ function TenantForm() {
   const err = errors as Record<string, { message?: string }>;
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-text-primary)]">New Tenant</h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">Add a new tenant to the PG</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="New Tenant"
+      description="Add a new tenant to the PG"
+      backHref="/tenants"
+      error={submitError}
+      maxWidth="4xl"
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/tenants"
+            submitLabel="Save Tenant"
+            submitIcon={<UserPlus className="h-4 w-4" />}
+            divided={false}
+          />
+        }
       >
-        {/* ── Personal Info ─────────────────────── */}
-        <div className="space-y-5">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            Personal Information
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Full Name" placeholder="Tenant name" error={err.name?.message} {...register('name')} />
-            <Input label="Email" type="email" placeholder="tenant@email.com" error={err.email?.message} {...register('email')} />
-          </div>
-          <Input label="Phone" placeholder="+919876543210" error={err.phone?.message} {...register('phone')} />
-        </div>
+        <FormSection
+          title="Personal information"
+          description="Basic identity and contact details"
+        >
+          <FormGrid>
+            <Input
+              label="Full name"
+              placeholder="Tenant name"
+              error={err.name?.message}
+              {...register('name')}
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="tenant@email.com"
+              error={err.email?.message}
+              {...register('email')}
+            />
+            <Input
+              label="Phone"
+              placeholder="+919876543210"
+              error={err.phone?.message}
+              {...register('phone')}
+            />
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Room & Bed ─────────────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            Room Assignment
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormSection
+          title="Room assignment"
+          description="Select an available room and bed"
+          divided
+        >
+          <FormGrid>
             <Controller
               name="roomId"
               control={control}
@@ -188,12 +207,14 @@ function TenantForm() {
                   placeholder="Select room..."
                   error={err.roomId?.message}
                   valueKey="_id"
-                  labelKey={(item: RoomOption) =>
-                    `Room ${item.roomNumber} — ${item.floor?.label ?? '?'}`
-                  }
-                  sublabelFn={(item: RoomOption) =>
-                    `₹${item.monthlyRent}/mo · ${item.sharingType} sharing`
-                  }
+                  labelKey={(item) => {
+                    const r = item as unknown as RoomOption;
+                    return `Room ${r.roomNumber} — ${r.floor?.label ?? '?'}`;
+                  }}
+                  sublabelFn={(item) => {
+                    const r = item as unknown as RoomOption;
+                    return `₹${r.monthlyRent}/mo · ${r.sharingType} sharing`;
+                  }}
                   dataPath="data"
                 />
               )}
@@ -204,55 +225,75 @@ function TenantForm() {
               error={err.bedId?.message}
               {...register('bedId')}
             />
-          </div>
+          </FormGrid>
 
-          {/* Selected room info */}
           {selectedRoom && (
-            <div className="rounded-lg border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
+            <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
               <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
-                Selected: Room {selectedRoom.roomNumber} · Floor {selectedRoom.floor?.label ?? '?'} · {selectedRoom.sharingType} sharing · ₹{selectedRoom.monthlyRent?.toLocaleString()}/mo
+                Selected: Room {selectedRoom.roomNumber} · Floor{' '}
+                {selectedRoom.floor?.label ?? '?'} · {selectedRoom.sharingType} sharing · ₹
+                {selectedRoom.monthlyRent?.toLocaleString()}/mo
               </p>
             </div>
           )}
-        </div>
+        </FormSection>
 
-        {/* ── Financial ──────────────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            Financial Details
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input label="Move-in Date" type="date" error={err.moveInDate?.message} {...register('moveInDate')} />
-            <Input label="Deposit Paid (₹)" type="number" error={err.depositPaid?.message} {...register('depositPaid')} />
-            <Input label="Monthly Rent (₹)" type="number" error={err.monthlyRent?.message} {...register('monthlyRent')} />
-          </div>
-        </div>
+        <FormSection
+          title="Financial details"
+          description="Move-in date, deposit, and monthly rent"
+          divided
+        >
+          <FormGrid cols={3}>
+            <Input
+              label="Move-in date"
+              type="date"
+              error={err.moveInDate?.message}
+              {...register('moveInDate')}
+            />
+            <Input
+              label="Deposit paid (₹)"
+              type="number"
+              error={err.depositPaid?.message}
+              {...register('depositPaid')}
+            />
+            <Input
+              label="Monthly rent (₹)"
+              type="number"
+              error={err.monthlyRent?.message}
+              {...register('monthlyRent')}
+            />
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Emergency Contact ──────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="flex items-center gap-2 font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            <Shield className="h-4 w-4" /> Emergency Contact
-          </h3>
-          <p className="text-xs text-[color:var(--color-text-muted)]">Optional — can be added later</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input label="Name" placeholder="Emergency contact name" error={err.emergencyName?.message} {...register('emergencyName')} />
-            <Input label="Phone (10 digits)" placeholder="9876543210" error={err.emergencyPhone?.message} {...register('emergencyPhone')} />
-            <Select label="Relation" options={RELATION_OPTIONS} error={err.emergencyRelation?.message} {...register('emergencyRelation')} />
-          </div>
-        </div>
-
-        {/* ── Actions ────────────────────────────── */}
-        <div className="mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <UserPlus className="h-4 w-4" />
-            Save Tenant
-          </Button>
-        </div>
-      </form>
-    </div>
+        <FormSection
+          title="Emergency contact"
+          description="Optional — can be added later"
+          icon={<Shield />}
+          divided
+        >
+          <FormGrid cols={3}>
+            <Input
+              label="Name"
+              placeholder="Emergency contact name"
+              error={err.emergencyName?.message}
+              {...register('emergencyName')}
+            />
+            <Input
+              label="Phone (10 digits)"
+              placeholder="9876543210"
+              error={err.emergencyPhone?.message}
+              {...register('emergencyPhone')}
+            />
+            <Select
+              label="Relation"
+              options={RELATION_OPTIONS}
+              error={err.emergencyRelation?.message}
+              {...register('emergencyRelation')}
+            />
+          </FormGrid>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }
 

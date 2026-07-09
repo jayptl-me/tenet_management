@@ -3,21 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft,
   Wifi,
   Calendar,
   Building,
   User,
   Pencil,
-  Loader2,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
-import { motion } from 'motion/react';
-import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
+import { FormPage } from '@/components/ui/FormPage';
+import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 
 interface ServiceDetail {
   _id: string;
@@ -77,160 +76,175 @@ export default function ServiceDetailPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
-  // ── Loading State ────────────────────────────
-  if (isLoading) {
+  if (!isLoading && (error || !service)) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-[color:var(--color-text-muted)]" />
-      </div>
+      <FormPage
+        title="Service Details"
+        description="View service information"
+        backHref="/services"
+        error={error || 'Service not found'}
+        maxWidth="4xl"
+      />
     );
   }
 
-  // ── Error / Not Found State ──────────────────
-  if (error || !service) {
-    return (
-      <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 text-center shadow-[var(--shadow-sm)]">
-          <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
-          <p className="mt-3 font-semibold text-[color:var(--color-danger-700)]">{error || 'Service not found'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const statusVariant = statusToVariant(service.status);
-  const label = serviceLabels[service.serviceType] ?? service.serviceType;
-  const floorLabel = service.floor?.label ?? 'N/A';
-  const openCount = service.openComplaintCount ?? 0;
+  const statusVariant = service ? statusToVariant(service.status) : 'neutral';
+  const label = service
+    ? (serviceLabels[service.serviceType] ?? service.serviceType)
+    : 'Service Details';
+  const floorLabel = service?.floor?.label ?? 'N/A';
+  const openCount = service?.openComplaintCount ?? 0;
 
   return (
-    <motion.div variants={staggerContainerFast} initial="hidden" animate="visible" className="mx-auto max-w-4xl space-y-6">
-
-      {/* ── Header ─────────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">{label}</h2>
-            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
-              {floorLabel}{service.floor?.floorNumber != null ? ` (Floor #${service.floor.floorNumber})` : ''}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} />
-          <Button variant="outline" size="icon" onClick={() => router.push(`/services/${service._id}/edit`)} title="Edit service">
+    <FormPage
+      title={label}
+      description={
+        service
+          ? `${floorLabel}${service.floor?.floorNumber != null ? ` (Floor #${service.floor.floorNumber})` : ''}`
+          : undefined
+      }
+      backHref="/services"
+      isLoading={isLoading}
+      maxWidth="4xl"
+      badge={
+        service ? (
+          <StatusBadge
+            variant={statusVariant}
+            label={service.status.replace(/_/g, ' ')}
+          />
+        ) : undefined
+      }
+      actions={
+        service ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/services/${service._id}/edit`)}
+          >
             <Pencil className="h-4 w-4" />
+            Edit
           </Button>
-        </div>
-      </motion.div>
-
-      {/* ── Stats Grid ─────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Floor"
-          value={floorLabel}
-          icon={<Building className="h-4 w-4" />}
-          variant="default"
-        />
-        <StatCard
-          title="Status"
-          value={service.status.replace(/_/g, ' ')}
-          icon={<Wifi className="h-4 w-4" />}
-          variant={statusVariant === 'success' ? 'success' : statusVariant === 'warning' ? 'warning' : 'danger'}
-        />
-        <StatCard
-          title="Open Complaints"
-          value={openCount.toString()}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          variant={openCount > 0 ? 'danger' : 'success'}
-        />
-      </motion.div>
-
-      {/* ── Info Cards ──────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <Wifi className="h-5 w-5 text-[color:var(--color-brand-500)]" />Service Information
-          </h3>
-          <div className="space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Type</p>
-              <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{label}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Status</p>
-              <div className="mt-1"><StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} /></div>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Floor</p>
-              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{floorLabel}{service.floor?.floorNumber != null ? ` #${service.floor.floorNumber}` : ''}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Last Updated</p>
-              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDateTime(service.lastUpdatedAt || service.updatedAt)}
-              </p>
-            </div>
+        ) : undefined
+      }
+    >
+      {service && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              title="Floor"
+              value={floorLabel}
+              icon={<Building className="h-4 w-4" />}
+              variant="default"
+            />
+            <StatCard
+              title="Status"
+              value={service.status.replace(/_/g, ' ')}
+              icon={<Wifi className="h-4 w-4" />}
+              variant={
+                statusVariant === 'success'
+                  ? 'success'
+                  : statusVariant === 'warning'
+                    ? 'warning'
+                    : 'danger'
+              }
+            />
+            <StatCard
+              title="Open Complaints"
+              value={openCount.toString()}
+              icon={<AlertTriangle className="h-4 w-4" />}
+              variant={openCount > 0 ? 'danger' : 'success'}
+            />
           </div>
-        </div>
 
-        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-[color:var(--color-text-primary)]">
-            <User className="h-5 w-5 text-[color:var(--color-brand-500)]" />Last Updated By
-          </h3>
-          <div className="space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Name</p>
-              <p className="text-lg font-extrabold text-[color:var(--color-text-primary)]">{service.lastUpdatedBy?.name ?? 'System'}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">Timestamp</p>
-              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />{formatDateTime(service.lastUpdatedAt || service.updatedAt)}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DetailCard title="Service Information" icon={<Wifi />}>
+              <DetailList>
+                <DetailRow label="Type" value={label} />
+                <DetailRow
+                  label="Status"
+                  value={
+                    <StatusBadge
+                      variant={statusVariant}
+                      label={service.status.replace(/_/g, ' ')}
+                    />
+                  }
+                />
+                <DetailRow
+                  label="Floor"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {floorLabel}
+                      {service.floor?.floorNumber != null
+                        ? ` #${service.floor.floorNumber}`
+                        : ''}
+                    </span>
+                  }
+                />
+                <DetailRow
+                  label="Last Updated"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {formatDateTime(service.lastUpdatedAt || service.updatedAt)}
+                    </span>
+                  }
+                />
+              </DetailList>
+            </DetailCard>
+
+            <DetailCard title="Last Updated By" icon={<User />}>
+              <DetailList>
+                <DetailRow
+                  label="Name"
+                  value={service.lastUpdatedBy?.name ?? 'System'}
+                />
+                <DetailRow
+                  label="Timestamp"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {formatDateTime(service.lastUpdatedAt || service.updatedAt)}
+                    </span>
+                  }
+                />
+              </DetailList>
+            </DetailCard>
           </div>
+
+          {openCount > 0 && (
+            <DetailCard
+              title={`${openCount} Open Complaint${openCount > 1 ? 's' : ''}`}
+              icon={<AlertTriangle />}
+              variant="danger"
+            >
+              <p className="text-sm font-medium text-[color:var(--color-text-secondary)]">
+                There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved
+                complaint{openCount > 1 ? 's' : ''} related to this service on this floor.
+              </p>
+            </DetailCard>
+          )}
+
+          {service.note && (
+            <DetailCard title="Notes" icon={<FileText />} variant="warning">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+                {service.note}
+              </p>
+            </DetailCard>
+          )}
+
+          <DetailCard title="Actions" icon={<Pencil />}>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="primary"
+                onClick={() => router.push(`/services/${service._id}/edit`)}
+              >
+                <Pencil className="h-4 w-4" /> Edit Service
+              </Button>
+            </div>
+          </DetailCard>
         </div>
-      </motion.div>
-
-      {/* ── Open Complaints Warning ─────────────── */}
-      {openCount > 0 && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-danger-800)]">
-            <AlertTriangle className="h-5 w-5" />
-            {openCount} Open Complaint{openCount > 1 ? 's' : ''}
-          </h3>
-          <p className="text-[13px] font-semibold text-[color:var(--color-danger-600)]">
-            There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved complaint{openCount > 1 ? 's' : ''} related to this service on this floor.
-          </p>
-        </motion.div>
       )}
-
-      {/* ── Notes ───────────────────────────────── */}
-      {service.note && (
-        <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-6 shadow-[var(--shadow-card)]">
-          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-[color:var(--color-warning-800)]">Notes</h3>
-          <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-warning-900)]">{service.note}</p>
-        </motion.div>
-      )}
-
-      {/* ── Actions ─────────────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
-        <h3 className="mb-4 text-lg font-bold text-[color:var(--color-text-primary)]">Actions</h3>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="primary" onClick={() => router.push(`/services/${service._id}/edit`)}>
-            <Pencil className="h-4 w-4" /> Edit Service
-          </Button>
-        </div>
-      </motion.div>
-    </motion.div>
+    </FormPage>
   );
 }

@@ -5,13 +5,14 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 
 const schema = z.object({
   title: z.string().min(1, 'Required'),
@@ -21,7 +22,6 @@ const schema = z.object({
   status: z.string().min(1, 'Required'),
   adminNotes: z.string().optional(),
 });
-
 
 const priorityOptions = [
   { value: 'low', label: 'Low' },
@@ -59,8 +59,14 @@ export default function EditPage() {
     api
       .get(`complaints/${id}`)
       .json<{ success: boolean; data: FormData }>()
-      .then((res) => { reset(res.data); setIsLoading(false); })
-      .catch(() => { setSubmitError('Failed to load data'); setIsLoading(false); });
+      .then((res) => {
+        reset(res.data);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setSubmitError('Failed to load data');
+        setIsLoading(false);
+      });
   }, [id, reset]);
 
   const onSubmit = async (data: FormData) => {
@@ -73,80 +79,78 @@ export default function EditPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Edit Complaints</h2>
-          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">Update details</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="Edit Complaint"
+      description="Update complaint details and resolution status"
+      backHref="/complaints"
+      error={submitError}
+      isLoading={isLoading}
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/complaints"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
       >
-        <div className="space-y-5">
-          <Input
-            label="Title"
-            type="string"
-            error={errors.title?.message}
-            {...register('title')}
-          />
+        <FormSection
+          title="Complaint details"
+          description="What was reported and which category it falls under"
+        >
+          <FormGrid>
+            <Input label="Title" error={errors.title?.message} {...register('title')} />
+            <Input label="Category" error={errors.category?.message} {...register('category')} />
+            <FormFullWidth>
+              <Textarea
+                label="Description"
+                rows={3}
+                error={errors.description?.message}
+                {...register('description')}
+              />
+            </FormFullWidth>
+          </FormGrid>
+        </FormSection>
+
+        <FormSection
+          title="Priority and status"
+          description="Triage and track resolution progress"
+          divided
+        >
+          <FormGrid>
+            <Select
+              label="Priority"
+              options={priorityOptions}
+              error={errors.priority?.message}
+              {...register('priority')}
+            />
+            <Select
+              label="Status"
+              options={statusOptions}
+              error={errors.status?.message}
+              {...register('status')}
+            />
+          </FormGrid>
+        </FormSection>
+
+        <FormSection
+          title="Admin notes"
+          description="Internal notes visible to staff only"
+          divided
+        >
           <Textarea
-            label="Description"
+            label="Admin notes"
             rows={3}
-            error={errors.description?.message}
-            {...register('description')}
-          />
-          <Input
-            label="Category"
-            type="string"
-            error={errors.category?.message}
-            {...register('category')}
-          />
-          <Select
-            label="Priority"
-            options={priorityOptions}
-            error={errors.priority?.message}
-            {...register('priority')}
-          />
-          <Select
-            label="Status"
-            options={statusOptions}
-            error={errors.status?.message}
-            {...register('status')}
-          />
-          <Input
-            label="Admin Notes"
-            type="string"
+            placeholder="Optional internal notes..."
             error={errors.adminNotes?.message}
             {...register('adminNotes')}
           />
-        </div>
-
-        <div className="border-[color:var(--color-surface-200)] mt-8 flex items-center justify-end gap-3 border-t-2 pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" /> Save Changes
-          </Button>
-        </div>
-      </form>
-    </div>
+        </FormSection>
+      </FormCard>
+    </FormPage>
   );
 }

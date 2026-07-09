@@ -21,7 +21,13 @@ import { Timeline } from '@/components/ui/Timeline';
 import { LineChart } from '@/components/ui/LineChart';
 import { GaugeChart } from '@/components/ui/GaugeChart';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Surface } from '@/components/ui/Surface';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
+import { surfaceNestedClass } from '@/lib/field-styles';
+import { chartTokens } from '@/lib/chart-theme';
+import { clsx } from 'clsx';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -101,11 +107,11 @@ const CATEGORY_COLORS = [
 ];
 
 const FUNNEL_COLORS: Record<string, string> = {
-  draft: 'var(--color-surface-400)',
+  draft: chartTokens.barSecondary,
   sent: 'var(--color-info-500)',
-  partial: 'var(--color-warning-500)',
-  paid: 'var(--color-success-500)',
-  overdue: 'var(--color-danger-500)',
+  partial: chartTokens.warning,
+  paid: chartTokens.success,
+  overdue: chartTokens.danger,
 };
 
 const FUNNEL_ORDER = ['paid', 'sent', 'partial', 'overdue', 'draft'];
@@ -145,20 +151,51 @@ function SectionHeader({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h3 className="text-lg font-bold text-[color:var(--color-text-primary)]">
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h3 className="font-[family:var(--font-display)] text-base font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[17px]">
           {title}
         </h3>
         {subtitle && (
-          <p className="text-[11px] font-medium text-[color:var(--color-text-muted)] mt-0.5">
+          <p className="mt-0.5 text-[12px] font-medium leading-snug text-[color:var(--color-text-secondary)]">
             {subtitle}
           </p>
         )}
       </div>
       {actionLabel && onAction && (
-        <Button variant="outline" size="sm" onClick={onAction}>
-          {actionLabel} <ArrowRight className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+        <Button variant="outline" size="sm" className="flex-shrink-0" onClick={onAction}>
+          {actionLabel}
+          <ArrowRight className="ml-1 h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Compact empty state for use inside Surface panels (no nested card chrome). */
+function PanelEmpty({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+      <div className="mb-2 text-[color:var(--color-text-muted)]">{icon}</div>
+      <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{title}</p>
+      {description && (
+        <p className="mt-1 max-w-xs text-[11px] font-medium leading-relaxed text-[color:var(--color-text-muted)]">
+          {description}
+        </p>
+      )}
+      {action && (
+        <Button variant="outline" size="sm" className="mt-3" onClick={action.onClick}>
+          {action.label}
         </Button>
       )}
     </div>
@@ -186,20 +223,11 @@ export default function DashboardPage() {
 
   if (!stats) {
     return (
-      <motion.div
-        variants={fadeScaleIn}
-        initial="hidden"
-        animate="visible"
-        className="rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-8 text-center shadow-[var(--shadow-md)]"
-      >
-        <AlertTriangle className="mx-auto h-10 w-10 text-[color:var(--color-danger-500)]" />
-        <p className="mt-3 text-[15px] font-bold text-[color:var(--color-danger-700)]">
-          {error || 'Failed to load dashboard'}
-        </p>
-        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
-          Retry
-        </Button>
-      </motion.div>
+      <ErrorState
+        title={error || 'Failed to load dashboard'}
+        description="We could not load your operational metrics. Check your connection and try again."
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
@@ -282,8 +310,12 @@ export default function DashboardPage() {
     .map((key) => ({
       label: key.charAt(0).toUpperCase() + key.slice(1),
       value: stats.paymentFunnel?.[key]?.count ?? 0,
-      color: FUNNEL_COLORS[key] ?? 'var(--color-surface-400)',
+      color: FUNNEL_COLORS[key] ?? chartTokens.barSecondary,
     }));
+
+  const todayLabel = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
 
   return (
     <motion.div
@@ -292,27 +324,21 @@ export default function DashboardPage() {
       animate="visible"
       className="space-y-6"
     >
-      {/* ── Header with Quick Date ─────────────────── */}
-      <motion.div variants={fadeScaleIn} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
-            Dashboard
-          </h2>
-          <p className="mt-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
-            {new Date().toLocaleDateString('en-IN', {
-              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-            })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 mt-2 sm:mt-0">
-          <Button variant="outline" size="sm" onClick={() => router.push('/complaints/new')}>
-            + New Complaint
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => router.push('/services')}>
-            Manage Services
-          </Button>
-        </div>
-      </motion.div>
+      {/* ── Header ─────────────────────────────────── */}
+      <PageHeader
+        title="Dashboard"
+        description={todayLabel}
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => router.push('/complaints/new')}>
+              New Complaint
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => router.push('/services')}>
+              Manage Services
+            </Button>
+          </div>
+        }
+      />
 
       {/* ── KPI Row: 5 Key Metrics ─────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -326,7 +352,7 @@ export default function DashboardPage() {
             onClick={() => router.push('/tenants')}
           >
             <div className="mt-2">
-              <Sparkline data={occupancySparkline} width={100} height={20} color="var(--color-brand-500)" />
+              <Sparkline data={occupancySparkline} width={100} height={20} color={chartTokens.brand} />
             </div>
           </StatCard>
         </motion.div>
@@ -378,620 +404,591 @@ export default function DashboardPage() {
       {/* ── Charts Row: Revenue Line + Service Health Gauge ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Revenue Line Chart — 2/3 width */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="lg:col-span-2 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-bold text-[color:var(--color-text-primary)]">
-                Revenue Trend
-              </h3>
-              <p className="text-[11px] font-medium text-[color:var(--color-text-muted)] mt-0.5">
-                Last 6 months — collected vs. expected
-                {momDelta != null && (
-                  <span className={`ml-2 font-semibold ${momDelta >= 0 ? 'text-[color:var(--color-success-600)]' : 'text-[color:var(--color-danger-600)]'}`}>
-                    {momDelta >= 0 ? '↑' : '↓'} {Math.abs(momDelta)}% MoM
-                  </span>
-                )}
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => router.push('/payments')}>
-              View Payments
-            </Button>
-          </div>
-          {stats.revenueHistory.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <IndianRupee className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No revenue data available yet
-              </p>
-            </div>
-          ) : (
-            <LineChart
-              data={revenueChartData}
-              labels={revenueLabels}
-              height={240}
-              lines={[
-                { key: 'collected', color: 'var(--color-brand-500)', label: 'Collected' },
-                { key: 'expected', color: 'var(--color-surface-300)', label: 'Expected' },
-              ]}
-              showGrid
-
-              isCurrency
+        <motion.div variants={fadeScaleIn} className="lg:col-span-2">
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Revenue Trend"
+              subtitle={
+                momDelta != null
+                  ? `Last 6 months — collected vs expected · ${momDelta >= 0 ? '+' : ''}${momDelta}% MoM`
+                  : 'Last 6 months — collected vs expected'
+              }
+              actionLabel="View Payments"
+              onAction={() => router.push('/payments')}
             />
-          )}
-        </motion.section>
+            {stats.revenueHistory.length === 0 ? (
+              <PanelEmpty
+                icon={<IndianRupee className="h-10 w-10" />}
+                title="No revenue data yet"
+                description="Collection history will appear once payments are recorded."
+              />
+            ) : (
+              <LineChart
+                data={revenueChartData}
+                labels={revenueLabels}
+                height={240}
+                lines={[
+                  { key: 'collected', color: chartTokens.brand, label: 'Collected' },
+                  { key: 'expected', color: chartTokens.barSecondary, label: 'Expected' },
+                ]}
+                showGrid
+                showLegend
+                isCurrency
+              />
+            )}
+          </Surface>
+        </motion.div>
 
         {/* Service Health Gauge + Breakdown */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)] flex flex-col"
-        >
-          <SectionHeader
-            title="Service Health"
-            subtitle={`${serviceTotal} services across all floors`}
-            actionLabel="View All"
-            onAction={() => router.push('/services')}
-          />
-          {serviceTotal === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center flex-1">
-              <Wifi className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No services configured
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/services/new')}>
-                Add Service
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="flex justify-center mb-5">
-                <GaugeChart
-                  value={stats.services.operational}
-                  max={serviceTotal}
-                  size={130}
-                  label="Operational"
-                  sublabel={`${stats.services.operational} of ${serviceTotal} up`}
-                  colorVar={serviceHealthPct === 100 ? '--color-success-500' : serviceHealthPct >= 70 ? '--color-warning-500' : '--color-danger-500'}
-                />
-              </div>
-
-              <div className="flex justify-center gap-3 mb-5">
-                <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-success-50)] px-3 py-1">
-                  <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
-                  <span className="text-[11px] font-bold text-[color:var(--color-success-700)]">{stats.services.operational} Up</span>
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="flex h-full flex-col">
+            <SectionHeader
+              title="Service Health"
+              subtitle={`${serviceTotal} services across all floors`}
+              actionLabel="View All"
+              onAction={() => router.push('/services')}
+            />
+            {serviceTotal === 0 ? (
+              <PanelEmpty
+                icon={<Wifi className="h-10 w-10" />}
+                title="No services configured"
+                action={{ label: 'Add Service', onClick: () => router.push('/services/new') }}
+              />
+            ) : (
+              <>
+                <div className="mb-5 flex justify-center">
+                  <GaugeChart
+                    value={stats.services.operational}
+                    max={serviceTotal}
+                    size={130}
+                    label="Operational"
+                    sublabel={`${stats.services.operational} of ${serviceTotal} up`}
+                    colorVar={serviceHealthPct === 100 ? '--color-success-500' : serviceHealthPct >= 70 ? '--color-warning-500' : '--color-danger-500'}
+                  />
                 </div>
-                {stats.services.degraded > 0 && (
-                  <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-warning-50)] px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
-                    <span className="text-[11px] font-bold text-[color:var(--color-warning-700)]">{stats.services.degraded} Degraded</span>
+
+                <div className="mb-1 flex flex-wrap justify-center gap-2">
+                  <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-success-50)] px-3 py-1">
+                    <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
+                    <span className="text-[11px] font-bold text-[color:var(--color-success-700)]">{stats.services.operational} Up</span>
                   </div>
-                )}
-                {stats.services.down > 0 && (
-                  <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-danger-50)] px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-[color:var(--color-danger-500)]" />
-                    <span className="text-[11px] font-bold text-[color:var(--color-danger-700)]">{stats.services.down} Down</span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </motion.section>
+                  {stats.services.degraded > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-warning-50)] px-3 py-1">
+                      <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
+                      <span className="text-[11px] font-bold text-[color:var(--color-warning-700)]">{stats.services.degraded} Degraded</span>
+                    </div>
+                  )}
+                  {stats.services.down > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-danger-50)] px-3 py-1">
+                      <span className="h-2 w-2 rounded-full bg-[color:var(--color-danger-500)]" />
+                      <span className="text-[11px] font-bold text-[color:var(--color-danger-700)]">{stats.services.down} Down</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </Surface>
+        </motion.div>
       </div>
 
-      {/* ── Occupancy Trend (new G3 section) ──────────── */}
-      <motion.section
-        variants={fadeScaleIn}
-        className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-      >
-        <SectionHeader
-          title="Occupancy Trend"
-          subtitle={stats.occupancyHistory && stats.occupancyHistory.length > 0
-            ? 'Last 6 months — occupied vs total beds'
-            : 'Occupancy data will appear as history is collected'}
-          actionLabel="View Tenants"
-          onAction={() => router.push('/tenants')}
-        />
-        {!stats.occupancyHistory || stats.occupancyHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Users className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-            <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-              Occupancy history will track month-over-month bed utilization
-            </p>
-            <p className="text-[11px] text-[color:var(--color-text-muted)] mt-1">
-              Currently showing real-time snapshot: {stats.occupancy.occupiedBeds} of {stats.occupancy.totalRooms} beds filled
-            </p>
-          </div>
-        ) : (
-          <LineChart
-            data={stats.occupancyHistory.map((p) => ({ occupied: p.occupied, total: p.total }))}
-            labels={stats.occupancyHistory.map((p) => {
-              const [y, m] = p.month.split('-');
-              return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', { month: 'short' });
-            })}
-            height={220}
-            lines={[
-              { key: 'occupied', color: 'var(--color-brand-500)', label: 'Occupied' },
-              { key: 'total', color: 'var(--color-surface-300)', label: 'Total Capacity' },
-            ]}
-            showGrid
-
+      {/* ── Occupancy Trend ──────────────────────────── */}
+      <motion.div variants={fadeScaleIn}>
+        <Surface as="section" variant="card" padding="md">
+          <SectionHeader
+            title="Occupancy Trend"
+            subtitle={stats.occupancyHistory && stats.occupancyHistory.length > 0
+              ? 'Last 6 months — occupied vs total beds'
+              : 'Occupancy data will appear as history is collected'}
+            actionLabel="View Tenants"
+            onAction={() => router.push('/tenants')}
           />
-        )}
-      </motion.section>
-
-      {/* ── Complaint Resolution + Payment Funnel ───── */}
-      {/* ── Service Health History Timeline (new G4 section) ── */}
-      <motion.section
-        variants={fadeScaleIn}
-        className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-      >
-        <SectionHeader
-          title="Service Health History"
-          subtitle={stats.serviceHistory && stats.serviceHistory.length > 0
-            ? 'Last 14 days of service status changes'
-            : 'Service status change tracking will appear here'}
-          actionLabel="View Services"
-          onAction={() => router.push('/services')}
-        />
-        {!stats.serviceHistory || stats.serviceHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <Wifi className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-            <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-              Service health timeline will track operational status changes over time
-            </p>
-            <p className="text-[11px] text-[color:var(--color-text-muted)] mt-1">
-              Currently {stats.services.operational} operational, {stats.services.degraded} degraded, {stats.services.down} down
-            </p>
-          </div>
-        ) : (
-          <div className="max-h-[300px] overflow-y-auto pr-1">
-            <Timeline
-              events={stats.serviceHistory.map((e) => ({
-                id: e.id,
-                date: e.date,
-                title: e.title,
-                description: e.description,
-                status: e.status as 'success' | 'warning' | 'danger',
-              }))}
-              maxHeight={280}
+          {!stats.occupancyHistory || stats.occupancyHistory.length === 0 ? (
+            <PanelEmpty
+              icon={<Users className="h-10 w-10" />}
+              title="No occupancy history yet"
+              description={`Real-time snapshot: ${stats.occupancy.occupiedBeds} of ${stats.occupancy.totalRooms} beds filled`}
             />
-          </div>
-        )}
-      </motion.section>
+          ) : (
+            <LineChart
+              data={stats.occupancyHistory.map((p) => ({ occupied: p.occupied, total: p.total }))}
+              labels={stats.occupancyHistory.map((p) => {
+                const [y, m] = p.month.split('-');
+                return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', { month: 'short' });
+              })}
+              height={220}
+              lines={[
+                { key: 'occupied', color: chartTokens.brand, label: 'Occupied' },
+                { key: 'total', color: chartTokens.barSecondary, label: 'Total Capacity' },
+              ]}
+              showGrid
+              showLegend
+            />
+          )}
+        </Surface>
+      </motion.div>
+
+      {/* ── Service Health History Timeline ── */}
+      <motion.div variants={fadeScaleIn}>
+        <Surface as="section" variant="card" padding="md">
+          <SectionHeader
+            title="Service Health History"
+            subtitle={stats.serviceHistory && stats.serviceHistory.length > 0
+              ? 'Last 14 days of service status changes'
+              : 'Service status change tracking will appear here'}
+            actionLabel="View Services"
+            onAction={() => router.push('/services')}
+          />
+          {!stats.serviceHistory || stats.serviceHistory.length === 0 ? (
+            <PanelEmpty
+              icon={<Wifi className="h-10 w-10" />}
+              title="No service events yet"
+              description={`Currently ${stats.services.operational} operational, ${stats.services.degraded} degraded, ${stats.services.down} down`}
+            />
+          ) : (
+            <div className="max-h-[300px] overflow-y-auto pr-1">
+              <Timeline
+                events={stats.serviceHistory.map((e) => ({
+                  id: e.id,
+                  date: e.date,
+                  title: e.title,
+                  description: e.description,
+                  status: e.status as 'success' | 'warning' | 'danger',
+                }))}
+                maxHeight={280}
+              />
+            </div>
+          )}
+        </Surface>
+      </motion.div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Complaint Resolution Gauge + Stats */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Complaint Resolution"
-            subtitle={`${totalComplaints} total · ${resolvedRate}% resolved`}
-            actionLabel="View All"
-            onAction={() => router.push('/complaints')}
-          />
-          {totalComplaints === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle2 className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No complaints yet
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-6 justify-center">
-              <GaugeChart
-                value={stats.complaints.resolved}
-                max={totalComplaints}
-                size={120}
-                label="Resolved"
-                sublabel={`${stats.complaints.resolved} of ${totalComplaints}`}
-                colorVar={resolvedRate >= 70 ? '--color-success-500' : resolvedRate >= 40 ? '--color-warning-500' : '--color-danger-500'}
-              />
-              <div className="flex-1 space-y-3 min-w-[140px]">
-                {[
-                  { label: 'Open', count: stats.complaints.open, color: 'var(--color-danger-500)', bg: 'var(--color-danger-100)' },
-                  { label: 'In Progress', count: stats.complaints.inProgress, color: 'var(--color-warning-500)', bg: 'var(--color-warning-100)' },
-                  { label: 'Resolved', count: stats.complaints.resolved, color: 'var(--color-success-500)', bg: 'var(--color-success-100)' },
-                  { label: 'Dismissed', count: stats.complaints.dismissed, color: 'var(--color-surface-400)', bg: 'var(--color-surface-100)' },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">{item.label}</span>
-                      <span className="text-[11px] font-bold font-mono text-[color:var(--color-text-primary)]">{item.count}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[color:var(--color-surface-200)] overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: totalComplaints > 0 ? `${(item.count / totalComplaints) * 100}%` : '0%',
-                          backgroundColor: item.color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </motion.section>
-
-        {/* Payment Collection Funnel — NEW */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Payment Collection Pipeline"
-            subtitle="Current month invoice status breakdown"
-            actionLabel="View Invoices"
-            onAction={() => router.push('/invoices')}
-          />
-          {paymentFunnelStages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CreditCard className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No invoices this month
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/invoices/new')}>
-                Create Invoice
-              </Button>
-            </div>
-          ) : (
-            <FunnelChart
-              stages={paymentFunnelStages}
-              maxWidth={100}
-              barHeight={28}
-              barGap={8}
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Complaint Resolution"
+              subtitle={`${totalComplaints} total · ${resolvedRate}% resolved`}
+              actionLabel="View All"
+              onAction={() => router.push('/complaints')}
             />
-          )}
-        </motion.section>
+            {totalComplaints === 0 ? (
+              <PanelEmpty
+                icon={<CheckCircle2 className="h-10 w-10" />}
+                title="No complaints yet"
+              />
+            ) : (
+              <div className="flex items-center justify-center gap-6">
+                <GaugeChart
+                  value={stats.complaints.resolved}
+                  max={totalComplaints}
+                  size={120}
+                  label="Resolved"
+                  sublabel={`${stats.complaints.resolved} of ${totalComplaints}`}
+                  colorVar={resolvedRate >= 70 ? '--color-success-500' : resolvedRate >= 40 ? '--color-warning-500' : '--color-danger-500'}
+                />
+                <div className="min-w-[140px] flex-1 space-y-3">
+                  {[
+                    { label: 'Open', count: stats.complaints.open, color: chartTokens.danger },
+                    { label: 'In Progress', count: stats.complaints.inProgress, color: chartTokens.warning },
+                    { label: 'Resolved', count: stats.complaints.resolved, color: chartTokens.success },
+                    { label: 'Dismissed', count: stats.complaints.dismissed, color: chartTokens.barSecondary },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">{item.label}</span>
+                        <span className="font-mono text-[11px] font-bold tabular-nums text-[color:var(--color-text-primary)]">{item.count}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--chart-track)]">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: totalComplaints > 0 ? `${(item.count / totalComplaints) * 100}%` : '0%',
+                            backgroundColor: item.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Surface>
+        </motion.div>
+
+        {/* Payment Collection Funnel */}
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Payment Collection Pipeline"
+              subtitle="Current month invoice status breakdown"
+              actionLabel="View Invoices"
+              onAction={() => router.push('/invoices')}
+            />
+            {paymentFunnelStages.length === 0 ? (
+              <PanelEmpty
+                icon={<CreditCard className="h-10 w-10" />}
+                title="No invoices this month"
+                action={{ label: 'Create Invoice', onClick: () => router.push('/invoices/new') }}
+              />
+            ) : (
+              <FunnelChart
+                stages={paymentFunnelStages}
+                maxWidth={100}
+                barHeight={28}
+                barGap={8}
+              />
+            )}
+          </Surface>
+        </motion.div>
       </div>
 
       {/* ── Complaint Categories Donut + Meal Feedback ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Complaint Category Donut — NEW */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Complaint Categories"
-            subtitle={totalComplaints > 0 ? `Top ${complaintCategoryDonut.length} categories` : 'No complaints yet'}
-            actionLabel="View All"
-            onAction={() => router.push('/complaints')}
-          />
-          {complaintCategoryDonut.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle2 className="h-10 w-10 text-[color:var(--color-success-300)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                All clear — no complaints
-              </p>
-            </div>
-          ) : (
-            <DonutChart
-              segments={complaintCategoryDonut}
-              centerLabel={String(totalComplaints)}
-              sublabel="total"
-              size={170}
-              thickness={32}
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Complaint Categories"
+              subtitle={totalComplaints > 0 ? `Top ${complaintCategoryDonut.length} categories` : 'No complaints yet'}
+              actionLabel="View All"
+              onAction={() => router.push('/complaints')}
             />
-          )}
-        </motion.section>
-
-        {/* Meal Feedback Summary */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Meal Feedback"
-            subtitle="14-day rolling average"
-            actionLabel="View All"
-            onAction={() => router.push('/meals')}
-          />
-          {stats.mealFeedbackTrend.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <UtensilsCrossed className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No meal feedback yet
-              </p>
-            </div>
-          ) : (
-            <>
-              <LineChart
-                data={mealChartData}
-                labels={mealChartLabels.length > 7
-                  ? mealChartLabels.filter((_, i) => i % Math.ceil(mealChartLabels.length / 6) === 0)
-                  : mealChartLabels}
-                height={140}
-                lines={[
-                  { key: 'breakfast', color: 'var(--color-warning-500)', label: 'Breakfast' },
-                  { key: 'lunch', color: 'var(--color-brand-500)', label: 'Lunch' },
-                  { key: 'dinner', color: 'var(--color-success-500)', label: 'Dinner' },
-                ]}
-                showGrid={false}
-
+            {complaintCategoryDonut.length === 0 ? (
+              <PanelEmpty
+                icon={<CheckCircle2 className="h-10 w-10" />}
+                title="All clear"
+                description="No complaints logged in this period."
               />
-              <div className="grid grid-cols-3 gap-3 mt-4">
-                {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => {
-                  const score = mealAvg[meal];
-                  const pct = (score / 5) * 100;
+            ) : (
+              <DonutChart
+                segments={complaintCategoryDonut}
+                centerLabel={String(totalComplaints)}
+                sublabel="total"
+                size={170}
+                thickness={32}
+              />
+            )}
+          </Surface>
+        </motion.div>
+
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Meal Feedback"
+              subtitle="14-day rolling average"
+              actionLabel="View All"
+              onAction={() => router.push('/meals')}
+            />
+            {stats.mealFeedbackTrend.length === 0 ? (
+              <PanelEmpty
+                icon={<UtensilsCrossed className="h-10 w-10" />}
+                title="No meal feedback yet"
+              />
+            ) : (
+              <>
+                <LineChart
+                  data={mealChartData}
+                  labels={mealChartLabels.length > 7
+                    ? mealChartLabels.filter((_, i) => i % Math.ceil(mealChartLabels.length / 6) === 0)
+                    : mealChartLabels}
+                  height={140}
+                  lines={[
+                    { key: 'breakfast', color: chartTokens.warning, label: 'Breakfast' },
+                    { key: 'lunch', color: chartTokens.brand, label: 'Lunch' },
+                    { key: 'dinner', color: chartTokens.success, label: 'Dinner' },
+                  ]}
+                  showGrid={false}
+                  showLegend
+                />
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => {
+                    const score = mealAvg[meal];
+                    const pct = (score / 5) * 100;
+                    return (
+                      <div
+                        key={meal}
+                        className={clsx(surfaceNestedClass, 'p-3 text-center')}
+                      >
+                        <p className="text-[11px] font-semibold capitalize text-[color:var(--color-text-secondary)]">
+                          {meal}
+                        </p>
+                        <p className={clsx(
+                          'mt-1 text-xl font-bold tabular-nums',
+                          pct >= 60 ? 'text-[color:var(--color-success-600)]'
+                            : pct >= 30 ? 'text-[color:var(--color-warning-600)]'
+                            : 'text-[color:var(--color-danger-600)]',
+                        )}>
+                          {score}
+                        </p>
+                        <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">/ 5</p>
+                        <div className="mt-1 flex justify-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <svg
+                              key={i}
+                              className={clsx(
+                                'h-3 w-3',
+                                i < Math.round(score)
+                                  ? 'text-[color:var(--color-warning-500)]'
+                                  : 'text-[color:var(--chart-track)]',
+                              )}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </Surface>
+        </motion.div>
+      </div>
+
+      {/* ── Amenity Health + Complaint Heatmap ────────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Amenity Health Breakdown"
+              subtitle={`${Object.keys(stats.amenityHealth ?? {}).length} services tracked`}
+              actionLabel="View All"
+              onAction={() => router.push('/services')}
+            />
+            {!stats.amenityHealth || Object.keys(stats.amenityHealth).length === 0 ? (
+              <PanelEmpty
+                icon={<Wifi className="h-10 w-10" />}
+                title="No amenities configured"
+                action={{ label: 'Add Service', onClick: () => router.push('/services/new') }}
+              />
+            ) : (
+              <StackedBarChart
+                bars={Object.entries(stats.amenityHealth).map(([key, data]) => ({
+                  label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                  segments: [
+                    { value: data.operational, color: chartTokens.success, label: 'Operational' },
+                    { value: data.degraded, color: chartTokens.warning, label: 'Degraded' },
+                    { value: data.down, color: chartTokens.danger, label: 'Down' },
+                  ].filter((s) => s.value > 0),
+                }))}
+                barHeight={28}
+                barGap={10}
+              />
+            )}
+          </Surface>
+        </motion.div>
+
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Complaint Activity"
+              subtitle="Daily complaint filings this month"
+              actionLabel="View All"
+              onAction={() => router.push('/complaints')}
+            />
+            {!stats.complaintHeatmap || Object.keys(stats.complaintHeatmap).length === 0 ? (
+              <PanelEmpty
+                icon={<CheckCircle2 className="h-10 w-10" />}
+                title="No complaints this month"
+              />
+            ) : (
+              <div className="flex justify-center">
+                <HeatmapCalendar
+                  data={stats.complaintHeatmap}
+                  year={new Date().getFullYear()}
+                  month={new Date().getMonth()}
+                  colorScale="danger"
+                  size={14}
+                  onDayClick={(_date, count) => {
+                    if (count > 0) router.push('/complaints');
+                  }}
+                />
+              </div>
+            )}
+          </Surface>
+        </motion.div>
+      </div>
+
+      {/* ── Recent Activity: Complaints + Enquiries ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Recent Complaints"
+              subtitle={`${activeComplaints} active · ${stats.complaints.resolved} resolved`}
+              actionLabel="View All"
+              onAction={() => router.push('/complaints')}
+            />
+            {sortedComplaints.length === 0 ? (
+              <PanelEmpty
+                icon={<CheckCircle2 className="h-10 w-10" />}
+                title="All clear"
+                description="No recent complaints."
+                action={{ label: 'New Complaint', onClick: () => router.push('/complaints/new') }}
+              />
+            ) : (
+              <div className="space-y-2">
+                {sortedComplaints.map((c) => {
+                  const meta = complaintStatusMeta(c.status);
+                  const isActive = c.status === 'open' || c.status === 'in_progress';
+                  const daysAgo = getDaysAgo(c.createdAt);
+                  const showAgeBadge = isActive && daysAgo >= 3;
+
                   return (
                     <div
-                      key={meal}
-                      className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3 text-center"
+                      key={c._id}
+                      role="button"
+                      tabIndex={0}
+                      className={clsx(
+                        surfaceNestedClass,
+                        'group flex cursor-pointer items-center gap-3 p-3 transition-all duration-[var(--transition-duration)]',
+                        'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)]',
+                      )}
+                      onClick={() => router.push(`/complaints/${c._id}`)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter' || ev.key === ' ') {
+                          ev.preventDefault();
+                          router.push(`/complaints/${c._id}`);
+                        }
+                      }}
                     >
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                        {meal}
-                      </p>
-                      <p className={`mt-1 text-xl font-bold tabular-nums ${
-                        pct >= 60 ? 'text-[color:var(--color-success-600)]'
-                          : pct >= 30 ? 'text-[color:var(--color-warning-600)]'
-                          : 'text-[color:var(--color-danger-600)]'
-                      }`}>
-                        {score}
-                      </p>
-                      <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">/ 5</p>
-                      <div className="mt-1 flex justify-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <svg
-                            key={i}
-                            className={`h-3 w-3 ${
-                              i < Math.round(score)
-                                ? 'text-[color:var(--color-warning-500)]'
-                                : 'text-[color:var(--color-surface-200)]'
-                            }`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
+                      <div
+                        className={clsx(
+                          'h-2.5 w-2.5 flex-shrink-0 rounded-full',
+                          c.status === 'open' && 'animate-pulse bg-[color:var(--color-danger-500)]',
+                          c.status === 'in_progress' && 'bg-[color:var(--color-warning-500)]',
+                          c.status === 'resolved' && 'bg-[color:var(--color-success-500)]',
+                          c.status !== 'open' && c.status !== 'in_progress' && c.status !== 'resolved' && 'bg-[color:var(--chart-bar-secondary)]',
+                        )}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)] transition-colors group-hover:text-[color:var(--color-brand-600)]">
+                            {c.title}
+                          </p>
+                          {showAgeBadge && (
+                            <span
+                              className={clsx(
+                                'flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                                daysAgo > 7
+                                  ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
+                                  : 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
+                              )}
+                            >
+                              {daysAgo}d
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                          {c.tenantId?.userId?.name ?? 'Unknown'} · {formatDate(c.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-1.5">
+                        <StatusBadge variant={meta.variant} label={meta.label} />
+                        {isActive && (
+                          <ArrowRight className="h-3.5 w-3.5 text-[color:var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </>
-          )}
-        </motion.section>
-      </div>
+            )}
+          </Surface>
+        </motion.div>
 
-      {/* ── Amenity Health + Complaint Heatmap ────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Amenity Health Stacked Bar Chart */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Amenity Health Breakdown"
-            subtitle={`${Object.keys(stats.amenityHealth ?? {}).length} services tracked`}
-            actionLabel="View All"
-            onAction={() => router.push('/services')}
-          />
-          {!stats.amenityHealth || Object.keys(stats.amenityHealth).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <Wifi className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No amenities configured
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/services/new')}>
-                Add Service
-              </Button>
-            </div>
-          ) : (
-            <StackedBarChart
-              bars={Object.entries(stats.amenityHealth).map(([key, data]) => ({
-                label: key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-                segments: [
-                  { value: data.operational, color: 'var(--color-success-500)', label: 'Operational' },
-                  { value: data.degraded, color: 'var(--color-warning-500)', label: 'Degraded' },
-                  { value: data.down, color: 'var(--color-danger-500)', label: 'Down' },
-                ].filter((s) => s.value > 0),
-              }))}
-              barHeight={28}
-              barGap={10}
+        <motion.div variants={fadeScaleIn}>
+          <Surface as="section" variant="card" padding="md" className="h-full">
+            <SectionHeader
+              title="Recent Enquiries"
+              subtitle={`${stats.enquiries.pending} pending`}
+              actionLabel="View All"
+              onAction={() => router.push('/enquiries')}
             />
-          )}
-        </motion.section>
-
-        {/* Complaint Activity Heatmap */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Complaint Activity"
-            subtitle="Daily complaint filings this month"
-            actionLabel="View All"
-            onAction={() => router.push('/complaints')}
-          />
-          {!stats.complaintHeatmap || Object.keys(stats.complaintHeatmap).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle2 className="h-10 w-10 text-[color:var(--color-success-300)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No complaints this month
-              </p>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <HeatmapCalendar
-                data={stats.complaintHeatmap}
-                year={new Date().getFullYear()}
-                month={new Date().getMonth()}
-                colorScale="danger"
-                size={14}
-                onDayClick={(date, count) => {
-                  if (count > 0) router.push(`/complaints`);
-                }}
+            {stats.recent.enquiries.length === 0 ? (
+              <PanelEmpty
+                icon={<PhoneCall className="h-10 w-10" />}
+                title="No recent enquiries"
               />
-            </div>
-          )}
-        </motion.section>
-      </div>
-
-      {/* ── Recent Activity: Complaints + Enquiries ── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Complaints — with age badges */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Recent Complaints"
-            subtitle={`${activeComplaints} active · ${stats.complaints.resolved} resolved`}
-            actionLabel="View All"
-            onAction={() => router.push('/complaints')}
-          />
-          {sortedComplaints.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <CheckCircle2 className="h-10 w-10 text-[color:var(--color-success-300)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                All clear — no complaints
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => router.push('/complaints/new')}>
-                + New Complaint
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {sortedComplaints.map((c) => {
-                const meta = complaintStatusMeta(c.status);
-                const isActive = c.status === 'open' || c.status === 'in_progress';
-                const daysAgo = getDaysAgo(c.createdAt);
-                const showAgeBadge = isActive && daysAgo >= 3;
-
-                return (
+            ) : (
+              <div className="space-y-2">
+                {stats.recent.enquiries.map((e) => (
                   <div
-                    key={c._id}
-                    className="group flex items-center gap-3 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3 transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] cursor-pointer"
-                    onClick={() => router.push(`/complaints/${c._id}`)}
+                    key={e._id}
+                    role="button"
+                    tabIndex={0}
+                    className={clsx(
+                      surfaceNestedClass,
+                      'flex cursor-pointer items-center justify-between p-3 transition-all duration-[var(--transition-duration)]',
+                      'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)]',
+                    )}
+                    onClick={() => router.push(`/enquiries/${e._id}`)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        router.push(`/enquiries/${e._id}`);
+                      }
+                    }}
                   >
-                    <div className={`flex-shrink-0 h-2.5 w-2.5 rounded-full ${
-                      c.status === 'open' ? 'bg-[color:var(--color-danger-500)] animate-pulse'
-                        : c.status === 'in_progress' ? 'bg-[color:var(--color-warning-500)]'
-                        : c.status === 'resolved' ? 'bg-[color:var(--color-success-500)]'
-                        : 'bg-[color:var(--color-surface-300)]'
-                    }`} />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
-                          {c.title}
-                        </p>
-                        {showAgeBadge && (
-                          <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                            daysAgo > 7
-                              ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
-                              : 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]'
-                          }`}>
-                            {daysAgo}d
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] font-medium text-[color:var(--color-text-muted)] mt-0.5">
-                        {c.tenantId?.userId?.name ?? 'Unknown'} · {formatDate(c.createdAt)}
+                      <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                        {e.name}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                        {e.phone} · {formatDate(e.createdAt)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <StatusBadge variant={meta.variant} label={meta.label} />
-                      {isActive && (
-                        <ArrowRight className="h-3.5 w-3.5 text-[color:var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </div>
+                    <StatusBadge
+                      variant={e.status === 'new' ? 'warning' : e.status === 'contacted' ? 'info' : 'success'}
+                      label={e.status.replace(/_/g, ' ')}
+                    />
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </motion.section>
-
-        {/* Recent Enquiries */}
-        <motion.section
-          variants={fadeScaleIn}
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-        >
-          <SectionHeader
-            title="Recent Enquiries"
-            subtitle={`${stats.enquiries.pending} pending`}
-            actionLabel="View All"
-            onAction={() => router.push('/enquiries')}
-          />
-          {stats.recent.enquiries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <PhoneCall className="h-10 w-10 text-[color:var(--color-text-muted)] mb-2" />
-              <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                No recent enquiries
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {stats.recent.enquiries.map((e) => (
-                <div
-                  key={e._id}
-                  className="flex items-center justify-between rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3 transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] cursor-pointer"
-                  onClick={() => router.push(`/enquiries/${e._id}`)}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                      {e.name}
-                    </p>
-                    <p className="text-[11px] font-medium text-[color:var(--color-text-muted)] mt-0.5">
-                      {e.phone} · {formatDate(e.createdAt)}
-                    </p>
-                  </div>
-                  <StatusBadge
-                    variant={e.status === 'new' ? 'warning' : e.status === 'contacted' ? 'info' : 'success'}
-                    label={e.status.replace(/_/g, ' ')}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </motion.section>
+                ))}
+              </div>
+            )}
+          </Surface>
+        </motion.div>
       </div>
 
       {/* ── Activity Timeline ─────────────────────── */}
-      <motion.section
-        variants={fadeScaleIn}
-        className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]"
-      >
-        <SectionHeader
-          title="Activity Timeline"
-          subtitle="Recent system events and updates"
-          actionLabel="View Audit Logs"
-          onAction={() => router.push('/audit-logs')}
-        />
-        <div className="max-h-[320px] overflow-y-auto pr-1">
-          <Timeline
-            events={[
-              ...sortedComplaints.slice(0, 5).map((c) => ({
-                id: `complaint-${c._id}`,
-                date: c.createdAt,
-                title: `Complaint: ${c.title}`,
-                description: `${c.tenantId?.userId?.name ?? 'Unknown'} · ${c.category ?? 'General'}`,
-                status: c.status === 'open' ? 'danger' as const
-                  : c.status === 'in_progress' ? 'warning' as const
-                  : c.status === 'resolved' ? 'success' as const
-                  : 'neutral' as const,
-              })),
-              ...stats.recent.enquiries.slice(0, 3).map((e) => ({
-                id: `enquiry-${e._id}`,
-                date: e.createdAt,
-                title: `Enquiry: ${e.name}`,
-                description: `${e.phone} · ${e.status.replace(/_/g, ' ')}`,
-                status: e.status === 'new' ? 'info' as const
-                  : e.status === 'contacted' ? 'info' as const
-                  : 'success' as const,
-              })),
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8)}
-            maxHeight={280}
+      <motion.div variants={fadeScaleIn}>
+        <Surface as="section" variant="card" padding="md">
+          <SectionHeader
+            title="Activity Timeline"
+            subtitle="Recent system events and updates"
+            actionLabel="View Audit Logs"
+            onAction={() => router.push('/audit-logs')}
           />
-        </div>
-      </motion.section>
+          <div className="max-h-[320px] overflow-y-auto pr-1">
+            <Timeline
+              events={[
+                ...sortedComplaints.slice(0, 5).map((c) => ({
+                  id: `complaint-${c._id}`,
+                  date: c.createdAt,
+                  title: `Complaint: ${c.title}`,
+                  description: `${c.tenantId?.userId?.name ?? 'Unknown'} · ${c.category ?? 'General'}`,
+                  status: c.status === 'open' ? 'danger' as const
+                    : c.status === 'in_progress' ? 'warning' as const
+                    : c.status === 'resolved' ? 'success' as const
+                    : 'neutral' as const,
+                })),
+                ...stats.recent.enquiries.slice(0, 3).map((e) => ({
+                  id: `enquiry-${e._id}`,
+                  date: e.createdAt,
+                  title: `Enquiry: ${e.name}`,
+                  description: `${e.phone} · ${e.status.replace(/_/g, ' ')}`,
+                  status: e.status === 'new' ? 'info' as const
+                    : e.status === 'contacted' ? 'info' as const
+                    : 'success' as const,
+                })),
+              ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8)}
+              maxHeight={280}
+            />
+          </div>
+        </Surface>
+      </motion.div>
 
       {/* ── Quick Links Row ───────────────────────── */}
       <motion.div
@@ -1006,12 +1003,19 @@ export default function DashboardPage() {
         ].map((link) => (
           <button
             key={link.href}
+            type="button"
             onClick={() => router.push(link.href)}
-            className="group flex items-center gap-2 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-2.5 text-[13px] font-semibold text-[color:var(--color-text-secondary)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-sm)]"
+            className={clsx(
+              'group flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold',
+              'text-[color:var(--color-text-secondary)]',
+              'rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-xs)]',
+              'transition-all duration-[var(--transition-duration)]',
+              'hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-sm)]',
+            )}
           >
             {link.icon}
             {link.label}
-            <ArrowRight className="ml-auto h-3 w-3 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
+            <ArrowRight className="ml-auto h-3 w-3 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
           </button>
         ))}
       </motion.div>

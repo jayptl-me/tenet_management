@@ -75,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-2.5 font-display text-sm font-bold text-[color:var(--color-surface-900)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
+                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-2.5 font-display text-sm font-bold text-[color:var(--color-surface-900)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh Page
@@ -105,7 +105,7 @@ export class ErrorBoundary extends Component<Props, State> {
 export function PageErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--color-danger-300)] bg-[color:var(--color-surface-100)] p-8 text-center shadow-[var(--shadow-card)]">
+      <div className="w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--color-danger-300)] bg-[color:var(--color-card-bg)] p-8 text-center shadow-[var(--shadow-card)]">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-strong)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-100)]">
           <AlertTriangle className="h-8 w-8 text-[color:var(--color-danger-600)]" />
         </div>

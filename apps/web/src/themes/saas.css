@@ -188,9 +188,25 @@
 
   /* ── Cross-cutting tokens ─────────────────────────────── */
   --color-text-primary: var(--color-surface-900);
+  /* Secondary ≈ 5.5:1 on card; muted ≈ 4.6:1 (AA body) — not surface-400 */
   --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-400);
+  --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-50);
+
+  /* Semantic surfaces for forms / cards / fields */
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: #ffffff;
+  --color-elevated: #ffffff;
+  --color-field-bg: var(--color-surface-50);
+  --color-field-bg-hover: var(--color-surface-100);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
+
+  --border-color-default: var(--border-color);
+  --border-color-strong: var(--color-surface-300);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
 
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
@@ -198,9 +214,40 @@
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
 
   --disabled-opacity: 0.5;
   --disabled-bg: var(--color-surface-200);
+
+  /* ── Chart / data-viz tokens (theme-reactive) ─────────── */
+  --chart-grid: var(--color-surface-200);
+  --chart-grid-strong: var(--color-surface-300);
+  --chart-axis: var(--color-surface-500);
+  --chart-label: var(--color-surface-600);
+  --chart-bar: var(--color-brand-500);
+  --chart-bar-secondary: var(--color-surface-300);
+  --chart-bar-radius: 4px;
+  --chart-track: var(--color-surface-100);
+  --chart-on-fill: var(--color-text-inverted);
+  --chart-tooltip-bg: var(--tooltip-bg);
+  --chart-tooltip-text: var(--tooltip-text);
+  --chart-tooltip-shadow: var(--shadow-tooltip);
+  /* Heatmap empty → full (solid mixes; no washed transparent overlays) */
+  --chart-heatmap-0: var(--color-surface-100);
+  --chart-heatmap-1: color-mix(in srgb, var(--color-brand-500) 22%, var(--color-surface-100));
+  --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 42%, var(--color-surface-100));
+  --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 68%, var(--color-surface-100));
+  --chart-heatmap-4: var(--color-brand-500);
+  --chart-heatmap-danger-1: color-mix(in srgb, var(--color-danger-500) 22%, var(--color-surface-100));
+  --chart-heatmap-danger-2: color-mix(in srgb, var(--color-danger-500) 42%, var(--color-surface-100));
+  --chart-heatmap-danger-3: color-mix(in srgb, var(--color-danger-500) 68%, var(--color-surface-100));
+  --chart-heatmap-danger-4: var(--color-danger-500);
+  --chart-heatmap-success-1: color-mix(in srgb, var(--color-success-500) 22%, var(--color-surface-100));
+  --chart-heatmap-success-2: color-mix(in srgb, var(--color-success-500) 42%, var(--color-surface-100));
+  --chart-heatmap-success-3: color-mix(in srgb, var(--color-success-500) 68%, var(--color-surface-100));
+  --chart-heatmap-success-4: var(--color-success-500);
+  --chart-cell-border: var(--border-color);
+  --chart-cell-radius: 3px;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -372,11 +419,26 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-padding: 6px 10px;
 
-  /* Cross-cutting dark */
+  /* Cross-cutting dark — inverted surface scale: higher step = lighter */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-400);
+  --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-950);
+
+  /* Semantic surfaces — nested fields sit slightly above page bg */
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: var(--color-surface-100);
+  --color-elevated: var(--color-surface-100);
+  --color-field-bg: #0c0c0e;
+  --color-field-bg-hover: var(--color-surface-200);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
+
+  --border-color-default: var(--border-color);
+  --border-color-strong: rgba(255, 255, 255, 0.14);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
 
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
@@ -384,7 +446,37 @@
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
 
   --disabled-opacity: 0.4;
   --disabled-bg: var(--color-surface-300);
+
+  /* Chart / data-viz — dark */
+  --chart-grid: var(--color-surface-200);
+  --chart-grid-strong: var(--color-surface-300);
+  --chart-axis: var(--color-surface-500);
+  --chart-label: var(--color-surface-600);
+  --chart-bar: var(--color-brand-500);
+  --chart-bar-secondary: var(--color-surface-300);
+  --chart-bar-radius: 4px;
+  --chart-track: var(--color-surface-200);
+  --chart-on-fill: var(--color-text-inverted);
+  --chart-tooltip-bg: var(--color-surface-200);
+  --chart-tooltip-text: var(--color-surface-900);
+  --chart-tooltip-shadow: var(--shadow-tooltip);
+  --chart-heatmap-0: var(--color-surface-200);
+  --chart-heatmap-1: color-mix(in srgb, var(--color-brand-500) 28%, var(--color-surface-100));
+  --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 48%, var(--color-surface-100));
+  --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 72%, var(--color-surface-100));
+  --chart-heatmap-4: var(--color-brand-500);
+  --chart-heatmap-danger-1: color-mix(in srgb, var(--color-danger-500) 28%, var(--color-surface-100));
+  --chart-heatmap-danger-2: color-mix(in srgb, var(--color-danger-500) 48%, var(--color-surface-100));
+  --chart-heatmap-danger-3: color-mix(in srgb, var(--color-danger-500) 72%, var(--color-surface-100));
+  --chart-heatmap-danger-4: var(--color-danger-500);
+  --chart-heatmap-success-1: color-mix(in srgb, var(--color-success-500) 28%, var(--color-surface-100));
+  --chart-heatmap-success-2: color-mix(in srgb, var(--color-success-500) 48%, var(--color-surface-100));
+  --chart-heatmap-success-3: color-mix(in srgb, var(--color-success-500) 72%, var(--color-surface-100));
+  --chart-heatmap-success-4: var(--color-success-500);
+  --chart-cell-border: rgba(255, 255, 255, 0.06);
+  --chart-cell-radius: 3px;
 }

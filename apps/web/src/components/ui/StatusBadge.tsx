@@ -12,7 +12,7 @@ const variantStyles: Record<StatusVariant, string> = {
     'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] border-[color:var(--color-danger-300)]',
   info: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)] border-[color:var(--color-brand-300)]',
   neutral:
-    'bg-[color:var(--color-surface-100)] text-[color:var(--color-surface-700)] border-[color:var(--color-surface-300)]',
+    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] border-[color:var(--border-color)]',
 };
 
 export interface StatusBadgeProps {

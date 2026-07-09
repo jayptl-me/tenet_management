@@ -252,7 +252,7 @@ export default function SettingsPage() {
   }
 
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
-    <section className="space-y-4 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]">
+    <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
       <div>
         <h3 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-lg font-bold">{title}</h3>
         <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">{description}</p>
@@ -295,7 +295,7 @@ export default function SettingsPage() {
             onClick={() => handleTabChange(tab.key)}
             className={`font-[family:var(--font-display)] flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
               activeTab === tab.key
-                ? 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
+                ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
                 : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]'
             }`}
           >
@@ -526,7 +526,7 @@ export default function SettingsPage() {
                   {config.amenities.map((a, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2"
+                      className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-2"
                     >
                       <span className="text-[color:var(--color-text-primary)] text-sm font-semibold">{a}</span>
                       <button
@@ -562,7 +562,7 @@ export default function SettingsPage() {
                 config.testimonials.map((t, i) => (
                   <div
                     key={i}
-                    className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4"
+                    className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-sm font-bold">

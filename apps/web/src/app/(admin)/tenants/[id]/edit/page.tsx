@@ -5,14 +5,16 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 
 const ALL_BEDS = [
   { value: 'A', label: 'Bed A' },
@@ -206,43 +208,46 @@ export default function EditTenantPage() {
     }
   };
 
-  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[color:var(--color-text-muted)]" /></div>;
-
   const err = errors as Record<string, { message?: string }>;
 
   return (
-    <div className="animate-fade-in-up space-y-6">
-      {/* ── Header ─────────────────────────────── */}
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-text-primary)]">Edit Tenant</h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">Update tenant details</p>
-        </div>
-      </div>
-
-      {submitError && <ErrorBanner message={submitError} />}
-
-      <form
+    <FormPage
+      title="Edit Tenant"
+      description="Update contact info, room assignment, rent, and documents"
+      backHref="/tenants"
+      error={submitError}
+      isLoading={isLoading}
+      maxWidth="4xl"
+    >
+      <FormCard
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
+        footer={
+          <FormActions
+            loading={isSubmitting}
+            cancelHref="/tenants"
+            submitLabel="Save Changes"
+            divided={false}
+          />
+        }
       >
-        {/* ── Personal Info ─────────────────────── */}
-        <div className="space-y-5">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Personal Information</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Name" error={err.name?.message} {...register('name')} />
-            <Input label="Phone" error={err.phone?.message} {...register('phone')} />
-          </div>
-          <Input label="Email" type="email" error={err.email?.message} {...register('email')} />
-        </div>
+        <FormSection
+          title="Personal information"
+          description="Primary contact details used across invoices and notices"
+        >
+          <FormGrid>
+            <Input label="Name" error={err.name?.message} autoComplete="name" {...register('name')} />
+            <Input label="Phone" error={err.phone?.message} inputMode="tel" autoComplete="tel" {...register('phone')} />
+            <Input label="Email" type="email" error={err.email?.message} autoComplete="email" {...register('email')} />
+            <Select label="Status" options={STATUS_OPTIONS} error={err.isActive?.message} {...register('isActive')} />
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Room & Bed ─────────────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Room Assignment</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormSection
+          title="Room assignment"
+          description="Only free beds (plus this tenant's current bed) appear for the selected room"
+          divided
+        >
+          <FormGrid>
             <Controller
               name="roomId"
               control={control}
@@ -258,12 +263,14 @@ export default function EditTenantPage() {
                   placeholder="Select room..."
                   error={err.roomId?.message}
                   valueKey="_id"
-                  labelKey={(item: RoomOption) =>
-                    `Room ${item.roomNumber} — ${item.floor?.label ?? '?'}`
-                  }
-                  sublabelFn={(item: RoomOption) =>
-                    `₹${item.monthlyRent}/mo · ${item.sharingType} sharing`
-                  }
+                  labelKey={(item) => {
+                    const r = item as unknown as RoomOption;
+                    return `Room ${r.roomNumber} — ${r.floor?.label ?? '?'}`;
+                  }}
+                  sublabelFn={(item) => {
+                    const r = item as unknown as RoomOption;
+                    return `₹${r.monthlyRent}/mo · ${r.sharingType} sharing`;
+                  }}
                   dataPath="data"
                 />
               )}
@@ -272,44 +279,44 @@ export default function EditTenantPage() {
               label="Bed"
               options={bedOptions}
               error={err.bedId?.message}
+              disabled={!roomIdWatch}
               {...register('bedId')}
             />
-          </div>
-          {roomIdWatch && (
-            <p className="text-xs text-[color:var(--color-text-muted)]">
-              Only free beds (plus this tenant&apos;s current bed) are listed for the selected room.
-            </p>
-          )}
-        </div>
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Financial ──────────────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Financial Details</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input label="Monthly Rent" type="number" step="0.01" error={err.monthlyRent?.message} {...register('monthlyRent')} />
-            <Input label="Deposit Paid" type="number" step="0.01" error={err.depositPaid?.message} {...register('depositPaid')} />
-            <Input label="Move-in Date" type="date" error={err.moveInDate?.message} {...register('moveInDate')} />
-          </div>
-          <Select label="Status" options={STATUS_OPTIONS} error={err.isActive?.message} {...register('isActive')} />
-        </div>
+        <FormSection
+          title="Financial details"
+          description="Rent and deposit used for invoicing"
+          divided
+        >
+          <FormGrid cols={3}>
+            <Input label="Monthly rent" type="number" step="0.01" inputMode="decimal" error={err.monthlyRent?.message} {...register('monthlyRent')} />
+            <Input label="Deposit paid" type="number" step="0.01" inputMode="decimal" error={err.depositPaid?.message} {...register('depositPaid')} />
+            <Input label="Move-in date" type="date" error={err.moveInDate?.message} {...register('moveInDate')} />
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Emergency Contact ──────────────────── */}
-        <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-          <h3 className="flex items-center gap-2 font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            <Shield className="h-4 w-4" /> Emergency Contact
-          </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <FormSection
+          title="Emergency contact"
+          icon={<Shield />}
+          description="Optional guardian or relative for emergencies"
+          divided
+        >
+          <FormGrid cols={3}>
             <Input label="Name" placeholder="Emergency contact name" error={err.emergencyName?.message} {...register('emergencyName')} />
-            <Input label="Phone (10 digits)" placeholder="9876543210" error={err.emergencyPhone?.message} {...register('emergencyPhone')} />
+            <Input label="Phone (10 digits)" placeholder="9876543210" inputMode="tel" error={err.emergencyPhone?.message} {...register('emergencyPhone')} />
             <Select label="Relation" options={RELATION_OPTIONS} error={err.emergencyRelation?.message} {...register('emergencyRelation')} />
-          </div>
-        </div>
+          </FormGrid>
+        </FormSection>
 
-        {/* ── Documents ──────────────────────────── */}
         {tenantData && (
-          <div className="mt-6 space-y-5 border-t border-[color:var(--border-color)] pt-6">
-            <h3 className="font-[family:var(--font-display)] text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">Documents</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSection
+            title="Documents"
+            description="Aadhaar and photo are stored securely for this tenant"
+            divided
+          >
+            <FormGrid>
               <DocumentUpload
                 tenantId={id}
                 docType="aadhaar"
@@ -322,16 +329,10 @@ export default function EditTenantPage() {
                 currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
                 onUploaded={(url) => setTenantData((prev) => prev ? { ...prev, documents: { ...(prev.documents as Record<string, string> ?? {}), photoUrl: url } } : prev)}
               />
-            </div>
-          </div>
+            </FormGrid>
+          </FormSection>
         )}
-
-        {/* ── Actions ────────────────────────────── */}
-        <div className="mt-8 flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}><Save className="h-4 w-4" /> Save Changes</Button>
-        </div>
-      </form>
-    </div>
+      </FormCard>
+    </FormPage>
   );
 }

@@ -63,7 +63,7 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
   return (
     <div
       className={clsx(
-        'rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -95,7 +95,7 @@ export function CardSkeleton({ className, lines = 4 }: CardSkeletonProps) {
   return (
     <div
       className={clsx(
-        'rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -120,12 +120,12 @@ export function TableSkeleton({
   return (
     <div
       className={clsx(
-        'overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)]',
+        'overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]',
         className,
       )}
     >
       {/* Table header */}
-      <div className="flex border-b border-b-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-3 gap-4">
+      <div className="flex border-b border-b-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-3 gap-4">
         {Array.from({ length: columns }).map((_, i) => (
           <ShimmerBlock
             key={`header-${i}`}
@@ -168,7 +168,7 @@ export function ChartSkeleton({ className, height = 240 }: ChartSkeletonProps) {
   return (
     <div
       className={clsx(
-        'rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -185,15 +185,15 @@ export function ChartSkeleton({ className, height = 240 }: ChartSkeletonProps) {
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
         <HeadingSkeleton />
         <ShimmerBlock className="h-4 w-48" />
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Stat cards — match live KPI row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <StatCardSkeleton key={i} />
         ))}

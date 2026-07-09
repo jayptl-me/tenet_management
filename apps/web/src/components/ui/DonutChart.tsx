@@ -76,7 +76,7 @@ export function DonutChart({
           cy={center}
           r={radius}
           fill="none"
-          stroke="var(--color-surface-200)"
+          stroke="var(--chart-track)"
           strokeWidth={thickness}
         />
 

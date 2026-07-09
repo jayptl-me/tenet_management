@@ -5,13 +5,18 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Loader2, User, Home, Hash } from 'lucide-react';
+import { User, Home, Hash } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { surfaceCardClass, surfaceNestedClass } from '@/lib/field-styles';
 import { tenantDisplayName, tenantRoomNumber } from '@/lib/api-shapes';
+import { clsx } from 'clsx';
 
 const schema = z.object({
   rentAmount: z.coerce.number().min(0, 'Rent amount cannot be negative'),
@@ -120,129 +125,123 @@ export default function EditInvoicePage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[color:var(--color-text-muted)]" />
-      </div>
-    );
-  }
-
   const tenant = invoiceData?.tenantId;
   const isPaymentDriven =
     invoiceData?.status === 'paid' || invoiceData?.status === 'partial';
 
+  const descriptionParts: string[] = [];
+  if (invoiceData?.invoiceNumber) descriptionParts.push(`#${invoiceData.invoiceNumber}`);
+  if (invoiceData?.month) descriptionParts.push(invoiceData.month);
+
   return (
-    <div className="animate-fade-in-up space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div>
-          <h2 className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-            Edit Invoice
-          </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
-            {invoiceData?.invoiceNumber && (
-              <span className="font-mono text-xs">#{invoiceData.invoiceNumber}</span>
-            )}
-            {invoiceData?.month && <span className="ml-2">· {invoiceData.month}</span>}
-          </p>
-        </div>
-      </div>
+    <FormPage
+      title="Edit Invoice"
+      description={descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update invoice line items'}
+      backHref="/invoices"
+      error={submitError}
+      isLoading={isLoading}
+      maxWidth="3xl"
+    >
+      <div className="space-y-5">
+        {isPaymentDriven && (
+          <ErrorBanner message="This invoice is paid or partially paid. Amounts may still be adjusted; status paid/partial is controlled by payments and cannot be set manually." />
+        )}
 
-      {submitError && <ErrorBanner message={submitError} />}
-
-      {isPaymentDriven && (
-        <ErrorBanner message="This invoice is paid or partially paid. Amounts may still be adjusted; status paid/partial is controlled by payments and cannot be set manually." />
-      )}
-
-      {tenant && (
-        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 shadow-[var(--shadow-card)]">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-            Tenant
-          </h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-[color:var(--color-brand-500)]" />
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-                {tenantDisplayName(tenant)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Home className="h-4 w-4 text-[color:var(--color-brand-500)]" />
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-                Room {tenantRoomNumber(tenant)}
-              </span>
-            </div>
-            {tenant.bedId && (
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+        {tenant && (
+          <div className={clsx(surfaceCardClass, 'p-4 sm:p-5')}>
+            <h3 className="mb-3 text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+              Tenant
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex min-h-10 items-center gap-2">
+                <User className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
                 <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-                  Bed {tenant.bedId}
+                  {tenantDisplayName(tenant)}
                 </span>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-card)]"
-      >
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              label="Rent Amount"
-              type="number"
-              step="0.01"
-              error={errors.rentAmount?.message}
-              {...register('rentAmount')}
-            />
-            <Input
-              label="Electricity"
-              type="number"
-              step="0.01"
-              error={errors.electricityAmount?.message}
-              {...register('electricityAmount')}
-            />
-            <Input
-              label="Other Charges"
-              type="number"
-              step="0.01"
-              error={errors.otherCharges?.message}
-              {...register('otherCharges')}
-            />
-          </div>
-          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
-                Auto-calculated Total
-              </span>
-              <span className="text-2xl font-extrabold text-[color:var(--color-text-primary)]">
-                ₹{autoTotal.toLocaleString('en-IN')}
-              </span>
+              <div className="flex min-h-10 items-center gap-2">
+                <Home className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
+                <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  Room {tenantRoomNumber(tenant)}
+                </span>
+              </div>
+              {tenant.bedId && (
+                <div className="flex min-h-10 items-center gap-2">
+                  <Hash className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
+                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    Bed {tenant.bedId}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-          {!isPaymentDriven && (
-            <Select
-              label="Status"
-              options={statusOptions}
-              error={errors.status?.message}
-              {...register('status')}
+        )}
+
+        <FormCard
+          onSubmit={handleSubmit(onSubmit)}
+          footer={
+            <FormActions
+              loading={isSubmitting}
+              cancelHref="/invoices"
+              submitLabel="Save Changes"
+              divided={false}
             />
+          }
+        >
+          <FormSection
+            title="Line items"
+            description="Amounts roll up into the total below"
+          >
+            <FormGrid cols={3}>
+              <Input
+                label="Rent amount"
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                error={errors.rentAmount?.message}
+                {...register('rentAmount')}
+              />
+              <Input
+                label="Electricity"
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                error={errors.electricityAmount?.message}
+                {...register('electricityAmount')}
+              />
+              <Input
+                label="Other charges"
+                type="number"
+                step="0.01"
+                inputMode="decimal"
+                error={errors.otherCharges?.message}
+                {...register('otherCharges')}
+              />
+            </FormGrid>
+            <div className={clsx(surfaceNestedClass, 'mt-4 p-4')}>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                  Auto-calculated total
+                </span>
+                <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
+                  ₹{autoTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          </FormSection>
+
+          {!isPaymentDriven && (
+            <FormSection title="Status" divided>
+              <Select
+                label="Invoice status"
+                options={statusOptions}
+                error={errors.status?.message}
+                {...register('status')}
+              />
+            </FormSection>
           )}
-        </div>
-        <div className="mt-8 flex items-center justify-end gap-3 border-t border-[color:var(--border-color)] pt-5">
-          <Button variant="outline" type="button" onClick={() => router.back()}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            <Save className="h-4 w-4" /> Save Changes
-          </Button>
-        </div>
-      </form>
-    </div>
+        </FormCard>
+      </div>
+    </FormPage>
   );
 }

@@ -3,12 +3,22 @@
 import { forwardRef } from 'react';
 import { clsx } from 'clsx';
 import { ChevronDown } from 'lucide-react';
+import {
+  fieldControlBase,
+  fieldControlBorderError,
+  fieldControlBorderOk,
+  fieldErrorClass,
+  fieldHelperClass,
+  fieldHintClass,
+  fieldLabelClass,
+} from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
 
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
 export interface SelectProps extends Omit<
@@ -31,39 +41,28 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 
     return (
       <div className="flex flex-col gap-1.5">
-        {/* Label + hint */}
         {label && (
           <div className="flex items-center justify-between gap-2">
-            <label
-              htmlFor={selectId}
-              className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
-            >
+            <label htmlFor={selectId} className={fieldLabelClass}>
               {label}
             </label>
-            {hint && (
-              <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
-                {hint}
-              </span>
-            )}
+            {hint && <span className={fieldHintClass}>{hint}</span>}
           </div>
         )}
 
-        {/* Select wrapper */}
         <div className="relative">
           <select
             ref={ref}
             id={selectId}
             className={clsx(
-            'w-full appearance-none rounded-lg border bg-[color:var(--color-surface-50)] py-2 pl-3.5 pr-9 text-sm font-medium text-[color:var(--color-text-primary)]',
-            'transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-            'hover:bg-[color:var(--color-surface-100)]',
-            'focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:ring-offset-0 focus:bg-[color:var(--color-surface-50)] focus:border-[color:var(--color-brand-500)]',
-            'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)]',
-              error
-                ? 'border-[color:var(--color-danger-400)] focus:ring-[color:var(--color-danger-400)]'
-                : 'border-[color:var(--border-color)] hover:border-[color:var(--color-surface-300)]',
+              fieldControlBase,
+              'appearance-none pr-9 cursor-pointer',
+              // Native option menus inherit OS chrome; keep field colors for closed state
+              '[&>option]:bg-[color:var(--color-card-bg)] [&>option]:text-[color:var(--color-text-primary)]',
+              error ? fieldControlBorderError : fieldControlBorderOk,
               className,
             )}
+            aria-invalid={error ? true : undefined}
             {...props}
           >
             {placeholder && (
@@ -72,25 +71,21 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             )}
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <option key={opt.value} value={opt.value} disabled={opt.disabled}>
                 {opt.label}
               </option>
             ))}
           </select>
 
-          {/* Chevron */}
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--color-text-muted)]" />
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
         </div>
 
-        {/* Error / helper */}
         {error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
-            {helperText}
+          <p className={fieldErrorClass} role="alert">
+            {error}
           </p>
         )}
+        {helperText && !error && <p className={fieldHelperClass}>{helperText}</p>}
       </div>
     );
   },
