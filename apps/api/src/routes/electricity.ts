@@ -7,17 +7,17 @@ import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { ElectricityBill } from '../models/electricityBill.js';
 import { Tenant } from '../models/tenant.js';
+import { Invoice } from '../models/invoice.js';
+import { Payment } from '../models/payment.js';
 import { generateSingleInvoice } from '../services/invoice.service.js';
 import { logger } from '../lib/logger.js';
 
 // ── Cast helpers ────────────────────────────────────────
-type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
 type FindFn = (filter: Record<string, unknown>) => Promise<unknown[]>;
 type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
 type CountFn = (filter: Record<string, unknown>) => Promise<number>;
 const billFind = ElectricityBill.find as unknown as FindFn;
 const billFindOne = ElectricityBill.findOne.bind(ElectricityBill) as unknown as FindOneFn;
-const billCreate = ElectricityBill.create as unknown as CreateFn;
 const billCountDocs = ElectricityBill.countDocuments.bind(ElectricityBill) as unknown as CountFn;
 
 const electricity = new Hono();
@@ -74,7 +74,11 @@ electricity.get('/:id', authGuard, adminOnly, async (c) => {
   if (!id) return badRequest(c, 'Invalid bill ID');
 
   const billRaw = await (ElectricityBill.findById(id)
-    .populate('roomEntries.roomId', 'roomNumber sharingType floor')
+    .populate({
+      path: 'roomEntries.roomId',
+      select: 'roomNumber sharingType floorId',
+      populate: { path: 'floorId', select: 'label floorNumber' },
+    })
     .lean() as unknown);
 
   if (!billRaw) return notFound(c, 'Electricity bill');
@@ -86,9 +90,38 @@ electricity.get('/:id', authGuard, adminOnly, async (c) => {
 electricity.post('/', authGuard, adminOnly, zValidator('json', createBillSchema), async (c) => {
   const body = c.req.valid('json');
 
+  for (const entry of body.roomEntries) {
+    if (entry.currentReading < entry.previousReading) {
+      return badRequest(
+        c,
+        'Current reading must be greater than or equal to previous reading',
+        'INVALID_READING',
+      );
+    }
+  }
+
   try {
-    const bill = await billCreate(body);
-    return c.json({ success: true, data: bill }, 201);
+    // Create via document + save so pre-save derives units/amount
+    const doc = new ElectricityBill({
+      month: body.month,
+      totalBillAmount: body.totalBillAmount,
+      billImageUrl: body.billImageUrl,
+      notes: body.notes ?? '',
+      status: 'draft',
+      roomEntries: body.roomEntries.map((e) => ({
+        roomId: new mongoose.Types.ObjectId(e.roomId),
+        previousReading: e.previousReading,
+        currentReading: e.currentReading,
+        ratePerUnit: e.ratePerUnit,
+        unitsConsumed: 0,
+        amount: 0,
+      })),
+    });
+    await doc.save();
+    const populated = await ElectricityBill.findById(doc._id)
+      .populate('roomEntries.roomId', 'roomNumber sharingType floorId')
+      .lean();
+    return c.json({ success: true, data: populated }, 201);
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {
@@ -105,22 +138,52 @@ electricity.post('/', authGuard, adminOnly, zValidator('json', createBillSchema)
 });
 
 // ── PUT /electricity/:id ────────────────────────────────
+// Must use document.save() so pre-save derives unitsConsumed/amount
 electricity.put('/:id', authGuard, adminOnly, zValidator('json', updateBillSchema), async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid bill ID');
 
   const body = c.req.valid('json');
+  const bill = await ElectricityBill.findById(id);
+  if (!bill) return notFound(c, 'Electricity bill');
 
-  const billRaw = await (ElectricityBill.findByIdAndUpdate(id, body, {
-    returnDocument: 'after',
-    runValidators: true,
-  })
-    .populate('roomEntries.roomId', 'roomNumber sharingType')
-    .lean() as unknown);
+  if (bill.status === 'distributed') {
+    return badRequest(c, 'Distributed bills cannot be edited', 'BILL_LOCKED');
+  }
 
-  if (!billRaw) return notFound(c, 'Electricity bill');
+  if (body.month !== undefined) bill.month = body.month;
+  if (body.totalBillAmount !== undefined) bill.totalBillAmount = body.totalBillAmount;
+  if (body.billImageUrl !== undefined) bill.billImageUrl = body.billImageUrl;
+  if (body.notes !== undefined) bill.notes = body.notes;
 
-  return c.json({ success: true, data: billRaw });
+  if (body.roomEntries !== undefined) {
+    for (const entry of body.roomEntries) {
+      if (entry.currentReading < entry.previousReading) {
+        return badRequest(
+          c,
+          'Current reading must be greater than or equal to previous reading',
+          'INVALID_READING',
+        );
+      }
+    }
+    bill.roomEntries = body.roomEntries.map((e) => ({
+      roomId: new mongoose.Types.ObjectId(e.roomId) as unknown as typeof bill.roomEntries[0]['roomId'],
+      previousReading: e.previousReading,
+      currentReading: e.currentReading,
+      ratePerUnit: e.ratePerUnit,
+      unitsConsumed: 0,
+      amount: 0,
+    }));
+    bill.markModified('roomEntries');
+  }
+
+  await bill.save();
+
+  const populated = await ElectricityBill.findById(id)
+    .populate('roomEntries.roomId', 'roomNumber sharingType floorId')
+    .lean();
+
+  return c.json({ success: true, data: populated });
 });
 
 // ── POST /electricity/:id/finalize ──────────────────────
@@ -144,6 +207,8 @@ electricity.post('/:id/finalize', authGuard, adminOnly, async (c) => {
 });
 
 // ── POST /electricity/:id/distribute ────────────────────
+// Attaches per-tenant electricity share to existing monthly invoices when present;
+// otherwise generates a new invoice. Also re-syncs open pending payments.
 electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid bill ID');
@@ -159,14 +224,26 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
   const roomEntries = (bill.roomEntries as Array<Record<string, unknown>>) ?? [];
   const month = bill.month as string;
   let distributed = 0;
+  let created = 0;
+  let updated = 0;
   let errors = 0;
 
   for (const entry of roomEntries) {
     try {
-      // Find active tenants in this room for the given month
+      const roomIdRaw = entry.roomId;
+      const roomId =
+        typeof roomIdRaw === 'object' && roomIdRaw !== null && '_id' in (roomIdRaw as object)
+          ? String((roomIdRaw as { _id: unknown })._id)
+          : String(roomIdRaw ?? '');
+
+      if (!roomId || !mongoose.Types.ObjectId.isValid(roomId)) {
+        errors++;
+        continue;
+      }
+
       const tenants = await Tenant.find(
         safeFilter({
-          roomId: entry.roomId,
+          roomId: new mongoose.Types.ObjectId(roomId),
           isActive: true,
         }),
       ).lean();
@@ -174,34 +251,111 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
       if (tenants.length === 0) continue;
 
       const sharePerTenant = ((entry.amount as number) ?? 0) / tenants.length;
+      const elecLabel = `Electricity Charges — ${month}`;
 
       for (const tenant of tenants) {
         const tenantDoc = tenant as unknown as Record<string, unknown>;
+        const tenantId = String(tenantDoc._id ?? '');
         try {
-          await generateSingleInvoice({
-            tenantId: String(tenantDoc._id),
-            month,
-          });
-          distributed++;
-        } catch {
+          const existing = await Invoice.findOne(
+            safeFilter({
+              tenantId: new mongoose.Types.ObjectId(tenantId),
+              month,
+            }),
+          );
+
+          if (existing) {
+            // Update electricity on existing invoice (amounts are source of truth)
+            existing.electricityAmount = sharePerTenant;
+            const items = (existing.lineItems ?? []).filter(
+              (li) => !String(li.description).toLowerCase().startsWith('electricity'),
+            );
+            if (sharePerTenant > 0) {
+              items.push({ description: elecLabel, amount: sharePerTenant });
+            }
+            existing.lineItems = items;
+            // pre-save recomputes totalAmount
+            await existing.save();
+
+            // Re-sync open pending obligation to remaining balance
+            const paidAgg = await Payment.aggregate([
+              {
+                $match: {
+                  invoiceId: existing._id,
+                  status: 'paid',
+                },
+              },
+              { $group: { _id: null, total: { $sum: '$amount' } } },
+            ]);
+            const alreadyPaid = (paidAgg[0]?.total as number) ?? 0;
+            const residual = Math.max(0, existing.totalAmount - alreadyPaid);
+
+            const openPending = await Payment.findOne(
+              safeFilter({
+                invoiceId: existing._id,
+                status: { $in: ['pending', 'pending_verification'] },
+              }),
+            );
+            if (openPending) {
+              openPending.amount = residual;
+              await openPending.save();
+            } else if (residual > 0.01 && existing.status !== 'paid' && existing.status !== 'cancelled') {
+              type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
+              const paymentCreate = Payment.create as unknown as CreateFn;
+              await paymentCreate({
+                tenantId: existing.tenantId,
+                invoiceId: existing._id,
+                amount: residual,
+                type: 'rent',
+                method: 'upi',
+                status: 'pending',
+                month,
+                dueDate: existing.dueDate ?? new Date(),
+              });
+            }
+
+            // Refresh invoice status from payments
+            if (alreadyPaid >= existing.totalAmount && existing.totalAmount > 0) {
+              existing.status = 'paid';
+            } else if (alreadyPaid > 0) {
+              existing.status = 'partial';
+            } else if (existing.status === 'paid' || existing.status === 'partial') {
+              existing.status = 'sent';
+            }
+            await existing.save();
+
+            updated++;
+            distributed++;
+          } else {
+            await generateSingleInvoice({ tenantId, month });
+            created++;
+            distributed++;
+          }
+        } catch (err) {
+          logger.error({ err, tenantId, month }, 'Electricity distribute tenant failed');
           errors++;
         }
       }
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'Electricity distribute room failed');
       errors++;
     }
   }
 
-  // Mark bill as distributed
   await ElectricityBill.findByIdAndUpdate(id, { status: 'distributed' });
 
-  logger.info({ billId: id, month, distributed, errors }, 'Electricity bill distributed');
+  logger.info(
+    { billId: id, month, distributed, created, updated, errors },
+    'Electricity bill distributed',
+  );
 
   return c.json({
     success: true,
     data: {
-      message: `Distribution complete. ${distributed} invoices updated, ${errors} errors.`,
+      message: `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated, ${errors} errors.`,
       distributed,
+      created,
+      updated,
       errors,
       month,
     },

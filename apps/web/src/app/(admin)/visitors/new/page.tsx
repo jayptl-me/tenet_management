@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
@@ -75,6 +76,9 @@ export default function NewVisitorPage() {
                 onChange={field.onChange}
                 placeholder="Select tenant..."
                 error={errors.tenantId?.message}
+                valueKey="_id"
+                labelKey={tenantLabel}
+                sublabelFn={tenantSublabel}
               />
             )}
           />

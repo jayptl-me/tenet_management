@@ -22,6 +22,24 @@ export interface IPayment {
   createdAt: string;
 }
 
+/** Admin offline payment body — POST /payments/offline */
+export interface IOfflinePaymentCreate {
+  tenantId: string;
+  invoiceId: string;
+  amount: number;
+  method: 'cash' | 'bank_transfer' | 'other';
+  paidAt: string;
+  notes?: string;
+}
+
+export interface IPaymentUpdate {
+  amount?: number;
+  method?: IPaymentMethod;
+  type?: IPaymentType;
+  status?: IPaymentStatus;
+  notes?: string;
+}
+
 export interface IPaymentQrResponse {
   qrDataUrl: string;
   upiDeepLink: string;
@@ -35,4 +53,22 @@ export interface IPaymentQrResponse {
 export interface IPaymentUtrSubmit {
   invoiceId: string;
   utrNumber: string;
+}
+
+/** Populated list row shape returned by GET /payments */
+export interface IPaymentListItem extends Omit<IPayment, 'tenantId' | 'invoiceId'> {
+  tenantId: {
+    id?: string;
+    _id?: string;
+    userId?: { name?: string; email?: string; phone?: string };
+    roomId?: { roomNumber?: string; floorId?: string };
+  } | string;
+  invoiceId: {
+    id?: string;
+    _id?: string;
+    invoiceNumber?: string;
+    month?: string;
+    totalAmount?: number;
+    status?: string;
+  } | string;
 }
