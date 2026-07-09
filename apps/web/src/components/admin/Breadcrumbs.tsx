@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { clsx } from 'clsx';
 import { ChevronRight, Home } from 'lucide-react';
 
 interface BreadcrumbSegment {
@@ -13,7 +12,6 @@ interface BreadcrumbSegment {
 
 /**
  * Maps URL path segments to human-readable labels.
- * Extend this map as sections are added.
  */
 const LABEL_MAP: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -39,21 +37,60 @@ const LABEL_MAP: Record<string, string> = {
   export: 'Export',
   'audit-logs': 'Audit Logs',
   settings: 'Settings',
+  new: 'New',
+  edit: 'Edit',
 };
+
+const MONGO_ID_RE = /^[a-f\d]{24}$/i;
+
+/** Parent resource segment -> short detail label (avoids raw ObjectIds). */
+const DETAIL_LABEL: Record<string, string> = {
+  tenants: 'Tenant',
+  rooms: 'Room',
+  floors: 'Floor',
+  payments: 'Payment',
+  invoices: 'Invoice',
+  electricity: 'Bill',
+  laundry: 'Slot',
+  meals: 'Meal',
+  menus: 'Menu',
+  services: 'Service',
+  complaints: 'Complaint',
+  enquiries: 'Enquiry',
+  notices: 'Notice',
+  notifications: 'Notification',
+  visitors: 'Visitor',
+  guardians: 'Guardian',
+  leaves: 'Leave',
+  attendance: 'Record',
+  assets: 'Asset',
+};
+
+function segmentLabel(segment: string, parentSegment: string | undefined): string {
+  if (LABEL_MAP[segment]) return LABEL_MAP[segment];
+  if (MONGO_ID_RE.test(segment)) {
+    return (parentSegment && DETAIL_LABEL[parentSegment]) || 'Details';
+  }
+  // Title-case kebab segments without dumping raw IDs
+  return segment
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
 
 export function Breadcrumbs() {
   const pathname = usePathname();
 
-  // Skip root paths with no meaningful breadcrumb
   if (pathname === '/dashboard' || pathname === '/') return null;
 
   const segments = pathname.split('/').filter(Boolean);
 
   const breadcrumbs: BreadcrumbSegment[] = segments.map((segment, index) => {
     const href = '/' + segments.slice(0, index + 1).join('/');
-    const label = LABEL_MAP[segment] ?? segment.replace(/-/g, ' ');
+    const parent = index > 0 ? segments[index - 1] : undefined;
+    const label = segmentLabel(segment, parent);
     return {
-      label: label.charAt(0).toUpperCase() + label.slice(1),
+      label,
       href,
       isLast: index === segments.length - 1,
     };

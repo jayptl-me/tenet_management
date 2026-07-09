@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import mongoose from 'mongoose';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, safeFilter } from '../lib/routeUtils.js';
@@ -58,12 +59,12 @@ async function enrichWithComplaintCounts(
 
       const categories = serviceToCategory[svc.serviceType] ?? [svc.serviceType];
 
-      const roomIds = await Room.find({ floorId }).distinct('_id');
+      const roomIds = await Room.find({ floorId: new mongoose.Types.ObjectId(floorId) } as Record<string, unknown>).distinct('_id');
       const floorComplaintCount = await Complaint.countDocuments({
         status: { $in: ['open', 'in_progress'] },
         category: { $in: categories },
         roomId: { $in: roomIds },
-      });
+      } as Record<string, unknown>);
 
       return { ...svc, openComplaintCount: floorComplaintCount };
     }),
@@ -80,6 +81,74 @@ const updateServiceSchema = z.strictObject({
   note: z.string().max(500, 'Note cannot exceed 500 characters').optional(),
 });
 
+// ── GET /services/summary — count by status (admin) ──
+// Registered before /:id so "summary" is not treated as an ObjectId
+services.get('/summary', authGuard, adminOnly, async (c) => {
+  const results = await ServiceStatus.aggregate([
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+  const summary: Record<string, number> = { operational: 0, degraded: 0, down: 0 };
+  for (const entry of results) {
+    summary[entry._id as string] = entry.count;
+  }
+  return c.json({ success: true, data: summary });
+});
+
+// ── GET /services — paginated list (auth) ──
+services.get('/', authGuard, async (c) => {
+  const filter: Record<string, unknown> = {};
+
+  const floorIdQ = c.req.query('floorId');
+  if (floorIdQ) {
+    const parsed = parseId(floorIdQ);
+    if (!parsed) return badRequest(c, 'Invalid floorId');
+    filter.floorId = parsed;
+  }
+
+  const page = Math.max(1, Number(c.req.query('page')) || 1);
+  const limit = Math.min(100, Math.max(1, Number(c.req.query('limit')) || 50));
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    ServiceStatus.find(safeFilter(filter))
+      .sort({ serviceType: 1 } as Record<string, 1>)
+      .skip(skip)
+      .limit(limit)
+      .populate('floor')
+      .lean(),
+    ServiceStatus.countDocuments(safeFilter(filter)),
+  ]);
+
+  const enriched = await enrichWithComplaintCounts(data as any[]);
+
+  return c.json({
+    success: true,
+    data: enriched,
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+// ── GET /services/floor/:floorId/with-complaints ──
+services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
+  const floorId = parseId(c.req.param('floorId'));
+  if (!floorId) return badRequest(c, 'Invalid floor ID');
+
+  const services_list = await ServiceStatus.find(safeFilter({ floorId }))
+    .populate('floor')
+    .lean();
+
+  const enriched = await enrichWithComplaintCounts(services_list as any[]);
+  const totalRooms = await Room.countDocuments(safeFilter({ floorId, isActive: true }));
+
+  return c.json({
+    success: true,
+    data: {
+      services: enriched,
+      totalRooms,
+    },
+  });
+});
+
 // ── POST /services — create service status entry (admin) ──
 services.post('/', authGuard, adminOnly, zValidator('json', z.strictObject({
   floorId: z.string().min(1, 'Floor is required'),
@@ -87,16 +156,39 @@ services.post('/', authGuard, adminOnly, zValidator('json', z.strictObject({
   status: z.enum(['operational', 'degraded', 'down']).default('operational'),
   note: z.string().max(500).optional(),
 })), async (c) => {
-  const body = c.req.valid('json') as any;
+  const body = c.req.valid('json');
+  const user = c.get('user');
+
+  const validType = await isValidServiceType(body.serviceType);
+  if (!validType) {
+    return badRequest(c, 'Invalid service type. Must match an AppConfig amenity definition key.', 'INVALID_SERVICE_TYPE');
+  }
+
   const { Floor } = await import('../models/floor.js');
   const floor = await Floor.findById(body.floorId).lean();
   if (!floor) {
     return c.json({ success: false, error: { code: 'FLOOR_NOT_FOUND', message: 'Floor not found' } }, 400);
   }
-  const ServiceStatusMod = (await import('../models/serviceStatus.js')).ServiceStatus;
-  const service: any = await ServiceStatusMod.create(body);
-  const populated = await ServiceStatusMod.findById(String(service._id)).populate('floor').lean();
-  return c.json({ success: true, data: populated }, 201);
+
+  try {
+    const service = await ServiceStatus.create({
+      floorId: new mongoose.Types.ObjectId(body.floorId),
+      serviceType: body.serviceType,
+      status: body.status,
+      note: body.note ?? '',
+      lastUpdatedBy: new mongoose.Types.ObjectId(user.sub),
+      lastUpdatedAt: new Date(),
+    } as Record<string, unknown>);
+    const createdId = String((service as { _id?: unknown })._id ?? '');
+    const populated = await ServiceStatus.findById(createdId).populate('floor').lean();
+    return c.json({ success: true, data: populated }, 201);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to create service status';
+    if (message.includes('duplicate') || (err as { code?: number })?.code === 11000) {
+      return badRequest(c, 'Service status already exists for this floor and type', 'DUPLICATE_SERVICE');
+    }
+    return badRequest(c, message);
+  }
 });
 
 // ── PUT /services/:id — update service status (auth) ──
@@ -141,77 +233,6 @@ services.get('/:id', authGuard, async (c) => {
 
   const enriched = await enrichWithComplaintCounts([service as any]);
   return c.json({ success: true, data: enriched[0] });
-});
-
-// ── GET /services/summary — count by status (admin) ──
-services.get('/summary', authGuard, adminOnly, async (_c) => {
-  const results = await ServiceStatus.aggregate([
-    { $group: { _id: '$status', count: { $sum: 1 } } },
-  ]);
-  const summary: Record<string, number> = { operational: 0, degraded: 0, down: 0 };
-  for (const entry of results) {
-    summary[entry._id as string] = entry.count;
-  }
-  return _c.json({ success: true, data: summary });
-});
-
-// ── GET /services — paginated list (auth) ──
-services.get('/', authGuard, async (c) => {
-  const filter: Record<string, unknown> = {};
-
-  const floorIdQ = c.req.query('floorId');
-  if (floorIdQ) {
-    const parsed = parseId(floorIdQ);
-    if (!parsed) return badRequest(c, 'Invalid floorId');
-    filter.floorId = parsed;
-  }
-
-  // Parse pagination manually since we need to return a different shape
-  const page = Math.max(1, Number(c.req.query('page')) || 1);
-  const limit = Math.min(100, Math.max(1, Number(c.req.query('limit')) || 50));
-  const skip = (page - 1) * limit;
-
-  const [data, total] = await Promise.all([
-    ServiceStatus.find(safeFilter(filter))
-      .sort({ serviceType: 1 } as Record<string, 1>)
-      .skip(skip)
-      .limit(limit)
-      .populate('floor')
-      .lean(),
-    ServiceStatus.countDocuments(safeFilter(filter)),
-  ]);
-
-  // Attach complaint counts per service per floor
-  const enriched = await enrichWithComplaintCounts(data as any[]);
-
-  return c.json({
-    success: true,
-    data: enriched,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  });
-});
-
-// ── GET /services/floor/:floorId/with-complaints — service health + complaint counts ──
-services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
-  const floorId = parseId(c.req.param('floorId'));
-  if (!floorId) return badRequest(c, 'Invalid floor ID');
-
-  const services_list = await ServiceStatus.find(safeFilter({ floorId }))
-    .populate('floor')
-    .lean();
-
-  const enriched = await enrichWithComplaintCounts(services_list as any[]);
-
-  // Also fetch floor's room count for context
-  const totalRooms = await Room.countDocuments(safeFilter({ floorId, isActive: true }));
-
-  return c.json({
-    success: true,
-    data: {
-      services: enriched,
-      totalRooms,
-    },
-  });
 });
 
 // ── PUT /services/:id/full — full update (admin) ──

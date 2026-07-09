@@ -252,7 +252,7 @@ export default function FloorDetailPage() {
             icon={<BedDouble className="h-10 w-10" />}
             title="No rooms on this floor"
             description="Add a room to start managing this floor"
-            action={{ label: 'Add Room', onClick: () => router.push('/rooms/new') }}
+            action={{ label: 'Add Room', onClick: () => router.push(`/rooms/new?floorId=${floor._id}`) }}
           />
         )}
       </motion.div>

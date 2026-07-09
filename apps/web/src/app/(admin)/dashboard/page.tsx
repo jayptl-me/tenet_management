@@ -18,238 +18,10 @@ import { FunnelChart } from '@/components/ui/FunnelChart';
 import { StackedBarChart } from '@/components/ui/StackedBarChart';
 import { HeatmapCalendar } from '@/components/ui/HeatmapCalendar';
 import { Timeline } from '@/components/ui/Timeline';
+import { LineChart } from '@/components/ui/LineChart';
+import { GaugeChart } from '@/components/ui/GaugeChart';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
-
-// ── Chart Components (inline to this file) ──────────────
-
-/** Format a number as a compact currency label (₹, K, L) */
-function formatCurrencyLabel(n: number): string {
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`;
-  if (n >= 1_000) return `₹${Math.round(n / 1_000)}K`;
-  return `₹${Math.round(n)}`;
-}
-
-/** Interactive HTML/CSS bar chart — uses explicit pixel heights for correct data scaling */
-function LineChart({
-  data,
-  labels,
-  lines,
-  showGrid = true,
-  isCurrency = false,
-}: {
-  data: Array<Record<string, number>>;
-  labels: string[];
-  height?: number;
-  lines: Array<{ key: string; color: string; label: string }>;
-  showGrid?: boolean;
-  showDots?: boolean;
-  isCurrency?: boolean;
-}) {
-  const [tooltipIdx, setTooltipIdx] = useState<number | null>(null);
-  const chartAreaH = 200; // fixed chart height in px for consistent scaling
-  const baselineH = 24;   // space below chart for x-axis labels
-  const yLabelW = 64;     // width reserved for y-axis labels (fits ₹39K)
-
-  const allValues = data.flatMap((d) => lines.map((l) => d[l.key] ?? 0));
-  const rawMax = Math.max(...allValues, 1);
-  // Add 20% headroom so tallest bar doesn't touch top of chart
-  const maxVal = rawMax * 1.2;
-  const minVal = Math.min(...allValues, 0);
-  const range = maxVal - minVal || 1;
-
-  // Compute per-bar heights in pixels
-  const bars = data.map((d) =>
-    lines.map((line) => {
-      const val = d[line.key] ?? 0;
-      const h = range > 0 ? ((val - minVal) / range) * chartAreaH : 0;
-      return { key: line.key, color: line.color, height: Math.max(h, val > 0 ? 4 : 0), value: val };
-    })
-  );
-
-  // Smart label sampling
-  const maxVisibleLabels = 7;
-  const labelInterval = data.length <= maxVisibleLabels ? 1 : Math.ceil(data.length / maxVisibleLabels);
-
-  // Y-axis grid: 5 evenly-spaced pixel positions + values
-  const gridCount = 4;
-  const gridRows = Array.from({ length: gridCount + 1 }, (_, i) => {
-    const y = chartAreaH - (i / gridCount) * chartAreaH;
-    const rawVal = minVal + range * (i / gridCount);
-    return { y, value: rawVal };
-  });
-
-  return (
-    <div className="w-full">
-      <div className="flex gap-0">
-        {/* Y-axis */}
-        {showGrid && (
-          <div className="relative flex-shrink-0 overflow-visible" style={{ width: yLabelW, height: chartAreaH }}>
-            {gridRows.map((gr, i) => (
-              <div key={i} className="absolute right-0 text-right" style={{ top: gr.y, transform: 'translateY(-50%)' }}>
-                <span className="text-[10px] font-mono font-medium text-[color:var(--color-text-muted)] leading-none tabular-nums whitespace-nowrap">
-                  {isCurrency ? formatCurrencyLabel(gr.value) : Math.round(gr.value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Chart area */}
-        <div className="flex-1 relative" style={{ height: chartAreaH + baselineH }}>
-          {/* Grid lines */}
-          {showGrid && gridRows.map((gr, i) => (
-            <div
-              key={i}
-              className="absolute left-0 right-0 border-t border-[color:var(--border-color)] pointer-events-none"
-              style={{ top: gr.y, opacity: i === gridCount ? 0.8 : 0.4, borderStyle: i === gridCount ? 'solid' : 'dashed' }}
-            />
-          ))}
-
-          {/* Bars container — absolute-positioned bars per month, growing upward from baseline */}
-          <div className="flex items-end gap-[6px] sm:gap-2" style={{ height: chartAreaH, paddingBottom: 0 }}>
-            {bars.map((barGroup, i) => (
-              <div
-                key={i}
-                className="flex-1 relative cursor-pointer"
-                style={{ height: chartAreaH, minWidth: 24 }}
-                onMouseEnter={() => setTooltipIdx(i)}
-                onMouseLeave={() => setTooltipIdx(null)}
-              >
-                {/* Bars positioned at the bottom baseline */}
-                <div className="absolute bottom-0 left-0 right-0 flex flex-row items-end justify-center gap-[2px]">
-                  {barGroup.map((seg) => (
-                    <div
-                      key={seg.key}
-                      className="flex-1 rounded-t-sm transition-all duration-200"
-                      style={{
-                        height: `${seg.height}px`,
-                        minHeight: seg.value > 0 ? '4px' : '0px',
-                        backgroundColor: seg.color,
-                        opacity: tooltipIdx === i ? 1 : 0.85,
-                      }}
-                    />
-                  ))}
-                </div>
-                {/* Tooltip */}
-                {tooltipIdx === i && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-10 pointer-events-none">
-                    <div
-                      className="rounded-lg px-3 py-2 shadow-[var(--shadow-dropdown)] text-center whitespace-nowrap"
-                      style={{
-                        backgroundColor: 'var(--tooltip-bg, var(--color-surface-900))',
-                        borderRadius: 'var(--tooltip-radius, 8px)',
-                      }}
-                    >
-                      <p className="text-[11px] font-bold leading-tight" style={{ color: 'var(--tooltip-text, var(--color-surface-50))' }}>{labels[i]}</p>
-                      {barGroup.map((seg) => (
-                        <p key={seg.key} className="text-[10px] font-medium leading-tight mt-0.5 opacity-90" style={{ color: 'var(--tooltip-text, var(--color-surface-50))' }}>
-                          {seg.key}: {isCurrency ? formatCurrencyLabel(seg.value) : Math.round(seg.value)}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* X-axis labels */}
-          <div className="flex gap-[2px] sm:gap-1 mt-1">
-            {labels.map((label, i) => {
-              if (i % labelInterval !== 0 && i !== labels.length - 1) return <div key={i} className="flex-1 min-w-[20px]" />;
-              return (
-                <div key={i} className="flex-1 text-center min-w-[20px]">
-                  <span className="text-[10px] font-medium text-[color:var(--color-text-muted)] leading-tight">{label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-        {lines.map((line) => (
-          <div key={line.key} className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: line.color }} />
-            <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">{line.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Radial gauge — shows a percentage value as a semi-circular gauge */
-function GaugeChart({
-  value,
-  max = 100,
-  size = 120,
-  label,
-  sublabel,
-  colorVar = '--color-success-500',
-}: {
-  value: number;
-  max?: number;
-  size?: number;
-  label?: string;
-  sublabel?: string;
-  colorVar?: string;
-}) {
-  const strokeW = 10;
-  const radius = (size - strokeW) / 2;
-  const circumference = Math.PI * radius;
-  const pct = Math.min(value / max, 1);
-  const offset = circumference * (1 - pct);
-  const center = size / 2;
-
-  return (
-    <div className="inline-flex flex-col items-center gap-1.5">
-      <svg width={size} height={size / 2 + strokeW} viewBox={`0 0 ${size} ${size / 2 + strokeW}`}>
-        <path
-          d={`M ${strokeW / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeW / 2} ${size / 2}`}
-          fill="none"
-          stroke="var(--border-color)"
-          strokeWidth={strokeW}
-          strokeLinecap="round"
-        />
-        <path
-          d={`M ${strokeW / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeW / 2} ${size / 2}`}
-          fill="none"
-          stroke={`var(${colorVar})`}
-          strokeWidth={strokeW}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          opacity={0.9}
-          className="transition-all duration-700 ease-out"
-        />
-        <text
-          x={center}
-          y={size / 2 - 4}
-          textAnchor="middle"
-          fill="var(--color-text-primary)"
-          fontSize={size * 0.18}
-          fontFamily="var(--font-display)"
-          fontWeight={700}
-        >
-          {Math.round(pct * 100)}%
-        </text>
-      </svg>
-      {label && (
-        <span className="font-display text-xs font-bold text-[color:var(--color-text-primary)]">
-          {label}
-        </span>
-      )}
-      {sublabel && (
-        <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
-          {sublabel}
-        </span>
-      )}
-    </div>
-  );
-}
 
 // ── Types ──────────────────────────────────────────────
 
@@ -462,9 +234,11 @@ export default function DashboardPage() {
         ? null // this month has revenue but last month was 0 → use "New" label below
         : null;
 
-  // Occupancy sparkline data (from revenue history collected values as proxy)
-  // In a real implementation this would be bed-occupancy-over-time; for now we approximate
-  const occupancySparkline = stats.revenueHistory.map((r) => r.collected);
+  // Occupancy sparkline from real occupancyHistory (occupied beds), not revenue
+  const occupancySparkline =
+    (stats.occupancyHistory?.length ?? 0) > 0
+      ? stats.occupancyHistory!.map((r) => r.occupied)
+      : [stats.occupancy.occupiedBeds];
 
   // Meal feedback averages
   const mealAvg = {
@@ -643,7 +417,7 @@ export default function DashboardPage() {
                 { key: 'expected', color: 'var(--color-surface-300)', label: 'Expected' },
               ]}
               showGrid
-              showDots
+
               isCurrency
             />
           )}
@@ -742,7 +516,7 @@ export default function DashboardPage() {
               { key: 'total', color: 'var(--color-surface-300)', label: 'Total Capacity' },
             ]}
             showGrid
-            showDots
+
           />
         )}
       </motion.section>
@@ -939,7 +713,7 @@ export default function DashboardPage() {
                   { key: 'dinner', color: 'var(--color-success-500)', label: 'Dinner' },
                 ]}
                 showGrid={false}
-                showDots={false}
+
               />
               <div className="grid grid-cols-3 gap-3 mt-4">
                 {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => {

@@ -19,15 +19,17 @@ export function applyBrandTokens(tokens: IBrandTokens | null): void {
     root.style.setProperty(`--color-surface-${level}`, hex);
   }
 
-  // Apply dark mode surface colors via injected style (so .dark class can override)
+  // App uses data-mode="dark"; also support .dark for compatibility
   const existing = document.getElementById('brand-dark-tokens');
   if (existing) existing.remove();
 
+  const darkRules = Object.entries(tokens.surfaceColorScaleDark)
+    .map(([level, hex]) => `  --color-surface-${level}: ${hex};`)
+    .join('\n');
+
   const darkStyle = document.createElement('style');
   darkStyle.id = 'brand-dark-tokens';
-  darkStyle.textContent = `.dark {\n${Object.entries(tokens.surfaceColorScaleDark)
-    .map(([level, hex]) => `  --color-surface-${level}: ${hex};`)
-    .join('\n')}\n}`;
+  darkStyle.textContent = `[data-mode="dark"], .dark {\n${darkRules}\n}`;
   document.head.appendChild(darkStyle);
 }
 

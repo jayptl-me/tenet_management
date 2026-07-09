@@ -58,8 +58,13 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+      .populate({
+        path: 'tenantId',
+        populate: [
+          { path: 'userId', select: 'name email phone' },
+          { path: 'roomId', select: 'roomNumber floorId' },
+        ],
+      })
       .lean() as unknown,
     invoiceCountDocs(safeFilter(filter)),
   ]);
@@ -126,8 +131,13 @@ invoices.get('/:id', authGuard, async (c) => {
   if (!id) return badRequest(c, 'Invalid invoice ID');
 
   const invoiceRaw = await (Invoice.findById(id)
-    .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber floor' } })
+    .populate({
+      path: 'tenantId',
+      populate: [
+        { path: 'userId', select: 'name email phone' },
+        { path: 'roomId', select: 'roomNumber floorId' },
+      ],
+    })
     .lean() as unknown);
 
   if (!invoiceRaw) return notFound(c, 'Invoice');
@@ -149,7 +159,7 @@ invoices.get('/:id', authGuard, async (c) => {
   // Compute paidAmount and balance from payments
   const payments = (await Payment.find(
     safeFilter({ invoiceId: new mongoose.Types.ObjectId(id), status: 'paid' }),
-  ).lean()) as Array<Record<string, unknown>>;
+  ).lean()) as unknown as Array<Record<string, unknown>>;
 
   const paidAmount = payments.reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
   const totalAmount = (invoice.totalAmount as number) ?? 0;
@@ -177,14 +187,122 @@ invoices.get('/:id', authGuard, async (c) => {
   });
 });
 
+// ── PUT /invoices/:id — update amounts / status (admin) ──
+const updateInvoiceSchema = z.strictObject({
+  rentAmount: z.number().min(0).optional(),
+  electricityAmount: z.number().min(0).optional(),
+  otherCharges: z.number().min(0).optional(),
+  lineItems: z
+    .array(
+      z.strictObject({
+        description: z.string().min(1),
+        amount: z.number().min(0),
+      }),
+    )
+    .optional(),
+  status: z.enum(['draft', 'sent', 'overdue', 'cancelled']).optional(),
+  dueDate: z.string().datetime().optional(),
+});
+
+invoices.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator('json', updateInvoiceSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid invoice ID');
+
+    const body = c.req.valid('json');
+    const adminId = c.get('user').sub;
+
+    const invoice = await Invoice.findById(id);
+    if (!invoice) return notFound(c, 'Invoice');
+
+    const currentStatus = invoice.status;
+    if (currentStatus === 'paid') {
+      return badRequest(c, 'Paid invoices cannot be edited', 'INVOICE_LOCKED');
+    }
+    if (currentStatus === 'cancelled' && body.status !== 'draft' && body.status !== 'sent') {
+      return badRequest(c, 'Cancelled invoices can only be reopened to draft or sent', 'INVALID_STATUS_TRANSITION');
+    }
+
+    if (body.rentAmount !== undefined) invoice.rentAmount = body.rentAmount;
+    if (body.electricityAmount !== undefined) invoice.electricityAmount = body.electricityAmount;
+    if (body.otherCharges !== undefined) invoice.otherCharges = body.otherCharges;
+    if (body.lineItems !== undefined) invoice.lineItems = body.lineItems;
+    if (body.dueDate !== undefined) invoice.dueDate = new Date(body.dueDate);
+    if (body.status !== undefined) invoice.status = body.status;
+
+    // pre-save recomputes totalAmount
+    await invoice.save();
+
+    // Re-sync pending obligation amount if not paid/cancelled
+    if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
+      const openPending = await Payment.findOne(
+        safeFilter({
+          invoiceId: invoice._id,
+          status: { $in: ['pending', 'pending_verification'] },
+        }),
+      );
+      if (openPending) {
+        const paidSum = await Payment.aggregate([
+          {
+            $match: {
+              invoiceId: invoice._id,
+              status: 'paid',
+            },
+          },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]);
+        const alreadyPaid = (paidSum[0]?.total as number) ?? 0;
+        const residual = Math.max(0, invoice.totalAmount - alreadyPaid);
+        openPending.amount = residual;
+        if (invoice.dueDate) openPending.dueDate = invoice.dueDate;
+        await openPending.save();
+      }
+    }
+
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: adminId,
+      action: 'update',
+      resource: 'invoice',
+      resourceId: id,
+      details: {
+        fields: Object.keys(body),
+        status: invoice.status,
+        totalAmount: invoice.totalAmount,
+      },
+    });
+
+    const populated = await Invoice.findById(id)
+      .populate({
+        path: 'tenantId',
+        populate: [
+          { path: 'userId', select: 'name email phone' },
+          { path: 'roomId', select: 'roomNumber floorId' },
+        ],
+      })
+      .lean();
+
+    return c.json({ success: true, data: populated });
+  },
+);
+
 // ── GET /invoices/:id/pdf ───────────────────────────────
 invoices.get('/:id/pdf', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid invoice ID');
 
   const invoiceRaw = await (Invoice.findById(id)
-    .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber floor' } })
+    .populate({
+      path: 'tenantId',
+      populate: [
+        { path: 'userId', select: 'name email phone' },
+        { path: 'roomId', select: 'roomNumber floorId' },
+      ],
+    })
     .lean() as unknown);
 
   if (!invoiceRaw) return notFound(c, 'Invoice');
