@@ -460,7 +460,8 @@
   --chart-bar-secondary: var(--color-surface-300);
   --chart-bar-radius: 4px;
   --chart-track: var(--color-surface-200);
-  --chart-on-fill: var(--color-text-inverted);
+  /* White/near-white ink on filled bars for contrast in dark mode */
+  --chart-on-fill: #fafafa;
   --chart-tooltip-bg: var(--color-surface-200);
   --chart-tooltip-text: var(--color-surface-900);
   --chart-tooltip-shadow: var(--shadow-tooltip);
