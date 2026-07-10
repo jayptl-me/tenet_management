@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { parsePagination, badRequest, safeFilter } from '../lib/routeUtils.js';
+import { parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { AuditLog } from '../models/auditLog.js';
 
 const audit = new Hono();

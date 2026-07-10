@@ -71,11 +71,11 @@ export function notFound(c: Context, resource: string) {
   throw new ResourceNotFoundError(resource);
 }
 
-export function badRequest(c: Context, message: string, code = 'BAD_REQUEST') {
+export function badRequest(c: Context, message: string, _code = 'BAD_REQUEST') {
   throw new ValidationError(message);
 }
 
-export function conflict(c: Context, message: string, code = 'CONFLICT') {
+export function conflict(c: Context, message: string, _code = 'CONFLICT') {
   throw new ConflictError(message);
 }
 

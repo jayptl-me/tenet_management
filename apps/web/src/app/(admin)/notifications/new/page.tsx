@@ -2,7 +2,23 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Megaphone, AlertTriangle, CreditCard, Check, MessageSquare, Wrench, Zap, Waves, Utensils, Users, Building2, DoorOpen, User, Copy } from 'lucide-react';
+import {
+  Send,
+  Megaphone,
+  AlertTriangle,
+  CreditCard,
+  Check,
+  MessageSquare,
+  Wrench,
+  Zap,
+  Waves,
+  Utensils,
+  Users,
+  Building2,
+  DoorOpen,
+  User,
+  Copy,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -75,16 +91,18 @@ export default function NewNotificationPage() {
     setSubmitError('');
     setSendSuccess(false);
     try {
-      await api.post('notifications', {
-        json: {
-          targetType,
-          targetIds: targetType !== 'all' ? targetIds : [],
-          title: title.trim(),
-          body: body.trim(),
-          type,
-          sendPush,
-        },
-      }).json<{ success: boolean }>();
+      await api
+        .post('notifications', {
+          json: {
+            targetType,
+            targetIds: targetType !== 'all' ? targetIds : [],
+            title: title.trim(),
+            body: body.trim(),
+            type,
+            sendPush,
+          },
+        })
+        .json<{ success: boolean }>();
       setSendSuccess(true);
       setTimeout(() => router.push('/notifications'), 1000);
     } catch {
@@ -127,8 +145,11 @@ export default function NewNotificationPage() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => { setTargetType(key); setTargetIds([]); }}
-                  className={`flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 font-[family:var(--font-body)] text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
+                  onClick={() => {
+                    setTargetType(key);
+                    setTargetIds([]);
+                  }}
+                  className={`font-[family:var(--font-body)] flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
                     targetType === key
                       ? 'bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-button)]'
                       : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
@@ -173,7 +194,7 @@ export default function NewNotificationPage() {
                   key={opt.value}
                   type="button"
                   onClick={() => setType(opt.value)}
-                  className={`flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 font-[family:var(--font-body)] text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
+                  className={`font-[family:var(--font-body)] flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all active:scale-[var(--active-press-scale)] ${
                     type === opt.value
                       ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)] shadow-[var(--shadow-button)]'
                       : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
@@ -208,42 +229,43 @@ export default function NewNotificationPage() {
                   placeholder="Notification message..."
                   required
                 />
-                <p className="mt-1 text-right font-[family:var(--font-mono)] text-xs text-[color:var(--color-text-muted)]">
+                <p className="font-[family:var(--font-mono)] mt-1 text-right text-xs text-[color:var(--color-text-muted)]">
                   {body.length}/2000
                 </p>
 
-                {type === 'emergency' && (() => {
-                  const whatsappUrl = generateWhatsAppUrl('', `EMERGENCY: ${title}\n${body}`);
-                  return (
-                    <div className="mt-3 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
-                      <p className="mb-2 font-[family:var(--font-body)] text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text-secondary)]">
-                        WhatsApp Share Preview
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 truncate font-[family:var(--font-mono)] text-xs text-[color:var(--color-brand-600)] underline"
-                        >
-                          {whatsappUrl}
-                        </a>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => {
-                            copyToClipboard(whatsappUrl);
-                            toast.success('WhatsApp link copied to clipboard');
-                          }}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy link
-                        </Button>
+                {type === 'emergency' &&
+                  (() => {
+                    const whatsappUrl = generateWhatsAppUrl('', `EMERGENCY: ${title}\n${body}`);
+                    return (
+                      <div className="mt-3 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
+                        <p className="font-[family:var(--font-body)] mb-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text-secondary)]">
+                          WhatsApp Share Preview
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-[family:var(--font-mono)] flex-1 truncate text-xs text-[color:var(--color-brand-600)] underline"
+                          >
+                            {whatsappUrl}
+                          </a>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(whatsappUrl);
+                              toast.success('WhatsApp link copied to clipboard');
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy link
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
               </div>
 
               <Checkbox

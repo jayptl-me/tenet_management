@@ -68,9 +68,12 @@ const visitorSchema = new Schema<IVisitorDocument>(
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        // Alias model field names to frontend-friendly names
+        ret.name = ret.visitorName;
+        ret.phone = ret.visitorPhone;
+        delete ret.visitorName;
+        delete ret.visitorPhone;
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },
@@ -79,6 +82,8 @@ const visitorSchema = new Schema<IVisitorDocument>(
   },
 );
 
+// toJSON transform already aliases visitorName -> name / visitorPhone -> phone
+// for frontend compatibility
 visitorSchema.index({ tenantId: 1, expectedArrival: -1 });
 visitorSchema.index({ status: 1 });
 visitorSchema.index({ expectedArrival: 1 });

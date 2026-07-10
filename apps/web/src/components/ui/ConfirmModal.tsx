@@ -80,7 +80,7 @@ export function ConfirmModal({
                   <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
                     {title}
                   </h3>
-                  <p className="mt-1 text-[13px] text-[color:var(--color-text-secondary)] leading-relaxed">
+                  <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]">
                     {message}
                   </p>
                 </div>
@@ -99,11 +99,7 @@ export function ConfirmModal({
               <Button variant="outline" onClick={onCancel} disabled={loading}>
                 {cancelLabel}
               </Button>
-              <Button
-                variant={confirmVariant[variant]}
-                onClick={onConfirm}
-                loading={loading}
-              >
+              <Button variant={confirmVariant[variant]} onClick={onConfirm} loading={loading}>
                 {confirmLabel}
               </Button>
             </div>

@@ -2,232 +2,249 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { useForm, useWatch, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus, Trash2, Sun, Moon, Sunset } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Checkbox } from '@/components/ui/Checkbox';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
-import { surfaceNestedClass } from '@/lib/field-styles';
+import { surfaceNestedClass, fieldLabelClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
-interface MealItem {
-  mealType: 'breakfast' | 'lunch' | 'dinner';
-  items: string[];
-}
+// ── Schema ──────────────────────────────────────────────
 
-interface MenuFormData {
-  date: string;
-  dayOfWeek: string;
-  isActive: boolean;
-  meals: MealItem[];
-}
+const mealItemSchema = z.object({
+  name: z.string().min(1, 'Item name is required'),
+  description: z.string().optional(),
+});
 
-const emptyMeals: MealItem[] = [
-  { mealType: 'breakfast', items: [''] },
-  { mealType: 'lunch', items: [''] },
-  { mealType: 'dinner', items: [''] },
+const formSchema = z.object({
+  date: z.string().min(1, 'Date is required'),
+  breakfast: z.array(mealItemSchema),
+  lunch: z.array(mealItemSchema),
+  dinner: z.array(mealItemSchema),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+// ── Meal section config ─────────────────────────────────
+
+const MEAL_SECTIONS = [
+  { key: 'breakfast' as const, label: 'Breakfast', description: 'Morning meal items', icon: Sun },
+  { key: 'lunch' as const, label: 'Lunch', description: 'Midday meal items', icon: Sunset },
+  { key: 'dinner' as const, label: 'Dinner', description: 'Evening meal items', icon: Moon },
 ];
 
-const daysOfWeek = [
-  { value: 'monday', label: 'Monday' },
-  { value: 'tuesday', label: 'Tuesday' },
-  { value: 'wednesday', label: 'Wednesday' },
-  { value: 'thursday', label: 'Thursday' },
-  { value: 'friday', label: 'Friday' },
-  { value: 'saturday', label: 'Saturday' },
-  { value: 'sunday', label: 'Sunday' },
-];
-
-const mealMeta: Record<
-  MealItem['mealType'],
-  { label: string; description: string }
-> = {
-  breakfast: { label: 'Breakfast', description: 'Morning meal items' },
-  lunch: { label: 'Lunch', description: 'Midday meal items' },
-  dinner: { label: 'Dinner', description: 'Evening meal items' },
-};
+// ── Component ───────────────────────────────────────────
 
 export default function NewMenuPage() {
   const router = useRouter();
-  const [form, setForm] = useState<MenuFormData>({
-    date: new Date().toISOString().slice(0, 10),
-    dayOfWeek: '',
-    isActive: true,
-    meals: emptyMeals,
+  const [submitError, setSubmitError] = useState('');
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      date: new Date().toISOString().slice(0, 10),
+      breakfast: [{ name: '', description: '' }],
+      lunch: [{ name: '', description: '' }],
+      dinner: [{ name: '', description: '' }],
+    },
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
 
-  const updateMealItem = (mealIndex: number, itemIndex: number, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      meals: prev.meals.map((m, i) =>
-        i === mealIndex
-          ? { ...m, items: m.items.map((item, j) => (j === itemIndex ? value : item)) }
-          : m,
-      ),
-    }));
+  const breakfastArray = useFieldArray({ control, name: 'breakfast' });
+  const lunchArray = useFieldArray({ control, name: 'lunch' });
+  const dinnerArray = useFieldArray({ control, name: 'dinner' });
+
+  const fieldArrays = {
+    breakfast: breakfastArray,
+    lunch: lunchArray,
+    dinner: dinnerArray,
   };
 
-  const addMealItem = (mealIndex: number) => {
-    setForm((prev) => ({
-      ...prev,
-      meals: prev.meals.map((m, i) =>
-        i === mealIndex ? { ...m, items: [...m.items, ''] } : m,
-      ),
-    }));
+  const breakfastItems = useWatch({ control, name: 'breakfast' });
+  const lunchItems = useWatch({ control, name: 'lunch' });
+  const dinnerItems = useWatch({ control, name: 'dinner' });
+
+  const itemCounts = {
+    breakfast: breakfastItems?.filter((i) => i.name?.trim()).length ?? 0,
+    lunch: lunchItems?.filter((i) => i.name?.trim()).length ?? 0,
+    dinner: dinnerItems?.filter((i) => i.name?.trim()).length ?? 0,
   };
 
-  const removeMealItem = (mealIndex: number, itemIndex: number) => {
-    setForm((prev) => ({
-      ...prev,
-      meals: prev.meals.map((m, i) =>
-        i === mealIndex ? { ...m, items: m.items.filter((_, j) => j !== itemIndex) } : m,
-      ),
-    }));
-  };
+  const totalItems = itemCounts.breakfast + itemCounts.lunch + itemCounts.dinner;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const onSubmit = async (data: FormData) => {
+    setSubmitError('');
 
-    const hasEmpty = form.meals.some((m) => m.items.some((item) => !item.trim()));
-    if (hasEmpty) {
-      setError('All meal items must be filled in or removed.');
+    const allItems = [...data.breakfast, ...data.lunch, ...data.dinner];
+    if (allItems.length === 0 || allItems.every((item) => !item.name.trim())) {
+      setSubmitError('At least one meal item with a name is required.');
       return;
     }
 
-    setIsSaving(true);
     try {
       const payload = {
-        date: form.date,
-        dayOfWeek: form.dayOfWeek || undefined,
-        isActive: form.isActive,
-        meals: form.meals
-          .filter((m) => m.items.some((item) => item.trim()))
-          .map((m) => ({
-            mealType: m.mealType,
-            items: m.items.filter((item) => item.trim()),
-          })),
+        date: data.date,
+        meals: {
+          breakfast: data.breakfast
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
+          lunch: data.lunch
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
+          dinner: data.dinner
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+            })),
+        },
       };
 
-      await api.post('menus', { json: payload }).json();
+      await api.post('menus', { json: payload }).json<{ success: boolean }>();
       router.push('/menus');
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Failed to create menu. Please try again.';
-      setError(msg);
-    } finally {
-      setIsSaving(false);
+    } catch {
+      setSubmitError('Failed to create menu. Please try again.');
     }
   };
 
   return (
     <FormPage
-      title="Create Daily Menu"
-      description="Plan meals for a specific date"
+      title="New Daily Menu"
+      description="Create a new daily menu with breakfast, lunch, and dinner items"
       backHref="/menus"
-      error={error}
+      error={submitError}
       maxWidth="3xl"
     >
       <FormCard
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         footer={
           <FormActions
-            loading={isSaving}
+            loading={isSubmitting}
             cancelHref="/menus"
-            submitLabel="Create Menu"
+            submitLabel="Save Menu"
             divided={false}
           />
         }
       >
-        <FormSection
-          title="Date and status"
-          description="When this menu applies and whether it is active"
-        >
-          <FormGrid cols={3}>
+        <FormSection title="Date" description="Day this menu applies to">
+          <FormGrid cols={1}>
             <Input
               label="Date"
               type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              error={(errors as Record<string, { message?: string }>).date?.message}
+              {...register('date')}
               required
             />
-            <Select
-              label="Day of week"
-              options={[{ value: '', label: 'Auto-detect from date' }, ...daysOfWeek]}
-              value={form.dayOfWeek}
-              onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value })}
-            />
-            <div className="flex items-end pb-2">
-              <Checkbox
-                label="Active"
-                checked={form.isActive}
-                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-              />
-            </div>
           </FormGrid>
         </FormSection>
 
-        {form.meals.map((meal, mealIdx) => {
-          const meta = mealMeta[meal.mealType];
+        {MEAL_SECTIONS.map(({ key, label, description }) => {
+          const fieldArray = fieldArrays[key];
+
           return (
             <FormSection
-              key={meal.mealType}
-              title={meta.label}
-              description={meta.description}
+              key={key}
+              title={label}
+              description={description}
               divided
               action={
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => addMealItem(mealIdx)}
+                  onClick={() => fieldArray.append({ name: '', description: '' })}
                 >
                   <Plus className="h-4 w-4" /> Add item
                 </Button>
               }
             >
               <div className="space-y-3">
-                {meal.items.map((item, itemIdx) => (
+                {fieldArray.fields.length === 0 && (
+                  <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-6 text-center text-sm text-[color:var(--color-text-secondary)]">
+                    No items yet. Add an item to begin.
+                  </p>
+                )}
+
+                {fieldArray.fields.map((field, itemIdx) => (
                   <div
-                    key={itemIdx}
+                    key={field.id}
                     className={clsx(
                       surfaceNestedClass,
-                      'flex flex-col gap-2 p-3 sm:flex-row sm:items-center',
+                      'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end',
                     )}
                   >
-                    <div className="min-w-0 flex-1">
-                      <Input
-                        label={itemIdx === 0 ? 'Item' : undefined}
-                        placeholder={`${meta.label} item ${itemIdx + 1}...`}
-                        value={item}
-                        onChange={(e) => updateMealItem(mealIdx, itemIdx, e.target.value)}
+                    <div className="flex flex-col gap-1.5">
+                      <label className={fieldLabelClass} htmlFor={`${key}-${itemIdx}-name`}>
+                        Item name
+                      </label>
+                      <input
+                        id={`${key}-${itemIdx}-name`}
+                        {...register(`${key}.${itemIdx}.name` as const)}
+                        placeholder="Item name"
+                        className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
                       />
                     </div>
-                    {meal.items.length > 1 && (
+                    <input
+                      {...register(`${key}.${itemIdx}.description` as const)}
+                      placeholder="Description (optional)"
+                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                    />
+                    <div className="flex justify-end sm:pb-0.5">
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
-                        aria-label={`Remove ${meta.label} item ${itemIdx + 1}`}
-                        onClick={() => removeMealItem(mealIdx, itemIdx)}
-                        className="shrink-0 self-end sm:self-center"
+                        aria-label={`Remove ${label} item ${itemIdx + 1}`}
+                        onClick={() => fieldArray.remove(itemIdx)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             </FormSection>
           );
         })}
+
+        {/* Summary */}
+        <FormSection title="Summary" divided>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
+              <Sun className="h-3.5 w-3.5 text-[color:var(--color-warning-500)]" />
+              {itemCounts.breakfast} breakfast items
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
+              <Sunset className="h-3.5 w-3.5 text-[color:var(--color-brand-500)]" />
+              {itemCounts.lunch} lunch items
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
+              <Moon className="h-3.5 w-3.5 text-[color:var(--color-info-500)]" />
+              {itemCounts.dinner} dinner items
+            </span>
+            <span className="text-[color:var(--color-text-muted)]">|</span>
+            <span className="font-bold text-[color:var(--color-text-primary)]">
+              {totalItems} total items
+            </span>
+          </div>
+        </FormSection>
       </FormCard>
     </FormPage>
   );

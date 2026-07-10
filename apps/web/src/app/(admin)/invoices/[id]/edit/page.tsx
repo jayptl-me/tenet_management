@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Home, Hash } from 'lucide-react';
+import { User, Home, Hash, Banknote, Zap, Receipt } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -63,15 +63,15 @@ export default function EditInvoicePage() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
-  const rentAmount = watch('rentAmount');
-  const electricityAmount = watch('electricityAmount');
-  const otherCharges = watch('otherCharges');
+  const rentAmount = useWatch({ control, name: 'rentAmount' });
+  const electricityAmount = useWatch({ control, name: 'electricityAmount' });
+  const otherCharges = useWatch({ control, name: 'otherCharges' });
 
   const autoTotal = useMemo(() => {
     return (rentAmount || 0) + (electricityAmount || 0) + (otherCharges || 0);
@@ -126,8 +126,7 @@ export default function EditInvoicePage() {
   };
 
   const tenant = invoiceData?.tenantId;
-  const isPaymentDriven =
-    invoiceData?.status === 'paid' || invoiceData?.status === 'partial';
+  const isPaymentDriven = invoiceData?.status === 'paid' || invoiceData?.status === 'partial';
 
   const descriptionParts: string[] = [];
   if (invoiceData?.invoiceNumber) descriptionParts.push(`#${invoiceData.invoiceNumber}`);
@@ -136,7 +135,9 @@ export default function EditInvoicePage() {
   return (
     <FormPage
       title="Edit Invoice"
-      description={descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update invoice line items'}
+      description={
+        descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update invoice line items'
+      }
       backHref="/invoices"
       error={submitError}
       isLoading={isLoading}
@@ -188,10 +189,7 @@ export default function EditInvoicePage() {
             />
           }
         >
-          <FormSection
-            title="Line items"
-            description="Amounts roll up into the total below"
-          >
+          <FormSection title="Line items" description="Amounts roll up into the total below">
             <FormGrid cols={3}>
               <Input
                 label="Rent amount"
@@ -199,6 +197,7 @@ export default function EditInvoicePage() {
                 step="0.01"
                 inputMode="decimal"
                 error={errors.rentAmount?.message}
+                leftIcon={<Banknote className="h-4 w-4" />}
                 {...register('rentAmount')}
               />
               <Input
@@ -207,6 +206,7 @@ export default function EditInvoicePage() {
                 step="0.01"
                 inputMode="decimal"
                 error={errors.electricityAmount?.message}
+                leftIcon={<Zap className="h-4 w-4" />}
                 {...register('electricityAmount')}
               />
               <Input
@@ -215,6 +215,7 @@ export default function EditInvoicePage() {
                 step="0.01"
                 inputMode="decimal"
                 error={errors.otherCharges?.message}
+                leftIcon={<Receipt className="h-4 w-4" />}
                 {...register('otherCharges')}
               />
             </FormGrid>

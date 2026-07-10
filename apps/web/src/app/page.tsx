@@ -10,7 +10,6 @@ import {
   Star,
   Shield,
   Zap,
-  Users,
   Send,
   Check,
   Mail,
@@ -142,8 +141,7 @@ function getAmenityIcon(label: string) {
     return <Sparkles className="h-5 w-5" />;
   if (lower.includes('study') || lower.includes('library')) return <BookOpen className="h-5 w-5" />;
   if (lower.includes('power') || lower.includes('electricity')) return <Zap className="h-5 w-5" />;
-  if (lower.includes('laundry') || lower.includes('washing'))
-    return <Shield className="h-5 w-5" />;
+  if (lower.includes('laundry') || lower.includes('washing')) return <Shield className="h-5 w-5" />;
   return <Check className="h-5 w-5" />;
 }
 
@@ -175,8 +173,7 @@ export default function LandingPage() {
   }, []);
 
   const pgName = config?.pgName || 'Apex PG';
-  const headline =
-    config?.landingHeroHeadline || 'Premium PG Living, Effortlessly Managed';
+  const headline = config?.landingHeroHeadline || 'Premium PG Living, Effortlessly Managed';
   const subline =
     config?.landingHeroSubline ||
     'Safe, comfortable, and well-managed paying guest accommodations with transparent billing, real-time updates, and zero hassle.';
@@ -190,14 +187,7 @@ export default function LandingPage() {
   };
   const amenities = config?.amenities?.length
     ? config.amenities
-    : [
-        'High-Speed WiFi',
-        'Washing Machine',
-        'Fridge',
-        'RO Water',
-        'Housekeeping',
-        '24/7 Security',
-      ];
+    : ['High-Speed WiFi', 'Washing Machine', 'Fridge', 'RO Water', 'Housekeeping', '24/7 Security'];
   const roomPricing = config?.roomPricing || {
     sharing2: 8000,
     sharing3: 6500,
@@ -210,8 +200,7 @@ export default function LandingPage() {
           name: 'Rahul Sharma',
           occupation: 'Software Engineer',
           rating: 5,
-          quote:
-            'Best PG experience in Bangalore! Super clean rooms, and the food is great.',
+          quote: 'Best PG experience in Bangalore! Super clean rooms, and the food is great.',
         },
         {
           name: 'Priya Mehta',
@@ -273,14 +262,14 @@ export default function LandingPage() {
       <header
         className={`sticky top-0 z-50 border-b transition-all duration-[var(--transition-duration-slow)] ${
           scrolled
-            ? 'border-b-[color:var(--border-color)] bg-[color:var(--glass-bg-strong)] backdrop-blur-[var(--glass-blur-strong)] shadow-[var(--shadow-sm)]'
+            ? 'border-b-[color:var(--border-color)] bg-[color:var(--glass-bg-strong)] shadow-[var(--shadow-sm)] backdrop-blur-[var(--glass-blur-strong)]'
             : 'border-b-transparent bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)]'
         }`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
-              <span className="font-bold text-white text-xs tracking-tight">A</span>
+          <Link href="/" className="group flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
+              <span className="text-xs font-bold tracking-tight text-white">A</span>
             </div>
             <span className="text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">
               {pgName}
@@ -308,7 +297,7 @@ export default function LandingPage() {
 
           {/* Mobile hamburger */}
           <button
-            className="rounded-lg border border-[color:var(--border-color)] p-2 md:hidden text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] transition-colors"
+            className="rounded-lg border border-[color:var(--border-color)] p-2 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)] md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -318,12 +307,12 @@ export default function LandingPage() {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-4 space-y-1 md:hidden">
+          <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-4 md:hidden">
             {['amenities', 'rooms', 'gallery', 'testimonials', 'contact'].map((link) => (
               <a
                 key={link}
                 href={`#${link}`}
-                className="block rounded-lg px-3 py-2.5 text-[13px] font-medium text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] transition-colors"
+                className="block rounded-lg px-3 py-2.5 text-[13px] font-medium text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)]"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.charAt(0).toUpperCase() + link.slice(1)}
@@ -349,7 +338,7 @@ export default function LandingPage() {
       </header>
 
       {/* ── Hero (Theme-aware + Geometric Animated BG) ── */}
-      <section className="relative overflow-hidden bg-[color:var(--color-brand-500)] border-b border-b-[color:var(--color-brand-600)]">
+      <section className="relative overflow-hidden border-b border-b-[color:var(--color-brand-600)] bg-[color:var(--color-brand-500)]">
         {/* Animated geometric background */}
         <HeroBackground />
 
@@ -368,7 +357,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5"
           >
-            <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-400)] animate-pulse" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-success-400)]" />
             <span className="text-xs font-semibold text-white/90">Now Open for Bookings</span>
           </motion.div>
 
@@ -406,7 +395,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white/30 text-white hover:bg-white/10 hover:border-white/50"
+                className="border-white/30 text-white hover:border-white/50 hover:bg-white/10"
               >
                 View Rooms & Pricing
               </Button>
@@ -415,7 +404,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white/20 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/40"
+                className="border-white/20 text-white/80 hover:border-white/40 hover:bg-white/10 hover:text-white"
                 onClick={handleTenantApp}
               >
                 <ExternalLink className="h-4 w-4" />
@@ -429,7 +418,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-12 grid grid-cols-3 gap-4 mx-auto max-w-md"
+            className="mx-auto mt-12 grid max-w-md grid-cols-3 gap-4"
           >
             {[
               { val: '99%', label: 'Occupancy' },
@@ -438,9 +427,9 @@ export default function LandingPage() {
             ].map((s, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-white/10 bg-white/5 py-3 px-2 backdrop-blur-sm"
+                className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 backdrop-blur-sm"
               >
-                <p className="text-xl font-bold text-white tabular-nums">{s.val}</p>
+                <p className="text-xl font-bold tabular-nums text-white">{s.val}</p>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-brand-200)]">
                   {s.label}
                 </p>
@@ -456,9 +445,7 @@ export default function LandingPage() {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
             Amenities
           </p>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Everything included
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything included</h2>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Everything you need for a comfortable, stress-free stay at {pgName}.
           </p>
@@ -469,9 +456,9 @@ export default function LandingPage() {
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="group rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5"
+              className="group rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
             >
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)] group-hover:bg-[color:var(--color-brand-500)] group-hover:text-white group-hover:border-[color:var(--color-brand-500)]">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)] group-hover:border-[color:var(--color-brand-500)] group-hover:bg-[color:var(--color-brand-500)] group-hover:text-white">
                 {getAmenityIcon(amenity)}
               </div>
               <h3 className="text-[13px] font-semibold tracking-tight">{amenity}</h3>
@@ -499,7 +486,7 @@ export default function LandingPage() {
           </motion.div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {[2, 3, 4].map((share, idx) => {
+            {[2, 3, 4].map((share) => {
               const price =
                 share === 2
                   ? roomPricing.sharing2
@@ -518,7 +505,7 @@ export default function LandingPage() {
                 <motion.div
                   key={share}
                   variants={fadeInUp}
-                  className={`relative flex flex-col rounded-xl border bg-[color:var(--color-surface-50)] p-6 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 ${
+                  className={`relative flex flex-col rounded-xl border bg-[color:var(--color-surface-50)] p-6 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] ${
                     isPopular
                       ? 'border-[color:var(--color-brand-500)] ring-1 ring-[color:var(--color-brand-500)]'
                       : 'border-[color:var(--border-color)]'
@@ -581,9 +568,7 @@ export default function LandingPage() {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
             Gallery
           </p>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            See it for yourself
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it for yourself</h2>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Take a virtual tour of our rooms, dining area, and facilities.
           </p>
@@ -611,11 +596,11 @@ export default function LandingPage() {
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="group overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5"
+              className="group overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]"
             >
               <div className="h-48 overflow-hidden bg-[color:var(--color-surface-200)]">
                 {item.img ? (
-                  <img
+                  <img /* eslint-disable-line @next/next/no-img-element */
                     src={item.img}
                     alt={item.title}
                     className="h-full w-full object-cover transition-transform duration-[var(--duration-glacial)] group-hover:scale-105"
@@ -655,9 +640,7 @@ export default function LandingPage() {
               <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
                 About Us
               </p>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Why {pgName}?
-              </h2>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why {pgName}?</h2>
               <p className="mt-4 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
                 We provide premium paying guest accommodations designed for working professionals
                 and students who value comfort, convenience, and community. Our properties are
@@ -695,10 +678,7 @@ export default function LandingPage() {
                   { val: '24×7', label: 'Security' },
                   { val: '3', label: 'Meals/Day' },
                 ].map((s, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-white/15 bg-white/10 p-3"
-                  >
+                  <div key={i} className="rounded-lg border border-white/15 bg-white/10 p-3">
                     <p className="text-2xl font-bold">{s.val}</p>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-brand-200)]">
                       {s.label}
@@ -717,9 +697,7 @@ export default function LandingPage() {
           <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
             Testimonials
           </p>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Loved by residents
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Loved by residents</h2>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
             Real feedback from working professionals and students at {pgName}.
           </p>
@@ -851,7 +829,7 @@ export default function LandingPage() {
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Tell us about your requirements..."
-                      className="w-full resize-none rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:border-[color:var(--color-brand-500)]"
+                      className="w-full resize-none rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-500)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
                     />
                   </div>
                   {formError && (
@@ -874,7 +852,7 @@ export default function LandingPage() {
       <footer className="border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-900)] text-[color:var(--color-surface-400)]">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <span className="text-lg font-bold text-white tracking-tight">{pgName}</span>
+            <span className="text-lg font-bold tracking-tight text-white">{pgName}</span>
             <nav className="flex items-center gap-6 text-[13px] font-medium">
               {['amenities', 'rooms', 'gallery', 'testimonials'].map((link) => (
                 <a

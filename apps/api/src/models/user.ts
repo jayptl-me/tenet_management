@@ -16,9 +16,15 @@ export interface IUserDocument extends Document {
   profilePhoto?: string;
   tenantId?: string;
   guardianId?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
+  loginAttempts: number;
+  lockedUntil: Date | null;
   comparePassword(candidate: string): Promise<boolean>;
+  recordLoginSuccess(): Promise<void>;
+  recordLoginFailed(): Promise<void>;
   toPublicJSON(): Omit<IUserDocument, 'passwordHash'>;
 }
 
@@ -79,6 +85,24 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
     guardianId: {
       type: String,
     },
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    lockedUntil: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -86,9 +110,7 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },
@@ -110,13 +132,29 @@ userSchema.methods.comparePassword = async function (candidate: string): Promise
   return bcrypt.compare(candidate, this.passwordHash);
 };
 
+userSchema.methods.recordLoginSuccess = async function (): Promise<void> {
+  this.loginAttempts = 0;
+  this.lockedUntil = null as unknown as Date;
+  await this.save();
+};
+
+userSchema.methods.recordLoginFailed = async function (): Promise<void> {
+  this.loginAttempts = (this.loginAttempts ?? 0) + 1;
+  if (this.loginAttempts >= 5) {
+    this.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+  }
+  await this.save();
+};
+
 userSchema.methods.toPublicJSON = function () {
   const obj = this.toJSON();
   return obj;
 };
 
 userSchema.statics.findByEmail = function (email: string) {
-  return this.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+  return this.findOne({ email: email.toLowerCase().trim() }).select(
+    '+passwordHash +loginAttempts +lockedUntil',
+  );
 };
 
 userSchema.statics.findWithNtfyTopic = function (userId: string) {

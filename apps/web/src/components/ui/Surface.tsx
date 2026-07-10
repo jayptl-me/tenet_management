@@ -46,12 +46,7 @@ export function Surface({
 
   if (animate) {
     return (
-      <motion.div
-        variants={fadeScaleIn}
-        initial="hidden"
-        animate="visible"
-        className={classes}
-      >
+      <motion.div variants={fadeScaleIn} initial="hidden" animate="visible" className={classes}>
         {children}
       </motion.div>
     );

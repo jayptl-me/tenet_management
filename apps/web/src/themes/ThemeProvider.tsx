@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/api';
 import { removeCustomStylesFromDOM, applyColorScaleToDOM } from '@/lib/colorScale';
 import type { ThemeSettings } from '@pg/types';
@@ -11,7 +11,6 @@ const DEFAULT_THEME: ThemeSettings = {
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
   const prevThemeRef = useRef<string | null>(null);
 
   // Bootstrap from localStorage immediately to prevent SSR flash
@@ -31,7 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    setMounted(true);
+    // bootstrap complete
   }, []);
 
   const applyTheme = useCallback((settings: ThemeSettings) => {
@@ -79,7 +78,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [applyTheme]);
 
   useEffect(() => {
-    setMounted(true);
     loadTheme();
 
     // Listen for theme fetch trigger (set after settings save)

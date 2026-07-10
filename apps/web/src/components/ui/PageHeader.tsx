@@ -76,7 +76,7 @@ export function PageHeader({
 
       {/* Right side */}
       {(action || badge) && (
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-3">
           {badge && <span className="flex-shrink-0">{badge}</span>}
           {action && <span className="flex-shrink-0">{action}</span>}
         </div>

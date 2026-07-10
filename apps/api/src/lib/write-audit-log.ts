@@ -46,6 +46,9 @@ export async function writeAuditLog(params: WriteAuditLogParams): Promise<void> 
       timestamp: new Date(),
     });
   } catch (err) {
-    logger.error({ err, action: params.action, resource: params.resource }, 'Failed to write audit log');
+    logger.error(
+      { err, action: params.action, resource: params.resource },
+      'Failed to write audit log',
+    );
   }
 }

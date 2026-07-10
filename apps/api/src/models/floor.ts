@@ -1,5 +1,5 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
-import type { IFloor, AmenityCount } from '@pg/types/floor';
+import type { AmenityCount } from '@pg/types/floor';
 
 export interface IFloorDocument extends Document {
   id: string;
@@ -86,9 +86,7 @@ const floorSchema = new Schema<IFloorDocument>(
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },
@@ -98,5 +96,6 @@ const floorSchema = new Schema<IFloorDocument>(
 );
 
 floorSchema.index({ 'amenityCounts.amenityKey': 1 });
+floorSchema.index({ label: 1 }, { unique: true });
 
 export const Floor: Model<IFloorDocument> = model<IFloorDocument>('Floor', floorSchema);

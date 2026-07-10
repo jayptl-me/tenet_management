@@ -2,8 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import {
-  BedDouble, CreditCard, AlertTriangle, PhoneCall,
-  Users, IndianRupee, CheckCircle2, Clock, Wifi, ArrowRight,
+  BedDouble,
+  CreditCard,
+  AlertTriangle,
+  PhoneCall,
+  Users,
+  IndianRupee,
+  CheckCircle2,
+  Clock,
+  Wifi,
+  ArrowRight,
   UtensilsCrossed,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -32,23 +40,35 @@ import { clsx } from 'clsx';
 // ── Types ──────────────────────────────────────────────
 
 interface RevenueHistoryPoint {
-  month: string; collected: number; expected: number;
+  month: string;
+  collected: number;
+  expected: number;
 }
 
 interface MealFeedbackTrendPoint {
-  date: string; breakfast: number; lunch: number; dinner: number;
+  date: string;
+  breakfast: number;
+  lunch: number;
+  dinner: number;
 }
 
 interface PaymentFunnelStage {
-  count: number; totalAmount: number;
+  count: number;
+  totalAmount: number;
 }
 
 interface OccupancyHistoryPoint {
-  month: string; occupied: number; total: number;
+  month: string;
+  occupied: number;
+  total: number;
 }
 
 interface ServiceHistoryEvent {
-  id: string; date: string; title: string; description: string; status: 'success' | 'warning' | 'danger';
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  status: 'success' | 'warning' | 'danger';
 }
 
 interface DashboardStats {
@@ -59,12 +79,19 @@ interface DashboardStats {
   enquiries: { pending: number };
   recent: {
     complaints: Array<{
-      _id: string; title: string; status: string; category?: string;
+      _id: string;
+      title: string;
+      status: string;
+      category?: string;
       tenantId?: { userId?: { name: string } };
       createdAt: string;
     }>;
     enquiries: Array<{
-      _id: string; name: string; phone: string; status: string; createdAt: string;
+      _id: string;
+      name: string;
+      phone: string;
+      status: string;
+      createdAt: string;
     }>;
   };
   revenueHistory: RevenueHistoryPoint[];
@@ -72,7 +99,10 @@ interface DashboardStats {
   mealFeedbackTrend: MealFeedbackTrendPoint[];
   complaintsByCategory: Array<{ _id: string; count: number }>;
   paymentFunnel: Record<string, PaymentFunnelStage>;
-  amenityHealth: Record<string, { operational: number; degraded: number; down: number; total: number }>;
+  amenityHealth: Record<
+    string,
+    { operational: number; degraded: number; down: number; total: number }
+  >;
   complaintHeatmap: Record<string, number>;
   serviceHistory?: ServiceHistoryEvent[];
 }
@@ -80,7 +110,10 @@ interface DashboardStats {
 // ── Helpers ────────────────────────────────────────────
 
 const STATUS_PRIORITY: Record<string, number> = {
-  open: 0, in_progress: 1, resolved: 2, dismissed: 3,
+  open: 0,
+  in_progress: 1,
+  resolved: 2,
+  dismissed: 3,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -118,7 +151,11 @@ const FUNNEL_ORDER = ['paid', 'sent', 'partial', 'overdue', 'draft'];
 
 function formatDate(dateStr: string | null | undefined): string {
   if (dateStr == null) return 'N/A';
-  try { return new Date(dateStr).toLocaleDateString('en-IN'); } catch { return dateStr; }
+  try {
+    return new Date(dateStr).toLocaleDateString('en-IN');
+  } catch {
+    return dateStr;
+  }
 }
 
 function getDaysAgo(dateStr: string): number {
@@ -127,13 +164,22 @@ function getDaysAgo(dateStr: string): number {
   return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function complaintStatusMeta(status: string): { variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; label: string; icon: React.ReactNode } {
+function complaintStatusMeta(status: string): {
+  variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+  label: string;
+  icon: React.ReactNode;
+} {
   switch (status) {
-    case 'open': return { variant: 'danger', label: 'Open', icon: <AlertTriangle className="h-3 w-3" /> };
-    case 'in_progress': return { variant: 'warning', label: 'In Progress', icon: <Clock className="h-3 w-3" /> };
-    case 'resolved': return { variant: 'success', label: 'Resolved', icon: <CheckCircle2 className="h-3 w-3" /> };
-    case 'dismissed': return { variant: 'neutral', label: 'Dismissed', icon: <CheckCircle2 className="h-3 w-3" /> };
-    default: return { variant: 'neutral', label: status, icon: null };
+    case 'open':
+      return { variant: 'danger', label: 'Open', icon: <AlertTriangle className="h-3 w-3" /> };
+    case 'in_progress':
+      return { variant: 'warning', label: 'In Progress', icon: <Clock className="h-3 w-3" /> };
+    case 'resolved':
+      return { variant: 'success', label: 'Resolved', icon: <CheckCircle2 className="h-3 w-3" /> };
+    case 'dismissed':
+      return { variant: 'neutral', label: 'Dismissed', icon: <CheckCircle2 className="h-3 w-3" /> };
+    default:
+      return { variant: 'neutral', label: status, icon: null };
   }
 }
 
@@ -232,12 +278,21 @@ export default function DashboardPage() {
   }
 
   // ── Derived Data ──────────────────────────────
-  const totalComplaints = stats.complaints.open + stats.complaints.inProgress + stats.complaints.resolved + stats.complaints.dismissed;
+  const totalComplaints =
+    stats.complaints.open +
+    stats.complaints.inProgress +
+    stats.complaints.resolved +
+    stats.complaints.dismissed;
   const activeComplaints = stats.complaints.open + stats.complaints.inProgress;
-  const resolvedRate = totalComplaints > 0 ? Math.round((stats.complaints.resolved / totalComplaints) * 100) : 0;
-  const collectionRate = stats.revenue.expected > 0 ? Math.round((stats.revenue.collected / stats.revenue.expected) * 100) : 0;
+  const resolvedRate =
+    totalComplaints > 0 ? Math.round((stats.complaints.resolved / totalComplaints) * 100) : 0;
+  const collectionRate =
+    stats.revenue.expected > 0
+      ? Math.round((stats.revenue.collected / stats.revenue.expected) * 100)
+      : 0;
   const serviceTotal = stats.services.operational + stats.services.degraded + stats.services.down;
-  const serviceHealthPct = serviceTotal > 0 ? Math.round((stats.services.operational / serviceTotal) * 100) : 100;
+  const serviceHealthPct =
+    serviceTotal > 0 ? Math.round((stats.services.operational / serviceTotal) * 100) : 100;
   const vacancyRate = Math.round(stats.occupancy.vacancyRate);
 
   // Revenue chart data
@@ -252,8 +307,10 @@ export default function DashboardPage() {
 
   // MoM delta: compare this month vs last month collected
   const momRevenueHistory = stats.revenueHistory;
-  const thisMonthCollected = momRevenueHistory.length > 0 ? momRevenueHistory[momRevenueHistory.length - 1].collected : 0;
-  const lastMonthCollected = momRevenueHistory.length > 1 ? momRevenueHistory[momRevenueHistory.length - 2].collected : 0;
+  const thisMonthCollected =
+    momRevenueHistory.length > 0 ? momRevenueHistory[momRevenueHistory.length - 1].collected : 0;
+  const lastMonthCollected =
+    momRevenueHistory.length > 1 ? momRevenueHistory[momRevenueHistory.length - 2].collected : 0;
   // Only show delta when there's a meaningful prior-month baseline
   const momDelta =
     lastMonthCollected > 0
@@ -270,15 +327,30 @@ export default function DashboardPage() {
 
   // Meal feedback averages
   const mealAvg = {
-    breakfast: stats.mealFeedbackTrend.length > 0
-      ? Math.round((stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) / stats.mealFeedbackTrend.length) * 10) / 10
-      : 0,
-    lunch: stats.mealFeedbackTrend.length > 0
-      ? Math.round((stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) / stats.mealFeedbackTrend.length) * 10) / 10
-      : 0,
-    dinner: stats.mealFeedbackTrend.length > 0
-      ? Math.round((stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) / stats.mealFeedbackTrend.length) * 10) / 10
-      : 0,
+    breakfast:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
+    lunch:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
+    dinner:
+      stats.mealFeedbackTrend.length > 0
+        ? Math.round(
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
+        : 0,
   };
 
   // Meal trend chart data
@@ -294,7 +366,7 @@ export default function DashboardPage() {
 
   // Complaints sorted by priority (open first)
   const sortedComplaints = [...stats.recent.complaints].sort(
-    (a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99)
+    (a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99),
   );
 
   // Complaint categories for donut chart
@@ -305,16 +377,19 @@ export default function DashboardPage() {
   }));
 
   // Payment funnel data
-  const paymentFunnelStages = FUNNEL_ORDER
-    .filter((key) => (stats.paymentFunnel?.[key]?.count ?? 0) > 0)
-    .map((key) => ({
-      label: key.charAt(0).toUpperCase() + key.slice(1),
-      value: stats.paymentFunnel?.[key]?.count ?? 0,
-      color: FUNNEL_COLORS[key] ?? chartTokens.barSecondary,
-    }));
+  const paymentFunnelStages = FUNNEL_ORDER.filter(
+    (key) => (stats.paymentFunnel?.[key]?.count ?? 0) > 0,
+  ).map((key) => ({
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    value: stats.paymentFunnel?.[key]?.count ?? 0,
+    color: FUNNEL_COLORS[key] ?? chartTokens.barSecondary,
+  }));
 
   const todayLabel = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 
   return (
@@ -347,12 +422,21 @@ export default function DashboardPage() {
             title="Occupancy"
             value={`${stats.occupancy.occupiedBeds}/${stats.occupancy.totalRooms}`}
             icon={<Users className="h-5 w-5" />}
-            trend={{ value: `${vacancyRate}%`, direction: vacancyRate < 20 ? 'up' : 'down', label: 'vacant' }}
+            trend={{
+              value: `${vacancyRate}%`,
+              direction: vacancyRate < 20 ? 'up' : 'down',
+              label: 'vacant',
+            }}
             variant="default"
             onClick={() => router.push('/tenants')}
           >
             <div className="mt-2">
-              <Sparkline data={occupancySparkline} width={100} height={20} color={chartTokens.brand} />
+              <Sparkline
+                data={occupancySparkline}
+                width={100}
+                height={20}
+                color={chartTokens.brand}
+              />
             </div>
           </StatCard>
         </motion.div>
@@ -361,12 +445,20 @@ export default function DashboardPage() {
             title="Collected (This Month)"
             value={`₹${stats.revenue.collected.toLocaleString()}`}
             icon={<IndianRupee className="h-5 w-5" />}
-            trend={{ value: `${collectionRate}%`, direction: collectionRate >= 80 ? 'up' : 'down', label: 'of target' }}
-            delta={momDelta != null ? {
-              value: `${momDelta >= 0 ? '+' : ''}${momDelta}%`,
-              direction: momDelta >= 0 ? 'up' : 'down',
-              label: 'vs last month',
-            } : undefined}
+            trend={{
+              value: `${collectionRate}%`,
+              direction: collectionRate >= 80 ? 'up' : 'down',
+              label: 'of target',
+            }}
+            delta={
+              momDelta != null
+                ? {
+                    value: `${momDelta >= 0 ? '+' : ''}${momDelta}%`,
+                    direction: momDelta >= 0 ? 'up' : 'down',
+                    label: 'vs last month',
+                  }
+                : undefined
+            }
             variant={collectionRate >= 80 ? 'success' : 'warning'}
           />
         </motion.div>
@@ -385,8 +477,18 @@ export default function DashboardPage() {
             title="Service Health"
             value={`${stats.services.operational}/${serviceTotal}`}
             icon={<Wifi className="h-5 w-5" />}
-            trend={{ value: `${serviceHealthPct}%`, direction: serviceHealthPct >= 90 ? 'up' : 'down', label: 'operational' }}
-            variant={stats.services.down > 0 ? 'danger' : stats.services.degraded > 0 ? 'warning' : 'success'}
+            trend={{
+              value: `${serviceHealthPct}%`,
+              direction: serviceHealthPct >= 90 ? 'up' : 'down',
+              label: 'operational',
+            }}
+            variant={
+              stats.services.down > 0
+                ? 'danger'
+                : stats.services.degraded > 0
+                  ? 'warning'
+                  : 'success'
+            }
             onClick={() => router.push('/services')}
           />
         </motion.div>
@@ -463,25 +565,37 @@ export default function DashboardPage() {
                     size={130}
                     label="Operational"
                     sublabel={`${stats.services.operational} of ${serviceTotal} up`}
-                    colorVar={serviceHealthPct === 100 ? '--color-success-500' : serviceHealthPct >= 70 ? '--color-warning-500' : '--color-danger-500'}
+                    colorVar={
+                      serviceHealthPct === 100
+                        ? '--color-success-500'
+                        : serviceHealthPct >= 70
+                          ? '--color-warning-500'
+                          : '--color-danger-500'
+                    }
                   />
                 </div>
 
                 <div className="mb-1 flex flex-wrap justify-center gap-2">
                   <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-success-50)] px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
-                    <span className="text-[11px] font-bold text-[color:var(--color-success-700)]">{stats.services.operational} Up</span>
+                    <span className="text-[11px] font-bold text-[color:var(--color-success-700)]">
+                      {stats.services.operational} Up
+                    </span>
                   </div>
                   {stats.services.degraded > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-warning-50)] px-3 py-1">
                       <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
-                      <span className="text-[11px] font-bold text-[color:var(--color-warning-700)]">{stats.services.degraded} Degraded</span>
+                      <span className="text-[11px] font-bold text-[color:var(--color-warning-700)]">
+                        {stats.services.degraded} Degraded
+                      </span>
                     </div>
                   )}
                   {stats.services.down > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-danger-50)] px-3 py-1">
                       <span className="h-2 w-2 rounded-full bg-[color:var(--color-danger-500)]" />
-                      <span className="text-[11px] font-bold text-[color:var(--color-danger-700)]">{stats.services.down} Down</span>
+                      <span className="text-[11px] font-bold text-[color:var(--color-danger-700)]">
+                        {stats.services.down} Down
+                      </span>
                     </div>
                   )}
                 </div>
@@ -496,9 +610,11 @@ export default function DashboardPage() {
         <Surface as="section" variant="card" padding="md">
           <SectionHeader
             title="Occupancy Trend"
-            subtitle={stats.occupancyHistory && stats.occupancyHistory.length > 0
-              ? 'Last 6 months — occupied vs total beds'
-              : 'Occupancy data will appear as history is collected'}
+            subtitle={
+              stats.occupancyHistory && stats.occupancyHistory.length > 0
+                ? 'Last 6 months — occupied vs total beds'
+                : 'Occupancy data will appear as history is collected'
+            }
             actionLabel="View Tenants"
             onAction={() => router.push('/tenants')}
           />
@@ -513,7 +629,9 @@ export default function DashboardPage() {
               data={stats.occupancyHistory.map((p) => ({ occupied: p.occupied, total: p.total }))}
               labels={stats.occupancyHistory.map((p) => {
                 const [y, m] = p.month.split('-');
-                return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', { month: 'short' });
+                return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', {
+                  month: 'short',
+                });
               })}
               height={220}
               lines={[
@@ -532,9 +650,11 @@ export default function DashboardPage() {
         <Surface as="section" variant="card" padding="md">
           <SectionHeader
             title="Service Health History"
-            subtitle={stats.serviceHistory && stats.serviceHistory.length > 0
-              ? 'Last 14 days of service status changes'
-              : 'Service status change tracking will appear here'}
+            subtitle={
+              stats.serviceHistory && stats.serviceHistory.length > 0
+                ? 'Last 14 days of service status changes'
+                : 'Service status change tracking will appear here'
+            }
             actionLabel="View Services"
             onAction={() => router.push('/services')}
           />
@@ -572,10 +692,7 @@ export default function DashboardPage() {
               onAction={() => router.push('/complaints')}
             />
             {totalComplaints === 0 ? (
-              <PanelEmpty
-                icon={<CheckCircle2 className="h-10 w-10" />}
-                title="No complaints yet"
-              />
+              <PanelEmpty icon={<CheckCircle2 className="h-10 w-10" />} title="No complaints yet" />
             ) : (
               <div className="flex items-center justify-center gap-6">
                 <GaugeChart
@@ -584,25 +701,50 @@ export default function DashboardPage() {
                   size={120}
                   label="Resolved"
                   sublabel={`${stats.complaints.resolved} of ${totalComplaints}`}
-                  colorVar={resolvedRate >= 70 ? '--color-success-500' : resolvedRate >= 40 ? '--color-warning-500' : '--color-danger-500'}
+                  colorVar={
+                    resolvedRate >= 70
+                      ? '--color-success-500'
+                      : resolvedRate >= 40
+                        ? '--color-warning-500'
+                        : '--color-danger-500'
+                  }
                 />
                 <div className="min-w-[140px] flex-1 space-y-3">
                   {[
                     { label: 'Open', count: stats.complaints.open, color: chartTokens.danger },
-                    { label: 'In Progress', count: stats.complaints.inProgress, color: chartTokens.warning },
-                    { label: 'Resolved', count: stats.complaints.resolved, color: chartTokens.success },
-                    { label: 'Dismissed', count: stats.complaints.dismissed, color: chartTokens.barSecondary },
+                    {
+                      label: 'In Progress',
+                      count: stats.complaints.inProgress,
+                      color: chartTokens.warning,
+                    },
+                    {
+                      label: 'Resolved',
+                      count: stats.complaints.resolved,
+                      color: chartTokens.success,
+                    },
+                    {
+                      label: 'Dismissed',
+                      count: stats.complaints.dismissed,
+                      color: chartTokens.barSecondary,
+                    },
                   ].map((item) => (
                     <div key={item.label}>
                       <div className="mb-1 flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">{item.label}</span>
-                        <span className="font-mono text-[11px] font-bold tabular-nums text-[color:var(--color-text-primary)]">{item.count}</span>
+                        <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">
+                          {item.label}
+                        </span>
+                        <span className="font-mono text-[11px] font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                          {item.count}
+                        </span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--chart-track)]">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
-                            width: totalComplaints > 0 ? `${(item.count / totalComplaints) * 100}%` : '0%',
+                            width:
+                              totalComplaints > 0
+                                ? `${(item.count / totalComplaints) * 100}%`
+                                : '0%',
                             backgroundColor: item.color,
                           }}
                         />
@@ -631,12 +773,7 @@ export default function DashboardPage() {
                 action={{ label: 'Create Invoice', onClick: () => router.push('/invoices/new') }}
               />
             ) : (
-              <FunnelChart
-                stages={paymentFunnelStages}
-                maxWidth={100}
-                barHeight={28}
-                barGap={8}
-              />
+              <FunnelChart stages={paymentFunnelStages} maxWidth={100} barHeight={28} barGap={8} />
             )}
           </Surface>
         </motion.div>
@@ -648,7 +785,11 @@ export default function DashboardPage() {
           <Surface as="section" variant="card" padding="md" className="h-full">
             <SectionHeader
               title="Complaint Categories"
-              subtitle={totalComplaints > 0 ? `Top ${complaintCategoryDonut.length} categories` : 'No complaints yet'}
+              subtitle={
+                totalComplaints > 0
+                  ? `Top ${complaintCategoryDonut.length} categories`
+                  : 'No complaints yet'
+              }
               actionLabel="View All"
               onAction={() => router.push('/complaints')}
             />
@@ -687,9 +828,13 @@ export default function DashboardPage() {
               <>
                 <LineChart
                   data={mealChartData}
-                  labels={mealChartLabels.length > 7
-                    ? mealChartLabels.filter((_, i) => i % Math.ceil(mealChartLabels.length / 6) === 0)
-                    : mealChartLabels}
+                  labels={
+                    mealChartLabels.length > 7
+                      ? mealChartLabels.filter(
+                          (_, i) => i % Math.ceil(mealChartLabels.length / 6) === 0,
+                        )
+                      : mealChartLabels
+                  }
                   height={140}
                   lines={[
                     { key: 'breakfast', color: chartTokens.warning, label: 'Breakfast' },
@@ -704,22 +849,25 @@ export default function DashboardPage() {
                     const score = mealAvg[meal];
                     const pct = (score / 5) * 100;
                     return (
-                      <div
-                        key={meal}
-                        className={clsx(surfaceNestedClass, 'p-3 text-center')}
-                      >
+                      <div key={meal} className={clsx(surfaceNestedClass, 'p-3 text-center')}>
                         <p className="text-[11px] font-semibold capitalize text-[color:var(--color-text-secondary)]">
                           {meal}
                         </p>
-                        <p className={clsx(
-                          'mt-1 text-xl font-bold tabular-nums',
-                          pct >= 60 ? 'text-[color:var(--color-success-600)]'
-                            : pct >= 30 ? 'text-[color:var(--color-warning-600)]'
-                            : 'text-[color:var(--color-danger-600)]',
-                        )}>
+                        <p
+                          className={clsx(
+                            'mt-1 text-xl font-bold tabular-nums',
+                            pct >= 60
+                              ? 'text-[color:var(--color-success-600)]'
+                              : pct >= 30
+                                ? 'text-[color:var(--color-warning-600)]'
+                                : 'text-[color:var(--color-danger-600)]',
+                          )}
+                        >
                           {score}
                         </p>
-                        <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">/ 5</p>
+                        <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+                          / 5
+                        </p>
                         <div className="mt-1 flex justify-center gap-0.5">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <svg
@@ -860,7 +1008,10 @@ export default function DashboardPage() {
                           c.status === 'open' && 'animate-pulse bg-[color:var(--color-danger-500)]',
                           c.status === 'in_progress' && 'bg-[color:var(--color-warning-500)]',
                           c.status === 'resolved' && 'bg-[color:var(--color-success-500)]',
-                          c.status !== 'open' && c.status !== 'in_progress' && c.status !== 'resolved' && 'bg-[color:var(--chart-bar-secondary)]',
+                          c.status !== 'open' &&
+                            c.status !== 'in_progress' &&
+                            c.status !== 'resolved' &&
+                            'bg-[color:var(--chart-bar-secondary)]',
                         )}
                       />
                       <div className="min-w-0 flex-1">
@@ -908,10 +1059,7 @@ export default function DashboardPage() {
               onAction={() => router.push('/enquiries')}
             />
             {stats.recent.enquiries.length === 0 ? (
-              <PanelEmpty
-                icon={<PhoneCall className="h-10 w-10" />}
-                title="No recent enquiries"
-              />
+              <PanelEmpty icon={<PhoneCall className="h-10 w-10" />} title="No recent enquiries" />
             ) : (
               <div className="space-y-2">
                 {stats.recent.enquiries.map((e) => (
@@ -941,7 +1089,13 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <StatusBadge
-                      variant={e.status === 'new' ? 'warning' : e.status === 'contacted' ? 'info' : 'success'}
+                      variant={
+                        e.status === 'new'
+                          ? 'warning'
+                          : e.status === 'contacted'
+                            ? 'info'
+                            : 'success'
+                      }
                       label={e.status.replace(/_/g, ' ')}
                     />
                   </div>
@@ -969,21 +1123,30 @@ export default function DashboardPage() {
                   date: c.createdAt,
                   title: `Complaint: ${c.title}`,
                   description: `${c.tenantId?.userId?.name ?? 'Unknown'} · ${c.category ?? 'General'}`,
-                  status: c.status === 'open' ? 'danger' as const
-                    : c.status === 'in_progress' ? 'warning' as const
-                    : c.status === 'resolved' ? 'success' as const
-                    : 'neutral' as const,
+                  status:
+                    c.status === 'open'
+                      ? ('danger' as const)
+                      : c.status === 'in_progress'
+                        ? ('warning' as const)
+                        : c.status === 'resolved'
+                          ? ('success' as const)
+                          : ('neutral' as const),
                 })),
                 ...stats.recent.enquiries.slice(0, 3).map((e) => ({
                   id: `enquiry-${e._id}`,
                   date: e.createdAt,
                   title: `Enquiry: ${e.name}`,
                   description: `${e.phone} · ${e.status.replace(/_/g, ' ')}`,
-                  status: e.status === 'new' ? 'info' as const
-                    : e.status === 'contacted' ? 'info' as const
-                    : 'success' as const,
+                  status:
+                    e.status === 'new'
+                      ? ('info' as const)
+                      : e.status === 'contacted'
+                        ? ('info' as const)
+                        : ('success' as const),
                 })),
-              ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8)}
+              ]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 8)}
               maxHeight={280}
             />
           </div>
@@ -991,10 +1154,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ── Quick Links Row ───────────────────────── */}
-      <motion.div
-        variants={fadeScaleIn}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-      >
+      <motion.div variants={fadeScaleIn} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: 'Tenants', icon: <Users className="h-4 w-4" />, href: '/tenants' },
           { label: 'Payments', icon: <CreditCard className="h-4 w-4" />, href: '/payments' },

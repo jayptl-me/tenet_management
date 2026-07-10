@@ -17,7 +17,11 @@ import { FormSection, FormGrid } from '@/components/ui/FormSection';
 function buildSchema(perFloorAmenities: { key: string; label: string; maxPerFloor?: number }[]) {
   const amenityFields: Record<string, z.ZodNumber> = {};
   for (const a of perFloorAmenities) {
-    amenityFields[a.key] = z.coerce.number().int().min(0, 'Must be >= 0').max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
+    amenityFields[a.key] = z.coerce
+      .number()
+      .int()
+      .min(0, 'Must be >= 0')
+      .max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
   }
   return z.object({
     label: z.string().min(1, 'Floor label is required'),
@@ -36,7 +40,8 @@ export default function NewFloorPage() {
   const [loadingDefs, setLoadingDefs] = useState(true);
 
   useEffect(() => {
-    api.get('app-config')
+    api
+      .get('app-config')
       .json<{ success: boolean; data: IAppConfig }>()
       .then((res) => {
         const defs = (res.data.amenityDefinitions ?? [])
@@ -117,10 +122,7 @@ export default function NewFloorPage() {
           />
         }
       >
-        <FormSection
-          title="Floor details"
-          description="Label, floor number, and room capacity"
-        >
+        <FormSection title="Floor details" description="Label, floor number, and room capacity">
           <FormGrid>
             <Input
               label="Floor label"

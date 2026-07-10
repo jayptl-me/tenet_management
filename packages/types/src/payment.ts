@@ -57,18 +57,22 @@ export interface IPaymentUtrSubmit {
 
 /** Populated list row shape returned by GET /payments */
 export interface IPaymentListItem extends Omit<IPayment, 'tenantId' | 'invoiceId'> {
-  tenantId: {
-    id?: string;
-    _id?: string;
-    userId?: { name?: string; email?: string; phone?: string };
-    roomId?: { roomNumber?: string; floorId?: string };
-  } | string;
-  invoiceId: {
-    id?: string;
-    _id?: string;
-    invoiceNumber?: string;
-    month?: string;
-    totalAmount?: number;
-    status?: string;
-  } | string;
+  tenantId:
+    | {
+        id?: string;
+        _id?: string;
+        userId?: { name?: string; email?: string; phone?: string };
+        roomId?: { roomNumber?: string; floorId?: string };
+      }
+    | string;
+  invoiceId:
+    | {
+        id?: string;
+        _id?: string;
+        invoiceNumber?: string;
+        month?: string;
+        totalAmount?: number;
+        status?: string;
+      }
+    | string;
 }

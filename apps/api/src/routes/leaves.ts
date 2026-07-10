@@ -69,6 +69,25 @@ leaves.post('/', authGuard, zValidator('json', createLeaveSchema), async (c) => 
     return badRequest(c, 'Tenant is not active', 'TENANT_INACTIVE');
   }
 
+  // Check for overlapping leave applications
+  const existingOverlap = await LeaveApplication.findOne({
+    tenantId: body.tenantId,
+    status: { $in: ['pending', 'approved'] },
+    $or: [{ fromDate: { $lte: body.toDate }, toDate: { $gte: body.fromDate } }],
+  });
+  if (existingOverlap) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'OVERLAPPING_LEAVE',
+          message: `You already have a ${existingOverlap.status} leave from ${existingOverlap.fromDate} to ${existingOverlap.toDate}. Please cancel it first before creating a new one.`,
+        },
+      },
+      409,
+    );
+  }
+
   // If user is a tenant, they can only create leaves for themselves
   if (authUser?.role === 'tenant') {
     const tenantUserId = (

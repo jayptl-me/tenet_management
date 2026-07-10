@@ -30,15 +30,13 @@ async function isValidServiceType(serviceType: string): Promise<boolean> {
   return definitions.some((d) => d.key === serviceType);
 }
 
-// ── Helper: get amenity definitions for response enrichment ──
-async function getAmenityDefinitions() {
-  const config = await AppConfig.findOne().select('amenityDefinitions').lean();
-  return config?.amenityDefinitions ?? [];
-}
-
 // ── Helper: attach complaint counts per service per floor (dynamic) ──
 async function enrichWithComplaintCounts(
-  services_list: Array<{ floorId?: { _id: string } | string; serviceType: string; [key: string]: unknown }>,
+  services_list: Array<{
+    floorId?: { _id: string } | string;
+    serviceType: string;
+    [key: string]: unknown;
+  }>,
 ): Promise<Array<Record<string, unknown>>> {
   if (services_list.length === 0) return services_list;
 
@@ -59,7 +57,10 @@ async function enrichWithComplaintCounts(
 
       const categories = serviceToCategory[svc.serviceType] ?? [svc.serviceType];
 
-      const roomIds = await Room.find({ floorId: new mongoose.Types.ObjectId(floorId) } as Record<string, unknown>).distinct('_id');
+      const roomIds = await Room.find({ floorId: new mongoose.Types.ObjectId(floorId) } as Record<
+        string,
+        unknown
+      >).distinct('_id');
       const floorComplaintCount = await Complaint.countDocuments({
         status: { $in: ['open', 'in_progress'] },
         category: { $in: categories },
@@ -119,6 +120,7 @@ services.get('/', authGuard, async (c) => {
     ServiceStatus.countDocuments(safeFilter(filter)),
   ]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched = await enrichWithComplaintCounts(data as any[]);
 
   return c.json({
@@ -133,10 +135,9 @@ services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
   const floorId = parseId(c.req.param('floorId'));
   if (!floorId) return badRequest(c, 'Invalid floor ID');
 
-  const services_list = await ServiceStatus.find(safeFilter({ floorId }))
-    .populate('floor')
-    .lean();
+  const services_list = await ServiceStatus.find(safeFilter({ floorId })).populate('floor').lean();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched = await enrichWithComplaintCounts(services_list as any[]);
   const totalRooms = await Room.countDocuments(safeFilter({ floorId, isActive: true }));
 
@@ -150,46 +151,66 @@ services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
 });
 
 // ── POST /services — create service status entry (admin) ──
-services.post('/', authGuard, adminOnly, zValidator('json', z.strictObject({
-  floorId: z.string().min(1, 'Floor is required'),
-  serviceType: z.string().min(1, 'Service type is required'),
-  status: z.enum(['operational', 'degraded', 'down']).default('operational'),
-  note: z.string().max(500).optional(),
-})), async (c) => {
-  const body = c.req.valid('json');
-  const user = c.get('user');
+services.post(
+  '/',
+  authGuard,
+  adminOnly,
+  zValidator(
+    'json',
+    z.strictObject({
+      floorId: z.string().min(1, 'Floor is required'),
+      serviceType: z.string().min(1, 'Service type is required'),
+      status: z.enum(['operational', 'degraded', 'down']).default('operational'),
+      note: z.string().max(500).optional(),
+    }),
+  ),
+  async (c) => {
+    const body = c.req.valid('json');
+    const user = c.get('user');
 
-  const validType = await isValidServiceType(body.serviceType);
-  if (!validType) {
-    return badRequest(c, 'Invalid service type. Must match an AppConfig amenity definition key.', 'INVALID_SERVICE_TYPE');
-  }
-
-  const { Floor } = await import('../models/floor.js');
-  const floor = await Floor.findById(body.floorId).lean();
-  if (!floor) {
-    return c.json({ success: false, error: { code: 'FLOOR_NOT_FOUND', message: 'Floor not found' } }, 400);
-  }
-
-  try {
-    const service = await ServiceStatus.create({
-      floorId: new mongoose.Types.ObjectId(body.floorId),
-      serviceType: body.serviceType,
-      status: body.status,
-      note: body.note ?? '',
-      lastUpdatedBy: new mongoose.Types.ObjectId(user.sub),
-      lastUpdatedAt: new Date(),
-    } as Record<string, unknown>);
-    const createdId = String((service as { _id?: unknown })._id ?? '');
-    const populated = await ServiceStatus.findById(createdId).populate('floor').lean();
-    return c.json({ success: true, data: populated }, 201);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create service status';
-    if (message.includes('duplicate') || (err as { code?: number })?.code === 11000) {
-      return badRequest(c, 'Service status already exists for this floor and type', 'DUPLICATE_SERVICE');
+    const validType = await isValidServiceType(body.serviceType);
+    if (!validType) {
+      return badRequest(
+        c,
+        'Invalid service type. Must match an AppConfig amenity definition key.',
+        'INVALID_SERVICE_TYPE',
+      );
     }
-    return badRequest(c, message);
-  }
-});
+
+    const { Floor } = await import('../models/floor.js');
+    const floor = await Floor.findById(body.floorId).lean();
+    if (!floor) {
+      return c.json(
+        { success: false, error: { code: 'FLOOR_NOT_FOUND', message: 'Floor not found' } },
+        400,
+      );
+    }
+
+    try {
+      const service = await ServiceStatus.create({
+        floorId: new mongoose.Types.ObjectId(body.floorId),
+        serviceType: body.serviceType,
+        status: body.status,
+        note: body.note ?? '',
+        lastUpdatedBy: new mongoose.Types.ObjectId(user.sub),
+        lastUpdatedAt: new Date(),
+      } as Record<string, unknown>);
+      const createdId = String((service as { _id?: unknown })._id ?? '');
+      const populated = await ServiceStatus.findById(createdId).populate('floor').lean();
+      return c.json({ success: true, data: populated }, 201);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create service status';
+      if (message.includes('duplicate') || (err as { code?: number })?.code === 11000) {
+        return badRequest(
+          c,
+          'Service status already exists for this floor and type',
+          'DUPLICATE_SERVICE',
+        );
+      }
+      return badRequest(c, message);
+    }
+  },
+);
 
 // ── PUT /services/:id — update service status (auth) ──
 services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (c) => {
@@ -231,24 +252,76 @@ services.get('/:id', authGuard, async (c) => {
   const service = await ServiceStatus.findById(id).populate('floor').lean();
   if (!service) return notFound(c, 'ServiceStatus');
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched = await enrichWithComplaintCounts([service as any]);
   return c.json({ success: true, data: enriched[0] });
 });
 
 // ── PUT /services/:id/full — full update (admin) ──
-services.put('/:id/full', authGuard, adminOnly, zValidator('json', z.strictObject({
-  serviceType: z.string().min(1).optional(),
-  status: z.enum(['operational', 'degraded', 'down']).optional(),
-  note: z.string().max(500).optional(),
-})), async (c) => {
-  const id = c.req.param('id');
-  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
-  const body = c.req.valid('json') as any;
-  const service = await ServiceStatus.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true })
-    .populate('floor').lean() as any;
-  if (!service) return notFound(c, 'Service');
-  return c.json({ success: true, data: service });
-});
+services.put(
+  '/:id/full',
+  authGuard,
+  adminOnly,
+  zValidator(
+    'json',
+    z.strictObject({
+      serviceType: z.string().min(1).optional(),
+      status: z.enum(['operational', 'degraded', 'down']).optional(),
+      note: z.string().max(500).optional(),
+    }),
+  ),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const body = c.req.valid('json') as any;
+
+    if (body.serviceType) {
+      const validType = await isValidServiceType(body.serviceType);
+      if (!validType) {
+        return badRequest(
+          c,
+          'Invalid service type. Must match an AppConfig amenity definition key.',
+          'INVALID_SERVICE_TYPE',
+        );
+      }
+    }
+
+    const service = await ServiceStatus.findById(id);
+    if (!service) return notFound(c, 'Service');
+
+    // ── Duplicate check: floorId + serviceType ──
+    if (body.serviceType !== undefined) {
+      const exists = await ServiceStatus.findOne(
+        safeFilter({
+          floorId: service.floorId,
+          serviceType: body.serviceType,
+          _id: { $ne: service._id },
+        }),
+      );
+      if (exists) {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'DUPLICATE_SERVICE',
+              message: 'A service status entry already exists for this floor and service type.',
+            },
+          },
+          409,
+        );
+      }
+    }
+
+    if (body.serviceType !== undefined) service.serviceType = body.serviceType;
+    if (body.status !== undefined) service.status = body.status;
+    if (body.note !== undefined) service.note = body.note;
+    await service.save();
+
+    const populated = await ServiceStatus.findById(service._id).populate('floor').lean();
+    return c.json({ success: true, data: populated });
+  },
+);
 
 // ── DELETE /services/:id — delete service (admin) ──
 services.delete('/:id', authGuard, adminOnly, async (c) => {

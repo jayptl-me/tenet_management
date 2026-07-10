@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { User, Phone, Home, Calendar, Clock, FileText, CheckCircle } from 'lucide-react';
+import { User, Phone, Home, Calendar, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -20,13 +20,8 @@ interface VisitorDetail {
   };
   expectedArrival?: string;
   actualArrival?: string;
-  checkIn?: string;
-  checkOut?: string;
-  departure?: string;
+  actualDeparture?: string;
   status: string;
-  approverName?: string;
-  approverRelation?: string;
-  notes?: string;
   createdAt: string;
 }
 
@@ -42,6 +37,10 @@ function formatDateTime(dateStr: string | null | undefined): string {
   } catch {
     return '—';
   }
+}
+
+function statusToDisplayLabel(status: string): string {
+  return status.replace(/_/g, ' ');
 }
 
 export default function VisitorDetailPage() {
@@ -86,7 +85,7 @@ export default function VisitorDetailPage() {
         visitor ? (
           <StatusBadge
             variant={statusToVariant(visitor.status)}
-            label={visitor.status.replace(/_/g, ' ')}
+            label={statusToDisplayLabel(visitor.status)}
           />
         ) : undefined
       }
@@ -141,18 +140,6 @@ export default function VisitorDetailPage() {
                     </span>
                   }
                 />
-                {visitor.approverName && (
-                  <DetailRow
-                    label="Approved By"
-                    value={
-                      <span className="inline-flex items-center gap-1">
-                        <CheckCircle className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                        {visitor.approverName}
-                        {visitor.approverRelation && ` (${visitor.approverRelation})`}
-                      </span>
-                    }
-                  />
-                )}
               </DetailList>
             </DetailCard>
           </div>
@@ -173,7 +160,7 @@ export default function VisitorDetailPage() {
                 value={
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                    {formatDateTime(visitor.checkIn || visitor.actualArrival)}
+                    {formatDateTime(visitor.actualArrival)}
                   </span>
                 }
               />
@@ -182,7 +169,7 @@ export default function VisitorDetailPage() {
                 value={
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                    {formatDateTime(visitor.checkOut || visitor.departure)}
+                    {formatDateTime(visitor.actualDeparture)}
                   </span>
                 }
               />
@@ -191,20 +178,12 @@ export default function VisitorDetailPage() {
                 value={
                   <StatusBadge
                     variant={statusToVariant(visitor.status)}
-                    label={visitor.status.replace(/_/g, ' ')}
+                    label={statusToDisplayLabel(visitor.status)}
                   />
                 }
               />
             </DetailList>
           </DetailCard>
-
-          {visitor.notes && (
-            <DetailCard title="Notes" icon={<FileText />}>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
-                {visitor.notes}
-              </p>
-            </DetailCard>
-          )}
         </div>
       )}
     </FormPage>

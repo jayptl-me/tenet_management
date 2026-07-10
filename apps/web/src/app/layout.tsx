@@ -11,14 +11,7 @@ export const metadata: Metadata = {
   },
   description:
     'Safe, comfortable, and well-managed paying guest accommodations with transparent billing, real-time updates, and zero hassle. Premium PG living for working professionals and students.',
-  keywords: [
-    'PG accommodation',
-    'paying guest',
-    'hostel',
-    'co-living',
-    'PG management',
-    'Apex PG',
-  ],
+  keywords: ['PG accommodation', 'paying guest', 'hostel', 'co-living', 'PG management', 'Apex PG'],
   authors: [{ name: 'Apex PG' }],
   creator: 'Apex PG',
   metadataBase: new URL('https://apexpg.com'),
@@ -65,7 +58,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" data-theme="saas" data-mode="light" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="h-full antialiased"
+      data-theme="saas"
+      data-mode="light"
+      suppressHydrationWarning
+    >
       <head />
       <body className="flex min-h-full flex-col">
         <AppProviders>

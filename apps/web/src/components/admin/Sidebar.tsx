@@ -249,8 +249,7 @@ export function Sidebar() {
       messFeedbackEnabled: flags?.messFeedbackEnabled ?? FEATURE_DEFAULTS.messFeedbackEnabled,
       visitorManagementEnabled:
         flags?.visitorManagementEnabled ?? FEATURE_DEFAULTS.visitorManagementEnabled,
-      guardianPortalEnabled:
-        flags?.guardianPortalEnabled ?? FEATURE_DEFAULTS.guardianPortalEnabled,
+      guardianPortalEnabled: flags?.guardianPortalEnabled ?? FEATURE_DEFAULTS.guardianPortalEnabled,
       noticeBoardEnabled: flags?.noticeBoardEnabled ?? FEATURE_DEFAULTS.noticeBoardEnabled,
     };
   }, [appConfig]);
@@ -259,9 +258,7 @@ export function Sidebar() {
   useEffect(() => {
     for (const section of navSections) {
       if (
-        section.items.some(
-          (item) => pathname === item.href || pathname.startsWith(item.href + '/'),
-        )
+        section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'))
       ) {
         setExpandedSections((prev) => new Set([...prev, section.id]));
         break;
@@ -282,23 +279,20 @@ export function Sidebar() {
   }, []);
 
   // Toggle pin for a nav item
-  const togglePin = useCallback(
-    (href: string) => {
-      setPinned((prev) => {
-        let next: string[];
-        if (prev.includes(href)) {
-          next = prev.filter((h) => h !== href);
-        } else if (prev.length >= MAX_PINNED) {
-          return prev; // max reached — don't add
-        } else {
-          next = [...prev, href];
-        }
-        savePinned(next);
-        return next;
-      });
-    },
-    [],
-  );
+  const togglePin = useCallback((href: string) => {
+    setPinned((prev) => {
+      let next: string[];
+      if (prev.includes(href)) {
+        next = prev.filter((h) => h !== href);
+      } else if (prev.length >= MAX_PINNED) {
+        return prev; // max reached — don't add
+      } else {
+        next = [...prev, href];
+      }
+      savePinned(next);
+      return next;
+    });
+  }, []);
 
   // Toggle sidebar collapse
   const toggleCollapsed = useCallback(() => {
@@ -341,23 +335,23 @@ export function Sidebar() {
     };
     return navSections
       .map((section) => {
-        const filteredItems = section.items.filter((item) => {
-          // Feature flag gate
-          if (item.featureFlag) {
-            const flagKey = item.featureFlag as keyof typeof features;
-            if (!features[flagKey]) return false;
-          }
-          // Search filter
-          if (q) {
-            return (
-              item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q)
-            );
-          }
-          return true;
-        }).map((item) => {
-          const count = badgeMap[item.href];
-          return count && count > 0 ? { ...item, badge: count } : item;
-        });
+        const filteredItems = section.items
+          .filter((item) => {
+            // Feature flag gate
+            if (item.featureFlag) {
+              const flagKey = item.featureFlag as keyof typeof features;
+              if (!features[flagKey]) return false;
+            }
+            // Search filter
+            if (q) {
+              return item.label.toLowerCase().includes(q) || item.href.toLowerCase().includes(q);
+            }
+            return true;
+          })
+          .map((item) => {
+            const count = badgeMap[item.href];
+            return count && count > 0 ? { ...item, badge: count } : item;
+          });
         return { ...section, items: filteredItems };
       })
       .filter((section) => section.items.length > 0);
@@ -376,7 +370,7 @@ export function Sidebar() {
       <>
         {/* Active indicator bar */}
         {isActive && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[color:var(--color-brand-500)]" />
         )}
 
         <span
@@ -422,17 +416,14 @@ export function Sidebar() {
               togglePin(item.href);
             }}
             className={clsx(
-              'absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--transition-duration)] rounded p-0.5',
+              'absolute right-1 rounded p-0.5 opacity-0 transition-opacity duration-[var(--transition-duration)] group-hover:opacity-100',
               isPinned
                 ? 'text-[color:var(--color-warning-500)]'
                 : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-warning-500)]',
             )}
             title={isPinned ? 'Unpin' : 'Pin to top'}
           >
-            <Star
-              className="h-3.5 w-3.5"
-              fill={isPinned ? 'currentColor' : 'none'}
-            />
+            <Star className="h-3.5 w-3.5" fill={isPinned ? 'currentColor' : 'none'} />
           </button>
         )}
       </div>
@@ -442,18 +433,18 @@ export function Sidebar() {
   const sidebarContent = (
     <nav
       className={clsx(
-        'flex h-full flex-col bg-[color:var(--color-surface-100)] border-r border-r-[color:var(--border-color)] transition-all duration-[var(--transition-duration-slow)]',
+        'flex h-full flex-col border-r border-r-[color:var(--border-color)] bg-[color:var(--color-surface-100)] transition-all duration-[var(--transition-duration-slow)]',
         collapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]',
       )}
     >
       {/* Brand */}
-      <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)] px-5 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:shadow-[var(--shadow-md)] group-hover:scale-105">
-            <span className="font-semibold text-white text-sm tracking-tight">A</span>
+      <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-5 py-4 backdrop-blur-[var(--glass-blur)]">
+        <Link href="/dashboard" className="group flex items-center gap-2.5">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
+            <span className="text-sm font-semibold tracking-tight text-white">A</span>
           </div>
           {!collapsed && (
-            <span className="font-semibold text-[color:var(--color-text-primary)] text-lg tracking-tight">
+            <span className="text-lg font-semibold tracking-tight text-[color:var(--color-text-primary)]">
               Apex PG
             </span>
           )}
@@ -469,7 +460,7 @@ export function Sidebar() {
 
       {/* Search — hidden when collapsed */}
       {!collapsed && (
-        <div className="px-3 pt-3 pb-1">
+        <div className="px-3 pb-1 pt-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
             <input
@@ -477,14 +468,14 @@ export function Sidebar() {
               placeholder="Search pages..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-[13px] font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] focus:border-[color:var(--color-brand-300)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-brand-300)]"
+              className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-[13px] font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-300)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-brand-300)]"
             />
           </div>
         </div>
       )}
 
       {/* Nav sections */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
+      <div className="flex-1 space-y-3 overflow-y-auto px-2 py-2">
         {/* Pinned section */}
         {!collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
           <div>
@@ -496,23 +487,18 @@ export function Sidebar() {
                 {pinnedItems.length}/{MAX_PINNED}
               </span>
             </div>
-            <div className="space-y-0.5 mt-1">
+            <div className="mt-1 space-y-0.5">
               {pinnedItems.map((item) => renderNavItem(item, true))}
             </div>
           </div>
         )}
 
         {collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
-          <div className="space-y-0.5">
-            {pinnedItems.map((item) => renderNavItem(item, false))}
-          </div>
+          <div className="space-y-0.5">{pinnedItems.map((item) => renderNavItem(item, false))}</div>
         )}
 
         {filteredSections.map((section) => {
           const isExpanded = expandedSections.has(section.id) || searchQuery.trim() !== '';
-          const hasActiveChild = section.items.some(
-            (item) => pathname === item.href || pathname.startsWith(item.href + '/'),
-          );
 
           return (
             <div key={section.id}>
@@ -543,7 +529,7 @@ export function Sidebar() {
                       animate="visible"
                       exit="hidden"
                       variants={collapse}
-                      className="space-y-0.5 mt-1"
+                      className="mt-1 space-y-0.5"
                     >
                       {section.items.map((item) => renderNavItem(item, true))}
                     </motion.div>
@@ -572,19 +558,15 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-t-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)] px-3 py-3 space-y-1">
+      <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-3 py-3 backdrop-blur-[var(--glass-blur)]">
         {/* Collapse toggle */}
         <button
           onClick={toggleCollapsed}
-          className="hidden lg:flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-[13px] font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-secondary)]"
+          className="hidden w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 text-[13px] font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-secondary)] lg:flex"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </span>
           {!collapsed && <span>Collapse</span>}
         </button>
@@ -627,7 +609,7 @@ export function Sidebar() {
 
         {/* User info */}
         {user && !collapsed && (
-          <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 mt-2">
+          <div className="mt-2 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2">
             <p className="truncate text-[12px] font-semibold text-[color:var(--color-text-primary)]">
               {user.name}
             </p>
@@ -644,7 +626,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed left-3 top-3 z-50 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)] lg:hidden"
+        className="hover:translate-[var(--hover-lift)] fixed left-3 top-3 z-50 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)] active:scale-[var(--active-press-scale)] lg:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Open sidebar"
       >
@@ -652,9 +634,7 @@ export function Sidebar() {
       </button>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-shrink-0 lg:flex">
-        {sidebarContent}
-      </aside>
+      <aside className="sticky top-0 hidden h-screen flex-shrink-0 lg:flex">{sidebarContent}</aside>
 
       {/* Mobile overlay */}
       <AnimatePresence>

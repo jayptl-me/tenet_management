@@ -43,6 +43,57 @@ const updateRoomSchema = z.strictObject({
   roomAmenities: z.array(roomAmenitySchema).optional(),
 });
 
+// ── Helpers ───────────────────────────────────────────────
+
+const BED_IDS = ['A', 'B', 'C', 'D'] as const;
+
+/**
+ * Rebuild the beds array when sharingType changes.
+ * Preserves occupied beds (with their tenantId), fills remaining
+ * slots with empty beds, and truncates excess if downsizing.
+ *
+ * Downsize safety: if occupied beds exceed the new sharing type,
+ * the update is rejected with an actionable error message.
+ */
+function rebuildBedsForSharingType(
+  existingBeds: Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }>,
+  newSharingType: number,
+): Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }> {
+  const occupied = existingBeds.filter((b) => b.isOccupied);
+  const slots = BED_IDS.slice(0, newSharingType);
+
+  // If downsizing would orphan occupied beds, throw — caller must handle
+  if (occupied.length > newSharingType) {
+    throw Object.assign(
+      new Error(
+        `Cannot change sharing type from ${existingBeds.length} to ${newSharingType}: ${occupied.length} bed(s) are still occupied. Check out tenants first.`,
+      ),
+      { code: 'BEDS_OCCUPIED_ON_DOWNSIZE' },
+    );
+  }
+
+  const beds: Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }> = [];
+  for (const bedId of slots) {
+    const existing = occupied.find((b) => b.bedId === bedId);
+    if (existing) {
+      beds.push({ ...existing });
+    } else {
+      beds.push({ bedId, isOccupied: false, tenantId: null });
+    }
+  }
+
+  // Preserve any occupied beds that don't fit the standard A/B/C/D pattern
+  // (should never happen, but guard against data corruption)
+  for (const b of occupied) {
+    if (!beds.some((nb) => nb.bedId === b.bedId)) {
+      beds.push({ ...b });
+    }
+  }
+
+  // Final truncation to exact sharing type count
+  return beds.slice(0, newSharingType);
+}
+
 // ── Router ───────────────────────────────────────────────
 
 const router = new Hono();
@@ -53,14 +104,17 @@ router.get('/', authGuard, async (c) => {
   const floorId = c.req.query('floorId');
   const sharingType = c.req.query('sharingType');
   const isActive = c.req.query('isActive');
+  const roomNumber = c.req.query('roomNumber');
 
   const filter: Record<string, unknown> = {};
   if (floorId) filter.floorId = floorId;
   if (sharingType) filter.sharingType = Number(sharingType);
   if (isActive !== undefined) filter.isActive = isActive === 'true';
+  if (roomNumber) filter.roomNumber = { $regex: roomNumber, $options: 'i' };
 
   const sortParam = c.req.query('sort') ?? '-createdAt';
-  const order = sortParam.startsWith('-') ? -1 : 1;
+  const orderParam = c.req.query('order') ?? 'desc';
+  const order = orderParam === 'asc' ? 1 : sortParam.startsWith('-') ? -1 : 1;
   const sortField = sortParam.startsWith('-') ? sortParam.slice(1) : sortParam;
   const sort: Record<string, 1 | -1> = { [sortField]: order };
 
@@ -191,6 +245,73 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
     }
   }
 
+  // If sharingType changes, rebuild beds array to match
+  if (body.sharingType !== undefined) {
+    const existingRoom = await Room.findById(id);
+    if (!existingRoom) return notFound(c, 'Room');
+
+    const oldSharingType = existingRoom.sharingType;
+    const newSharingType = body.sharingType;
+
+    if (oldSharingType !== newSharingType) {
+      try {
+        const rebuiltBeds = rebuildBedsForSharingType(
+          existingRoom.beds.map((b) => ({
+            bedId: b.bedId,
+            isOccupied: b.isOccupied,
+            tenantId: b.tenantId,
+          })),
+          newSharingType,
+        );
+
+        // Apply all changes atomically via findOneAndUpdate
+        // to prevent race conditions on concurrent sharingType changes.
+        // We must first validate via rebuildBedsForSharingType above
+        // (which throws on occupied downsize), then apply the update
+        // in a single atomic operation keyed on the current sharingType.
+        const updateData: Record<string, unknown> = {
+          sharingType: newSharingType,
+          beds: rebuiltBeds,
+          occupancyCount: rebuiltBeds.filter((b) => b.isOccupied).length,
+        };
+        if (body.roomNumber !== undefined) updateData.roomNumber = body.roomNumber;
+        if (body.floorId !== undefined) updateData.floorId = body.floorId;
+        if (body.monthlyRent !== undefined) updateData.monthlyRent = body.monthlyRent;
+        if (body.description !== undefined) updateData.description = body.description;
+        if (body.photos !== undefined) updateData.photos = body.photos;
+        if (body.isActive !== undefined) updateData.isActive = body.isActive;
+        if (body.roomAmenities !== undefined) updateData.roomAmenities = body.roomAmenities;
+
+        const updated = await Room.findOneAndUpdate(
+          { _id: id, sharingType: oldSharingType },
+          updateData,
+          { returnDocument: 'after', runValidators: true },
+        );
+        if (!updated) {
+          return conflict(
+            c,
+            'Room sharing type was changed by another admin. Please reload and try again.',
+            'CONCURRENT_MODIFICATION',
+          );
+        }
+        await updated.populate('floor');
+
+        return c.json({ success: true, data: updated });
+      } catch (err: unknown) {
+        const e = err as { code?: string; message?: string };
+        if (e?.code === 'BEDS_OCCUPIED_ON_DOWNSIZE') {
+          return conflict(
+            c,
+            e.message ?? 'Cannot reduce sharing type while beds are occupied',
+            'BEDS_OCCUPIED_ON_DOWNSIZE',
+          );
+        }
+        throw err;
+      }
+    }
+  }
+
+  // No sharingType change — standard partial update
   const room = await Room.findByIdAndUpdate(id, body, {
     returnDocument: 'after',
     runValidators: true,
@@ -208,21 +329,35 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid room ID');
 
-  // Check for active tenants in this room
-  const activeTenants = await Tenant.countDocuments({
+  // Check for ANY tenant references to this room (active + inactive)
+  const tenantCount = await Tenant.countDocuments({
     roomId: id,
-    isActive: true,
   } as Record<string, unknown>);
 
-  if (activeTenants > 0) {
+  if (tenantCount > 0) {
+    const activeCount = await Tenant.countDocuments({
+      roomId: id,
+      isActive: true,
+    } as Record<string, unknown>);
+    if (activeCount > 0) {
+      return conflict(
+        c,
+        `Cannot delete room: ${activeCount} active tenant(s) still occupy this room. Please check them out first.`,
+        'ACTIVE_TENANTS',
+      );
+    }
     return conflict(
       c,
-      `Cannot delete room: ${activeTenants} active tenant(s) still occupy this room. Please check them out first.`,
-      'ACTIVE_TENANTS',
+      `Cannot delete room: ${tenantCount} tenant record(s) still reference this room (including checked-out tenants). Please delete or reassign those tenants first.`,
+      'TENANT_REFERENCES',
     );
   }
 
-  const room = await Room.findByIdAndUpdate(id, { isActive: false }, { returnDocument: 'after' }).lean();
+  const room = await Room.findByIdAndUpdate(
+    id,
+    { isActive: false },
+    { returnDocument: 'after' },
+  ).lean();
 
   if (!room) return notFound(c, 'Room');
 

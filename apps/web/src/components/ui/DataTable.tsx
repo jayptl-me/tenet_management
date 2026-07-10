@@ -51,10 +51,7 @@ function SkeletonRow({ columns }: { columns: number }) {
   return (
     <tr>
       {Array.from({ length: columns }).map((_, j) => (
-        <td
-          key={j}
-          className="border-b border-b-[color:var(--border-color)] px-4 py-3"
-        >
+        <td key={j} className="border-b border-b-[color:var(--border-color)] px-4 py-3">
           <ShimmerBlock className="h-4 w-3/4" />
         </td>
       ))}
@@ -110,11 +107,9 @@ export function DataTable<T>({
 
       {/* Mobile Card View (only when mobileCardRenderer is provided) */}
       {mobileCardRenderer && (
-        <div className="block md:hidden space-y-3">
+        <div className="block space-y-3 md:hidden">
           {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <MobileCardSkeleton key={`mobile-skel-${i}`} />
-            ))
+            Array.from({ length: 3 }).map((_, i) => <MobileCardSkeleton key={`mobile-skel-${i}`} />)
           ) : data.length === 0 ? (
             <div className="rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
               {emptyState ?? (
@@ -135,7 +130,8 @@ export function DataTable<T>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={clsx(
                   'rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
-                  onRowClick && 'cursor-pointer hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
+                  onRowClick &&
+                    'cursor-pointer hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
                 )}
               >
                 {mobileCardRenderer(row)}
@@ -146,10 +142,12 @@ export function DataTable<T>({
       )}
 
       {/* Desktop Table (hidden on mobile when card view is active) */}
-      <div className={clsx(
-        'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
-        mobileCardRenderer && 'hidden md:block',
-      )}>
+      <div
+        className={clsx(
+          'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
+          mobileCardRenderer && 'hidden md:block',
+        )}
+      >
         <table className="w-full border-collapse bg-[color:var(--color-card-bg)]">
           <thead>
             <tr className="bg-[color:var(--color-field-bg)]">

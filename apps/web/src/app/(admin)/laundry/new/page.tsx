@@ -41,7 +41,9 @@ export default function NewLaundrySlotPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.post('laundry-slots', { json: data }).json<{ success: boolean; data: { _id: string } }>();
+      await api
+        .post('laundry-slots', { json: data })
+        .json<{ success: boolean; data: { _id: string } }>();
       router.push('/laundry');
     } catch {
       setSubmitError('Failed to create laundry slot. Please try again.');
@@ -86,8 +88,18 @@ export default function NewLaundrySlotPage() {
           />
 
           <FormGrid>
-            <Input label="Slot Date" type="date" error={errors.slotDate?.message} {...register('slotDate')} />
-            <Input label="Slot Time" type="time" error={errors.slotTime?.message} {...register('slotTime')} />
+            <Input
+              label="Slot Date"
+              type="date"
+              error={errors.slotDate?.message}
+              {...register('slotDate')}
+            />
+            <Input
+              label="Slot Time"
+              type="time"
+              error={errors.slotTime?.message}
+              {...register('slotTime')}
+            />
           </FormGrid>
 
           <FormGrid>

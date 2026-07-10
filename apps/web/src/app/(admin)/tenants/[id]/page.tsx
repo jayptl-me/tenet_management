@@ -155,9 +155,7 @@ export default function TenantDetailPage() {
     <FormPage
       title={tenant?.user?.name ?? 'Tenant Details'}
       description={
-        tenant
-          ? `Bed ${tenant.bedId} · Room ${tenant.room?.roomNumber ?? 'N/A'}`
-          : undefined
+        tenant ? `Bed ${tenant.bedId} · Room ${tenant.room?.roomNumber ?? 'N/A'}` : undefined
       }
       backHref="/tenants"
       isLoading={isLoading}
@@ -238,19 +236,11 @@ export default function TenantDetailPage() {
 
             <DetailCard title="Room" icon={<Home />}>
               <DetailList>
-                <DetailRow
-                  label="Room Number"
-                  value={tenant.room?.roomNumber ?? 'N/A'}
-                />
-                <DetailRow
-                  label="Floor"
-                  value={tenant.room?.floor?.label ?? 'N/A'}
-                />
+                <DetailRow label="Room Number" value={tenant.room?.roomNumber ?? 'N/A'} />
+                <DetailRow label="Floor" value={tenant.room?.floor?.label ?? 'N/A'} />
                 <DetailRow
                   label="Bed ID"
-                  value={
-                    <span className="font-mono text-sm font-bold">{tenant.bedId}</span>
-                  }
+                  value={<span className="font-mono text-sm font-bold">{tenant.bedId}</span>}
                 />
               </DetailList>
             </DetailCard>
@@ -259,18 +249,9 @@ export default function TenantDetailPage() {
           {(tenant.emergencyContact?.name || tenant.emergencyContact?.phone) && (
             <DetailCard title="Emergency Contact" icon={<Shield />} variant="warning">
               <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={tenant.emergencyContact.name ?? '—'}
-                />
-                <DetailRow
-                  label="Phone"
-                  value={tenant.emergencyContact.phone ?? '—'}
-                />
-                <DetailRow
-                  label="Relation"
-                  value={tenant.emergencyContact.relation ?? '—'}
-                />
+                <DetailRow label="Name" value={tenant.emergencyContact.name ?? '—'} />
+                <DetailRow label="Phone" value={tenant.emergencyContact.phone ?? '—'} />
+                <DetailRow label="Relation" value={tenant.emergencyContact.relation ?? '—'} />
               </DetailList>
             </DetailCard>
           )}
@@ -379,12 +360,8 @@ export default function TenantDetailPage() {
                         </span>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-2 text-[12px] font-semibold text-[color:var(--color-text-muted)]">
-                        <div>
-                          Electricity: {formatCurrency(duesData.electricityDues)}
-                        </div>
-                        <div>
-                          Deposit Held: {formatCurrency(duesData.depositHeld)}
-                        </div>
+                        <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
+                        <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
                         <div>Pending Payments: {duesData.pendingPayments}</div>
                       </div>
                     </div>
@@ -415,12 +392,11 @@ export default function TenantDetailPage() {
                         </div>
                       </div>
                     )}
-                    {duesData.totalDue === 0 &&
-                      duesData.unpaidInvoices.length === 0 && (
-                        <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-[13px] font-semibold text-[color:var(--color-success-700)]">
-                          No pending dues. Safe to checkout.
-                        </div>
-                      )}
+                    {duesData.totalDue === 0 && duesData.unpaidInvoices.length === 0 && (
+                      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-[13px] font-semibold text-[color:var(--color-success-700)]">
+                        No pending dues. Safe to checkout.
+                      </div>
+                    )}
                   </div>
                 ) : null}
                 <div className="mt-6 flex justify-end gap-3 border-t border-[color:var(--border-color)] pt-4">

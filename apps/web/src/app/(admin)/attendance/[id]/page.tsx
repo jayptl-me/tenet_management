@@ -129,12 +129,8 @@ export default function AttendanceDetailPage() {
   const statusVariant = record ? statusToVariant(record.status) : 'neutral';
   const tenantName = record?.tenant?.user?.name ?? 'N/A';
   const roomNumber = record?.tenant?.room?.roomNumber ?? 'N/A';
-  const methodIcon = record?.method
-    ? methodIcons[record.method]
-    : <Monitor className="h-4 w-4" />;
-  const methodLabel = record?.method
-    ? (methodLabels[record.method] ?? record.method)
-    : 'Unknown';
+  const methodIcon = record?.method ? methodIcons[record.method] : <Monitor className="h-4 w-4" />;
+  const methodLabel = record?.method ? (methodLabels[record.method] ?? record.method) : 'Unknown';
 
   return (
     <FormPage
@@ -145,10 +141,7 @@ export default function AttendanceDetailPage() {
       maxWidth="4xl"
       badge={
         record ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={record.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} />
         ) : undefined
       }
       actions={
@@ -237,10 +230,7 @@ export default function AttendanceDetailPage() {
                 <DetailRow
                   label="Status"
                   value={
-                    <StatusBadge
-                      variant={statusVariant}
-                      label={record.status.replace(/_/g, ' ')}
-                    />
+                    <StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} />
                   }
                 />
                 <DetailRow label="Check-in Time" value={formatTime(record.checkInTime)} />

@@ -92,6 +92,22 @@ laundry.post('/', authGuard, zValidator('json', createSlotSchema), async (c) => 
   const body = c.req.valid('json');
   const user = c.get('user');
 
+  // Check feature flag
+  const { AppConfig } = await import('../models/appConfig.js');
+  const config = await AppConfig.findOne().select('features').lean();
+  if (config && !config.features.laundryEnabled) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FEATURE_DISABLED',
+          message: 'Laundry booking is currently disabled by the administrator.',
+        },
+      },
+      403,
+    );
+  }
+
   // If tenant, force their own tenantId
   if (user.role === 'tenant') {
     const { Tenant } = await import('../models/tenant.js');
@@ -100,14 +116,32 @@ laundry.post('/', authGuard, zValidator('json', createSlotSchema), async (c) => 
     body.tenantId = String((tenant as unknown as Record<string, unknown>)._id);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slot: any = await LaundrySlot.create(body as any);
-  const populated = await LaundrySlot.findById(String((slot as any)._id))
-    .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
-    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
-    .lean();
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const slot: any = await LaundrySlot.create(body as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const populated = await LaundrySlot.findById(String((slot as any)._id))
+      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
+      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+      .lean();
 
-  return c.json({ success: true, data: populated }, 201);
+    return c.json({ success: true, data: populated }, 201);
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code === 11000) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'DUPLICATE_SLOT',
+            message: 'A laundry slot is already booked for this date and time.',
+          },
+        },
+        409,
+      );
+    }
+    throw err;
+  }
 });
 
 // ── PUT /laundry-slots/:id ──────────────────────────────
@@ -116,16 +150,49 @@ laundry.put('/:id', authGuard, adminOnly, zValidator('json', updateSlotSchema), 
   if (!id) return badRequest(c, 'Invalid slot ID');
 
   const body = c.req.valid('json');
-  const slot = await LaundrySlot.findByIdAndUpdate(id, body, {
-    returnDocument: 'after',
-    runValidators: true,
-  })
+  const slot = await LaundrySlot.findById(id);
+  if (!slot) return notFound(c, 'Laundry slot');
+
+  // ── Duplicate check: tenantId + slotDate + slotTime ──
+  if (body.slotDate !== undefined || body.slotTime !== undefined) {
+    const checkDate = body.slotDate ?? slot.slotDate;
+    const checkTime = body.slotTime ?? slot.slotTime;
+    const exists = await LaundrySlot.findOne(
+      safeFilter({
+        tenantId: slot.tenantId,
+        slotDate: checkDate,
+        slotTime: checkTime,
+        _id: { $ne: slot._id },
+      }),
+    );
+    if (exists) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'DUPLICATE_SLOT',
+            message: 'A laundry slot already exists for this tenant, date and time.',
+          },
+        },
+        409,
+      );
+    }
+  }
+
+  if (body.status !== undefined) slot.status = body.status;
+  if (body.slotDate !== undefined) slot.slotDate = body.slotDate;
+  if (body.slotTime !== undefined) slot.slotTime = body.slotTime;
+  if (body.items !== undefined) slot.items = body.items;
+  if (body.notes !== undefined) slot.notes = body.notes;
+
+  await slot.save();
+
+  const populated = await LaundrySlot.findById(slot._id)
     .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
     .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
     .lean();
 
-  if (!slot) return notFound(c, 'Laundry slot');
-  return c.json({ success: true, data: slot });
+  return c.json({ success: true, data: populated });
 });
 
 // ── DELETE /laundry-slots/:id ───────────────────────────

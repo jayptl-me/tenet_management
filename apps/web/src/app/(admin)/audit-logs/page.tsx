@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ScrollText } from 'lucide-react';
+import { ScrollText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Select } from '@/components/ui/Select';
@@ -22,7 +22,10 @@ interface AuditLogRow {
   timestamp: string;
 }
 
-const ACTION_LABELS: Record<string, { label: string; variant: 'info' | 'success' | 'danger' | 'warning' | 'neutral' }> = {
+const ACTION_LABELS: Record<
+  string,
+  { label: string; variant: 'info' | 'success' | 'danger' | 'warning' | 'neutral' }
+> = {
   create: { label: 'Created', variant: 'success' },
   update: { label: 'Updated', variant: 'info' },
   delete: { label: 'Deleted', variant: 'danger' },
@@ -77,10 +80,15 @@ export default function AuditLogsPage() {
   }, [fetchLogs]);
 
   const formatAction = (action: string) => {
-    return ACTION_LABELS[action]?.label ?? action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return (
+      ACTION_LABELS[action]?.label ??
+      action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    );
   };
 
-  const formatActionVariant = (action: string): 'info' | 'success' | 'danger' | 'warning' | 'neutral' => {
+  const formatActionVariant = (
+    action: string,
+  ): 'info' | 'success' | 'danger' | 'warning' | 'neutral' => {
     return ACTION_LABELS[action]?.variant ?? 'neutral';
   };
 
@@ -95,8 +103,12 @@ export default function AuditLogsPage() {
       header: 'Resource',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">{row.resource}</span>
-          <p className="font-mono text-[10px] text-[color:var(--color-text-muted)]">{row.resourceId?.slice(0, 12)}…</p>
+          <span className="font-semibold text-[color:var(--color-text-primary)]">
+            {row.resource}
+          </span>
+          <p className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
+            {row.resourceId?.slice(0, 12)}…
+          </p>
         </div>
       ),
     },
@@ -137,17 +149,16 @@ export default function AuditLogsPage() {
     {
       header: 'IP',
       accessor: (row) => (
-        <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">{row.ip ?? '—'}</span>
+        <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">
+          {row.ip ?? '—'}
+        </span>
       ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Audit Logs"
-        description="Track all admin actions across the system"
-      />
+      <PageHeader title="Audit Logs" description="Track all admin actions across the system" />
 
       <ErrorBanner message={error} />
 
@@ -168,7 +179,10 @@ export default function AuditLogsPage() {
             { value: 'export', label: 'Export' },
           ]}
           value={actionFilter}
-          onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setActionFilter(e.target.value);
+            setPage(1);
+          }}
           className="max-w-[200px]"
         />
         <Select
@@ -188,7 +202,10 @@ export default function AuditLogsPage() {
             { value: 'guardian', label: 'Guardian' },
           ]}
           value={resourceFilter}
-          onChange={(e) => { setResourceFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setResourceFilter(e.target.value);
+            setPage(1);
+          }}
           className="max-w-[200px]"
         />
       </div>
@@ -203,7 +220,10 @@ export default function AuditLogsPage() {
           perPage,
           total,
           onPageChange: setPage,
-          onPerPageChange: (pp) => { setPerPage(pp); setPage(1); },
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
         }}
         emptyState={
           <EmptyState
@@ -215,7 +235,10 @@ export default function AuditLogsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <StatusBadge variant={formatActionVariant(row.action)} label={formatAction(row.action)} />
+              <StatusBadge
+                variant={formatActionVariant(row.action)}
+                label={formatAction(row.action)}
+              />
               <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">
                 {new Date(row.timestamp).toLocaleDateString('en-IN', {
                   day: '2-digit',
@@ -226,7 +249,9 @@ export default function AuditLogsPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-[color:var(--color-text-muted)]">
-              <span className="font-semibold text-[color:var(--color-text-primary)]">{row.resource}</span>
+              <span className="font-semibold text-[color:var(--color-text-primary)]">
+                {row.resource}
+              </span>
               <span className="font-mono text-[10px]">{row.resourceId?.slice(0, 12)}…</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-[color:var(--color-text-muted)]">

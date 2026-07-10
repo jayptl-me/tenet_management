@@ -155,9 +155,7 @@ export function ServiceStatusIndicator({
   const getLabel = (serviceType: string): string => {
     const def = definitions.find((d) => d.key === serviceType);
     if (def) return def.label;
-    return serviceType
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return serviceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   // Resolve icon dynamically
@@ -180,9 +178,7 @@ export function ServiceStatusIndicator({
       } else if (showOnlyStatusLabel) {
         // Default: only show amenities with showAsStatusLabel=true AND isPerFloor=true
         const statusLabelKeys = new Set(
-          definitions
-            .filter((d) => d.showAsStatusLabel && d.isPerFloor)
-            .map((d) => d.key),
+          definitions.filter((d) => d.showAsStatusLabel && d.isPerFloor).map((d) => d.key),
         );
         if (statusLabelKeys.size > 0) {
           filtered = filtered.filter((s) => statusLabelKeys.has(s.serviceType));
@@ -219,9 +215,7 @@ export function ServiceStatusIndicator({
               ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
               : 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]'
         }`}
-        title={displayServices
-          .map((s) => `${getLabel(s.serviceType)}: ${s.status}`)
-          .join(', ')}
+        title={displayServices.map((s) => `${getLabel(s.serviceType)}: ${s.status}`).join(', ')}
       >
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full ${

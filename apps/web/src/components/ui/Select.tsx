@@ -31,12 +31,16 @@ export interface SelectProps extends Omit<
   hint?: string;
   options: SelectOption[];
   placeholder?: string;
+  leftIcon?: React.ReactNode;
 }
 
 // ── Component ──────────────────────────────────────────
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, hint, options, placeholder, className, id, ...props }, ref) => {
+  (
+    { label, error, helperText, hint, options, placeholder, leftIcon, className, id, ...props },
+    ref,
+  ) => {
     const selectId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -51,12 +55,18 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         )}
 
         <div className="relative">
+          {leftIcon && (
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+              {leftIcon}
+            </span>
+          )}
           <select
             ref={ref}
             id={selectId}
             className={clsx(
               fieldControlBase,
-              'appearance-none pr-9 cursor-pointer',
+              'cursor-pointer appearance-none pr-9',
+              leftIcon && 'pl-9',
               // Native option menus inherit OS chrome; keep field colors for closed state
               '[&>option]:bg-[color:var(--color-card-bg)] [&>option]:text-[color:var(--color-text-primary)]',
               error ? fieldControlBorderError : fieldControlBorderOk,

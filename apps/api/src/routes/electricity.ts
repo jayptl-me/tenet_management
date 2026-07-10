@@ -13,11 +13,7 @@ import { generateSingleInvoice } from '../services/invoice.service.js';
 import { logger } from '../lib/logger.js';
 
 // ── Cast helpers ────────────────────────────────────────
-type FindFn = (filter: Record<string, unknown>) => Promise<unknown[]>;
-type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
 type CountFn = (filter: Record<string, unknown>) => Promise<number>;
-const billFind = ElectricityBill.find as unknown as FindFn;
-const billFindOne = ElectricityBill.findOne.bind(ElectricityBill) as unknown as FindOneFn;
 const billCountDocs = ElectricityBill.countDocuments.bind(ElectricityBill) as unknown as CountFn;
 
 const electricity = new Hono();
@@ -147,8 +143,8 @@ electricity.put('/:id', authGuard, adminOnly, zValidator('json', updateBillSchem
   const bill = await ElectricityBill.findById(id);
   if (!bill) return notFound(c, 'Electricity bill');
 
-  if (bill.status === 'distributed') {
-    return badRequest(c, 'Distributed bills cannot be edited', 'BILL_LOCKED');
+  if (bill.status === 'distributed' || bill.status === 'finalized') {
+    return badRequest(c, 'Finalized and distributed bills cannot be edited', 'BILL_LOCKED');
   }
 
   if (body.month !== undefined) bill.month = body.month;
@@ -167,7 +163,9 @@ electricity.put('/:id', authGuard, adminOnly, zValidator('json', updateBillSchem
       }
     }
     bill.roomEntries = body.roomEntries.map((e) => ({
-      roomId: new mongoose.Types.ObjectId(e.roomId) as unknown as typeof bill.roomEntries[0]['roomId'],
+      roomId: new mongoose.Types.ObjectId(
+        e.roomId,
+      ) as unknown as (typeof bill.roomEntries)[0]['roomId'],
       previousReading: e.previousReading,
       currentReading: e.currentReading,
       ratePerUnit: e.ratePerUnit,
@@ -299,7 +297,11 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
             if (openPending) {
               openPending.amount = residual;
               await openPending.save();
-            } else if (residual > 0.01 && existing.status !== 'paid' && existing.status !== 'cancelled') {
+            } else if (
+              residual > 0.01 &&
+              existing.status !== 'paid' &&
+              existing.status !== 'cancelled'
+            ) {
               type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
               const paymentCreate = Payment.create as unknown as CreateFn;
               await paymentCreate({

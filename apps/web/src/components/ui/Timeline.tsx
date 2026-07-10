@@ -48,7 +48,7 @@ export function Timeline({
 
   if (events.length === 0) {
     return (
-      <div className={clsx('text-center py-8', className)}>
+      <div className={clsx('py-8 text-center', className)}>
         <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
           No events recorded
         </p>
@@ -62,19 +62,18 @@ export function Timeline({
       style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}
     >
       {/* Vertical line */}
-      <div className="absolute left-[11px] top-1 bottom-1 w-0.5 rounded-full bg-[color:var(--color-surface-200)]" />
+      <div className="absolute bottom-1 left-[11px] top-1 w-0.5 rounded-full bg-[color:var(--color-surface-200)]" />
 
       <div className="space-y-4">
-        {events.map((event, idx) => {
+        {events.map((event) => {
           const dotColor = statusDot[event.status ?? 'neutral'] ?? statusDot.neutral;
-          const isLast = idx === events.length - 1;
 
           return (
             <div key={event.id} className="relative flex gap-4 pl-7">
               {/* Dot on the timeline */}
               <span
                 className={clsx(
-                  'absolute left-[7px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-[color:var(--color-surface-100)] flex-shrink-0 z-10',
+                  'absolute left-[7px] top-1.5 z-10 h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-[color:var(--color-surface-100)]',
                   dotColor,
                 )}
               />

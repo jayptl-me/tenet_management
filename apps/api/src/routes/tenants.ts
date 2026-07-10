@@ -11,6 +11,11 @@ import { Complaint } from '../models/complaint.js';
 import { Invoice } from '../models/invoice.js';
 import { Notification } from '../models/notification.js';
 import { LeaveApplication } from '../models/leaveApplication.js';
+import { Visitor } from '../models/visitor.js';
+import { Guardian } from '../models/guardian.js';
+import { LaundrySlot } from '../models/laundrySlot.js';
+import { MealFeedback } from '../models/mealFeedback.js';
+import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import {
@@ -27,7 +32,6 @@ import { logger } from '../lib/logger.js';
 import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
-type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
 type CreateArrFn = (
   docs: Record<string, unknown>[],
   opts?: Record<string, unknown>,
@@ -67,7 +71,22 @@ const createTenantSchema = z.strictObject({
 const updateTenantSchema = z.strictObject({
   monthlyRent: z.number().min(1000).max(50000).optional(),
   depositPaid: z.number().min(0).optional(),
+  isActive: z.boolean().optional(),
+  bedId: z.enum(['A', 'B', 'C', 'D']).optional(),
+  roomId: z.string().min(1).optional(),
+  moveInDate: z.string().optional(),
   emergencyContact: emergencyContactSchema.optional(),
+  user: z
+    .strictObject({
+      name: z.string().trim().min(2).max(100).optional(),
+      email: z.string().email().max(255).toLowerCase().trim().optional(),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\+91[6-9]\d{9}$/, 'Must be +91XXXXXXXXXX format')
+        .optional(),
+    })
+    .optional(),
 });
 
 // ── Router ───────────────────────────────────────────────
@@ -77,6 +96,34 @@ const router = new Hono();
 // ── POST / — create tenant with full transaction (admin only)
 router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), async (c) => {
   const body = c.req.valid('json');
+
+  // Pre-check duplicate email/phone for friendly errors
+  const [emailExists, phoneExists] = await Promise.all([
+    User.exists({ email: body.email }),
+    User.exists({ phone: body.phone }),
+  ]);
+  if (emailExists) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'DUPLICATE_EMAIL', message: 'A user with this email already exists.' },
+      },
+      409,
+    );
+  }
+  if (phoneExists) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'DUPLICATE_PHONE',
+          message: 'A user with this phone number already exists.',
+        },
+      },
+      409,
+    );
+  }
+
   const passwordHash = crypto.randomBytes(8).toString('hex');
   const session = await mongoose.startSession();
 
@@ -287,19 +334,186 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
   const body = c.req.valid('json');
-  const tenant = await Tenant.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true })
-    .populate('user')
-    .populate('room')
-    .lean();
+  const adminId = c.get('user').sub;
 
+  const tenant = await Tenant.findById(id);
   if (!tenant) return notFound(c, 'Tenant');
-  return c.json({ success: true, data: tenant });
+
+  // Track room/bed changes for audit
+  const oldRoomId = String(tenant.roomId);
+  const oldBedId = tenant.bedId;
+
+  // Update direct tenant fields
+  const typedTenant = tenant as unknown as Record<string, unknown>;
+  const directFields = ['monthlyRent', 'depositPaid', 'isActive', 'bedId'] as const;
+  for (const field of directFields) {
+    if (body[field] !== undefined) {
+      typedTenant[field] = body[field];
+    }
+  }
+
+  if (body.moveInDate !== undefined) {
+    tenant.moveInDate = new Date(body.moveInDate);
+  }
+
+  if (body.emergencyContact !== undefined) {
+    tenant.emergencyContact = {
+      ...tenant.emergencyContact,
+      ...body.emergencyContact,
+    };
+  }
+
+  const tenantIdStr = String(tenant._id);
+
+  // Handle room transfer
+  if (body.roomId && body.roomId !== String(tenant.roomId)) {
+    const newRoom = await Room.findById(body.roomId);
+    if (!newRoom) return badRequest(c, 'New room not found', 'ROOM_NOT_FOUND');
+    if (!newRoom.isActive) return badRequest(c, 'New room is not active', 'ROOM_INACTIVE');
+
+    // Free old bed
+    const oldRoom = await Room.findById(tenant.roomId);
+    if (oldRoom) {
+      const oldBed = oldRoom.beds.find((b) => b.bedId === tenant.bedId);
+      if (oldBed) {
+        oldBed.isOccupied = false;
+        oldBed.tenantId = null;
+      }
+      oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
+      await oldRoom.save();
+    }
+
+    // Reserve new bed
+    const newBedId = body.bedId ?? tenant.bedId;
+    const newBed = newRoom.beds.find((b) => b.bedId === newBedId);
+    if (!newBed) return badRequest(c, 'Bed not found in new room', 'BED_NOT_FOUND');
+    if (newBed.isOccupied && String(newBed.tenantId ?? '') !== tenantIdStr) {
+      return badRequest(c, 'Bed is already occupied', 'BED_OCCUPIED');
+    }
+
+    newBed.isOccupied = true;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    newBed.tenantId = tenant._id as any;
+    newRoom.markModified('beds');
+    newRoom.occupancyCount = newRoom.beds.filter((b) => b.isOccupied).length;
+
+    await newRoom.save();
+
+    tenant.roomId = body.roomId as unknown as mongoose.Schema.Types.ObjectId;
+    tenant.bedId = newBedId;
+  } else if (body.bedId && body.bedId !== tenant.bedId) {
+    // Same room, different bed
+    const currentRoom = await Room.findById(tenant.roomId);
+    if (currentRoom) {
+      const oldBed = currentRoom.beds.find((b) => b.bedId === tenant.bedId);
+      if (oldBed) {
+        oldBed.isOccupied = false;
+        oldBed.tenantId = null;
+      }
+      const newBed = currentRoom.beds.find((b) => b.bedId === body.bedId);
+      if (newBed) {
+        if (newBed.isOccupied && String(newBed.tenantId ?? '') !== tenantIdStr) {
+          return badRequest(c, 'Target bed is already occupied', 'BED_OCCUPIED');
+        }
+        newBed.isOccupied = true;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        newBed.tenantId = tenant._id as any;
+      }
+      currentRoom.occupancyCount = currentRoom.beds.filter((b) => b.isOccupied).length;
+      await currentRoom.save();
+    }
+    tenant.bedId = body.bedId;
+  }
+
+  // Update user details if provided
+  if (body.user) {
+    const userFields: Record<string, string | undefined> = {};
+    if (body.user.name) userFields.name = body.user.name;
+    if (body.user.email) userFields.email = body.user.email;
+    if (body.user.phone) userFields.phone = body.user.phone;
+    if (Object.keys(userFields).length > 0) {
+      await User.findByIdAndUpdate(tenant.userId, userFields);
+    }
+  }
+
+  await tenant.save();
+
+  // Write audit log for room/bed transfers
+  const newRoomId = body.roomId ?? oldRoomId;
+  const newBedId = body.bedId ?? oldBedId;
+  if (oldRoomId !== String(newRoomId) || oldBedId !== newBedId) {
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      await writeAuditLog({
+        userId: adminId,
+        action: 'update',
+        resource: 'tenant',
+        resourceId: id,
+        details: {
+          roomTransfer: oldRoomId !== String(newRoomId),
+          bedSwap: oldBedId !== newBedId,
+          fromRoomId: oldRoomId,
+          toRoomId: String(body.roomId ?? tenant.roomId),
+          fromBedId: oldBedId,
+          toBedId: newBedId,
+        },
+      });
+    } catch {
+      // Audit log failure should not block the tenant update
+    }
+  }
+
+  const populatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+
+  return c.json({ success: true, data: populatedTenant });
 });
 
 // ── POST /:id/checkout — checkout tenant (admin only)
 router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  // Check for unpaid invoices before allowing checkout
+  const unpaidCount = await Invoice.countDocuments(
+    safeFilter({
+      tenantId: id,
+      status: { $in: ['sent', 'partial', 'overdue'] },
+    }),
+  );
+  if (unpaidCount > 0) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'UNPAID_INVOICES',
+          message: `Tenant has ${unpaidCount} unpaid invoice(s). Please clear all dues before checkout.`,
+        },
+      },
+      409,
+    );
+  }
+
+  // Check for unverified/overdue payments that would block checkout
+  const unresolvedPayments = await Payment.countDocuments(
+    safeFilter({
+      tenantId: id,
+      status: { $in: ['pending_verification', 'overdue'] },
+    }),
+  );
+  if (unresolvedPayments > 0) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'UNRESOLVED_PAYMENTS',
+          message: `Tenant has ${unresolvedPayments} unresolved payment(s). Please verify or cancel them before checkout.`,
+        },
+      },
+      409,
+    );
+  }
 
   const session = await mongoose.startSession();
 
@@ -342,6 +556,61 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   }
 });
 
+// ── POST /:id/reinstate — reinstate a checked-out tenant (admin only)
+router.post('/:id/reinstate', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      const tenant = await Tenant.findById(id).session(session);
+      if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+      if (tenant.isActive) throw new AppError('Tenant is already active', 400, 'ALREADY_ACTIVE');
+
+      const room = await Room.findById(tenant.roomId).session(session);
+      if (!room) throw new AppError('Original room not found', 404, 'ROOM_NOT_FOUND');
+      if (!room.isActive)
+        throw new AppError('Original room is no longer active', 400, 'ROOM_INACTIVE');
+
+      const bed = room.beds.find((b) => b.bedId === tenant.bedId);
+      if (!bed) throw new AppError('Original bed not found in room', 404, 'BED_NOT_FOUND');
+      if (bed.isOccupied) {
+        throw new AppError(
+          `Bed ${tenant.bedId} is now occupied by another tenant. Change bed assignment first.`,
+          409,
+          'BED_OCCUPIED',
+        );
+      }
+
+      bed.isOccupied = true;
+      bed.tenantId = tenant._id as unknown as Schema.Types.ObjectId;
+      room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
+      await room.save({ session });
+
+      tenant.isActive = true;
+      tenant.moveOutDate = null;
+      await tenant.save({ session });
+
+      await User.findByIdAndUpdate(tenant.userId, { isActive: true }, { session });
+    });
+
+    const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+    return c.json({ success: true, data: updatedTenant });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return c.json(
+        { success: false, error: { code: err.code, message: err.message } },
+        err.status as 400 | 404 | 409,
+      );
+    }
+    throw err;
+  } finally {
+    session.endSession();
+  }
+});
+
 // ── POST /:id/documents — upload KYC documents (Aadhaar, photo)
 router.post('/:id/documents', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
@@ -368,7 +637,9 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
 
     const file = body?.file as File | undefined;
     if (!file || !(file instanceof File)) {
-      throw new ValidationError('A file is required. Use multipart/form-data with field name "file".');
+      throw new ValidationError(
+        'A file is required. Use multipart/form-data with field name "file".',
+      );
     }
 
     // Validate file type and size
@@ -376,9 +647,7 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      throw new ValidationError(
-        'Invalid file type. Allowed: JPEG, PNG, WebP, PDF.',
-      );
+      throw new ValidationError('Invalid file type. Allowed: JPEG, PNG, WebP, PDF.');
     }
 
     if (file.size > MAX_SIZE) {
@@ -388,28 +657,23 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
     // Build Cloudinary upload form
     const uploadForm = new FormData();
     uploadForm.append('file', file);
-    uploadForm.append(
-      'public_id',
-      `tenants/${id}/${docType}_${Date.now()}`,
-    );
+    uploadForm.append('public_id', `tenants/${id}/${docType}_${Date.now()}`);
     uploadForm.append('folder', `tenet_pg/tenants/${id}`);
     uploadForm.append('upload_preset', ''); // Use unsigned upload or API key
 
     const cloudName = env.CLOUDINARY_CLOUD_NAME;
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      {
-        method: 'POST',
-        body: uploadForm,
-        headers: {
-          Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
-        },
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: uploadForm,
+      headers: {
+        Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
       },
-    );
+    });
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      const errMsg = (errData as { error?: { message?: string } })?.error?.message ?? 'Upload failed';
+      const errMsg =
+        (errData as { error?: { message?: string } })?.error?.message ?? 'Upload failed';
       logger.error({ tenantId: id, docType, cloudinaryError: errMsg }, 'Cloudinary upload failed');
       throw new AppError(
         `Document upload failed: ${errMsg}`,
@@ -439,10 +703,7 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
     }
     await tenant.save();
 
-    logger.info(
-      { tenantId: id, docType, url: result.secure_url },
-      'Tenant document uploaded',
-    );
+    logger.info({ tenantId: id, docType, url: result.secure_url }, 'Tenant document uploaded');
 
     return c.json({
       success: true,
@@ -479,16 +740,66 @@ router.get('/:id/complaints', authGuard, async (c) => {
   return c.json({ success: true, data: complaints });
 });
 
-// ── DELETE /:id — delete tenant (admin only)
+// ── DELETE /:id — delete tenant with full cascade (admin only)
 router.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
   const session = await mongoose.startSession();
   try {
+    const deletedCounts: Record<string, number> = {};
+
     await session.withTransaction(async () => {
       const tenant = await Tenant.findById(id).session(session);
       if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+
+      const tenantIdStr = String(tenant._id);
+
+      // Cascade-delete all child entities
+      const paymentResult = await Payment.deleteMany(safeFilter({ tenantId: tenantIdStr })).session(
+        session,
+      );
+      deletedCounts.payments = paymentResult.deletedCount;
+
+      const complaintResult = await Complaint.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.complaints = complaintResult.deletedCount;
+
+      const invoiceResult = await Invoice.deleteMany(safeFilter({ tenantId: tenantIdStr })).session(
+        session,
+      );
+      deletedCounts.invoices = invoiceResult.deletedCount;
+
+      const visitorResult = await Visitor.deleteMany(safeFilter({ tenantId: tenantIdStr })).session(
+        session,
+      );
+      deletedCounts.visitors = visitorResult.deletedCount;
+
+      const guardianResult = await Guardian.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.guardians = guardianResult.deletedCount;
+
+      const laundryResult = await LaundrySlot.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.laundrySlots = laundryResult.deletedCount;
+
+      const mealFeedbackResult = await MealFeedback.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.mealFeedbacks = mealFeedbackResult.deletedCount;
+
+      const attendanceResult = await AttendanceRecord.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.attendanceRecords = attendanceResult.deletedCount;
+
+      const leaveResult = await LeaveApplication.deleteMany(
+        safeFilter({ tenantId: tenantIdStr }),
+      ).session(session);
+      deletedCounts.leaveApplications = leaveResult.deletedCount;
 
       // Free the bed
       const room = await Room.findById(tenant.roomId).session(session);
@@ -502,14 +813,29 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
         await room.save({ session });
       }
 
-      // Deactivate user
-      await User.findByIdAndUpdate(tenant.userId, { isActive: false }, { session });
+      // Clear user's uniqueness fields so they can be re-added later
+      const userResult = await User.findByIdAndUpdate(
+        tenant.userId,
+        {
+          isActive: false,
+          email: `deleted:${Date.now()}:${Date.now()}`,
+          phone: `deleted:${Date.now()}:${Date.now()}`,
+        },
+        { session },
+      );
+      if (userResult) deletedCounts.user = 1;
 
       // Remove tenant record
       await Tenant.findByIdAndDelete(id, { session });
+      deletedCounts.tenant = 1;
+
+      logger.info({ tenantId: id, deletedCounts }, 'Tenant and children cascade-deleted');
     });
 
-    return c.json({ success: true, data: { message: 'Tenant deleted' } });
+    return c.json({
+      success: true,
+      data: { message: 'Tenant and associated records deleted', deletedCounts },
+    });
   } catch (err: unknown) {
     if (err instanceof AppError) {
       return c.json(
@@ -541,7 +867,13 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
   if (!tenant.isActive) {
     return c.json({
       success: true,
-      data: { totalDue: 0, unpaidInvoices: [], electricityDues: 0, depositHeld: tenant.depositPaid, checkedOut: true },
+      data: {
+        totalDue: 0,
+        unpaidInvoices: [],
+        electricityDues: 0,
+        depositHeld: tenant.depositPaid,
+        checkedOut: true,
+      },
     });
   }
 
@@ -569,7 +901,10 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
     // Check line items for electricity charges
     const invDoc = inv as unknown as { lineItems?: Array<{ description: string; amount: number }> };
     const lines = invDoc.lineItems || [];
-    return sum + lines.filter((li) => /electricity/i.test(li.description)).reduce((s, li) => s + li.amount, 0);
+    return (
+      sum +
+      lines.filter((li) => /electricity/i.test(li.description)).reduce((s, li) => s + li.amount, 0)
+    );
   }, 0);
 
   const totalDue = Math.max(invoiceTotal, paymentDue);
@@ -601,7 +936,9 @@ router.get('/:id/activity', authGuard, async (c) => {
   const events: Array<Record<string, unknown>> = [];
 
   // 1. Tenant move-in event
-  const tenant = await Tenant.findById(id).select('moveInDate createdAt isActive moveOutDate').lean();
+  const tenant = await Tenant.findById(id)
+    .select('moveInDate createdAt isActive moveOutDate')
+    .lean();
   if (tenant) {
     events.push({
       id: `movein-${String(tenant._id)}`,
@@ -674,10 +1011,7 @@ router.get('/:id/activity', authGuard, async (c) => {
 
   // 5. Notifications received (notices/announcements targeted)
   const notifications = await Notification.find({
-    $or: [
-      { targetType: 'all' },
-      { targetIds: id },
-    ],
+    $or: [{ targetType: 'all' }, { targetIds: id }],
     type: { $in: ['announcement', 'welcome'] },
   })
     .select('title body sentAt type')

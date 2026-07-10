@@ -167,21 +167,14 @@ export default function ComplaintDetailPage() {
       maxWidth="4xl"
       badge={
         complaint ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={complaint.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={complaint.status.replace(/_/g, ' ')} />
         ) : undefined
       }
     >
       {complaint && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <DetailCard
-              title="Complaint Details"
-              icon={<AlertCircle />}
-              className="lg:col-span-2"
-            >
+            <DetailCard title="Complaint Details" icon={<AlertCircle />} className="lg:col-span-2">
               <DetailList>
                 <DetailRow
                   label="Category"
@@ -189,9 +182,7 @@ export default function ComplaintDetailPage() {
                 />
                 <DetailRow
                   label="Severity"
-                  value={
-                    <StatusBadge variant={severityVariant} label={complaint.severity} />
-                  }
+                  value={<StatusBadge variant={severityVariant} label={complaint.severity} />}
                 />
                 <DetailRow
                   label="Status"
@@ -232,14 +223,8 @@ export default function ComplaintDetailPage() {
 
             <DetailCard title="Reported By" icon={<User />}>
               <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={complaint.tenant?.user?.name ?? 'N/A'}
-                />
-                <DetailRow
-                  label="Room"
-                  value={complaint.tenant?.room?.roomNumber ?? 'N/A'}
-                />
+                <DetailRow label="Name" value={complaint.tenant?.user?.name ?? 'N/A'} />
+                <DetailRow label="Room" value={complaint.tenant?.room?.roomNumber ?? 'N/A'} />
                 {complaint.tenant?.user?.email && (
                   <DetailRow label="Email" value={complaint.tenant.user.email} />
                 )}
@@ -271,12 +256,7 @@ export default function ComplaintDetailPage() {
                 {...register('adminNotes')}
               />
               <div className="flex justify-end border-t border-[color:var(--border-color)] pt-4">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={isSaving}
-                  loading={isSaving}
-                >
+                <Button type="submit" variant="primary" disabled={isSaving} loading={isSaving}>
                   <Save className="h-4 w-4" />
                   Save Changes
                 </Button>

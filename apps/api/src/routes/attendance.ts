@@ -96,32 +96,54 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
 
   const date = today();
 
+  // Check-in window: 5 AM to 11 PM server time
+  const currentHour = new Date().getHours();
+  if (currentHour < 5 || currentHour >= 23) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'CHECKIN_WINDOW_CLOSED',
+          message: 'Check-in is only available between 5 AM and 11 PM.',
+        },
+      },
+      400,
+    );
+  }
+
   // Check if already recorded today
   const existing = await AttendanceRecord.findOne(safeFilter({ tenantId: body.tenantId, date }));
   if (existing) {
     return badRequest(c, 'Attendance already recorded for today', 'ALREADY_RECORDED');
   }
 
-  const record = await attendanceCreate({
-    tenantId: body.tenantId,
-    date,
-    checkIn: new Date(),
-    checkOut: null,
-    status: 'present',
-    method: body.method,
-    recordedBy: authUser?.role === 'admin' ? authUser.sub : null,
-  });
+  try {
+    const record = await attendanceCreate({
+      tenantId: body.tenantId,
+      date,
+      checkIn: new Date(),
+      checkOut: null,
+      status: 'present',
+      method: body.method,
+      recordedBy: authUser?.role === 'admin' ? authUser.sub : null,
+    });
 
-  return c.json(
-    { success: true, data: mapRecord(record as unknown as Record<string, unknown>) },
-    201,
-  );
+    return c.json(
+      { success: true, data: mapRecord(record as unknown as Record<string, unknown>) },
+      201,
+    );
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code === 11000) {
+      return badRequest(c, 'Attendance already recorded for today (concurrent request).', 'ALREADY_RECORDED');
+    }
+    throw err;
+  }
 });
 
 // ── POST /attendance/check-out — tenant self check-out ──
 attendance.post('/check-out', authGuard, zValidator('json', checkOutSchema), async (c) => {
   const body = c.req.valid('json');
-  const authUser = c.get('user');
   const date = today();
 
   const record = await AttendanceRecord.findOne(safeFilter({ tenantId: body.tenantId, date }));

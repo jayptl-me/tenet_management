@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, ClipboardCheck } from 'lucide-react';
+import { Plus, ClipboardCheck } from 'lucide-react';
 import { api } from '@/lib/api';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
-import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
 interface AttendanceRow {
@@ -32,6 +33,7 @@ export default function AttendancePage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
@@ -44,6 +46,7 @@ export default function AttendancePage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
+      if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await api.get(`attendance?${params.toString()}`).json<{
@@ -58,7 +61,7 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, statusFilter]);
+  }, [page, perPage, search, statusFilter]);
 
   useEffect(() => {
     fetchRecords();
@@ -79,20 +82,61 @@ export default function AttendancePage() {
   };
 
   const columns: DataTableColumn<AttendanceRow>[] = [
-    { header: 'Tenant', accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.tenant?.user?.name ?? 'N/A'}</span> },
+    {
+      header: 'Tenant',
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          {row.tenant?.user?.name ?? 'N/A'}
+        </span>
+      ),
+    },
     { header: 'Room', accessor: (row) => row.tenant?.room?.roomNumber ?? 'N/A' },
-    { header: 'Date', accessor: (row) => new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
-    { header: 'Status', accessor: (row) => <StatusBadge variant={statusToVariant(row.status)} label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'} /> },
-    { header: 'Check In', accessor: (row) => row.checkInTime ? new Date(row.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—' },
-    { header: 'Check Out', accessor: (row) => row.checkOutTime ? new Date(row.checkOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—' },
+    {
+      header: 'Date',
+      accessor: (row) =>
+        new Date(row.date).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+    },
+    {
+      header: 'Status',
+      accessor: (row) => (
+        <StatusBadge
+          variant={statusToVariant(row.status)}
+          label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+        />
+      ),
+    },
+    {
+      header: 'Check In',
+      accessor: (row) =>
+        row.checkInTime
+          ? new Date(row.checkInTime).toLocaleTimeString('en-IN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '—',
+    },
+    {
+      header: 'Check Out',
+      accessor: (row) =>
+        row.checkOutTime
+          ? new Date(row.checkOutTime).toLocaleTimeString('en-IN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '—',
+    },
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}`); }} className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="View"><Eye className="h-3 w-3" /></button>
-          <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}/edit`); }} className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Edit"><Pencil className="h-3 w-3" /></button>
-          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }} className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors" title="Delete"><Trash2 className="h-3 w-3" /></button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/attendance/${row._id}`)}
+          onEdit={() => router.push(`/attendance/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -112,7 +156,30 @@ export default function AttendancePage() {
       />
       <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Select options={[{ value: '', label: 'All Statuses' }, { value: 'present', label: 'Present' }, { value: 'absent', label: 'Absent' }, { value: 'on_leave', label: 'On Leave' }, { value: 'late', label: 'Late' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[200px]" />
+        <Input
+          placeholder="Search by tenant name..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-xs"
+        />
+        <Select
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'present', label: 'Present' },
+            { value: 'absent', label: 'Absent' },
+            { value: 'on_leave', label: 'On Leave' },
+            { value: 'late', label: 'Late' },
+          ]}
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[200px]"
+        />
       </div>
       <DataTable
         columns={columns}
@@ -120,7 +187,16 @@ export default function AttendancePage() {
         keyExtractor={(row: AttendanceRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/attendance/${row._id}`)}
-        pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: setPage,
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
         emptyState={
           <EmptyState
             icon={<ClipboardCheck className="h-12 w-12" />}
@@ -132,29 +208,56 @@ export default function AttendancePage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
-              <StatusBadge variant={statusToVariant(row.status)} label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'} />
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+              />
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <span>{row.tenant?.room?.roomNumber ?? 'N/A'}</span>
-              <span>{new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-              {row.checkInTime && <span>In: {new Date(row.checkInTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
-              {row.checkOutTime && <span>Out: {new Date(row.checkOutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+              <span>
+                {new Date(row.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+              </span>
+              {row.checkInTime && (
+                <span>
+                  In:{' '}
+                  {new Date(row.checkInTime).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
+              {row.checkOutTime && (
+                <span>
+                  Out:{' '}
+                  {new Date(row.checkOutTime).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/attendance/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <TableActions
+                onView={() => router.push(`/attendance/${row._id}`)}
+                onEdit={() => router.push(`/attendance/${row._id}/edit`)}
+                showDelete={false}
+              />
             </div>
           </div>
         )}
       />
-      <ConfirmModal open={!!deleteTarget} title="Delete Attendance Record" message="Are you sure you want to delete this attendance record? This action cannot be undone." loading={deleting} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Attendance Record"
+        message="Are you sure you want to delete this attendance record? This action cannot be undone."
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

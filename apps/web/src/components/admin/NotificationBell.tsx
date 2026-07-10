@@ -114,22 +114,22 @@ export function NotificationBell() {
   if (!isAuthenticated) return null;
 
   const typeIcons: Record<string, React.ReactNode> = {
-    payment_reminder: <Bell className="h-4 w-4 text-warning-500" />,
-    payment_verified: <Check className="h-4 w-4 text-success-500" />,
-    complaint_update: <MessageSquare className="h-4 w-4 text-brand-500" />,
-    announcement: <Megaphone className="h-4 w-4 text-brand-500" />,
-    service_update: <Wrench className="h-4 w-4 text-warning-500" />,
-    electricity_bill: <Zap className="h-4 w-4 text-danger-500" />,
-    welcome: <User className="h-4 w-4 text-success-500" />,
-    emergency: <AlertTriangle className="h-4 w-4 text-danger-500" />,
-    meal_feedback: <Utensils className="h-4 w-4 text-brand-500" />,
+    payment_reminder: <Bell className="h-4 w-4 text-[color:var(--color-warning-500)]" />,
+    payment_verified: <Check className="h-4 w-4 text-[color:var(--color-success-500)]" />,
+    complaint_update: <MessageSquare className="h-4 w-4 text-[color:var(--color-brand-500)]" />,
+    announcement: <Megaphone className="h-4 w-4 text-[color:var(--color-brand-500)]" />,
+    service_update: <Wrench className="h-4 w-4 text-[color:var(--color-warning-500)]" />,
+    electricity_bill: <Zap className="h-4 w-4 text-[color:var(--color-danger-500)]" />,
+    welcome: <User className="h-4 w-4 text-[color:var(--color-success-500)]" />,
+    emergency: <AlertTriangle className="h-4 w-4 text-[color:var(--color-danger-500)]" />,
+    meal_feedback: <Utensils className="h-4 w-4 text-[color:var(--color-brand-500)]" />,
   };
 
   const typeColors: Record<string, string> = {
-    emergency: 'bg-danger-100 text-danger-800',
-    payment_verified: 'bg-success-100 text-success-800',
-    payment_reminder: 'bg-warning-100 text-warning-800',
-    welcome: 'bg-brand-100 text-brand-800',
+    emergency: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)]',
+    payment_verified: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)]',
+    payment_reminder: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-800)]',
+    welcome: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)]',
   };
 
   return (
@@ -139,9 +139,9 @@ export function NotificationBell() {
         className="relative rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-2 shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-field-bg)] active:scale-[var(--active-press-scale)]"
         aria-label="Notifications"
       >
-        <Bell className="text-surface-700 h-5 w-5" />
+        <Bell className="h-5 w-5 text-[color:var(--color-surface-700)]" />
         {unreadCount > 0 && (
-          <span className="bg-danger-500 absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-1 font-mono text-[10px] font-bold text-white shadow-[var(--shadow-button)]">
+          <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}

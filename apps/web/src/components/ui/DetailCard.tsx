@@ -55,14 +55,10 @@ const headerBorder: Record<DetailCardVariant, string> = {
 };
 
 const iconTone: Record<DetailCardVariant, string> = {
-  default:
-    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
-  warning:
-    'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-  danger:
-    'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-  success:
-    'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
+  default: 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
+  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
+  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
+  success: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
   info: 'bg-[color:var(--color-info-100)] text-[color:var(--color-info-700)]',
 };
 
@@ -131,9 +127,7 @@ export function DetailRow({
         className,
       )}
     >
-      <dt className="text-xs font-medium text-[color:var(--color-text-secondary)]">
-        {label}
-      </dt>
+      <dt className="text-xs font-medium text-[color:var(--color-text-secondary)]">{label}</dt>
       <dd className="text-sm font-semibold text-[color:var(--color-text-primary)] sm:text-right">
         {value ?? '—'}
       </dd>

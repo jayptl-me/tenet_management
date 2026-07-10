@@ -29,7 +29,7 @@ interface ResourceSelectProps<T extends Record<string, unknown> = Record<string,
   placeholder?: string;
   className?: string;
   /** Param name to use as the value from fetched data */
-  valueKey?: keyof T & string | string;
+  valueKey?: (keyof T & string) | string;
   /** Param name or function to derive the label */
   labelKey?: (keyof T & string) | string | ((item: T) => string);
   /** Optional function to derive a sublabel */
@@ -86,7 +86,7 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
         const items = Array.isArray(raw)
           ? raw
           : Array.isArray((res as { data?: unknown }).data)
-            ? ((res as { data: unknown[] }).data)
+            ? (res as { data: unknown[] }).data
             : [];
 
         const mapped: ResourceOption[] = items.map((item) => {
@@ -96,11 +96,7 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
             typeof labelKey === 'function'
               ? labelKey(record)
               : String(
-                  record[labelKey] ??
-                    record.name ??
-                    record.roomNumber ??
-                    record.floorNumber ??
-                    val,
+                  record[labelKey] ?? record.name ?? record.roomNumber ?? record.floorNumber ?? val,
                 );
           const sub = sublabelFn ? sublabelFn(record) : undefined;
           return { value: val, label: lbl, sublabel: sub };
@@ -162,16 +158,16 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
         )}
       </div>
       {fetchError && !isLoading && (
-        <p className="text-[12px] font-medium text-[color:var(--color-warning-600)]">{fetchError}</p>
+        <p className="text-[12px] font-medium text-[color:var(--color-warning-600)]">
+          {fetchError}
+        </p>
       )}
       {error && (
         <p className={fieldErrorClass} role="alert">
           {error}
         </p>
       )}
-      {helperText && !error && !fetchError && (
-        <p className={fieldHelperClass}>{helperText}</p>
-      )}
+      {helperText && !error && !fetchError && <p className={fieldHelperClass}>{helperText}</p>}
     </div>
   );
 }

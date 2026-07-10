@@ -84,11 +84,31 @@ export default function NewVisitorPage() {
             )}
           />
           <FormGrid>
-            <Input label="Visitor Name" placeholder="Full name" error={errors.visitorName?.message} {...register('visitorName')} />
-            <Input label="Visitor Phone" placeholder="10-digit number" error={errors.visitorPhone?.message} {...register('visitorPhone')} />
+            <Input
+              label="Visitor Name"
+              placeholder="Full name"
+              error={errors.visitorName?.message}
+              {...register('visitorName')}
+            />
+            <Input
+              label="Visitor Phone"
+              placeholder="10-digit number"
+              error={errors.visitorPhone?.message}
+              {...register('visitorPhone')}
+            />
           </FormGrid>
-          <Input label="Purpose" placeholder="e.g. Family Visit, Delivery" error={errors.purpose?.message} {...register('purpose')} />
-          <Input label="Expected Arrival" type="datetime-local" error={errors.expectedArrival?.message} {...register('expectedArrival')} />
+          <Input
+            label="Purpose"
+            placeholder="e.g. Family Visit, Delivery"
+            error={errors.purpose?.message}
+            {...register('purpose')}
+          />
+          <Input
+            label="Expected Arrival"
+            type="datetime-local"
+            error={errors.expectedArrival?.message}
+            {...register('expectedArrival')}
+          />
         </div>
       </FormCard>
     </FormPage>

@@ -294,6 +294,7 @@ const appConfigSchema = new Schema<IAppConfigDocument>(
     amenityDefinitions: {
       type: [amenityDefinitionSchema],
       default: () => [...DEFAULT_AMENITY_DEFINITIONS],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     features: {
       attendanceEnabled: { type: Boolean, default: false },
@@ -329,9 +330,7 @@ const appConfigSchema = new Schema<IAppConfigDocument>(
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },

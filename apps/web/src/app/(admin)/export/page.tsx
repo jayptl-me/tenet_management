@@ -1,15 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Download,
-  Users,
-  CreditCard,
-  Receipt,
-  AlertTriangle,
-  Check,
-  Loader2,
-} from 'lucide-react';
+import { Download, Users, CreditCard, Receipt, AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -105,7 +97,8 @@ export default function ExportPage() {
           const nested = value as Record<string, unknown>;
           for (const [nKey, nValue] of Object.entries(nested)) {
             if (nValue && typeof nValue === 'object') {
-              flat[`${key}_${nKey}`] = (nValue as Record<string, unknown>).name ?? JSON.stringify(nValue);
+              flat[`${key}_${nKey}`] =
+                (nValue as Record<string, unknown>).name ?? JSON.stringify(nValue);
             } else {
               flat[`${key}_${nKey}`] = nValue ?? '';
             }
@@ -130,7 +123,9 @@ export default function ExportPage() {
       }
     }
 
-    const headerRow = Array.from(headers).map((h) => `"${h}"`).join(',');
+    const headerRow = Array.from(headers)
+      .map((h) => `"${h}"`)
+      .join(',');
 
     const dataRows = flattened.map((row) =>
       Array.from(headers)
@@ -165,9 +160,11 @@ export default function ExportPage() {
               <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-100)] p-2">
                 {option.icon}
               </div>
-              <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">{option.label}</h3>
+              <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+                {option.label}
+              </h3>
             </div>
-            <p className="mb-5 flex-1 font-[family:var(--font-body)] text-sm text-[color:var(--color-text-secondary)]">
+            <p className="font-[family:var(--font-body)] mb-5 flex-1 text-sm text-[color:var(--color-text-secondary)]">
               {option.description}
             </p>
             <Button
@@ -201,8 +198,9 @@ export default function ExportPage() {
 
       <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-4 text-sm text-[color:var(--color-success-800)]">
         <p className="font-[family:var(--font-body)]">
-          <strong>Export limit:</strong> Up to 5,000 records per export. For larger exports, use date
-          range filters on the respective resource pages to narrow your selection before exporting.
+          <strong>Export limit:</strong> Up to 5,000 records per export. For larger exports, use
+          date range filters on the respective resource pages to narrow your selection before
+          exporting.
         </p>
       </div>
     </div>
