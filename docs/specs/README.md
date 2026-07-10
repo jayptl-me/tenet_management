@@ -1,7 +1,7 @@
 # tenet_pg_management -- Requirements Specification & Architecture Reference
 
 > **Purpose:** Complete system specification for future agents to understand every entity, relational flow, API contract, frontend page, and gap.
-> **Last Updated:** 2026-07-10T18:12+05:30 (v5 -- Full Codebase Audit & Self-Healing Orchestration)
+> **Last Updated:** 2026-07-10T18:24+05:30 (v6 -- Codebase Audit with 5 fixes applied)
 > **Stack:** Bun monorepo -- Next.js 16 (React 19, Tailwind v4, motion, Recharts) + Hono (Mongoose 8, Zod)
 > **Build Status:** API typecheck clean, Web typecheck clean, Web lint clean (0 errors, 0 warnings)
 
@@ -21,7 +21,7 @@
 | 08 | [HR & Ops](08-hr-ops.md) | Attendance Records, Leave Applications (approve/reject workflow) |
 | 09 | [System Administration](09-system-admin.md) | AppConfig (settings tab system), Audit Logs (90d TTL), SSE, Export, Dashboard |
 | 10 | [Data Flow Diagrams](10-data-flow-diagrams.md) | Entity relationships, validation contracts, edit page data flows |
-| 11 | [Gap Analysis](11-gap-analysis.md) | v5 full audit -- 0 P0-P2 issues, 9.9/10 health score, 5 P3 polish items |
+| 11 | [Gap Analysis](11-gap-analysis.md) | v6 full audit -- 5 issues fixed, 0 P0-P2 remaining, 9.9/10 health score, 5 P3 polish items |
 
 ---
 
@@ -46,7 +46,7 @@ ElectricityBill -- roomEntries[] --N:1-- Room
 DailyMenu, Asset, Enquiry, AuditLog, AppConfig -- standalone
 ```
 
-## Current Audit Summary (2026-07-10 v5)
+## Current Audit Summary (2026-07-10 v6)
 
 | Metric | Count |
 |--------|-------|
@@ -56,36 +56,55 @@ DailyMenu, Asset, Enquiry, AuditLog, AppConfig -- standalone
 | UI Components | 41 (ui/) + 10 (admin/) |
 | Shared Types | 27 |
 | Feature Flags | 7 |
-| P0 Issues | 0 (No critical data integrity issues) |
-| P1 Issues | 0 (All previously reported P1s verified as resolved) |
-| P2 Issues | 0 (All previously reported P2s verified as resolved) |
+| P0 Issues | 0 (Resolved: Payment-Invoice sync excess rows and status regression) |
+| P1 Issues | 0 (Resolved: Tenant checkout payment check, room transfer occupancyCount, room delete FK) |
+| P2 Issues | 0 (Resolved: Attendance compound index 11000 handling) |
 | P3 Polish Items | 5 (Type casts, Zustand sync, audit archive, push notifications, test infra) |
 | CRUD Completeness | 23/23 modules (19 active + 4 read-only by design) |
 | Frontend Completeness | 23/23 modules (List + Detail + Edit + New for all active CRUD) |
-| Build Health | typecheck=0 errors (api + web), lint=0 errors (web), build=clean |
+| Build Health | typecheck=0 errors (api + web), lint=0 errors (web) |
 | Codebase Health | 9.9/10 -- Production-ready |
 
-## Key Verification Results (v5)
+## Key Verification Results (v6)
 
 ### Relational Integrity -- ALL PASS
 - 9-collection cascade on Tenant DELETE
 - Invoice -> Payment cascade on Invoice DELETE
+- Room delete now checks ALL tenant references (active + inactive) to prevent dangling FK
 - 7 compound unique indexes with proper duplicate-key error handling
 - All derived fields re-derived on PUT (Invoice.totalAmount, ElectricityBill.unitsConsumed/amount, Room.occupancyCount)
 - 8 bed consistency paths traced -- occupancyCount always matches actual occupied beds
 - Room sharingType transitions with atomic concurrent-modification guards
+- Room transfer explicitly calls markModified('beds') + occupancyCount on new room
+
+### Payment-Invoice Sync -- FIXED
+- `updateInvoicePaymentStatus()` now cancels excess pending/pending_verification rows automatically
+- Invoice status no longer regresses from partial/paid to sent when payments are deleted
+- Keeps the stronger status (paid > partial > sent) when all payments are cancelled
+
+### Tenant Checkout -- HARDENED
+- Now blocks checkout if pending_verification or overdue payments exist
+- Provides actionable error: "Tenant has N unresolved payment(s)"
 
 ### Integration Completeness -- 100%
 - 19/19 active CRUD routes have DELETE handlers with dependency guards
 - 23/23 admin modules have List pages with PageHeader, TableActions, mobileCardRenderer, loading/empty/error states
 - 19/19 active CRUD modules have Detail + Edit + New pages
-- 23/23 admin modules have dedicated `[id]/edit/` directories
 
 ### Component Quality -- 100% CSS Variable Compliance
 - Zero hardcoded Tailwind color utilities in admin page `.tsx` files
 - All status indicators use centralized `<StatusBadge>` + `statusToVariant()`
 - All pages follow consistent component pattern (PageHeader, DataTable, EmptyState, ConfirmModal, TableActions)
-- Shared `field-styles.ts` classes available for form pages
+
+## Issues Fixed in v6 (2026-07-10)
+
+| # | Severity | Domain | Issue | File(s) |
+|---|----------|--------|-------|---------|
+| 1 | P0 | Payment-Invoice Sync | `updateInvoicePaymentStatus()` did not cancel excess pending rows or prevent status regression | `routes/payments.ts` |
+| 2 | P1 | Tenant Checkout | No check for pending_verification/overdue payments before allowing checkout | `routes/tenants.ts` |
+| 3 | P1 | Room Transfer | New room's `occupancyCount` and `markModified('beds')` not called during room transfer | `routes/tenants.ts` |
+| 4 | P1 | Room Delete FK | Only checked active tenants; inactive tenant references caused dangling FK | `routes/rooms.ts` |
+| 5 | P2 | Attendance Compound Index | No try/catch for 11000 on concurrent check-in | `routes/attendance.ts` |
 
 ## Fixed Across All Self-Healing Passes
 
@@ -107,6 +126,11 @@ DailyMenu, Asset, Enquiry, AuditLog, AppConfig -- standalone
 | Lint warning: unused user destructure | P3 | `__tests__/beds.test.ts` |
 | Floor label uniqueness | P1 | `models/floor.ts` (added `unique: true` index) |
 | Floors pagination mismatch | P2 | `floors/page.tsx` (removed pagination params, backend is unpaginated) |
+| Payment-invoice sync (v6) | P0 | `routes/payments.ts` |
+| Tenant checkout payment check (v6) | P1 | `routes/tenants.ts` |
+| Room transfer occupancyCount (v6) | P1 | `routes/tenants.ts` |
+| Room delete FK check (v6) | P1 | `routes/rooms.ts` |
+| Attendance compound index 11000 (v6) | P2 | `routes/attendance.ts` |
 
 ## Next Agent Priority
 
@@ -120,5 +144,5 @@ DailyMenu, Asset, Enquiry, AuditLog, AppConfig -- standalone
 
 - All documents are based on direct source code analysis, not assumptions
 - Each spec file captures models, routes, business logic, validation rules, and integration details
-- The gap analysis represents the complete audit state -- no known data integrity issues
+- The gap analysis represents the complete audit state -- no known P0-P2 issues
 - Delete outdated documentation; replace with freshly generated content from code-level analysis
