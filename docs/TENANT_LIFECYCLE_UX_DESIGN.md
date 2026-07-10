@@ -19,6 +19,7 @@ Floor
 ## Tenant Lifecycle Flow
 
 ### 1. ONBOARDING
+
 ```
 Enquiry → Convert → Create User → Assign Room/Bed → Move In → Tenant Active
   ↓
@@ -30,6 +31,7 @@ Enquiry → Convert → Create User → Assign Room/Bed → Move In → Tenant A
 ```
 
 ### 2. ACTIVE STAY — Daily Operations
+
 ```
 Tenant Dashboard:
   ├── Room info (room number, floor, bed)
@@ -42,6 +44,7 @@ Tenant Dashboard:
 ```
 
 ### 3. SERVICE HEALTH → COMPLAINT FLOW
+
 ```
 ServiceStatus per floor (wifi, electricity, water_supply, etc.)
   │
@@ -58,6 +61,7 @@ ServiceStatus per floor (wifi, electricity, water_supply, etc.)
 ```
 
 ### 4. COMPLAINT RESOLUTION
+
 ```
 Tenant submits → Admin sees in kanban → Admin updates status → Notification sent
   ↓                         ↓                         ↓
@@ -67,6 +71,7 @@ Tenant submits → Admin sees in kanban → Admin updates status → Notificatio
 ```
 
 ### 5. PAYMENT LIFE
+
 ```
 Invoice Generated (monthly)
   ├── Tenant pays (UPI/cash)
@@ -76,6 +81,7 @@ Invoice Generated (monthly)
 ```
 
 ### 6. LEAVE (if attendance enabled)
+
 ```
 Tenant requests leave → Admin approves → Attendance auto-set to on_leave
   ↓
@@ -83,6 +89,7 @@ Tenant requests leave → Admin approves → Attendance auto-set to on_leave
 ```
 
 ### 7. CHECKOUT
+
 ```
 Tenant requests checkout → Admin processes:
   ├── Pending dues calculated
@@ -109,6 +116,7 @@ Timeline of ALL events:
 ## UI Components Needed
 
 ### 1. FloorServiceGrid — Shows ALL services for a floor with status
+
 ```
 [Floor: Ground Floor]
   ┌────────────────────────────────────────────────────┐
@@ -122,6 +130,7 @@ Timeline of ALL events:
 ```
 
 ### 2. TenantActivityTimeline — Full event history on tenant detail
+
 ```
   ● Moved in — 15 Jan 2026
   ● Rent paid ₹12,000 — 01 Feb 2026 (UPI)
@@ -133,44 +142,52 @@ Timeline of ALL events:
 ```
 
 ### 3. ServiceHealthWidget — Room-level quick-view status dots
+
 ```
 Room 201:     [🟢 WiFi] [🔴 Power] [🟢 Water] [🟢 Geyser]
 Room 202:     [🟢 WiFi] [🟢 Power] [🟢 Water] [🟢 Geyser]
 ```
 
 ### 4. ComplaintQuickCreate — One-click complaint from service status
+
 - Click red/yellow service → opens complaint form with category + room pre-filled
 - Tenant just adds title + description
 
 ## Implementation Plan
 
 ### Batch A: Enhance ServiceStatus Model
+
 - Add `complaintCount` virtual/derived field
 - Add more service types: geyser, bedsheet, pillow, bed
 - Group services into categories (essential vs amenity)
 
 ### Batch B: FloorServiceGrid Component
+
 - Fetch all ServiceStatus for a floor
 - Show colored status dots + labels
 - Complaint count badge per service
 - "Report Issue" button → links to complaint creation
 
 ### Batch C: TenantActivityTimeline Component
+
 - Aggregate all events for a tenant
 - Display as vertical timeline
 - Color-code by event type
 
 ### Batch D: ServiceHealthWidget
+
 - Per-room quick view of floor services
 - Used on rooms list page and room detail
 - Compact green/red dots
 
 ### Batch E: Update Tenant Detail Page
+
 - Add activity timeline section
 - Add service health widget (from floor)
 - Add complaint count summary
 
 ### Batch F: Custom Dashboard Charts
+
 - Revenue bar chart (custom SVG)
 - Occupancy donut chart
 - Complaint category breakdown

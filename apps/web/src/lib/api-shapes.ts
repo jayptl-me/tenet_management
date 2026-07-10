@@ -25,23 +25,17 @@ export interface PopulatedTenantRef {
   room?: PopulatedRoom;
 }
 
-export function tenantDisplayName(
-  tenant: PopulatedTenantRef | string | null | undefined,
-): string {
+export function tenantDisplayName(tenant: PopulatedTenantRef | string | null | undefined): string {
   if (!tenant || typeof tenant === 'string') return 'N/A';
   return tenant.userId?.name ?? tenant.user?.name ?? 'N/A';
 }
 
-export function tenantRoomNumber(
-  tenant: PopulatedTenantRef | string | null | undefined,
-): string {
+export function tenantRoomNumber(tenant: PopulatedTenantRef | string | null | undefined): string {
   if (!tenant || typeof tenant === 'string') return 'N/A';
   return tenant.roomId?.roomNumber ?? tenant.room?.roomNumber ?? 'N/A';
 }
 
-export function tenantIdOf(
-  tenant: PopulatedTenantRef | string | null | undefined,
-): string {
+export function tenantIdOf(tenant: PopulatedTenantRef | string | null | undefined): string {
   if (!tenant) return '';
   if (typeof tenant === 'string') return tenant;
   return String(tenant._id ?? tenant.id ?? '');

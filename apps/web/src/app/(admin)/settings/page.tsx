@@ -1,13 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { triggerThemeUpdate } from '@/themes/ThemeProvider';
-import type { IAppConfig, IFeatureFlags, ITestimonial, ThemeSettings, AmenityDefinition } from '@pg/types';
+import type {
+  IAppConfig,
+  IFeatureFlags,
+  ITestimonial,
+  ThemeSettings,
+  AmenityDefinition,
+} from '@pg/types';
 import AppearanceTab from '@/components/admin/AppearanceTab';
 import AmenityTypesTab from '@/components/admin/AmenityTypesTab';
 
@@ -233,7 +239,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-t-[color:var(--color-brand-500)] border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
       </div>
     );
   }
@@ -241,7 +247,7 @@ export default function SettingsPage() {
   if (!config) {
     return (
       <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-6 text-center">
-        <p className="font-[family:var(--font-display)] text-[color:var(--color-danger-800)] text-lg font-semibold">
+        <p className="font-[family:var(--font-display)] text-lg font-semibold text-[color:var(--color-danger-800)]">
           {error || 'Failed to load settings'}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
@@ -254,8 +260,10 @@ export default function SettingsPage() {
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
     <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
       <div>
-        <h3 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-lg font-bold">{title}</h3>
-        <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">{description}</p>
+        <h3 className="font-[family:var(--font-display)] text-lg font-bold text-[color:var(--color-text-primary)]">
+          {title}
+        </h3>
+        <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">{description}</p>
       </div>
       {content}
     </section>
@@ -265,8 +273,10 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-2xl font-extrabold">Settings</h2>
-          <p className="text-[color:var(--color-text-muted)] mt-0.5 text-sm">
+          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-text-primary)]">
+            Settings
+          </h2>
+          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
             Configure PG brand, pricing, and features
           </p>
         </div>
@@ -277,12 +287,12 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
           {error}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)] p-4 text-sm font-semibold">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] p-4 text-sm font-semibold text-[color:var(--color-success-800)]">
           Settings saved successfully
         </div>
       )}
@@ -348,7 +358,9 @@ export default function SettingsPage() {
                 placeholder="contact@pg.com"
               />
 
-              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Address</h4>
+              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                Address
+              </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Address Line 1"
@@ -383,7 +395,9 @@ export default function SettingsPage() {
                 placeholder="https://www.google.com/maps/embed?..."
               />
 
-              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Social Links</h4>
+              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                Social Links
+              </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label="Instagram"
@@ -411,7 +425,9 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Branding</h4>
+              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                Branding
+              </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Input
@@ -437,7 +453,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <h4 className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] pt-2 text-sm font-bold">Landing Page</h4>
+              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                Landing Page
+              </h4>
               <Input
                 label="Hero Headline"
                 value={config.landingHeroHeadline}
@@ -520,7 +538,9 @@ export default function SettingsPage() {
                 </Button>
               </div>
               {config.amenities.length === 0 ? (
-                <p className="text-[color:var(--color-text-muted)] py-4 text-center text-sm">No amenities added yet</p>
+                <p className="py-4 text-center text-sm text-[color:var(--color-text-muted)]">
+                  No amenities added yet
+                </p>
               ) : (
                 <div className="space-y-2">
                   {config.amenities.map((a, i) => (
@@ -528,10 +548,12 @@ export default function SettingsPage() {
                       key={i}
                       className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-2"
                     >
-                      <span className="text-[color:var(--color-text-primary)] text-sm font-semibold">{a}</span>
+                      <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                        {a}
+                      </span>
                       <button
                         onClick={() => removeAmenity(i)}
-                        className="text-[color:var(--color-danger-500)] hover:bg-[color:var(--color-danger-50)] rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
+                        className="rounded-md p-1 text-[color:var(--color-danger-500)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -555,7 +577,7 @@ export default function SettingsPage() {
             'Reviews displayed on the landing page',
             <div className="space-y-4">
               {config.testimonials.length === 0 ? (
-                <p className="text-[color:var(--color-text-muted)] py-4 text-center text-sm">
+                <p className="py-4 text-center text-sm text-[color:var(--color-text-muted)]">
                   No testimonials added yet
                 </p>
               ) : (
@@ -565,12 +587,12 @@ export default function SettingsPage() {
                     className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-[family:var(--font-display)] text-[color:var(--color-text-primary)] text-sm font-bold">
+                      <span className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
                         Testimonial #{i + 1}
                       </span>
                       <button
                         onClick={() => removeTestimonial(i)}
-                        className="text-[color:var(--color-danger-500)] hover:bg-[color:var(--color-danger-50)] rounded-md p-1 transition-colors duration-[var(--transition-duration)]"
+                        className="rounded-md p-1 text-[color:var(--color-danger-500)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -588,7 +610,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="font-[family:var(--font-body)] text-[color:var(--color-text-primary)] mb-1 block text-sm font-semibold">
+                      <label className="font-[family:var(--font-body)] mb-1 block text-sm font-semibold text-[color:var(--color-text-primary)]">
                         Rating
                       </label>
                       <div className="flex gap-1">
@@ -633,7 +655,7 @@ export default function SettingsPage() {
                   key={key}
                   className="flex cursor-pointer items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--color-surface-200)] px-3 py-2 transition-colors duration-[var(--transition-duration)] hover:border-[color:var(--border-color)]"
                 >
-                  <span className="text-[color:var(--color-text-primary)] font-[family:var(--font-body)] text-sm font-semibold">
+                  <span className="font-[family:var(--font-body)] text-sm font-semibold text-[color:var(--color-text-primary)]">
                     {key
                       .replace(/([A-Z])/g, ' $1')
                       .replace(/^./, (s) => s.toUpperCase())
@@ -647,7 +669,7 @@ export default function SettingsPage() {
                         [key]: e.target.checked,
                       } as Partial<IFeatureFlags>)
                     }
-                    className="text-[color:var(--color-brand-500)] focus:ring-[color:var(--color-brand-500)] h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] focus:ring-[length:var(--bw-default)]"
+                    className="h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] text-[color:var(--color-brand-500)] focus:ring-[length:var(--bw-default)] focus:ring-[color:var(--color-brand-500)]"
                   />
                 </label>
               ))}
@@ -700,7 +722,7 @@ export default function SettingsPage() {
           Save All Settings
         </Button>
         {saved && (
-          <span className="text-[color:var(--color-success-600)] font-[family:var(--font-display)] text-sm font-semibold">
+          <span className="font-[family:var(--font-display)] text-sm font-semibold text-[color:var(--color-success-600)]">
             Settings saved
           </span>
         )}

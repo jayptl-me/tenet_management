@@ -173,6 +173,16 @@ export async function markAllAsRead(userId: string): Promise<{ modifiedCount: nu
 }
 
 /**
+ * Delete a single notification by ID (admin only).
+ */
+export async function deleteNotification(
+  notificationId: string,
+): Promise<{ deletedCount: number }> {
+  const result = await NotifModel.deleteOne({ _id: notificationId });
+  return { deletedCount: result.deletedCount };
+}
+
+/**
  * List notifications for a user with pagination.
  */
 export async function listNotifications(

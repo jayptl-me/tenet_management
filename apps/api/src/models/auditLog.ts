@@ -64,11 +64,8 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
         ret.timestamp = ret.createdAt;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.createdAt;
         return ret;
       },

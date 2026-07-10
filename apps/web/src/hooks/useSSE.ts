@@ -9,7 +9,7 @@ type SSEEventHandler = (event: string, data: unknown) => void;
 
 /**
  * Hook that connects to the admin SSE endpoint and listens for real-time events.
- * Automatically reconnects on disconnect and cleans up on unmount.
+ * Uses exponential backoff with jitter for reconnection to avoid thundering herd.
  */
 export function useSSE(onEvent: SSEEventHandler) {
   const { accessToken, isAuthenticated } = useAuthStore();
@@ -25,15 +25,20 @@ export function useSSE(onEvent: SSEEventHandler) {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout>;
     let isMounted = true;
+    let retryCount = 0;
+    const MAX_RETRY_DELAY = 30_000; // 30 seconds cap
 
     function connect() {
       if (!isMounted) return;
 
+      // Reset retry count on successful connection
       const url = `${API_BASE_URL}/sse/admin?token=${accessToken}`;
 
-      // EventSource doesn't support custom headers, so we pass token as query param.
-      // The SSE route will validate it via the authGuard middleware.
       eventSource = new EventSource(url);
+
+      eventSource.onopen = () => {
+        retryCount = 0; // Reset backoff on successful handshake
+      };
 
       eventSource.onmessage = (event) => {
         try {
@@ -75,8 +80,11 @@ export function useSSE(onEvent: SSEEventHandler) {
       eventSource.onerror = () => {
         eventSource?.close();
         if (isMounted) {
-          // Reconnect after 5 seconds
-          reconnectTimeout = setTimeout(connect, 5000);
+          // Exponential backoff with jitter: 1s → 2s → 4s → ... → 30s max
+          const baseDelay = Math.min(1000 * Math.pow(2, retryCount), MAX_RETRY_DELAY);
+          const jitter = baseDelay * (0.5 + Math.random() * 0.5); // 50%-100% of base
+          retryCount++;
+          reconnectTimeout = setTimeout(connect, jitter);
         }
       };
     }

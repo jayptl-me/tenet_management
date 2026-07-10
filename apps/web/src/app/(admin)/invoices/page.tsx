@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, FileText } from 'lucide-react';
+import { Plus, FileText, Wand2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -36,6 +39,8 @@ export default function InvoicesPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [bulkMonth, setBulkMonth] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
@@ -78,17 +83,40 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleBulkGenerate = async () => {
+    if (!bulkMonth) return;
+    setBulkLoading(true);
+    try {
+      const res = await api
+        .post('invoices/generate-bulk', { json: { month: bulkMonth } })
+        .json<{ success: boolean; data: { generated: number; skipped: number; errors: number } }>();
+      if (res.success) {
+        toast.success(
+          `Generated ${res.data.generated} invoices for ${bulkMonth}. Skipped: ${res.data.skipped}. Errors: ${res.data.errors}.`,
+        );
+        setBulkMonth('');
+        fetchInvoices();
+      }
+    } catch {
+      toast.error('Failed to generate invoices');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const columns: DataTableColumn<InvoiceRow>[] = [
     {
       header: 'Invoice #',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-primary)] font-mono font-semibold">{row.invoiceNumber}</span>
+        <span className="font-mono font-semibold text-[color:var(--color-text-primary)]">
+          {row.invoiceNumber}
+        </span>
       ),
     },
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-primary)] font-semibold">
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
           {row.tenantId?.userId?.name ?? 'N/A'}
         </span>
       ),
@@ -117,38 +145,11 @@ export default function InvoicesPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/invoices/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/invoices/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/invoices/${row._id}`)}
+          onEdit={() => router.push(`/invoices/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -168,6 +169,31 @@ export default function InvoicesPage() {
       />
 
       <ErrorBanner message={error} />
+
+      <div className="flex flex-col gap-3 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-sm)]">
+        <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+          Bulk Generate Invoices
+        </p>
+        <div className="flex items-center gap-3">
+          <Input
+            placeholder="YYYY-MM"
+            value={bulkMonth}
+            onChange={(e) => setBulkMonth(e.target.value)}
+            className="max-w-[160px]"
+            maxLength={7}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            loading={bulkLoading}
+            disabled={!bulkMonth || bulkLoading}
+            onClick={handleBulkGenerate}
+          >
+            <Wand2 className="mr-1 h-3.5 w-3.5" />
+            Generate All
+          </Button>
+        </div>
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select
@@ -216,7 +242,7 @@ export default function InvoicesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm font-mono">
+              <span className="font-mono text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.invoiceNumber}
               </span>
               <StatusBadge
@@ -230,24 +256,11 @@ export default function InvoicesPage() {
               <span>₹{(row.totalAmount ?? 0).toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/invoices/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
-              >
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/invoices/${row._id}/edit`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
-              >
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </button>
+              <TableActions
+                onView={() => router.push(`/invoices/${row._id}`)}
+                onEdit={() => router.push(`/invoices/${row._id}/edit`)}
+                onDelete={() => setDeleteTarget(row)}
+              />
             </div>
           </div>
         )}
@@ -256,7 +269,7 @@ export default function InvoicesPage() {
       <ConfirmModal
         open={!!deleteTarget}
         title="Delete Invoice"
-        message={`Are you sure you want to delete this invoice? This action cannot be undone.`}
+        message="Are you sure you want to delete this invoice? This action cannot be undone."
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

@@ -11,7 +11,10 @@ const floors = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
 const amenityCountSchema = z.strictObject({
-  amenityKey: z.string().min(1).regex(/^[a-z][a-z0-9_]*$/, 'Must be a valid amenity key'),
+  amenityKey: z
+    .string()
+    .min(1)
+    .regex(/^[a-z][a-z0-9_]*$/, 'Must be a valid amenity key'),
   count: z.number().int().min(0).max(10),
 });
 
@@ -57,7 +60,7 @@ floors.post('/', authGuard, adminOnly, zValidator('json', createFloorSchema), as
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {
-      return conflict(c, `Floor number ${body.floorNumber} already exists`, 'DUPLICATE_FLOOR');
+      return conflict(c, 'A floor with this number or label already exists', 'DUPLICATE_FLOOR');
     }
     throw err;
   }
@@ -69,6 +72,9 @@ floors.put('/:id', authGuard, adminOnly, zValidator('json', updateFloorSchema), 
   if (!id) return badRequest(c, 'Invalid floor ID');
 
   const body = c.req.valid('json');
+
+  // Strip totalRooms — auto-synced by Room.post('save') hook
+  delete (body as Record<string, unknown>).totalRooms;
 
   try {
     const floor = await Floor.findByIdAndUpdate(id, body, {

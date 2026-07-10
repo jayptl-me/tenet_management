@@ -73,9 +73,7 @@ export default function NoticeDetailPage() {
     );
   }
 
-  const priorityVariant = notice
-    ? (priorityVariantMap[notice.priority] ?? 'neutral')
-    : 'neutral';
+  const priorityVariant = notice ? (priorityVariantMap[notice.priority] ?? 'neutral') : 'neutral';
 
   return (
     <FormPage

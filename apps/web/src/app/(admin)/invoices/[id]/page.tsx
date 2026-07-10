@@ -166,11 +166,7 @@ export default function InvoiceDetailPage() {
       backHref="/invoices"
       isLoading={isLoading}
       maxWidth="4xl"
-      badge={
-        invoice ? (
-          <StatusBadge variant={statusVariant} label={statusLabel} />
-        ) : undefined
-      }
+      badge={invoice ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined}
       actions={
         invoice ? (
           <Button
@@ -393,8 +389,7 @@ export default function InvoiceDetailPage() {
                       title: `${formatCurrency(p.amount)} via ${p.method.replace(/_/g, ' ')}`,
                       description: p.utrNumber ? `UTR: ${p.utrNumber}` : undefined,
                       status: (p.status === 'paid' ? 'success' : 'warning') as
-                        | 'success'
-                        | 'warning',
+                        'success' | 'warning',
                     }))}
                   />
                 </DetailCard>
@@ -431,10 +426,7 @@ export default function InvoiceDetailPage() {
                   <Button
                     variant="primary"
                     onClick={() =>
-                      window.open(
-                        `${API_BASE_URL}/invoices/${invoice._id}/pdf`,
-                        '_blank',
-                      )
+                      window.open(`${API_BASE_URL}/invoices/${invoice._id}/pdf`, '_blank')
                     }
                   >
                     <FileDown className="h-4 w-4" />

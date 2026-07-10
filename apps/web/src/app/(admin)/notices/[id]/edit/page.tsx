@@ -20,7 +20,7 @@ const schema = z.object({
   content: z.string().min(1, 'Content is required'),
   pinned: z.boolean().optional(),
   isPublished: z.boolean(),
-  targetType: z.enum(['all', 'floor', 'room']).optional(),
+  targetType: z.enum(['all', 'floor', 'individual']).optional(),
   targetIds: z.string().optional(),
 });
 
@@ -29,7 +29,7 @@ type FormData = z.infer<typeof schema>;
 const TARGET_OPTIONS = [
   { value: 'all', label: 'All tenants' },
   { value: 'floor', label: 'By floor' },
-  { value: 'room', label: 'By room' },
+  { value: 'individual', label: 'Specific tenant' },
 ];
 
 export default function EditNoticePage() {
@@ -61,10 +61,8 @@ export default function EditNoticePage() {
           content: (d.content as string) ?? '',
           pinned: (d.pinned as boolean) ?? false,
           isPublished: (d.isPublished as boolean) ?? false,
-          targetType: (d.targetType as 'all' | 'floor' | 'room') ?? 'all',
-          targetIds: Array.isArray(d.targetIds)
-            ? (d.targetIds as string[]).join(', ')
-            : '',
+          targetType: (d.targetType as 'all' | 'floor' | 'individual') ?? 'all',
+          targetIds: Array.isArray(d.targetIds) ? (d.targetIds as string[]).join(', ') : '',
         });
         setIsLoading(false);
       })
@@ -112,10 +110,7 @@ export default function EditNoticePage() {
           />
         }
       >
-        <FormSection
-          title="Content"
-          description="Headline and body shown to tenants"
-        >
+        <FormSection title="Content" description="Headline and body shown to tenants">
           <FormGrid>
             <FormFullWidth>
               <Input label="Title" error={errors.title?.message} {...register('title')} />
@@ -132,11 +127,7 @@ export default function EditNoticePage() {
           </FormGrid>
         </FormSection>
 
-        <FormSection
-          title="Audience"
-          description="Who should see this notice"
-          divided
-        >
+        <FormSection title="Audience" description="Who should see this notice" divided>
           <FormGrid>
             <Select
               label="Target"

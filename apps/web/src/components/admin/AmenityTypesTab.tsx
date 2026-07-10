@@ -43,10 +43,26 @@ const ICON_OPTIONS: { name: string; icon: React.ReactNode }[] = [
 ];
 
 const CATEGORY_OPTIONS: { value: AmenityCategory; label: string; color: string }[] = [
-  { value: 'essential', label: 'Essential', color: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]' },
-  { value: 'appliance', label: 'Appliance', color: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]' },
-  { value: 'furnishing', label: 'Furnishing', color: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]' },
-  { value: 'other', label: 'Other', color: 'bg-[color:var(--color-surface-200)] text-[color:var(--color-surface-700)]' },
+  {
+    value: 'essential',
+    label: 'Essential',
+    color: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
+  },
+  {
+    value: 'appliance',
+    label: 'Appliance',
+    color: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]',
+  },
+  {
+    value: 'furnishing',
+    label: 'Furnishing',
+    color: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
+  },
+  {
+    value: 'other',
+    label: 'Other',
+    color: 'bg-[color:var(--color-surface-200)] text-[color:var(--color-surface-700)]',
+  },
 ];
 
 const emptyDefinition: AmenityDefinition = {
@@ -88,7 +104,9 @@ function getIconComponent(iconName: string): React.ReactNode {
 // ── Resolve category badge ──
 function getCategoryBadge(category: AmenityCategory): string {
   const found = CATEGORY_OPTIONS.find((c) => c.value === category);
-  return found?.color ?? 'bg-surface-200 text-surface-700';
+  return (
+    found?.color ?? 'bg-[color:var(--color-surface-200)] text-[color:var(--color-surface-700)]'
+  );
 }
 
 interface AmenityTypesTabProps {
@@ -107,9 +125,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
   const filteredIcons = useMemo(() => {
     if (!iconSearch.trim()) return ICON_OPTIONS;
-    return ICON_OPTIONS.filter((i) =>
-      i.name.toLowerCase().includes(iconSearch.toLowerCase()),
-    );
+    return ICON_OPTIONS.filter((i) => i.name.toLowerCase().includes(iconSearch.toLowerCase()));
   }, [iconSearch]);
 
   // ── Start adding new ──
@@ -149,9 +165,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
     }
 
     // Check for duplicate key
-    const dupIndex = definitions.findIndex(
-      (d, i) => d.key === formData.key && i !== editingIndex,
-    );
+    const dupIndex = definitions.findIndex((d, i) => d.key === formData.key && i !== editingIndex);
     if (dupIndex !== -1) {
       setFormErrors(['An amenity with this key already exists']);
       return;
@@ -177,10 +191,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
   };
 
   // ── Update form field ──
-  const updateField = <K extends keyof AmenityDefinition>(
-    key: K,
-    value: AmenityDefinition[K],
-  ) => {
+  const updateField = <K extends keyof AmenityDefinition>(key: K, value: AmenityDefinition[K]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
     setFormErrors([]);
   };
@@ -192,10 +203,10 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-display text-surface-900 text-lg font-bold">
+          <h3 className="font-[family:var(--font-display)] text-lg font-bold text-[color:var(--color-text-primary)]">
             Amenity Types
           </h3>
-          <p className="text-surface-500 mt-0.5 text-sm">
+          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
             Define and manage all amenities available across floors and rooms. These definitions
             control what appears in service status indicators, room detail cards, and complaint
             categories.
@@ -213,12 +224,12 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
       {isEditing && (
         <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="font-display text-surface-900 text-sm font-bold">
+            <h4 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
               {isAdding ? 'New Amenity' : 'Edit Amenity'}
             </h4>
             <button
               onClick={handleCancel}
-              className="text-surface-400 hover:text-surface-600 rounded-[var(--radius-md)] p-1 transition-colors"
+              className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -240,7 +251,9 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
               <Input
                 label="Key"
                 value={formData.key}
-                onChange={(e) => updateField('key', e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                onChange={(e) =>
+                  updateField('key', e.target.value.toLowerCase().replace(/\s+/g, '_'))
+                }
                 placeholder="e.g. washing_machine"
                 disabled={editingIndex !== null}
               />
@@ -254,7 +267,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Icon picker */}
             <div>
-              <label className="text-surface-700 mb-1.5 block font-body text-sm font-semibold">
+              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
                 Icon
               </label>
               <div className="relative">
@@ -263,20 +276,20 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   onClick={() => setShowIconPicker(!showIconPicker)}
                   className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-4 py-2.5 text-left text-sm transition-colors hover:border-[color:var(--color-brand-500)]"
                 >
-                  <span className="text-surface-600 flex-shrink-0">
+                  <span className="flex-shrink-0 text-[color:var(--color-text-secondary)]">
                     {getIconComponent(formData.icon)}
                   </span>
-                  <span className="text-surface-900 flex-1 font-semibold">
+                  <span className="flex-1 font-semibold text-[color:var(--color-text-primary)]">
                     {formData.icon}
                   </span>
-                  <span className="text-surface-400 text-xs">▼</span>
+                  <span className="text-xs text-[color:var(--color-text-muted)]">▼</span>
                 </button>
 
                 {showIconPicker && (
                   <div className="absolute z-10 mt-1 w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
                     <div className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] p-2">
                       <div className="relative">
-                        <Search className="text-surface-400 absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
                         <input
                           type="text"
                           value={iconSearch}
@@ -300,7 +313,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                             className={`flex flex-col items-center gap-0.5 rounded-[var(--radius-sm)] p-1.5 text-center transition-colors ${
                               formData.icon === opt.name
                                 ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
-                                : 'hover:bg-[color:var(--color-card-bg)] text-surface-500 hover:text-surface-700'
+                                : 'text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-card-bg)] hover:text-[color:var(--color-text-primary)]'
                             }`}
                             title={opt.name}
                           >
@@ -317,7 +330,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Category */}
             <div>
-              <label className="text-surface-700 mb-1.5 block font-body text-sm font-semibold">
+              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
                 Category
               </label>
               <div className="flex flex-wrap gap-2">
@@ -326,10 +339,10 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                     key={cat.value}
                     type="button"
                     onClick={() => updateField('category', cat.value)}
-                    className={`inline-flex items-center rounded-full px-3 py-1.5 font-display text-xs font-bold transition-all ${
+                    className={`font-[family:var(--font-display)] inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
                       formData.category === cat.value
                         ? `${cat.color} border-[length:var(--bw-default)] border-[color:var(--border-color)] shadow-[var(--shadow-button)]`
-                        : 'bg-[color:var(--color-surface-50)] text-surface-500 border-[length:var(--bw-default)] border-transparent'
+                        : 'border-[length:var(--bw-default)] border-transparent bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]'
                     }`}
                   >
                     {cat.label}
@@ -346,13 +359,13 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   type="checkbox"
                   checked={formData.showAsStatusLabel}
                   onChange={(e) => updateField('showAsStatusLabel', e.target.checked)}
-                  className="text-brand-500 focus:ring-brand-500 h-4 w-4 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)]"
+                  className="h-4 w-4 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] text-[color:var(--color-brand-500)] focus:ring-[color:var(--color-brand-500)]"
                 />
                 <div>
-                  <span className="text-surface-800 block text-sm font-semibold">
+                  <span className="block text-sm font-semibold text-[color:var(--color-text-primary)]">
                     Show as Status Label
                   </span>
-                  <span className="text-surface-400 block text-xs">
+                  <span className="block text-xs text-[color:var(--color-text-muted)]">
                     Display green/red dot on room/floor list views
                   </span>
                 </div>
@@ -364,13 +377,13 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   type="checkbox"
                   checked={formData.isPerFloor}
                   onChange={(e) => updateField('isPerFloor', e.target.checked)}
-                  className="text-brand-500 focus:ring-brand-500 h-4 w-4 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)]"
+                  className="h-4 w-4 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] text-[color:var(--color-brand-500)] focus:ring-[color:var(--color-brand-500)]"
                 />
                 <div>
-                  <span className="text-surface-800 block text-sm font-semibold">
+                  <span className="block text-sm font-semibold text-[color:var(--color-text-primary)]">
                     Per Floor
                   </span>
-                  <span className="text-surface-400 block text-xs">
+                  <span className="block text-xs text-[color:var(--color-text-muted)]">
                     One status per floor (vs. per room)
                   </span>
                 </div>
@@ -395,7 +408,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Complaint categories */}
             <div>
-              <label className="text-surface-700 mb-1.5 block font-body text-sm font-semibold">
+              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
                 Applicable Complaint Categories
               </label>
               <Input
@@ -409,7 +422,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                 }}
                 placeholder="e.g. wifi, internet (comma-separated)"
               />
-              <p className="text-surface-400 mt-1 text-xs">
+              <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
                 Complaints with these categories will be linked to this amenity status
               </p>
             </div>
@@ -431,13 +444,13 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
       {/* ── Table ── */}
       {definitions.length === 0 && !isEditing ? (
         <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-10 text-center shadow-[var(--shadow-card)]">
-          <div className="text-surface-300 mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
             <Wrench className="h-8 w-8" />
           </div>
-          <p className="text-surface-500 font-display text-sm font-bold">
+          <p className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-muted)]">
             No amenity types defined
           </p>
-          <p className="text-surface-400 mt-1 text-xs">
+          <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
             Add your first amenity type to start managing services dynamically.
           </p>
           <Button onClick={handleStartAdd} size="sm" className="mt-4">
@@ -450,25 +463,25 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
           <table className="w-full">
             <thead>
               <tr className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
-                <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Amenity
                 </th>
-                <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Category
                 </th>
-                <th className="px-4 py-3 text-center font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Status Label
                 </th>
-                <th className="px-4 py-3 text-center font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Per Floor
                 </th>
-                <th className="px-4 py-3 text-center font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Max/Floor
                 </th>
-                <th className="px-4 py-3 text-left font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Complaint Categories
                 </th>
-                <th className="px-4 py-3 text-right font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="font-[family:var(--font-display)] px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
                   Actions
                 </th>
               </tr>
@@ -483,14 +496,14 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-surface-500 flex-shrink-0">
+                      <span className="flex-shrink-0 text-[color:var(--color-text-muted)]">
                         {getIconComponent(def.icon)}
                       </span>
                       <div>
-                        <span className="text-surface-900 block text-sm font-semibold">
+                        <span className="block text-sm font-semibold text-[color:var(--color-text-primary)]">
                           {def.label}
                         </span>
-                        <span className="text-surface-400 block font-mono text-[10px]">
+                        <span className="block font-mono text-[10px] text-[color:var(--color-text-muted)]">
                           {def.key}
                         </span>
                       </div>
@@ -498,9 +511,10 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 font-display text-[10px] font-bold ${getCategoryBadge(def.category)}`}
+                      className={`font-[family:var(--font-display)] inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${getCategoryBadge(def.category)}`}
                     >
-                      {CATEGORY_OPTIONS.find((c) => c.value === def.category)?.label ?? def.category}
+                      {CATEGORY_OPTIONS.find((c) => c.value === def.category)?.label ??
+                        def.category}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -526,14 +540,14 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="text-surface-600 text-sm font-semibold">
+                    <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
                       {def.isPerFloor ? (def.maxPerFloor ?? '∞') : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {(def.applicableComplaintCategories ?? []).length === 0 ? (
-                        <span className="text-surface-400 text-xs">—</span>
+                        <span className="text-xs text-[color:var(--color-text-muted)]">—</span>
                       ) : (
                         (def.applicableComplaintCategories ?? []).map((cat) => (
                           <span
@@ -550,14 +564,14 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleStartEdit(index)}
-                        className="text-brand-600 hover:bg-brand-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                        className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
                         title="Edit"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
                       <button
                         onClick={() => setDeleteIndex(index)}
-                        className="text-danger-600 hover:bg-danger-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+                        className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
                         title="Delete"
                       >
                         <Trash2 className="h-3 w-3" />

@@ -216,19 +216,19 @@ export default function FloorDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[color:var(--border-color)] text-left">
-                      <th className="pb-3 pr-4 font-[family:var(--font-display)] text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                         Room #
                       </th>
-                      <th className="pb-3 pr-4 font-[family:var(--font-display)] text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                         Sharing
                       </th>
-                      <th className="pb-3 pr-4 font-[family:var(--font-display)] text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                         Rent
                       </th>
-                      <th className="pb-3 pr-4 font-[family:var(--font-display)] text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                         Occupancy
                       </th>
-                      <th className="pb-3 pr-4 font-[family:var(--font-display)] text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
                         Status
                       </th>
                     </tr>
@@ -236,13 +236,12 @@ export default function FloorDetailPage() {
                   <tbody>
                     {rooms.map((room) => {
                       const totalBeds = room.beds?.length ?? 0;
-                      const occupiedBeds =
-                        room.beds?.filter((b) => b.isOccupied).length ?? 0;
+                      const occupiedBeds = room.beds?.filter((b) => b.isOccupied).length ?? 0;
                       return (
                         <tr
                           key={room._id}
                           onClick={() => router.push(`/rooms/${room._id}`)}
-                          className="cursor-pointer border-b border-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)] last:border-b-0"
+                          className="cursor-pointer border-b border-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] last:border-b-0 hover:bg-[color:var(--color-field-bg)]"
                         >
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2">
@@ -277,9 +276,7 @@ export default function FloorDetailPage() {
                           </td>
                           <td className="py-3 pr-4">
                             <StatusBadge
-                              variant={statusToVariant(
-                                room.isActive ? 'active' : 'inactive',
-                              )}
+                              variant={statusToVariant(room.isActive ? 'active' : 'inactive')}
                               label={room.isActive ? 'Active' : 'Inactive'}
                             />
                           </td>

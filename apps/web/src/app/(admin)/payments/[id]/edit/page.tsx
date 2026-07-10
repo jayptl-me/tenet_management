@@ -84,10 +84,7 @@ export default function EditPaymentPage() {
           />
         }
       >
-        <FormSection
-          title="Payment details"
-          description="Amount, method, and payment category"
-        >
+        <FormSection title="Payment details" description="Amount, method, and payment category">
           <FormGrid>
             <Input
               label="Amount"

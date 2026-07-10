@@ -6,7 +6,6 @@ import crypto from 'node:crypto';
 import { Guardian } from '../models/guardian.js';
 import { User } from '../models/user.js';
 import { Tenant } from '../models/tenant.js';
-import { LeaveApplication } from '../models/leaveApplication.js';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
@@ -20,7 +19,6 @@ import {
 } from '../lib/routeUtils.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
-type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
 type CreateArrFn = (
   docs: Record<string, unknown>[],
   opts?: Record<string, unknown>,
@@ -28,7 +26,6 @@ type CreateArrFn = (
 
 const userCreate = User.create as unknown as CreateArrFn;
 const guardianCreate = Guardian.create as unknown as CreateArrFn;
-const guardianCreateOne = Guardian.create as unknown as CreateOneFn;
 
 // ── Zod Schemas ──────────────────────────────────────────
 
@@ -261,16 +258,32 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
   });
 });
 
-// ── DELETE /guardians/:id — deactivate guardian ─────────
+// ── DELETE /guardians/:id — deactivate guardian and User ─
 guardians.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid guardian ID');
 
-  const guardian = await Guardian.findByIdAndUpdate(id, { isActive: false }, { returnDocument: 'after' }).lean();
-
+  const guardian = await Guardian.findById(id);
   if (!guardian) return notFound(c, 'Guardian');
 
-  return c.json({ success: true, data: { message: 'Guardian deactivated' } });
+  // Deactivate guardian record
+  guardian.isActive = false;
+  await guardian.save();
+
+  // Deactivate the associated User account
+  const userResult = await User.findByIdAndUpdate(
+    guardian.userId,
+    { isActive: false },
+    { returnDocument: 'after' },
+  );
+
+  return c.json({
+    success: true,
+    data: {
+      message: 'Guardian deactivated',
+      userDeactivated: !!userResult,
+    },
+  });
 });
 
 // ── GET /guardians/me/ward — guardian views linked tenant

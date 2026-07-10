@@ -77,7 +77,8 @@ export default function AdminLoginPage() {
 
       // Admin-only: reject tenant/guardian credentials
       if (user.role !== 'admin') {
-        const roleLabel = user.role === 'tenant' ? 'Tenant' : user.role === 'guardian' ? 'Guardian' : user.role;
+        const roleLabel =
+          user.role === 'tenant' ? 'Tenant' : user.role === 'guardian' ? 'Guardian' : user.role;
         setError(
           `This login is for administrators only. ${roleLabel}s should use the respective portal or mobile app.`,
         );
@@ -98,7 +99,7 @@ export default function AdminLoginPage() {
     <div className="relative flex min-h-screen items-center justify-center bg-[color:var(--color-surface-50)] p-4">
       {/* Decorative background blobs — theme-aware */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[color:var(--color-brand-500)] opacity-[0.04] blur-3xl" />
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[color:var(--color-brand-500)] opacity-[0.04] blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-[color:var(--color-accent-500)] opacity-[0.04] blur-3xl" />
       </div>
 
@@ -117,7 +118,7 @@ export default function AdminLoginPage() {
             animate={mounted ? 'visible' : 'hidden'}
             className="mb-6 flex justify-center"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-100)] ring-2 ring-[color:var(--color-brand-200)] shadow-[var(--shadow-sm)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-100)] shadow-[var(--shadow-sm)] ring-2 ring-[color:var(--color-brand-200)]">
               <Building2 className="h-7 w-7 text-[color:var(--color-brand-600)]" />
             </div>
           </motion.div>
@@ -142,10 +143,13 @@ export default function AdminLoginPage() {
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:var(--color-danger-500)]" />
                 <div>
-                  <p className="text-[13px] font-semibold text-[color:var(--color-danger-700)] leading-snug">
+                  <p className="text-[13px] font-semibold leading-snug text-[color:var(--color-danger-700)]">
                     {error}
                   </p>
-                  {error.includes('tenant') || error.includes('guardian') || error.includes('Tenant') || error.includes('Guardian') ? (
+                  {error.includes('tenant') ||
+                  error.includes('guardian') ||
+                  error.includes('Tenant') ||
+                  error.includes('Guardian') ? (
                     <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-danger-600)]">
                       Use the mobile app or tenant/guardian portal to access your account.
                     </p>
@@ -201,8 +205,10 @@ export default function AdminLoginPage() {
             >
               <button
                 type="button"
-                onClick={() => setError('Please contact your system administrator to reset your password.')}
-                className="text-[11px] font-semibold text-[color:var(--color-brand-600)] hover:text-[color:var(--color-brand-700)] transition-colors underline-offset-2 hover:underline"
+                onClick={() =>
+                  setError('Please contact your system administrator to reset your password.')
+                }
+                className="text-[11px] font-semibold text-[color:var(--color-brand-600)] underline-offset-2 transition-colors hover:text-[color:var(--color-brand-700)] hover:underline"
               >
                 Forgot password?
               </button>
@@ -219,7 +225,7 @@ export default function AdminLoginPage() {
                 variant="primary"
                 size="lg"
                 loading={isSubmitting}
-                className="w-full group"
+                className="group w-full"
               >
                 {isSubmitting ? (
                   <>Signing in...</>
@@ -227,7 +233,7 @@ export default function AdminLoginPage() {
                   <>
                     <Lock className="h-4 w-4" />
                     Sign In
-                    <ArrowRight className="ml-auto h-4 w-4 opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
+                    <ArrowRight className="ml-auto h-4 w-4 -translate-x-2 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                   </>
                 )}
               </Button>
@@ -240,7 +246,7 @@ export default function AdminLoginPage() {
             custom={4}
             initial="hidden"
             animate={mounted ? 'visible' : 'hidden'}
-            className="mt-6 border-t border-[color:var(--border-color)] pt-4 space-y-3"
+            className="mt-6 space-y-3 border-t border-[color:var(--border-color)] pt-4"
           >
             {/* Demo admin login */}
             <Button
@@ -256,7 +262,7 @@ export default function AdminLoginPage() {
                   // Trigger React controlled input change
                   const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
                     window.HTMLInputElement.prototype,
-                    'value'
+                    'value',
                   )?.set;
                   nativeInputValueSetter?.call(emailInput, 'admin@pgmanagement.local');
                   nativeInputValueSetter?.call(passwordInput, 'Admin@123456');

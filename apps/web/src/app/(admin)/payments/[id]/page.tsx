@@ -142,10 +142,7 @@ export default function PaymentDetailPage() {
       maxWidth="4xl"
       badge={
         payment ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={formatStatusLabel(payment.status)}
-          />
+          <StatusBadge variant={statusVariant} label={formatStatusLabel(payment.status)} />
         ) : undefined
       }
     >
@@ -204,9 +201,7 @@ export default function PaymentDetailPage() {
               <DetailList>
                 <DetailRow
                   label="Method"
-                  value={
-                    <span className="capitalize">{formatMethod(payment.method)}</span>
-                  }
+                  value={<span className="capitalize">{formatMethod(payment.method)}</span>}
                 />
                 <DetailRow label="Category" value={formatType(payment.type)} />
                 <DetailRow
@@ -232,10 +227,7 @@ export default function PaymentDetailPage() {
 
             <DetailCard title="Tenant Information" icon={<User />}>
               <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={payment.tenant?.user?.name ?? 'N/A'}
-                />
+                <DetailRow label="Name" value={payment.tenant?.user?.name ?? 'N/A'} />
                 <DetailRow
                   label="Room"
                   value={
@@ -267,11 +259,7 @@ export default function PaymentDetailPage() {
                 {payment.invoiceId && (
                   <DetailRow
                     label="Invoice ID"
-                    value={
-                      <span className="break-all font-mono text-xs">
-                        {payment.invoiceId}
-                      </span>
-                    }
+                    value={<span className="break-all font-mono text-xs">{payment.invoiceId}</span>}
                   />
                 )}
               </DetailList>
@@ -294,6 +282,7 @@ export default function PaymentDetailPage() {
                 rel="noopener noreferrer"
                 className="block max-w-sm overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={payment.screenshotUrl}
                   alt="Payment Screenshot"
@@ -303,12 +292,7 @@ export default function PaymentDetailPage() {
                     target.style.display = 'none';
                     const parent = target.parentElement;
                     if (parent) {
-                      parent.classList.add(
-                        'flex',
-                        'items-center',
-                        'justify-center',
-                        'p-10',
-                      );
+                      parent.classList.add('flex', 'items-center', 'justify-center', 'p-10');
                       parent.innerHTML =
                         '<span class="text-[color:var(--color-text-muted)] flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
                     }

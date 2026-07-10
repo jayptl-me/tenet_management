@@ -97,8 +97,7 @@ export default function RoomDetailPage() {
   const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
   const amenityOperational =
     room?.roomAmenities?.filter((a) => a.status === 'operational').length ?? 0;
-  const amenityDegraded =
-    room?.roomAmenities?.filter((a) => a.status === 'degraded').length ?? 0;
+  const amenityDegraded = room?.roomAmenities?.filter((a) => a.status === 'degraded').length ?? 0;
   const amenityDown = room?.roomAmenities?.filter((a) => a.status === 'down').length ?? 0;
 
   const floorDescription = room
@@ -124,11 +123,7 @@ export default function RoomDetailPage() {
       }
       actions={
         room ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/rooms/${id}/edit`)}
-          >
+          <Button variant="outline" size="sm" onClick={() => router.push(`/rooms/${id}/edit`)}>
             <Pencil className="h-4 w-4" />
             Edit
           </Button>
@@ -143,9 +138,7 @@ export default function RoomDetailPage() {
               <button
                 type="button"
                 className="font-semibold text-[color:var(--color-brand-600)] hover:underline"
-                onClick={() =>
-                  router.push(`/floors/${room.floor!._id ?? room.floor!.id}`)
-                }
+                onClick={() => router.push(`/floors/${room.floor!._id ?? room.floor!.id}`)}
               >
                 {room.floor.label ?? 'Floor'}
               </button>
@@ -369,6 +362,7 @@ export default function RoomDetailPage() {
                     rel="noopener noreferrer"
                     className="block aspect-square overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo}
                       alt={`Room ${room.roomNumber} photo ${index + 1}`}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
@@ -66,7 +66,6 @@ export default function NewPaymentPage() {
     register,
     control,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -81,8 +80,8 @@ export default function NewPaymentPage() {
     },
   });
 
-  const tenantId = watch('tenantId');
-  const invoiceId = watch('invoiceId');
+  const tenantId = useWatch({ control, name: 'tenantId' });
+  const invoiceId = useWatch({ control, name: 'invoiceId' });
 
   const loadInvoices = useCallback(async (tid: string) => {
     if (!tid) {
@@ -123,9 +122,7 @@ export default function NewPaymentPage() {
         data: { balance?: number; totalAmount: number; paidAmount?: number };
       }>()
       .then((res) => {
-        const balance =
-          res.data.balance ??
-          res.data.totalAmount - (res.data.paidAmount ?? 0);
+        const balance = res.data.balance ?? res.data.totalAmount - (res.data.paidAmount ?? 0);
         setSelectedBalance(balance);
         setValue('amount', balance > 0 ? balance : 0);
       })
@@ -211,7 +208,12 @@ export default function NewPaymentPage() {
                 ? [{ value: '', label: 'Loading invoices...' }]
                 : invoiceOptions.length > 0
                   ? invoiceOptions
-                  : [{ value: '', label: tenantId ? 'No payable invoices' : 'Select a tenant first' }]
+                  : [
+                      {
+                        value: '',
+                        label: tenantId ? 'No payable invoices' : 'Select a tenant first',
+                      },
+                    ]
             }
             error={errors.invoiceId?.message}
             disabled={!tenantId || invoicesLoading || invoiceOptions.length === 0}
@@ -247,12 +249,7 @@ export default function NewPaymentPage() {
             {...register('paidAt')}
           />
 
-          <Textarea
-            label="Notes"
-            rows={3}
-            placeholder="Optional notes..."
-            {...register('notes')}
-          />
+          <Textarea label="Notes" rows={3} placeholder="Optional notes..." {...register('notes')} />
         </div>
       </FormCard>
     </FormPage>

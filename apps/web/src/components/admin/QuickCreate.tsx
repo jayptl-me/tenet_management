@@ -3,8 +3,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Plus, Search, X, Users, BedDouble, Building2, MessageSquare,
-  Receipt, CreditCard, Megaphone, PhoneCall, Wifi, Package, ShieldCheck,
+  Plus,
+  Search,
+  X,
+  Users,
+  BedDouble,
+  Building2,
+  MessageSquare,
+  Receipt,
+  CreditCard,
+  Megaphone,
+  PhoneCall,
+  Wifi,
+  Package,
+  ShieldCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppConfigPublic } from '@/hooks/useAppConfig';
@@ -76,7 +88,7 @@ export function QuickCreate() {
       {/* FAB trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-lg)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-xl)] hover:scale-105 active:scale-95"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-lg)] transition-all duration-[var(--transition-duration)] hover:scale-105 hover:bg-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-xl)] active:scale-95"
         title="Quick Create (Cmd+N)"
       >
         <Plus className="h-6 w-6" />
@@ -100,7 +112,7 @@ export function QuickCreate() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed bottom-24 right-6 z-50 w-80 rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)] overflow-hidden"
+              className="fixed bottom-24 right-6 z-50 w-80 overflow-hidden rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)]"
             >
               {/* Search bar */}
               <div className="flex items-center gap-2 border-b border-[color:var(--border-color)] px-4 py-3">
@@ -118,7 +130,7 @@ export function QuickCreate() {
                 </kbd>
                 <button
                   onClick={() => setOpen(false)}
-                  className="text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] transition-colors"
+                  className="text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)]"
                 >
                   <X className="h-4 w-4" />
                 </button>

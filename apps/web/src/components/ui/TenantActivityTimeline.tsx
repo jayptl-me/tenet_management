@@ -16,7 +16,16 @@ import { api } from '@/lib/api';
 
 interface ActivityEvent {
   id: string;
-  type: 'move_in' | 'payment' | 'complaint_filed' | 'complaint_resolved' | 'service_update' | 'notice' | 'leave' | 'checkout' | 'payment_verified';
+  type:
+    | 'move_in'
+    | 'payment'
+    | 'complaint_filed'
+    | 'complaint_resolved'
+    | 'service_update'
+    | 'notice'
+    | 'leave'
+    | 'checkout'
+    | 'payment_verified';
   title: string;
   subtitle?: string;
   amount?: number;
@@ -138,7 +147,9 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
           return (
             <div key={event.id} className="relative flex gap-3 pb-4">
               {/* Dot + icon */}
-              <div className={`relative z-10 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${cfg.bg} ${cfg.color}`}>
+              <div
+                className={`relative z-10 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${cfg.bg} ${cfg.color}`}
+              >
                 {cfg.icon}
               </div>
 
@@ -156,7 +167,9 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
                   </span>
                 </div>
                 {event.subtitle && (
-                  <p className="text-xs leading-tight text-[color:var(--color-text-muted)]">{event.subtitle}</p>
+                  <p className="text-xs leading-tight text-[color:var(--color-text-muted)]">
+                    {event.subtitle}
+                  </p>
                 )}
                 {event.amount ? (
                   <p className="mt-0.5 text-xs font-bold text-[color:var(--color-text-primary)]">
@@ -176,7 +189,9 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
         {compact && events.length > 5 && (
           <div className="relative flex gap-3 pb-2">
             <div className="relative z-10 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color:var(--color-field-bg)]">
-              <span className="font-mono text-[9px] font-bold text-[color:var(--color-text-muted)]">+{events.length - 5}</span>
+              <span className="font-mono text-[9px] font-bold text-[color:var(--color-text-muted)]">
+                +{events.length - 5}
+              </span>
             </div>
             <p className="self-center text-xs text-[color:var(--color-text-muted)]">
               {events.length - 5} more events

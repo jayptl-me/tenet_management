@@ -43,8 +43,7 @@ export default function NewServicePage() {
       .then((res) => {
         const defs = (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor !== false);
         // Prefer per-floor amenities; if none flagged, use all definitions
-        const floorDefs =
-          (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor) ?? [];
+        const floorDefs = (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor) ?? [];
         const source = floorDefs.length > 0 ? floorDefs : defs;
         setTypeOptions(
           source.map((d) => ({
@@ -123,9 +122,7 @@ export default function NewServicePage() {
             <Select
               label="Service Type"
               options={
-                typeOptions.length > 0
-                  ? typeOptions
-                  : [{ value: '', label: 'Loading types...' }]
+                typeOptions.length > 0 ? typeOptions : [{ value: '', label: 'Loading types...' }]
               }
               error={errors.serviceType?.message}
               {...register('serviceType')}
@@ -137,12 +134,7 @@ export default function NewServicePage() {
             error={errors.status?.message}
             {...register('status')}
           />
-          <Textarea
-            label="Note"
-            rows={3}
-            placeholder="Optional note..."
-            {...register('note')}
-          />
+          <Textarea label="Note" rows={3} placeholder="Optional note..." {...register('note')} />
         </div>
       </FormCard>
     </FormPage>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, DoorOpen } from 'lucide-react';
+import { Plus, DoorOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
@@ -82,7 +83,9 @@ export default function VisitorsPage() {
   const columns: DataTableColumn<VisitorRow>[] = [
     {
       header: 'Visitor',
-      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.name}</span>,
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.name}</span>
+      ),
     },
     {
       header: 'Phone',
@@ -141,38 +144,11 @@ export default function VisitorsPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/visitors/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/visitors/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/visitors/${row._id}`)}
+          onEdit={() => router.push(`/visitors/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -234,11 +210,17 @@ export default function VisitorsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.name}
               </span>
               <StatusBadge
-                variant={statusToVariant(row.status === 'arrived' ? 'active' : row.status === 'departed' ? 'completed' : 'pending')}
+                variant={statusToVariant(
+                  row.status === 'arrived'
+                    ? 'active'
+                    : row.status === 'departed'
+                      ? 'completed'
+                      : 'pending',
+                )}
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
@@ -247,12 +229,11 @@ export default function VisitorsPage() {
               <span>{row.tenant?.user?.name ?? 'N/A'}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/visitors/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/visitors/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <TableActions
+                onView={() => router.push(`/visitors/${row._id}`)}
+                onEdit={() => router.push(`/visitors/${row._id}/edit`)}
+                showDelete={false}
+              />
             </div>
           </div>
         )}

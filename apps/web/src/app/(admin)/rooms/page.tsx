@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, DoorOpen } from 'lucide-react';
+import { Plus, DoorOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { ServiceStatusIndicator } from '@/components/ui/ServiceStatusIndicator';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -88,7 +89,11 @@ export default function RoomsPage() {
   const columns: DataTableColumn<RoomRow>[] = [
     {
       header: 'Room',
-      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.roomNumber}</span>,
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          {row.roomNumber}
+        </span>
+      ),
     },
     {
       header: 'Floor',
@@ -131,38 +136,11 @@ export default function RoomsPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/rooms/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/rooms/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/rooms/${row._id}`)}
+          onEdit={() => router.push(`/rooms/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -186,7 +164,10 @@ export default function RoomsPage() {
         <Input
           placeholder="Search by room number..."
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           className="max-w-xs"
         />
         <Select
@@ -197,7 +178,10 @@ export default function RoomsPage() {
             { value: '4', label: '4 Sharing' },
           ]}
           value={sharingFilter}
-          onChange={(e) => { setSharingFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSharingFilter(e.target.value);
+            setPage(1);
+          }}
           className="max-w-[180px]"
         />
         <Select
@@ -207,7 +191,10 @@ export default function RoomsPage() {
             { value: 'false', label: 'Inactive' },
           ]}
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
           className="max-w-[160px]"
         />
       </div>
@@ -218,7 +205,16 @@ export default function RoomsPage() {
         keyExtractor={(row: RoomRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/rooms/${row._id}`)}
-        pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: (p) => setPage(p),
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
         emptyState={
           <EmptyState
             icon={<DoorOpen className="h-12 w-12" />}
@@ -230,7 +226,7 @@ export default function RoomsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 Room {row.roomNumber}
               </span>
               <StatusBadge
@@ -244,24 +240,11 @@ export default function RoomsPage() {
               <span>₹{row.monthlyRent.toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/rooms/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
-              >
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/rooms/${row._id}/edit`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
-              >
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </button>
+              <TableActions
+                onView={() => router.push(`/rooms/${row._id}`)}
+                onEdit={() => router.push(`/rooms/${row._id}/edit`)}
+                onDelete={() => setDeleteTarget(row)}
+              />
             </div>
           </div>
         )}

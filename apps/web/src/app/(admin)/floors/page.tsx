@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, Building2, Search } from 'lucide-react';
+import { Plus, Building2, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -38,24 +39,21 @@ export default function FloorsPage() {
     setIsLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-
-      const res = await api.get(`floors?${params.toString()}`).json<{
+      const res = await api.get('floors').json<{
         success: boolean;
         data: FloorRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
       }>();
-      setFloors(res.data);
-      setTotal(res.meta?.total ?? res.data.length);
+      const filtered = res.data.filter(
+        (f) => !search || f.label.toLowerCase().includes(search.toLowerCase()),
+      );
+      setFloors(filtered);
+      setTotal(filtered.length);
     } catch {
       setError('Failed to load floors');
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search]);
+  }, [search]);
 
   useEffect(() => {
     fetchFloors();
@@ -78,7 +76,9 @@ export default function FloorsPage() {
   const columns: DataTableColumn<FloorRow>[] = [
     {
       header: 'Floor',
-      accessor: (row) => <span className="font-semibold text-[color:var(--color-text-primary)]">{row.label}</span>,
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.label}</span>
+      ),
     },
     {
       header: 'Floor #',
@@ -100,40 +100,13 @@ export default function FloorsPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/floors/${row._id}`);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/floors/${row._id}/edit`);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/floors/${row._id}`)}
+          onEdit={() => router.push(`/floors/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
-      className: 'w-[120px]',
+      className: 'w-[130px]',
     },
   ];
 
@@ -152,14 +125,16 @@ export default function FloorsPage() {
 
       <ErrorBanner message={error} />
 
-      {/* Search */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative max-w-xs">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
           <Input
             placeholder="Search floors..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-8"
           />
         </div>
@@ -171,7 +146,16 @@ export default function FloorsPage() {
         keyExtractor={(row: FloorRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/floors/${row._id}`)}
-        pagination={{ page, perPage, total, onPageChange: (p) => setPage(p), onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: (p) => setPage(p),
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
         emptyState={
           <EmptyState
             icon={<Building2 className="h-12 w-12" />}
@@ -183,7 +167,7 @@ export default function FloorsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.label}
               </span>
               <span className="inline-flex items-center rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 text-xs font-medium text-[color:var(--color-text-muted)]">
@@ -191,27 +175,16 @@ export default function FloorsPage() {
               </span>
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span>{row.totalRooms} Room{row.totalRooms !== 1 ? 's' : ''}</span>
+              <span>
+                {row.totalRooms} Room{row.totalRooms !== 1 ? 's' : ''}
+              </span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/floors/${row._id}`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
-              >
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); router.push(`/floors/${row._id}/edit`); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
-              >
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-                className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
-              >
-                <Trash2 className="h-3 w-3" /> Delete
-              </button>
+              <TableActions
+                onView={() => router.push(`/floors/${row._id}`)}
+                onEdit={() => router.push(`/floors/${row._id}/edit`)}
+                onDelete={() => setDeleteTarget(row)}
+              />
             </div>
           </div>
         )}

@@ -47,10 +47,7 @@ export function BarChart({
   formatValue = (n) => String(Math.round(n)),
 }: BarChartProps) {
   const uid = useId().replace(/:/g, '');
-  const maxVal = Math.max(
-    ...data.map((d) => Math.max(d.value, d.secondaryValue ?? 0)),
-    1,
-  );
+  const maxVal = Math.max(...data.map((d) => Math.max(d.value, d.secondaryValue ?? 0)), 1);
 
   const padTop = showValues || primaryLabel ? 28 : 16;
   const padBottom = 40;
@@ -77,7 +74,7 @@ export function BarChart({
     return (
       <div
         className={clsx(
-          'flex items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--chart-track)]/50',
+          'bg-[color:var(--chart-track)]/50 flex items-center justify-center rounded-[var(--radius-md)]',
           className,
         )}
         style={{ height }}
@@ -99,9 +96,7 @@ export function BarChart({
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={
-        primaryLabel
-          ? `${primaryLabel} bar chart`
-          : `Bar chart with ${data.length} categories`
+        primaryLabel ? `${primaryLabel} bar chart` : `Bar chart with ${data.length} categories`
       }
     >
       <defs>
@@ -143,11 +138,7 @@ export function BarChart({
               y1={gl.y}
               x2={padLeft + plotW}
               y2={gl.y}
-              stroke={
-                i === gridLines.length - 1
-                  ? chartTokens.gridStrong
-                  : chartTokens.grid
-              }
+              stroke={i === gridLines.length - 1 ? chartTokens.gridStrong : chartTokens.grid}
               strokeWidth={i === gridLines.length - 1 ? 1 : 0.75}
               strokeDasharray={i === gridLines.length - 1 ? undefined : '3 3'}
             />
@@ -173,9 +164,7 @@ export function BarChart({
           const secondaryFill = chartTokens.barSecondary;
 
           const primaryH = (point.value / maxVal) * chartH;
-          const secH = hasSecondary
-            ? ((point.secondaryValue ?? 0) / maxVal) * chartH
-            : 0;
+          const secH = hasSecondary ? ((point.secondaryValue ?? 0) / maxVal) * chartH : 0;
 
           let primaryX: number;
           let primaryW: number;
@@ -275,9 +264,7 @@ export function BarChart({
                 fontFamily={chartTokens.fontBody}
                 fontWeight={500}
               >
-                {point.label.length > 10
-                  ? `${point.label.slice(0, 9)}…`
-                  : point.label}
+                {point.label.length > 10 ? `${point.label.slice(0, 9)}…` : point.label}
               </text>
             </g>
           );
@@ -288,14 +275,7 @@ export function BarChart({
         <g transform={`translate(${padLeft}, 10)`}>
           {primaryLabel && (
             <>
-              <rect
-                x={0}
-                y={0}
-                width={8}
-                height={8}
-                fill={chartTokens.bar}
-                rx={2}
-              />
+              <rect x={0} y={0} width={8} height={8} fill={chartTokens.bar} rx={2} />
               <text
                 x={12}
                 y={7}

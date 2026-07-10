@@ -38,10 +38,12 @@ export interface IInvoiceGenerateSingle {
 
 /** Populated list row shape returned by GET /invoices */
 export interface IInvoiceListItem extends Omit<IInvoice, 'tenantId'> {
-  tenantId: {
-    id?: string;
-    _id?: string;
-    userId?: { name?: string; email?: string; phone?: string };
-    roomId?: { roomNumber?: string; floorId?: string };
-  } | string;
+  tenantId:
+    | {
+        id?: string;
+        _id?: string;
+        userId?: { name?: string; email?: string; phone?: string };
+        roomId?: { roomNumber?: string; floorId?: string };
+      }
+    | string;
 }

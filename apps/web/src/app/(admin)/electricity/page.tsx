@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, Zap } from 'lucide-react';
+import { Plus, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -90,13 +91,15 @@ export default function ElectricityPage() {
     {
       header: 'Month',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-primary)] font-semibold">{row.month}</span>
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.month}</span>
       ),
     },
     {
       header: 'Total Amount',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-primary)] font-semibold">₹{row.totalBillAmount.toLocaleString()}</span>
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          ₹{row.totalBillAmount.toLocaleString()}
+        </span>
       ),
     },
     {
@@ -115,7 +118,7 @@ export default function ElectricityPage() {
     {
       header: 'Notes',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-muted)] block max-w-[200px] truncate text-xs">
+        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
           {row.notes ?? '—'}
         </span>
       ),
@@ -123,38 +126,11 @@ export default function ElectricityPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/electricity/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/electricity/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/electricity/${row._id}`)}
+          onEdit={() => router.push(`/electricity/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -219,7 +195,7 @@ export default function ElectricityPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.month}
               </span>
               <StatusBadge
@@ -232,36 +208,11 @@ export default function ElectricityPage() {
               <span>{row.roomEntries?.length ?? 0} rooms</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/electricity/${row._id}`);
-                }}
-                className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                title="View"
-              >
-                <Eye className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/electricity/${row._id}/edit`);
-                }}
-                className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                title="Edit"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(row);
-                }}
-                className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
+              <TableActions
+                onView={() => router.push(`/electricity/${row._id}`)}
+                onEdit={() => router.push(`/electricity/${row._id}/edit`)}
+                onDelete={() => setDeleteTarget(row)}
+              />
             </div>
           </div>
         )}
@@ -270,7 +221,7 @@ export default function ElectricityPage() {
       <ConfirmModal
         open={!!deleteTarget}
         title="Delete Electricity Bill"
-        message={`Are you sure you want to delete this electricity bill? This action cannot be undone.`}
+        message="Are you sure you want to delete this electricity bill? This action cannot be undone."
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

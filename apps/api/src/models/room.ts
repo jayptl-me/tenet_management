@@ -1,5 +1,6 @@
 import { Schema, model, type Document, type Model } from 'mongoose';
 import type { SharingType, RoomAmenityStatus } from '@pg/types/room';
+import { Floor } from './floor.js';
 
 const BED_IDS = ['A', 'B', 'C', 'D'] as const;
 
@@ -126,9 +127,7 @@ const roomSchema: any = new Schema(
       virtuals: true,
       transform(_doc: unknown, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },
@@ -156,6 +155,27 @@ roomSchema.virtual('floor', {
 roomSchema.pre('save', function (this: IRoomDocument) {
   if (this.isModified('beds')) {
     this.occupancyCount = this.beds.filter((b) => b.isOccupied).length;
+  }
+});
+
+// ── Post-save: keep Floor.totalRooms in sync ────────────
+roomSchema.post('save', async function (doc: IRoomDocument) {
+  try {
+    const count = await Room.countDocuments({ floorId: doc.floorId, isActive: true });
+    await Floor.findByIdAndUpdate(doc.floorId, { totalRooms: count });
+  } catch {
+    // Silently ignore — don't block the room save on floor update failure
+  }
+});
+
+// ── Post-remove: decrement Floor.totalRooms on deletion ─
+roomSchema.post('findOneAndDelete', async function (doc: IRoomDocument | null) {
+  if (!doc) return;
+  try {
+    const count = await Room.countDocuments({ floorId: doc.floorId, isActive: true });
+    await Floor.findByIdAndUpdate(doc.floorId, { totalRooms: count });
+  } catch {
+    // Silently ignore
   }
 });
 

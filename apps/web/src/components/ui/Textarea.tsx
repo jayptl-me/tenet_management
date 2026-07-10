@@ -19,12 +19,13 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   error?: string;
   helperText?: string;
   hint?: string;
+  leftIcon?: React.ReactNode;
 }
 
 // ── Component ──────────────────────────────────────────
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, helperText, hint, className, id, rows = 3, ...props }, ref) => {
+  ({ label, error, helperText, hint, leftIcon, className, id, rows = 3, ...props }, ref) => {
     const textareaId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -38,19 +39,27 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           </div>
         )}
 
-        <textarea
-          ref={ref}
-          id={textareaId}
-          rows={rows}
-          className={clsx(
-            fieldControlBase,
-            'min-h-[5.5rem] resize-y py-2.5',
-            error ? fieldControlBorderError : fieldControlBorderOk,
-            className,
+        <div className="relative">
+          {leftIcon && (
+            <span className="pointer-events-none absolute left-3 top-5 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+              {leftIcon}
+            </span>
           )}
-          aria-invalid={error ? true : undefined}
-          {...props}
-        />
+          <textarea
+            ref={ref}
+            id={textareaId}
+            rows={rows}
+            className={clsx(
+              fieldControlBase,
+              'min-h-[5.5rem] resize-y py-2.5',
+              leftIcon && 'pl-9',
+              error ? fieldControlBorderError : fieldControlBorderOk,
+              className,
+            )}
+            aria-invalid={error ? true : undefined}
+            {...props}
+          />
+        </div>
 
         {error && (
           <p className={fieldErrorClass} role="alert">

@@ -99,6 +99,7 @@ export function serviceUnavailableError(serviceName: string): {
   const status = getServiceAvailability().find((s) => s.name === serviceName);
   return {
     code: 'SERVICE_UNAVAILABLE',
-    message: status?.reason ?? `${serviceName} is not configured. Please contact your administrator.`,
+    message:
+      status?.reason ?? `${serviceName} is not configured. Please contact your administrator.`,
   };
 }

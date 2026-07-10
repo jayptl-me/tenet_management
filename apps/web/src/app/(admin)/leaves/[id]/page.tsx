@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Calendar,
-  User,
-  MapPin,
-  FileText,
-  Check,
-  X,
-  Pencil,
-} from 'lucide-react';
+import { Calendar, User, MapPin, FileText, Check, X, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -143,10 +135,7 @@ export default function LeaveDetailPage() {
       maxWidth="4xl"
       badge={
         leave ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={leave.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={leave.status.replace(/_/g, ' ')} />
         ) : undefined
       }
       actions={
@@ -228,17 +217,11 @@ export default function LeaveDetailPage() {
               <DetailList>
                 <DetailRow label="Start Date" value={formatDate(leave.startDate)} />
                 <DetailRow label="End Date" value={formatDate(leave.endDate)} />
-                <DetailRow
-                  label="Duration"
-                  value={`${duration} day${duration !== 1 ? 's' : ''}`}
-                />
+                <DetailRow label="Duration" value={`${duration} day${duration !== 1 ? 's' : ''}`} />
                 <DetailRow
                   label="Status"
                   value={
-                    <StatusBadge
-                      variant={statusVariant}
-                      label={leave.status.replace(/_/g, ' ')}
-                    />
+                    <StatusBadge variant={statusVariant} label={leave.status.replace(/_/g, ' ')} />
                   }
                 />
               </DetailList>
@@ -294,8 +277,7 @@ export default function LeaveDetailPage() {
           )}
 
           <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
-            Applied {formatDateTime(leave.createdAt)} · Updated{' '}
-            {formatDateTime(leave.updatedAt)}
+            Applied {formatDateTime(leave.createdAt)} · Updated {formatDateTime(leave.updatedAt)}
           </p>
         </div>
       )}
