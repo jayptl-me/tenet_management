@@ -56,9 +56,7 @@ export function FormPage({
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 py-20">
         <Loader2 className="h-8 w-8 animate-spin text-[color:var(--color-brand-500)]" />
-        <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
-          Loading...
-        </p>
+        <p className="text-sm font-medium text-[color:var(--color-text-muted)]">Loading...</p>
       </div>
     );
   }

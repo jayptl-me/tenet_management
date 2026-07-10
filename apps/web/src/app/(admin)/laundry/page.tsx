@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, CheckCircle, XCircle, Shirt } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Shirt } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -96,10 +97,10 @@ export default function LaundryPage() {
       header: 'Tenant',
       accessor: (row) => (
         <div>
-          <span className="text-[color:var(--color-text-primary)] font-semibold">
+          <span className="font-semibold text-[color:var(--color-text-primary)]">
             {row.tenant?.user?.name ?? 'N/A'}
           </span>
-          <p className="text-[color:var(--color-text-muted)] text-xs">
+          <p className="text-xs text-[color:var(--color-text-muted)]">
             Room {row.tenant?.room?.roomNumber ?? '—'}
           </p>
         </div>
@@ -124,75 +125,49 @@ export default function LaundryPage() {
     {
       header: 'Status',
       accessor: (row) => (
-        <StatusBadge
-          variant={statusToVariant(row.status)}
-          label={row.status.replace(/_/g, ' ')}
-        />
+        <StatusBadge variant={statusToVariant(row.status)} label={row.status.replace(/_/g, ' ')} />
       ),
     },
     {
       header: 'Actions',
       accessor: (row) => (
         <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/laundry/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/laundry/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
           {row.status === 'booked' && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleStatusUpdate(row._id, 'completed');
               }}
-              className="text-success-600 hover:bg-success-50 inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-success-600)] transition-colors hover:bg-[color:var(--color-success-50)]"
               title="Mark completed"
               disabled={isUpdating}
             >
               <CheckCircle className="h-3 w-3" />
             </button>
           )}
-          {(row.status === 'booked' || row.status === 'completed' || row.status === 'confirmed') && (
+          {(row.status === 'booked' ||
+            row.status === 'completed' ||
+            row.status === 'confirmed') && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleStatusUpdate(row._id, 'cancelled');
               }}
-              className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
               title="Cancel slot"
               disabled={isUpdating}
             >
               <XCircle className="h-3 w-3" />
             </button>
           )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+          <TableActions
+            onView={() => router.push(`/laundry/${row._id}`)}
+            onEdit={() => router.push(`/laundry/${row._id}/edit`)}
+            onDelete={() => setDeleteTarget(row)}
+          />
         </div>
       ),
-      className: 'w-[170px]',
+      className: 'w-[180px]',
     },
   ];
 
@@ -256,23 +231,30 @@ export default function LaundryPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
-              <StatusBadge variant={statusToVariant(row.status)} label={row.status.replace(/_/g, ' ')} />
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status.replace(/_/g, ' ')}
+              />
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span>{new Date(row.slotDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+              <span>
+                {new Date(row.slotDate).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                })}
+              </span>
               <span>{row.slotTime}</span>
               <span>{row.items != null ? `${row.items} items` : '—'}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/laundry/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/laundry/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <TableActions
+                onView={() => router.push(`/laundry/${row._id}`)}
+                onEdit={() => router.push(`/laundry/${row._id}/edit`)}
+                showDelete={false}
+              />
             </div>
           </div>
         )}

@@ -73,7 +73,6 @@ menus.get('/', authGuard, async (c) => {
   });
 });
 
-
 // ── GET /menus/:id ──────────────────────────────────────────
 menus.get('/:id', authGuard, async (c) => {
   const id = c.req.param('id');
@@ -87,6 +86,19 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
   const id = c.req.param('id');
   const body = c.req.valid('json');
 
+  // Reject edits to past dates
+  const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(id) ? id : body.date;
+  const today = new Date().toISOString().slice(0, 10);
+  if (targetDate && targetDate < today) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'PAST_DATE', message: 'Cannot edit menus for past dates.' },
+      },
+      422,
+    );
+  }
+
   // If param looks like a date (YYYY-MM-DD), upsert by date; otherwise find by ObjectId
   if (/^\d{4}-\d{2}-\d{2}$/.test(id)) {
     const menu = await DailyMenu.findOneAndUpdate(
@@ -97,7 +109,10 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
     return c.json({ success: true, data: menu });
   }
 
-  const menu = await DailyMenu.findByIdAndUpdate(id, body, { returnDocument: 'after', runValidators: true }).lean();
+  const menu = await DailyMenu.findByIdAndUpdate(id, body, {
+    returnDocument: 'after',
+    runValidators: true,
+  }).lean();
   if (!menu) return notFound(c, 'Daily menu');
   return c.json({ success: true, data: menu });
 });

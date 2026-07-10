@@ -1,12 +1,14 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import crypto from 'node:crypto';
 import { User } from '../models/user.js';
 import { signAccessToken, signRefreshToken } from '../lib/jwt.js';
 import { createRefreshToken, rotateRefreshToken, revokeAllUserTokens } from '../lib/tokenStore.js';
 import { authGuard } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js';
 import { logger } from '../lib/logger.js';
+import { sendPasswordResetEmail } from '../services/email.service.js';
 
 const auth = new Hono();
 
@@ -29,6 +31,18 @@ const changePasswordSchema = z.strictObject({
   newPassword: z.string().min(8, 'New password must be at least 8 characters'),
 });
 
+const forgotPasswordSchema = z.strictObject({
+  email: z
+    .string()
+    .email('Invalid email format')
+    .transform((v) => v.toLowerCase().trim()),
+});
+
+const resetPasswordSchema = z.strictObject({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 // ── POST /auth/login ────────────────────────────────────
 
 auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
@@ -45,6 +59,20 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
     );
   }
 
+  if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+    const remainingMinutes = Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 60000);
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: `Account locked due to too many failed attempts. Try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`,
+        },
+      },
+      423,
+    );
+  }
+
   if (!user.isActive) {
     return c.json(
       {
@@ -57,6 +85,7 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
 
   const passwordValid = await user.comparePassword(password);
   if (!passwordValid) {
+    await user.recordLoginFailed();
     return c.json(
       {
         success: false,
@@ -65,6 +94,8 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
       401,
     );
   }
+
+  await user.recordLoginSuccess();
 
   const accessToken = await signAccessToken({ sub: user.id, role: user.role });
   const jti = createRefreshToken(user.id);
@@ -84,7 +115,7 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
 
 // ── POST /auth/refresh ──────────────────────────────────
 
-auth.post('/refresh', zValidator('json', refreshSchema), async (c) => {
+auth.post('/refresh', authLimiter, zValidator('json', refreshSchema), async (c) => {
   const { refreshToken } = c.req.valid('json');
 
   let payload;
@@ -167,6 +198,90 @@ auth.get('/me', authGuard, async (c) => {
   }
 
   return c.json({ success: true, data: user.toPublicJSON() });
+});
+
+// ── POST /auth/forgot-password ───────────────────────────
+
+auth.post(
+  '/forgot-password',
+  passwordResetLimiter,
+  zValidator('json', forgotPasswordSchema),
+  async (c) => {
+    const { email } = c.req.valid('json');
+
+    const user = await User.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
+    // Always return success to prevent email enumeration
+    if (!user || !user.isActive) {
+      logger.info({ email }, 'Password reset requested for unknown/inactive user');
+      return c.json({
+        success: true,
+        data: {
+          message: 'If an account exists with this email, a password reset link has been sent.',
+        },
+      });
+    }
+
+    // Generate 32-byte random token (64 hex chars)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.passwordResetToken = tokenHash;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const { sent, resetUrl } = await sendPasswordResetEmail(email, resetToken, user.name);
+
+    if (!sent) {
+      logger.info({ email, resetUrl }, 'Password reset — email unavailable, URL logged');
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        message: 'If an account exists with this email, a password reset link has been sent.',
+      },
+    });
+  },
+);
+
+// ── POST /auth/reset-password ────────────────────────────
+
+auth.post('/reset-password', zValidator('json', resetPasswordSchema), async (c) => {
+  const { token, password } = c.req.valid('json');
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    passwordResetToken: tokenHash,
+    passwordResetExpires: { $gt: new Date() },
+  }).select('+passwordResetToken +passwordResetExpires');
+
+  if (!user) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_RESET_TOKEN',
+          message: 'Reset token is invalid or has expired.',
+        },
+      },
+      400,
+    );
+  }
+
+  user.passwordHash = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  // Revoke all existing sessions for security
+  revokeAllUserTokens(user.id);
+  logger.info({ userId: user.id }, 'Password reset — all tokens revoked');
+
+  return c.json({
+    success: true,
+    data: { message: 'Password reset successful. Please log in with your new password.' },
+  });
 });
 
 // ── PUT /auth/password ──────────────────────────────────

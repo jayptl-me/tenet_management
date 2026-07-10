@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList } from 'lucide-react';
 import { api } from '@/lib/api';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
 interface MenuRow {
@@ -29,6 +30,7 @@ export default function MenusPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MenuRow | null>(null);
@@ -41,6 +43,7 @@ export default function MenusPage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
+      if (search) params.set('search', search);
       if (statusFilter) params.set('isActive', statusFilter);
 
       const res = await api.get(`menus?${params.toString()}`).json<{
@@ -55,7 +58,7 @@ export default function MenusPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, statusFilter]);
+  }, [page, perPage, search, statusFilter]);
 
   useEffect(() => {
     fetchMenus();
@@ -79,7 +82,7 @@ export default function MenusPage() {
     {
       header: 'Date',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-primary)] font-semibold">
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
           {new Date(row.date).toLocaleDateString('en-IN', {
             weekday: 'long',
             day: '2-digit',
@@ -106,23 +109,11 @@ export default function MenusPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}`); }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          ><Eye className="h-3 w-3" /></button>
-          <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}/edit`); }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          ><Pencil className="h-3 w-3" /></button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          ><Trash2 className="h-3 w-3" /></button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/menus/${row._id}`)}
+          onEdit={() => router.push(`/menus/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -141,7 +132,28 @@ export default function MenusPage() {
       />
       <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Select options={[{ value: '', label: 'All Status' }, { value: 'true', label: 'Active' }, { value: 'false', label: 'Draft' }]} value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="max-w-[160px]" />
+        <Input
+          placeholder="Search by date..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-xs"
+        />
+        <Select
+          options={[
+            { value: '', label: 'All Status' },
+            { value: 'true', label: 'Active' },
+            { value: 'false', label: 'Draft' },
+          ]}
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[160px]"
+        />
       </div>
       <DataTable
         columns={columns}
@@ -149,7 +161,16 @@ export default function MenusPage() {
         keyExtractor={(row: MenuRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/menus/${row._id}`)}
-        pagination={{ page, perPage, total, onPageChange: setPage, onPerPageChange: (pp) => { setPerPage(pp); setPage(1); } }}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: setPage,
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
         emptyState={
           <EmptyState
             icon={<ClipboardList className="h-12 w-12" />}
@@ -161,8 +182,12 @@ export default function MenusPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
-                {new Date(row.date).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short' })}
+              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                {new Date(row.date).toLocaleDateString('en-IN', {
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: 'short',
+                })}
               </span>
               <StatusBadge
                 variant={statusToVariant(row.isActive ? 'active' : 'draft')}
@@ -170,17 +195,23 @@ export default function MenusPage() {
               />
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/menus/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <TableActions
+                onView={() => router.push(`/menus/${row._id}`)}
+                onEdit={() => router.push(`/menus/${row._id}/edit`)}
+                showDelete={false}
+              />
             </div>
           </div>
         )}
       />
-      <ConfirmModal open={!!deleteTarget} title="Delete Menu" message={`Are you sure you want to delete this menu? This action cannot be undone.`} loading={deleting} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Menu"
+        message={`Are you sure you want to delete this menu? This action cannot be undone.`}
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

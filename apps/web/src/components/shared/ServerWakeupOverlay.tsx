@@ -11,8 +11,12 @@ export default function ServerWakeupOverlay() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]">
       <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 text-center shadow-[var(--shadow-card)]">
         {/* Loading Spinner */}
-        <div className="bg-brand-100 mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]">
-          <svg className="text-brand-600 h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-100)]">
+          <svg
+            className="h-8 w-8 animate-spin text-[color:var(--color-brand-600)]"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
             <circle
               className="opacity-25"
               cx="12"
@@ -30,18 +34,18 @@ export default function ServerWakeupOverlay() {
         </div>
 
         {/* Text Details */}
-        <h3 className="font-display text-surface-900 mb-2 text-xl font-bold">
+        <h3 className="font-display mb-2 text-xl font-bold text-[color:var(--color-surface-900)]">
           Waking Up Server...
         </h3>
-        <p className="font-body text-surface-600 text-sm leading-relaxed">
+        <p className="font-body text-sm leading-relaxed text-[color:var(--color-surface-600)]">
           The server is currently starting up after a period of inactivity. This usually takes{' '}
-          <strong>30–60 seconds</strong>. Thank you for your patience!
+          <strong>30-60 seconds</strong>. Thank you for your patience!
         </p>
 
         {/* Shimmer Pulse Indicator */}
         <div className="mt-5 flex items-center justify-center gap-1.5">
-          <span className="bg-brand-500 h-2 w-2 animate-pulse rounded-full" />
-          <span className="text-brand-600 font-mono text-xs font-semibold uppercase tracking-wider">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[color:var(--color-brand-600)]">
             Establishing connection...
           </span>
         </div>

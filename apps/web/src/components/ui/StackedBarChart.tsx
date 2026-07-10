@@ -39,10 +39,7 @@ export function StackedBarChart({
     ...safeBars.map((b) => b.segments.reduce((s, seg) => s + seg.value, 0)),
     1,
   );
-  const totalHeight = Math.max(
-    safeBars.length * (barHeight + barGap) - barGap,
-    barHeight,
-  );
+  const totalHeight = Math.max(safeBars.length * (barHeight + barGap) - barGap, barHeight);
   const padLeft = 112;
   const padRight = 48;
   const chartW = 640;
@@ -123,9 +120,7 @@ export function StackedBarChart({
                 fontFamily={chartTokens.fontBody}
                 fontWeight={600}
               >
-                {bar.label.length > 14
-                  ? `${bar.label.slice(0, 13)}…`
-                  : bar.label}
+                {bar.label.length > 14 ? `${bar.label.slice(0, 13)}…` : bar.label}
               </text>
 
               <g clipPath={`url(#${clipId})`}>
@@ -233,18 +228,13 @@ export function StackedBarChart({
       {showLegend && legendItems.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           {legendItems.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-1.5 text-[11px] font-semibold"
-            >
+            <div key={item.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
                 style={{ backgroundColor: item.color }}
                 aria-hidden
               />
-              <span className="text-[color:var(--color-text-secondary)]">
-                {item.label}
-              </span>
+              <span className="text-[color:var(--color-text-secondary)]">{item.label}</span>
             </div>
           ))}
         </div>

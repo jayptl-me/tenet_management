@@ -1,38 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus, Trash2, Zap, Calculator } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
-import { fieldControlBase, fieldControlBorderOk, fieldLabelClass, surfaceNestedClass } from '@/lib/field-styles';
 import { roomLabel } from '@/lib/resource-select-presets';
+import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
-interface RoomOption {
-  _id: string;
-  roomNumber: string;
-  sharingType?: number;
-}
+// ── Schema ──────────────────────────────────────────────
 
-interface RoomEntryForm {
-  roomId: string;
-  previousReading: number;
-  currentReading: number;
-  ratePerUnit: number;
-}
+const roomEntrySchema = z.object({
+  roomId: z.string().min(1, 'Room is required'),
+  previousReading: z.coerce.number().min(0, 'Cannot be negative'),
+  currentReading: z.coerce.number().min(0, 'Cannot be negative'),
+  ratePerUnit: z.coerce.number().min(0, 'Rate must be >= 0'),
+});
 
-function roomIdOf(entry: { roomId?: string | { _id?: string } }): string {
-  if (!entry.roomId) return '';
-  if (typeof entry.roomId === 'string') return entry.roomId;
-  return entry.roomId._id ?? '';
-}
+const formSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
+    totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    notes: z.string().optional(),
+    roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
+  })
+  .refine((data) => data.roomEntries.every((e) => e.currentReading >= e.previousReading), {
+    message: 'Current reading must be >= previous reading for all entries',
+    path: ['roomEntries'],
+  })
+  .refine(
+    (data) => {
+      const ids = data.roomEntries.map((e) => e.roomId);
+      return new Set(ids).size === ids.length;
+    },
+    { message: 'Each room can only appear once', path: ['roomEntries'] },
+  );
+
+type FormData = z.infer<typeof formSchema>;
+
+// ── Component ───────────────────────────────────────────
 
 export default function EditElectricityPage() {
   const router = useRouter();
@@ -40,13 +57,37 @@ export default function EditElectricityPage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [month, setMonth] = useState('');
-  const [totalBillAmount, setTotalBillAmount] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState('draft');
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [entries, setEntries] = useState<RoomEntryForm[]>([]);
+  const [billStatus, setBillStatus] = useState('draft');
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      month: '',
+      totalBillAmount: 0,
+      notes: '',
+      roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'roomEntries' });
+
+  // Watch entries for auto-calculations
+  const entries = useWatch({ control, name: 'roomEntries' });
+
+  const computeAutoTotal = useCallback((entries: FormData['roomEntries']) => {
+    return entries.reduce((sum, e) => {
+      const units = Math.max(0, (e.currentReading || 0) - (e.previousReading || 0));
+      return sum + units * (e.ratePerUnit || 0);
+    }, 0);
+  }, []);
+
+  const autoTotal = computeAutoTotal(entries);
 
   useEffect(() => {
     if (!id) return;
@@ -66,55 +107,53 @@ export default function EditElectricityPage() {
           }>;
         };
       }>(),
-      api.get('rooms?limit=100').json<{ success: boolean; data: RoomOption[] }>(),
     ])
-      .then(([billRes, roomsRes]) => {
+      .then(([billRes]) => {
         const b = billRes.data;
-        setMonth(b.month);
-        setTotalBillAmount(b.totalBillAmount);
-        setNotes(b.notes ?? '');
-        setStatus(b.status);
-        setEntries(
-          (b.roomEntries ?? []).map((e) => ({
-            roomId: roomIdOf(e),
+        setBillStatus(b.status);
+
+        if (b.status === 'distributed') {
+          setSubmitError('Distributed bills cannot be edited');
+          setIsLoading(false);
+          return;
+        }
+
+        reset({
+          month: b.month ?? '',
+          totalBillAmount: b.totalBillAmount ?? 0,
+          notes: b.notes ?? '',
+          roomEntries: (b.roomEntries ?? []).map((e) => ({
+            roomId:
+              typeof e.roomId === 'string' ? e.roomId : ((e.roomId as { _id?: string })?._id ?? ''),
             previousReading: e.previousReading,
             currentReading: e.currentReading,
             ratePerUnit: e.ratePerUnit,
           })),
-        );
-        setRooms(roomsRes.data ?? []);
+        });
         setIsLoading(false);
       })
       .catch(() => {
         setSubmitError('Failed to load electricity bill');
         setIsLoading(false);
       });
-  }, [id]);
+  }, [id, reset]);
 
-  const updateEntry = (idx: number, patch: Partial<RoomEntryForm>) => {
-    setEntries((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: FormData) => {
     setSubmitError('');
-    if (status === 'distributed') {
+
+    if (billStatus === 'distributed') {
       setSubmitError('Distributed bills cannot be edited');
       return;
     }
-    if (entries.some((en) => !en.roomId || en.currentReading < en.previousReading)) {
-      setSubmitError('Check room selection and readings (current >= previous)');
-      return;
-    }
-    setIsSubmitting(true);
+
     try {
       await api
         .put(`electricity/${id}`, {
           json: {
-            month,
-            totalBillAmount,
-            notes: notes || undefined,
-            roomEntries: entries.map((en) => ({
+            month: data.month,
+            totalBillAmount: data.totalBillAmount,
+            notes: data.notes || undefined,
+            roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
               previousReading: en.previousReading,
               currentReading: en.currentReading,
@@ -126,28 +165,44 @@ export default function EditElectricityPage() {
       router.push(`/electricity/${id}`);
     } catch {
       setSubmitError('Failed to update electricity bill');
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <FormPage
+        title="Edit Electricity Bill"
+        description="Loading bill data..."
+        isLoading={true}
+        backHref="/electricity"
+        maxWidth="4xl"
+      />
+    );
+  }
+
+  const err = errors as Record<string, { message?: string }>;
 
   return (
     <FormPage
       title="Edit Electricity Bill"
-      description={`Status: ${status} · units and amounts recompute on save`}
+      description={
+        billStatus === 'distributed'
+          ? 'This bill has been distributed and cannot be edited'
+          : `Status: ${billStatus} — units and amounts recompute automatically`
+      }
       backHref="/electricity"
       error={submitError}
-      isLoading={isLoading}
       maxWidth="4xl"
     >
       <FormCard
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         footer={
           <FormActions
             loading={isSubmitting}
             cancelHref="/electricity"
-            submitLabel="Save Changes"
+            submitLabel={billStatus === 'distributed' ? 'Read Only' : 'Save Changes'}
             divided={false}
+            hideSubmit={billStatus === 'distributed'}
           />
         }
       >
@@ -157,114 +212,180 @@ export default function EditElectricityPage() {
             description="Billing month and total amount for this cycle"
           >
             <FormGrid>
-              <Input label="Month" value={month} onChange={(e) => setMonth(e.target.value)} />
               <Input
-                label="Total bill amount"
+                label="Month (YYYY-MM)"
+                placeholder="2025-01"
+                error={err.month?.message}
+                {...register('month')}
+                disabled={billStatus === 'distributed'}
+              />
+              <Input
+                label="Total bill amount (₹)"
                 type="number"
                 step="0.01"
-                value={totalBillAmount}
-                onChange={(e) => setTotalBillAmount(Number(e.target.value))}
+                min={0}
+                error={err.totalBillAmount?.message}
+                {...register('totalBillAmount')}
+                disabled={billStatus === 'distributed'}
               />
             </FormGrid>
           </FormSection>
 
           <FormSection
             title="Room readings"
-            divided
             description="Per-room meter readings for this billing period"
+            divided
             action={
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setEntries((p) => [
-                    ...p,
-                    { roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 },
-                  ])
+                  append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
                 }
+                disabled={billStatus === 'distributed'}
               >
                 <Plus className="h-4 w-4" /> Add room
               </Button>
             }
           >
             <div className="space-y-3">
-              {entries.length === 0 && (
+              {fields.length === 0 && (
                 <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-8 text-center text-sm text-[color:var(--color-text-secondary)]">
-                  No room readings yet. Add a room to begin.
+                  No room readings yet. Click &quot;Add room&quot; to begin.
                 </p>
               )}
-              {entries.map((entry, idx) => (
-                <div
-                  key={idx}
-                  className={clsx(
-                    surfaceNestedClass,
-                    'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
-                  )}
-                >
-                  <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
-                    <label className={fieldLabelClass} htmlFor={`elec-room-${idx}`}>
-                      Room
-                    </label>
-                    <select
-                      id={`elec-room-${idx}`}
-                      className={clsx(fieldControlBase, fieldControlBorderOk, 'appearance-none')}
-                      value={entry.roomId}
-                      onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
-                    >
-                      <option value="">Select room...</option>
-                      {rooms.map((r) => (
-                        <option key={r._id} value={r._id}>
-                          {roomLabel(r)}
-                        </option>
-                      ))}
-                    </select>
+
+              {fields.map((field, idx) => {
+                const entry = entries?.[idx];
+                const units = entry
+                  ? Math.max(0, (entry.currentReading || 0) - (entry.previousReading || 0))
+                  : 0;
+                const amount = units * (entry?.ratePerUnit || 0);
+
+                return (
+                  <div
+                    key={field.id}
+                    className={clsx(
+                      surfaceNestedClass,
+                      'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
+                    )}
+                  >
+                    <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                      <Controller
+                        name={`roomEntries.${idx}.roomId`}
+                        control={control}
+                        render={({ field: rf }) => (
+                          <ResourceSelect
+                            label="Room"
+                            endpoint="rooms?limit=100"
+                            value={rf.value}
+                            onChange={rf.onChange}
+                            placeholder="Select room..."
+                            labelKey={roomLabel}
+                            valueKey="_id"
+                            dataPath="data"
+                            disabled={billStatus === 'distributed'}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <Input
+                      label="Previous reading"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { previousReading?: { message?: string } })
+                          ?.previousReading?.message
+                      }
+                      {...register(`roomEntries.${idx}.previousReading` as const)}
+                      disabled={billStatus === 'distributed'}
+                    />
+                    <Input
+                      label="Current reading"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { currentReading?: { message?: string } })
+                          ?.currentReading?.message
+                      }
+                      {...register(`roomEntries.${idx}.currentReading` as const)}
+                      disabled={billStatus === 'distributed'}
+                    />
+                    <Input
+                      label="Rate/unit (₹)"
+                      type="number"
+                      step="0.01"
+                      inputMode="decimal"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { ratePerUnit?: { message?: string } })
+                          ?.ratePerUnit?.message
+                      }
+                      {...register(`roomEntries.${idx}.ratePerUnit` as const)}
+                      disabled={billStatus === 'distributed'}
+                    />
+
+                    <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Remove room ${idx + 1}`}
+                        onClick={() => remove(idx)}
+                        disabled={fields.length <= 1 || billStatus === 'distributed'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Computed values for this entry */}
+                    <div className="col-span-full flex items-center gap-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface-50)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                      <Calculator className="h-3.5 w-3.5" />
+                      <span>
+                        Units:{' '}
+                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                          {units}
+                        </strong>
+                      </span>
+                      <span className="text-[color:var(--border-color)]">|</span>
+                      <span>
+                        Amount:{' '}
+                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                          ₹{amount.toLocaleString('en-IN')}
+                        </strong>
+                      </span>
+                    </div>
                   </div>
-                  <Input
-                    label="Previous"
-                    type="number"
-                    inputMode="numeric"
-                    value={entry.previousReading}
-                    onChange={(e) => updateEntry(idx, { previousReading: Number(e.target.value) })}
-                  />
-                  <Input
-                    label="Current"
-                    type="number"
-                    inputMode="numeric"
-                    value={entry.currentReading}
-                    onChange={(e) => updateEntry(idx, { currentReading: Number(e.target.value) })}
-                  />
-                  <Input
-                    label="Rate / unit"
-                    type="number"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={entry.ratePerUnit}
-                    onChange={(e) => updateEntry(idx, { ratePerUnit: Number(e.target.value) })}
-                  />
-                  <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label={`Remove room reading ${idx + 1}`}
-                      onClick={() => setEntries((p) => p.filter((_, i) => i !== idx))}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {fields.length > 0 && (
+              <div
+                className={clsx(surfaceNestedClass, 'mt-4 flex items-center justify-between p-4')}
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                  <Zap className="h-4 w-4" />
+                  Computed total from readings
+                </span>
+                <span className="font-mono text-xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                  ₹{autoTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
           </FormSection>
 
-          <FormSection title="Notes" divided>
+          <FormSection title="Notes" description="Optional remarks for this bill" divided>
             <Textarea
               label="Notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Optional notes..."
+              {...register('notes')}
+              disabled={billStatus === 'distributed'}
             />
           </FormSection>
         </div>

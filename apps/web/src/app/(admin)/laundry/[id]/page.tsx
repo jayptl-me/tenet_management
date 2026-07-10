@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Calendar,
-  Clock,
-  User,
-  Home,
-  Hash,
-  FileText,
-  Pencil,
-} from 'lucide-react';
+import { Calendar, Clock, User, Home, Hash, FileText, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -93,10 +85,7 @@ export default function LaundryDetailPage() {
       maxWidth="4xl"
       badge={
         slot ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={slot.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={slot.status.replace(/_/g, ' ')} />
         ) : undefined
       }
       actions={
@@ -183,10 +172,7 @@ export default function LaundryDetailPage() {
                 <DetailRow
                   label="Status"
                   value={
-                    <StatusBadge
-                      variant={statusVariant}
-                      label={slot.status.replace(/_/g, ' ')}
-                    />
+                    <StatusBadge variant={statusVariant} label={slot.status.replace(/_/g, ' ')} />
                   }
                 />
               </DetailList>

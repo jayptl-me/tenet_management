@@ -34,11 +34,7 @@ export function ResponsiveContainer({
 }: ResponsiveContainerProps) {
   return (
     <Tag
-      className={clsx(
-        'mx-auto w-full px-4 sm:px-6 lg:px-8',
-        maxWidthStyles[maxWidth],
-        className,
-      )}
+      className={clsx('mx-auto w-full px-4 sm:px-6 lg:px-8', maxWidthStyles[maxWidth], className)}
     >
       {children}
     </Tag>

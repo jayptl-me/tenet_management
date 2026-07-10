@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
@@ -100,7 +93,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`pointer-events-auto animate-slide-in-left flex items-start gap-3 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] p-4 shadow-[var(--shadow-dropdown)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] max-w-[420px] ${BG_COLORS[toast.type]} ${BORDER_COLORS[toast.type]}`}
+                className={`animate-slide-in-left pointer-events-auto flex max-w-[420px] items-start gap-3 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] p-4 shadow-[var(--shadow-dropdown)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] ${BG_COLORS[toast.type]} ${BORDER_COLORS[toast.type]}`}
                 role="alert"
               >
                 <span className={`flex-shrink-0 ${TEXT_COLORS[toast.type]}`}>

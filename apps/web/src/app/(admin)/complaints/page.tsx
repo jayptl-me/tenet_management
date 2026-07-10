@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Eye, Pencil, LayoutList, Columns3, Loader2, Trash2, MessageSquareWarning } from 'lucide-react';
+import { Plus, LayoutList, Columns3, Loader2, MessageSquareWarning } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { TableActions } from '@/components/ui/TableActions';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -44,23 +45,19 @@ const KANBAN_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as cons
 const kanbanMeta: Record<string, { label: string; color: string }> = {
   open: {
     label: 'Open',
-    color:
-      'border-l-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)]',
+    color: 'border-l-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)]',
   },
   in_progress: {
     label: 'In Progress',
-    color:
-      'border-l-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)]',
+    color: 'border-l-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)]',
   },
   resolved: {
     label: 'Resolved',
-    color:
-      'border-l-[color:var(--color-success-500)] bg-[color:var(--color-success-50)]',
+    color: 'border-l-[color:var(--color-success-500)] bg-[color:var(--color-success-50)]',
   },
   dismissed: {
     label: 'Dismissed',
-    color:
-      'border-l-[color:var(--color-surface-400)] bg-[color:var(--color-field-bg)]',
+    color: 'border-l-[color:var(--color-surface-400)] bg-[color:var(--color-field-bg)]',
   },
 };
 
@@ -78,14 +75,13 @@ function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const meta = kanbanMeta[status] ?? {
     label: status,
-    color:
-      'border-l-[color:var(--color-surface-300)] bg-[color:var(--color-field-bg)]',
+    color: 'border-l-[color:var(--color-surface-300)] bg-[color:var(--color-field-bg)]',
   };
 
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'ring-2 ring-[color:var(--color-brand-500)] ring-offset-2 ring-offset-[color:var(--focus-ring-offset-bg)] scale-[1.01]' : ''}`}
+      className={`min-h-[200px] rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'scale-[1.01] ring-2 ring-[color:var(--color-brand-500)] ring-offset-2 ring-offset-[color:var(--focus-ring-offset-bg)]' : ''}`}
     >
       <div
         className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}
@@ -101,7 +97,9 @@ function KanbanColumn({
       </div>
       <div className="max-h-[500px] space-y-2 overflow-y-auto p-3">
         {complaints.length === 0 ? (
-          <p className="py-6 text-center text-xs text-[color:var(--color-text-muted)]">No complaints</p>
+          <p className="py-6 text-center text-xs text-[color:var(--color-text-muted)]">
+            No complaints
+          </p>
         ) : (
           complaints.map((c) => (
             <KanbanCard key={c._id} complaint={c} onClick={() => onComplaintClick(c)} />
@@ -144,7 +142,9 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
         </p>
         <StatusBadge variant={priorityVariant} label={complaint.severity} />
       </div>
-      <p className="mb-2 line-clamp-2 text-xs text-[color:var(--color-text-muted)]">{complaint.description}</p>
+      <p className="mb-2 line-clamp-2 text-xs text-[color:var(--color-text-muted)]">
+        {complaint.description}
+      </p>
       <div className="flex items-center justify-between text-[10px] text-[color:var(--color-text-muted)]">
         <span className="flex items-center gap-1">
           <span>{complaint.tenant?.user?.name ?? 'N/A'}</span>
@@ -281,13 +281,11 @@ export default function ComplaintsPage() {
     const complaintId = String(active.id);
     const newStatus = String(over.id);
 
-    // Only handle drops onto columns (KANBAN_STATUSES)
     if (!KANBAN_STATUSES.includes(newStatus as (typeof KANBAN_STATUSES)[number])) return;
 
     const complaint = complaints.find((c) => c._id === complaintId);
     if (!complaint || complaint.status === newStatus) return;
 
-    // Optimistic update
     setComplaints((prev) =>
       prev.map((c) => (c._id === complaintId ? { ...c, status: newStatus } : c)),
     );
@@ -300,7 +298,6 @@ export default function ComplaintsPage() {
         })
         .json();
     } catch {
-      // Revert on failure
       setComplaints((prev) =>
         prev.map((c) => (c._id === complaintId ? { ...c, status: complaint.status } : c)),
       );
@@ -347,38 +344,11 @@ export default function ComplaintsPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/complaints/${row._id}`);
-            }}
-            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)]"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/complaints/${row._id}/edit`);
-            }}
-            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors hover:bg-[color:var(--color-danger-50)]"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/complaints/${row._id}`)}
+          onEdit={() => router.push(`/complaints/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -386,43 +356,42 @@ export default function ComplaintsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="font-display text-2xl font-extrabold text-[color:var(--color-text-primary)]">Complaints</h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">Track and resolve tenant complaints</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex overflow-hidden rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
-                viewMode === 'table'
-                  ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                  : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
-              }`}
-            >
-              <LayoutList className="mr-1 inline h-3.5 w-3.5" />
-              List
-            </button>
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
-                viewMode === 'kanban'
-                  ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                  : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
-              }`}
-            >
-              <Columns3 className="mr-1 inline h-3.5 w-3.5" />
-              Kanban
-            </button>
+      <PageHeader
+        title="Complaints"
+        description="Track and resolve tenant complaints"
+        action={
+          <div className="flex items-center gap-2">
+            <div className="flex overflow-hidden rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                  viewMode === 'table'
+                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
+                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                }`}
+              >
+                <LayoutList className="mr-1 inline h-3.5 w-3.5" />
+                List
+              </button>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                  viewMode === 'kanban'
+                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
+                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                }`}
+              >
+                <Columns3 className="mr-1 inline h-3.5 w-3.5" />
+                Kanban
+              </button>
+            </div>
+            <Button onClick={() => router.push('/complaints/new')}>
+              <Plus className="h-4 w-4" />
+              New Complaint
+            </Button>
           </div>
-          <Button onClick={() => router.push('/complaints/new')}>
-            <Plus className="h-4 w-4" />
-            New Complaint
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {error && <ErrorBanner message={error} />}
       {isUpdatingStatus && (
@@ -478,7 +447,7 @@ export default function ComplaintsPage() {
             mobileCardRenderer={(row) => (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[color:var(--color-text-primary)] text-sm truncate max-w-[70%]">
+                  <span className="max-w-[70%] truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
                     {row.title}
                   </span>
                   <StatusBadge
@@ -490,42 +459,21 @@ export default function ComplaintsPage() {
                   <span>{row.tenant?.user?.name ?? 'N/A'}</span>
                   <StatusBadge
                     variant={
-                      row.severity === 'critical' ? 'danger' : row.severity === 'high' ? 'warning' : 'info'
+                      row.severity === 'critical'
+                        ? 'danger'
+                        : row.severity === 'high'
+                          ? 'warning'
+                          : 'info'
                     }
                     label={row.severity}
                   />
                 </div>
                 <div className="flex items-center gap-1 pt-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/complaints/${row._id}`);
-                    }}
-                    className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                    title="View"
-                  >
-                    <Eye className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/complaints/${row._id}/edit`);
-                    }}
-                    className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                    title="Edit"
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget(row);
-                    }}
-                    className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  <TableActions
+                    onView={() => router.push(`/complaints/${row._id}`)}
+                    onEdit={() => router.push(`/complaints/${row._id}/edit`)}
+                    onDelete={() => setDeleteTarget(row)}
+                  />
                 </div>
               </div>
             )}
@@ -535,7 +483,7 @@ export default function ComplaintsPage() {
         <>
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="border-t-brand-500 h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)]" />
+              <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
             </div>
           ) : (
             <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

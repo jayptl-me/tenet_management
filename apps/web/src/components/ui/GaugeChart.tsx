@@ -36,9 +36,7 @@ export function GaugeChart({
         viewBox={`0 0 ${size} ${size / 2 + strokeW}`}
         role="img"
         aria-label={
-          label
-            ? `${label}: ${Math.round(pct * 100)} percent`
-            : `${Math.round(pct * 100)} percent`
+          label ? `${label}: ${Math.round(pct * 100)} percent` : `${Math.round(pct * 100)} percent`
         }
       >
         <path

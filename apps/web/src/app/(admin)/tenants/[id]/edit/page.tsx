@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Shield } from 'lucide-react';
+import { Shield, UserRound, Mail, Phone, CalendarDays, Banknote } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -80,48 +80,46 @@ export default function EditTenantPage() {
     reset,
     control,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
-  const roomIdWatch = watch('roomId');
+  const roomIdWatch = useWatch({ control, name: 'roomId' });
 
-  const loadBedOptions = async (roomId: string, keepBedId: string) => {
-    if (!roomId) {
-      setBedOptions(ALL_BEDS);
-      return;
-    }
-    try {
-      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
-      const room = res.data;
-      const maxBeds = room.sharingType ?? 4;
-      const beds = ALL_BEDS.slice(0, maxBeds).map((b) => {
-        const bedMeta = room.beds?.find((x) => x.bedId === b.value);
-        const occupiedByOther =
-          !!bedMeta?.isOccupied &&
-          String(bedMeta.tenantId ?? '') !== String(id) &&
-          b.value !== keepBedId;
-        return {
-          value: b.value,
-          label: occupiedByOther ? `${b.label} (Occupied)` : b.label,
-          disabled: occupiedByOther,
-        };
-      });
-      // Select only allows value/label — filter out disabled for options list but keep current
-      setBedOptions(
-        beds
-          .filter((b) => !b.disabled || b.value === keepBedId)
-          .map(({ value, label }) => ({ value, label })),
-      );
-      if (room.monthlyRent) {
-        // only auto-fill if rent empty? Keep existing rent on load; on room change update
+  const loadBedOptions = useCallback(
+    async (roomId: string, keepBedId: string) => {
+      if (!roomId) {
+        setBedOptions(ALL_BEDS);
+        return;
       }
-    } catch {
-      setBedOptions(ALL_BEDS.slice(0, 4));
-    }
-  };
+      try {
+        const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+        const room = res.data;
+        const maxBeds = room.sharingType ?? 4;
+        const beds = ALL_BEDS.slice(0, maxBeds).map((b) => {
+          const bedMeta = room.beds?.find((x) => x.bedId === b.value);
+          const occupiedByOther =
+            !!bedMeta?.isOccupied &&
+            String(bedMeta.tenantId ?? '') !== String(id) &&
+            b.value !== keepBedId;
+          return {
+            value: b.value,
+            label: occupiedByOther ? `${b.label} (Occupied)` : b.label,
+            disabled: occupiedByOther,
+          };
+        });
+        setBedOptions(
+          beds
+            .filter((b) => !b.disabled || b.value === keepBedId)
+            .map(({ value, label }) => ({ value, label })),
+        );
+      } catch {
+        setBedOptions(ALL_BEDS.slice(0, 4));
+      }
+    },
+    [id],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -159,23 +157,26 @@ export default function EditTenantPage() {
         setSubmitError('Failed to load tenant');
         setIsLoading(false);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per tenant id
-  }, [id, reset]);
+  }, [id, reset, loadBedOptions]);
 
-  const onRoomChange = async (roomId: string) => {
-    setValue('roomId', roomId);
-    const keepBed = roomId === ((tenantData?.room as { _id?: string } | undefined)?._id ?? tenantData?.roomId)
-      ? currentBedId
-      : '';
-    if (!keepBed) setValue('bedId', '');
-    try {
-      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
-      if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
-    } catch {
-      /* ignore */
-    }
-    await loadBedOptions(roomId, keepBed);
-  };
+  const onRoomChange = useCallback(
+    async (roomId: string) => {
+      setValue('roomId', roomId);
+      const keepBed =
+        roomId === ((tenantData?.room as { _id?: string } | undefined)?._id ?? tenantData?.roomId)
+          ? currentBedId
+          : '';
+      if (!keepBed) setValue('bedId', '');
+      try {
+        const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+        if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
+      } catch {
+        /* ignore */
+      }
+      await loadBedOptions(roomId, keepBed);
+    },
+    [tenantData, currentBedId, setValue, loadBedOptions],
+  );
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -235,10 +236,35 @@ export default function EditTenantPage() {
           description="Primary contact details used across invoices and notices"
         >
           <FormGrid>
-            <Input label="Name" error={err.name?.message} autoComplete="name" {...register('name')} />
-            <Input label="Phone" error={err.phone?.message} inputMode="tel" autoComplete="tel" {...register('phone')} />
-            <Input label="Email" type="email" error={err.email?.message} autoComplete="email" {...register('email')} />
-            <Select label="Status" options={STATUS_OPTIONS} error={err.isActive?.message} {...register('isActive')} />
+            <Input
+              label="Name"
+              error={err.name?.message}
+              autoComplete="name"
+              leftIcon={<UserRound className="h-4 w-4" />}
+              {...register('name')}
+            />
+            <Input
+              label="Phone"
+              error={err.phone?.message}
+              inputMode="tel"
+              autoComplete="tel"
+              leftIcon={<Phone className="h-4 w-4" />}
+              {...register('phone')}
+            />
+            <Input
+              label="Email"
+              type="email"
+              error={err.email?.message}
+              autoComplete="email"
+              leftIcon={<Mail className="h-4 w-4" />}
+              {...register('email')}
+            />
+            <Select
+              label="Status"
+              options={STATUS_OPTIONS}
+              error={err.isActive?.message}
+              {...register('isActive')}
+            />
           </FormGrid>
         </FormSection>
 
@@ -291,9 +317,31 @@ export default function EditTenantPage() {
           divided
         >
           <FormGrid cols={3}>
-            <Input label="Monthly rent" type="number" step="0.01" inputMode="decimal" error={err.monthlyRent?.message} {...register('monthlyRent')} />
-            <Input label="Deposit paid" type="number" step="0.01" inputMode="decimal" error={err.depositPaid?.message} {...register('depositPaid')} />
-            <Input label="Move-in date" type="date" error={err.moveInDate?.message} {...register('moveInDate')} />
+            <Input
+              label="Monthly rent"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              error={err.monthlyRent?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
+              {...register('monthlyRent')}
+            />
+            <Input
+              label="Deposit paid"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              error={err.depositPaid?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
+              {...register('depositPaid')}
+            />
+            <Input
+              label="Move-in date"
+              type="date"
+              error={err.moveInDate?.message}
+              leftIcon={<CalendarDays className="h-4 w-4" />}
+              {...register('moveInDate')}
+            />
           </FormGrid>
         </FormSection>
 
@@ -304,9 +352,25 @@ export default function EditTenantPage() {
           divided
         >
           <FormGrid cols={3}>
-            <Input label="Name" placeholder="Emergency contact name" error={err.emergencyName?.message} {...register('emergencyName')} />
-            <Input label="Phone (10 digits)" placeholder="9876543210" inputMode="tel" error={err.emergencyPhone?.message} {...register('emergencyPhone')} />
-            <Select label="Relation" options={RELATION_OPTIONS} error={err.emergencyRelation?.message} {...register('emergencyRelation')} />
+            <Input
+              label="Name"
+              placeholder="Emergency contact name"
+              error={err.emergencyName?.message}
+              {...register('emergencyName')}
+            />
+            <Input
+              label="Phone (10 digits)"
+              placeholder="9876543210"
+              inputMode="tel"
+              error={err.emergencyPhone?.message}
+              {...register('emergencyPhone')}
+            />
+            <Select
+              label="Relation"
+              options={RELATION_OPTIONS}
+              error={err.emergencyRelation?.message}
+              {...register('emergencyRelation')}
+            />
           </FormGrid>
         </FormSection>
 
@@ -321,13 +385,37 @@ export default function EditTenantPage() {
                 tenantId={id}
                 docType="aadhaar"
                 currentUrl={(tenantData.documents as Record<string, string>)?.aadhaarUrl}
-                onUploaded={(url) => setTenantData((prev) => prev ? { ...prev, documents: { ...(prev.documents as Record<string, string> ?? {}), aadhaarUrl: url } } : prev)}
+                onUploaded={(url) =>
+                  setTenantData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          documents: {
+                            ...((prev.documents as Record<string, string>) ?? {}),
+                            aadhaarUrl: url,
+                          },
+                        }
+                      : prev,
+                  )
+                }
               />
               <DocumentUpload
                 tenantId={id}
                 docType="photo"
                 currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
-                onUploaded={(url) => setTenantData((prev) => prev ? { ...prev, documents: { ...(prev.documents as Record<string, string> ?? {}), photoUrl: url } } : prev)}
+                onUploaded={(url) =>
+                  setTenantData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          documents: {
+                            ...((prev.documents as Record<string, string>) ?? {}),
+                            photoUrl: url,
+                          },
+                        }
+                      : prev,
+                  )
+                }
               />
             </FormGrid>
           </FormSection>

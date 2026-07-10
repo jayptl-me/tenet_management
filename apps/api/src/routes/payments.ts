@@ -59,19 +59,49 @@ async function updateInvoicePaymentStatus(invoiceId: string): Promise<void> {
   if (!invoiceRaw) return;
 
   const invoice = invoiceRaw as Record<string, unknown>;
-  const invoiceTotal = invoice.totalAmount as number;
+  const invoiceTotal = (invoice.totalAmount as number) ?? 0;
 
-  const totalPaid = (paymentsRaw as unknown as Array<Record<string, unknown>>)
+  const allActive = paymentsRaw as unknown as Array<Record<string, unknown>>;
+  const totalPaid = allActive
     .filter((p) => p.status === 'paid')
     .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
 
+  // Cancel any excess pending / pending_verification rows beyond the first,
+  // and cancel any pending row whose amount exceeds the remaining balance.
+  const openPayments = allActive.filter(
+    (p) => p.status === 'pending' || p.status === 'pending_verification',
+  );
+  let keepFirst = true;
+  const remainingBalance = Math.max(0, invoiceTotal - totalPaid);
+
+  for (const open of openPayments) {
+    const openId = open._id as string;
+    if (keepFirst && (open.amount as number) <= remainingBalance + 0.001) {
+      keepFirst = false;
+      continue;
+    }
+    // Cancel duplicate or excess pending rows
+    await Payment.findByIdAndUpdate(openId, { status: 'cancelled' });
+    logger.info(
+      { paymentId: openId, invoiceId, reason: keepFirst ? 'amount exceeds balance' : 'duplicate pending row' },
+      'Cancelled excess pending payment row',
+    );
+  }
+
+  // Determine invoice status — never regress from partial/paid
+  const currentStatus = (invoice.status as string) ?? 'sent';
   let newStatus: string;
-  if (totalPaid >= invoiceTotal) {
+
+  if (totalPaid >= invoiceTotal && invoiceTotal > 0) {
     newStatus = 'paid';
   } else if (totalPaid > 0) {
     newStatus = 'partial';
+  } else if (currentStatus === 'paid' || currentStatus === 'partial') {
+    // Preserve partial/paid if zero-paid should be impossible
+    // (e.g. all payments just got cancelled). Keep the stronger status.
+    newStatus = currentStatus;
   } else {
-    newStatus = (invoice.status as string) ?? 'sent';
+    newStatus = currentStatus === 'overdue' ? 'overdue' : 'sent';
   }
 
   await Invoice.findByIdAndUpdate(invoiceId, { status: newStatus });
@@ -236,11 +266,7 @@ payments.post(
     const invoiceTenantId = String(invoice.tenantId ?? '');
 
     if (invoiceTenantId !== body.tenantId) {
-      return badRequest(
-        c,
-        'tenantId does not match the invoice tenant',
-        'TENANT_INVOICE_MISMATCH',
-      );
+      return badRequest(c, 'tenantId does not match the invoice tenant', 'TENANT_INVOICE_MISMATCH');
     }
 
     const invoiceStatus = String(invoice.status ?? '');
@@ -456,10 +482,18 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
     );
   }
 
-  const paymentRaw = await paymentFindOne(
-    safeFilter({ invoiceId: new mongoose.Types.ObjectId(body.invoiceId) }),
-  );
-  if (!paymentRaw) {
+  // Find all existing payments for this invoice (not cancelled).
+  // Prefer updating an existing open row; create only if none exist.
+  const existingPayments = (await Payment.find(
+    safeFilter({
+      invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+      status: { $ne: 'cancelled' },
+    }),
+  )
+    .sort({ createdAt: 1 })
+    .lean()) as unknown as Array<Record<string, unknown>>;
+
+  if (existingPayments.length === 0) {
     const tenantRaw = await tenantFindOne(safeFilter({ userId }));
     if (!tenantRaw) return notFound(c, 'Tenant profile');
 
@@ -485,19 +519,25 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
     return c.json({ success: true, data: newPayment }, 201);
   }
 
-  const payment = paymentRaw as Record<string, unknown>;
+  // Pick the first open (pending / pending_verification) row if available;
+  // otherwise fall back to the first row.
+  const openRow = existingPayments.find(
+    (p) => p.status === 'pending' || p.status === 'pending_verification',
+  );
+  const targetPayment = openRow ?? existingPayments[0]!;
+
   const updated = await (Payment.findByIdAndUpdate(
-    payment._id,
+    targetPayment._id,
     {
       utrNumber: body.utrNumber,
-      screenshotUrl: body.screenshotUrl ?? payment.screenshotUrl,
+      screenshotUrl: body.screenshotUrl ?? targetPayment.screenshotUrl ?? null,
       status: 'pending_verification',
     },
     { returnDocument: 'after' },
   ).lean() as unknown);
 
   logger.info(
-    { paymentId: payment._id, utr: body.utrNumber },
+    { paymentId: targetPayment._id, utr: body.utrNumber },
     'UTR submitted (existing payment updated)',
   );
 
@@ -637,38 +677,32 @@ payments.get('/:id', authGuard, async (c) => {
 });
 
 // ── PUT /payments/:id ──────────────────────────────────
-payments.put(
-  '/:id',
-  authGuard,
-  adminOnly,
-  zValidator('json', updatePaymentSchema),
-  async (c) => {
-    const id = parseId(c.req.param('id'));
-    if (!id) return badRequest(c, 'Invalid payment ID');
+payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchema), async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid payment ID');
 
-    const body = c.req.valid('json');
-    if (Object.keys(body).length === 0) return badRequest(c, 'No fields to update');
+  const body = c.req.valid('json');
+  if (Object.keys(body).length === 0) return badRequest(c, 'No fields to update');
 
-    const updateData: Record<string, unknown> = {};
-    if (body.amount !== undefined) updateData.amount = body.amount;
-    if (body.method !== undefined) updateData.method = body.method;
-    if (body.type !== undefined) updateData.type = body.type;
-    if (body.status !== undefined) updateData.status = body.status;
-    if (body.notes !== undefined) updateData.notes = body.notes;
+  const updateData: Record<string, unknown> = {};
+  if (body.amount !== undefined) updateData.amount = body.amount;
+  if (body.method !== undefined) updateData.method = body.method;
+  if (body.type !== undefined) updateData.type = body.type;
+  if (body.status !== undefined) updateData.status = body.status;
+  if (body.notes !== undefined) updateData.notes = body.notes;
 
-    const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
-      returnDocument: 'after',
-    }).lean() as unknown);
-    if (!paymentRaw) return notFound(c, 'Payment');
+  const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
+    returnDocument: 'after',
+  }).lean() as unknown);
+  if (!paymentRaw) return notFound(c, 'Payment');
 
-    const payment = paymentRaw as Record<string, unknown>;
-    await updateInvoicePaymentStatus(String(payment.invoiceId));
+  const payment = paymentRaw as Record<string, unknown>;
+  await updateInvoicePaymentStatus(String(payment.invoiceId));
 
-    logger.info({ paymentId: id, fields: Object.keys(updateData) }, 'Payment updated');
+  logger.info({ paymentId: id, fields: Object.keys(updateData) }, 'Payment updated');
 
-    return c.json({ success: true, data: payment });
-  },
-);
+  return c.json({ success: true, data: payment });
+});
 
 // ── POST /payments/:id/verify ──────────────────────────
 payments.post(

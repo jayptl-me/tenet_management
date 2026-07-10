@@ -57,8 +57,8 @@ export class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h2>
             <p className="font-[family:var(--font-body)] mb-6 text-sm leading-relaxed text-[color:var(--color-danger-600)]">
-              An unexpected error occurred while rendering this section. You can try refreshing
-              the page, or go back to the dashboard.
+              An unexpected error occurred while rendering this section. You can try refreshing the
+              page, or go back to the dashboard.
             </p>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="mb-6 text-left">
@@ -75,14 +75,14 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-2.5 font-display text-sm font-bold text-[color:var(--color-surface-900)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
+                className="font-display hover:translate-[var(--hover-lift)] inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-2.5 text-sm font-bold text-[color:var(--color-surface-900)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] active:scale-[var(--active-press-scale)]"
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh Page
               </button>
               <a
                 href="/dashboard"
-                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 font-display text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
+                className="font-display hover:translate-[var(--hover-lift)] inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] active:scale-[var(--active-press-scale)]"
               >
                 <Home className="h-4 w-4" />
                 Go to Dashboard
@@ -102,7 +102,7 @@ export class ErrorBoundary extends Component<Props, State> {
  * Wraps individual admin pages to prevent a crash in one page
  * from breaking the entire admin shell.
  */
-export function PageErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
+export function PageErrorFallback({ reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
       <div className="w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--color-danger-300)] bg-[color:var(--color-card-bg)] p-8 text-center shadow-[var(--shadow-card)]">
@@ -118,7 +118,7 @@ export function PageErrorFallback({ error, reset }: { error: Error; reset: () =>
         </p>
         <button
           onClick={reset}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 font-display text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]"
+          className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]"
         >
           <RefreshCw className="h-4 w-4" />
           Try Again

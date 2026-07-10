@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { triggerThemeUpdate } from '@/themes/ThemeProvider';
 import { applyColorScaleToDOM, removeCustomStylesFromDOM } from '@/lib/colorScale';
 import type { ThemeSettings, ThemePreset, ThemeMode } from '@pg/types';
 
@@ -12,11 +11,6 @@ const DEFAULT_THEME: ThemeSettings = {
 };
 
 const THEME_STORAGE_KEY = 'tenet-theme';
-
-function getSystemMode(): ThemeMode {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
 
 function loadStoredTheme(): ThemeSettings | null {
   if (typeof window === 'undefined') return null;
@@ -74,8 +68,8 @@ export function useTheme() {
 
   const toggleMode = useCallback(() => {
     const root = document.documentElement;
-    const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
-    const currentPreset = root.getAttribute('data-theme') as ThemePreset ?? 'saas';
+    const currentMode = (root.getAttribute('data-mode') as ThemeMode) ?? 'light';
+    const currentPreset = (root.getAttribute('data-theme') as ThemePreset) ?? 'saas';
     // Preserve any stored brandColor and fonts from localStorage
     const stored = loadStoredTheme();
     const updated: ThemeSettings = {
@@ -87,22 +81,28 @@ export function useTheme() {
     applyAndPersist(updated);
   }, [applyAndPersist]);
 
-  const setPreset = useCallback((preset: ThemePreset) => {
-    const root = document.documentElement;
-    const currentMode = root.getAttribute('data-mode') as ThemeMode ?? 'light';
-    const stored = loadStoredTheme();
-    const updated: ThemeSettings = {
-      preset,
-      mode: currentMode,
-      brandColor: stored?.brandColor,
-      fonts: stored?.fonts,
-    };
-    applyAndPersist(updated);
-  }, [applyAndPersist]);
+  const setPreset = useCallback(
+    (preset: ThemePreset) => {
+      const root = document.documentElement;
+      const currentMode = (root.getAttribute('data-mode') as ThemeMode) ?? 'light';
+      const stored = loadStoredTheme();
+      const updated: ThemeSettings = {
+        preset,
+        mode: currentMode,
+        brandColor: stored?.brandColor,
+        fonts: stored?.fonts,
+      };
+      applyAndPersist(updated);
+    },
+    [applyAndPersist],
+  );
 
-  const setTheme = useCallback((settings: ThemeSettings) => {
-    applyAndPersist(settings);
-  }, [applyAndPersist]);
+  const setTheme = useCallback(
+    (settings: ThemeSettings) => {
+      applyAndPersist(settings);
+    },
+    [applyAndPersist],
+  );
 
   return { theme, loading, setTheme, toggleMode, setPreset };
 }

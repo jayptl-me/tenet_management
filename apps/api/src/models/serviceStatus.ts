@@ -22,7 +22,10 @@ const serviceStatusSchema = new Schema<IServiceStatusDocument>(
       type: String,
       trim: true,
       required: [true, 'Service type is required'],
-      match: [/^[a-z][a-z0-9_]*$/, 'Service type must be a valid key (lowercase alphanumeric with underscores)'],
+      match: [
+        /^[a-z][a-z0-9_]*$/,
+        'Service type must be a valid key (lowercase alphanumeric with underscores)',
+      ],
     },
     status: {
       type: String,
@@ -51,9 +54,7 @@ const serviceStatusSchema = new Schema<IServiceStatusDocument>(
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = String(ret._id ?? '');
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret._id;
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete ret.__v;
         return ret;
       },

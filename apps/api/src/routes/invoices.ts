@@ -17,11 +17,8 @@ import { getPgUpiConfig } from '../lib/upi.js';
 import { logger } from '../lib/logger.js';
 
 // ── Cast helpers ────────────────────────────────────────
-type FindFn = (filter: Record<string, unknown>) => Promise<unknown[]>;
 type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
 type CountFn = (filter: Record<string, unknown>) => Promise<number>;
-const invoiceFind = Invoice.find as unknown as FindFn;
-const invoiceFindOne = Invoice.findOne.bind(Invoice) as unknown as FindOneFn;
 const invoiceCountDocs = Invoice.countDocuments.bind(Invoice) as unknown as CountFn;
 const tenantFindOne = Tenant.findOne.bind(Tenant) as unknown as FindOneFn;
 
@@ -189,6 +186,11 @@ invoices.get('/:id', authGuard, async (c) => {
 
 // ── PUT /invoices/:id — update amounts / status (admin) ──
 const updateInvoiceSchema = z.strictObject({
+  month: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM format')
+    .optional(),
+  tenantId: z.string().min(1).optional(),
   rentAmount: z.number().min(0).optional(),
   electricityAmount: z.number().min(0).optional(),
   otherCharges: z.number().min(0).optional(),
@@ -204,91 +206,123 @@ const updateInvoiceSchema = z.strictObject({
   dueDate: z.string().datetime().optional(),
 });
 
-invoices.put(
-  '/:id',
-  authGuard,
-  adminOnly,
-  zValidator('json', updateInvoiceSchema),
-  async (c) => {
-    const id = parseId(c.req.param('id'));
-    if (!id) return badRequest(c, 'Invalid invoice ID');
+invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchema), async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid invoice ID');
 
-    const body = c.req.valid('json');
-    const adminId = c.get('user').sub;
+  const body = c.req.valid('json');
+  const adminId = c.get('user').sub;
 
-    const invoice = await Invoice.findById(id);
-    if (!invoice) return notFound(c, 'Invoice');
+  const invoice = await Invoice.findById(id);
+  if (!invoice) return notFound(c, 'Invoice');
 
-    const currentStatus = invoice.status;
-    if (currentStatus === 'paid') {
-      return badRequest(c, 'Paid invoices cannot be edited', 'INVOICE_LOCKED');
-    }
-    if (currentStatus === 'cancelled' && body.status !== 'draft' && body.status !== 'sent') {
-      return badRequest(c, 'Cancelled invoices can only be reopened to draft or sent', 'INVALID_STATUS_TRANSITION');
-    }
-
-    if (body.rentAmount !== undefined) invoice.rentAmount = body.rentAmount;
-    if (body.electricityAmount !== undefined) invoice.electricityAmount = body.electricityAmount;
-    if (body.otherCharges !== undefined) invoice.otherCharges = body.otherCharges;
-    if (body.lineItems !== undefined) invoice.lineItems = body.lineItems;
-    if (body.dueDate !== undefined) invoice.dueDate = new Date(body.dueDate);
-    if (body.status !== undefined) invoice.status = body.status;
-
-    // pre-save recomputes totalAmount
-    await invoice.save();
-
-    // Re-sync pending obligation amount if not paid/cancelled
-    if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
-      const openPending = await Payment.findOne(
-        safeFilter({
-          invoiceId: invoice._id,
-          status: { $in: ['pending', 'pending_verification'] },
-        }),
+  const currentStatus = invoice.status;
+  if (currentStatus === 'paid') {
+    return badRequest(c, 'Paid invoices cannot be edited', 'INVOICE_LOCKED');
+  }
+  if (currentStatus === 'cancelled') {
+    if (body.status !== 'draft' && body.status !== 'sent') {
+      return badRequest(
+        c,
+        'Cancelled invoices can only be reopened to draft or sent',
+        'INVALID_STATUS_TRANSITION',
       );
-      if (openPending) {
-        const paidSum = await Payment.aggregate([
-          {
-            $match: {
-              invoiceId: invoice._id,
-              status: 'paid',
-            },
-          },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
-        ]);
-        const alreadyPaid = (paidSum[0]?.total as number) ?? 0;
-        const residual = Math.max(0, invoice.totalAmount - alreadyPaid);
-        openPending.amount = residual;
-        if (invoice.dueDate) openPending.dueDate = invoice.dueDate;
-        await openPending.save();
-      }
     }
+  } else if (
+    currentStatus !== 'draft' &&
+    currentStatus !== 'sent' &&
+    currentStatus !== 'partial' &&
+    currentStatus !== 'overdue'
+  ) {
+    return badRequest(c, `Cannot edit invoice with status "${currentStatus}"`, 'INVOICE_LOCKED');
+  }
 
-    const { writeAuditLog } = await import('../lib/write-audit-log.js');
-    await writeAuditLog({
-      userId: adminId,
-      action: 'update',
-      resource: 'invoice',
-      resourceId: id,
-      details: {
-        fields: Object.keys(body),
-        status: invoice.status,
-        totalAmount: invoice.totalAmount,
-      },
-    });
+  // ── Duplicate check: month + tenantId ──
+  if (body.month !== undefined || body.tenantId !== undefined) {
+    const checkMonth = body.month ?? invoice.month;
+    const checkTenantId = body.tenantId ?? String(invoice.tenantId);
+    const exists = await Invoice.findOne(
+      safeFilter({
+        tenantId: new mongoose.Types.ObjectId(checkTenantId),
+        month: checkMonth,
+        _id: { $ne: invoice._id },
+      }),
+    );
+    if (exists) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'DUPLICATE_INVOICE',
+            message: 'An invoice already exists for this tenant and month.',
+          },
+        },
+        409,
+      );
+    }
+  }
 
-    const populated = await Invoice.findById(id)
-      .populate({
-        path: 'tenantId',
-        populate: [
-          { path: 'userId', select: 'name email phone' },
-          { path: 'roomId', select: 'roomNumber floorId' },
-        ],
-      })
-      .lean();
+  if (body.rentAmount !== undefined) invoice.rentAmount = body.rentAmount;
+  if (body.electricityAmount !== undefined) invoice.electricityAmount = body.electricityAmount;
+  if (body.otherCharges !== undefined) invoice.otherCharges = body.otherCharges;
+  if (body.lineItems !== undefined) invoice.lineItems = body.lineItems;
+  if (body.dueDate !== undefined) invoice.dueDate = new Date(body.dueDate);
+  if (body.status !== undefined) invoice.status = body.status;
 
-    return c.json({ success: true, data: populated });
-  },
-);
+  // pre-save recomputes totalAmount
+  await invoice.save();
+
+  // Re-sync pending obligation amount if not paid/cancelled
+  if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
+    const openPending = await Payment.findOne(
+      safeFilter({
+        invoiceId: invoice._id,
+        status: { $in: ['pending', 'pending_verification'] },
+      }),
+    );
+    if (openPending) {
+      const paidSum = await Payment.aggregate([
+        {
+          $match: {
+            invoiceId: invoice._id,
+            status: 'paid',
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]);
+      const alreadyPaid = (paidSum[0]?.total as number) ?? 0;
+      const residual = Math.max(0, invoice.totalAmount - alreadyPaid);
+      openPending.amount = residual;
+      if (invoice.dueDate) openPending.dueDate = invoice.dueDate;
+      await openPending.save();
+    }
+  }
+
+  const { writeAuditLog } = await import('../lib/write-audit-log.js');
+  await writeAuditLog({
+    userId: adminId,
+    action: 'update',
+    resource: 'invoice',
+    resourceId: id,
+    details: {
+      fields: Object.keys(body),
+      status: invoice.status,
+      totalAmount: invoice.totalAmount,
+    },
+  });
+
+  const populated = await Invoice.findById(id)
+    .populate({
+      path: 'tenantId',
+      populate: [
+        { path: 'userId', select: 'name email phone' },
+        { path: 'roomId', select: 'roomNumber floorId' },
+      ],
+    })
+    .lean();
+
+  return c.json({ success: true, data: populated });
+});
 
 // ── GET /invoices/:id/pdf ───────────────────────────────
 invoices.get('/:id/pdf', authGuard, async (c) => {
@@ -326,6 +360,7 @@ invoices.get('/:id/pdf', authGuard, async (c) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfBuffer = await (ReactPDF as any).renderToBuffer(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       React.createElement(InvoicePdf as any, {
         invoice,
         appConfig: upiConfig,
@@ -373,7 +408,9 @@ invoices.delete('/:id', authGuard, adminOnly, async (c) => {
   }
 
   // Delete all linked payments first
-  await Payment.deleteMany(safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) } as Record<string, unknown>));
+  await Payment.deleteMany(
+    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) } as Record<string, unknown>),
+  );
   await Invoice.findByIdAndDelete(id);
 
   return c.json({ success: true, data: { message: 'Invoice deleted' } });

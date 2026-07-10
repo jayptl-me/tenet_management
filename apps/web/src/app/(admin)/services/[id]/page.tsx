@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Wifi,
-  Calendar,
-  Building,
-  User,
-  Pencil,
-  AlertTriangle,
-  FileText,
-} from 'lucide-react';
+import { Wifi, Calendar, Building, User, Pencil, AlertTriangle, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -108,10 +100,7 @@ export default function ServiceDetailPage() {
       maxWidth="4xl"
       badge={
         service ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={service.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} />
         ) : undefined
       }
       actions={
@@ -175,9 +164,7 @@ export default function ServiceDetailPage() {
                     <span className="inline-flex items-center gap-1.5">
                       <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
                       {floorLabel}
-                      {service.floor?.floorNumber != null
-                        ? ` #${service.floor.floorNumber}`
-                        : ''}
+                      {service.floor?.floorNumber != null ? ` #${service.floor.floorNumber}` : ''}
                     </span>
                   }
                 />
@@ -195,10 +182,7 @@ export default function ServiceDetailPage() {
 
             <DetailCard title="Last Updated By" icon={<User />}>
               <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={service.lastUpdatedBy?.name ?? 'System'}
-                />
+                <DetailRow label="Name" value={service.lastUpdatedBy?.name ?? 'System'} />
                 <DetailRow
                   label="Timestamp"
                   value={
@@ -219,8 +203,8 @@ export default function ServiceDetailPage() {
               variant="danger"
             >
               <p className="text-sm font-medium text-[color:var(--color-text-secondary)]">
-                There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved
-                complaint{openCount > 1 ? 's' : ''} related to this service on this floor.
+                There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved complaint
+                {openCount > 1 ? 's' : ''} related to this service on this floor.
               </p>
             </DetailCard>
           )}

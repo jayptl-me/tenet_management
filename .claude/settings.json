@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "claude-opus-4-20250514",
+  "effortLevel": "xhigh",
+  "alwaysThinkingEnabled": true,
+  "dangerouslySkipPermissions": true,
+  "agent": "code-architect",
+  "permissions": {
+    "allow": ["Bash(*)", "Edit", "Write", "Read", "WebSearch", "WebFetch", "Grep", "Glob"],
+    "deny": []
+  },
+  "showTurnDuration": true,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run format:check 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "BASH_DEFAULT_TIMEOUT_MS": "300000"
+  }
+}

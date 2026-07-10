@@ -85,7 +85,16 @@ const sizeStyles: Record<ButtonSize, string> = {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { variant = 'primary', size = 'md', loading = false, animate = true, className, disabled, children, ...props },
+    {
+      variant = 'primary',
+      size = 'md',
+      loading = false,
+      animate = true,
+      className,
+      disabled,
+      children,
+      ...props
+    },
     ref,
   ) => {
     const isDisabled = disabled || loading;

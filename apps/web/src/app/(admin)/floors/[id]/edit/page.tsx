@@ -16,7 +16,11 @@ import type { IAppConfig } from '@pg/types';
 function buildSchema(perFloorAmenities: { key: string; label: string; maxPerFloor?: number }[]) {
   const amenityFields: Record<string, z.ZodNumber> = {};
   for (const a of perFloorAmenities) {
-    amenityFields[a.key] = z.coerce.number().int().min(0, 'Must be >= 0').max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
+    amenityFields[a.key] = z.coerce
+      .number()
+      .int()
+      .min(0, 'Must be >= 0')
+      .max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
   }
   return z.object({
     label: z.string().min(1, 'Label is required'),
@@ -68,9 +72,12 @@ export default function EditFloorPage() {
         };
 
         // Pre-fill amenity counts from floor data
-        const amenityCounts = (floor.amenityCounts as Array<{ amenityKey: string; count: number }>) ?? [];
+        const amenityCounts =
+          (floor.amenityCounts as Array<{ amenityKey: string; count: number }>) ?? [];
         for (const a of defs) {
-          const existing = amenityCounts.find((ac: { amenityKey: string; count: number }) => ac.amenityKey === a.key);
+          const existing = amenityCounts.find(
+            (ac: { amenityKey: string; count: number }) => ac.amenityKey === a.key,
+          );
           defaults[a.key] = existing?.count ?? 0;
         }
 
@@ -124,10 +131,7 @@ export default function EditFloorPage() {
           />
         }
       >
-        <FormSection
-          title="Floor details"
-          description="Label, floor number, and room capacity"
-        >
+        <FormSection title="Floor details" description="Label, floor number, and room capacity">
           <FormGrid>
             <Input
               label="Label"

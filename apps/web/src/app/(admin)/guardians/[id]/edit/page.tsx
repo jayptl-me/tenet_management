@@ -100,10 +100,7 @@ export default function EditGuardianPage() {
           />
         }
       >
-        <FormSection
-          title="Linked tenant"
-          description="Tenant this guardian is associated with"
-        >
+        <FormSection title="Linked tenant" description="Tenant this guardian is associated with">
           <Controller
             name="tenantId"
             control={control}
@@ -147,22 +144,14 @@ export default function EditGuardianPage() {
           </FormGrid>
         </FormSection>
 
-        <FormSection
-          title="Flags"
-          description="Emergency contact and active status"
-          divided
-        >
+        <FormSection title="Flags" description="Emergency contact and active status" divided>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
             <Checkbox
               label="Emergency contact"
               error={errors.isEmergencyContact?.message}
               {...register('isEmergencyContact')}
             />
-            <Checkbox
-              label="Active"
-              error={errors.isActive?.message}
-              {...register('isActive')}
-            />
+            <Checkbox label="Active" error={errors.isActive?.message} {...register('isActive')} />
           </div>
         </FormSection>
       </FormCard>

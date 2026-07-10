@@ -20,13 +20,7 @@ export interface EmptyStateProps {
 
 // ── Component ──────────────────────────────────────────
 
-export function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className,
-}: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <motion.div
       variants={fadeScaleIn}
@@ -37,14 +31,8 @@ export function EmptyState({
         className,
       )}
     >
-      {icon && (
-        <div className="mb-4 text-[color:var(--color-text-muted)]">
-          {icon}
-        </div>
-      )}
-      <h3 className="text-base font-bold text-[color:var(--color-text-primary)]">
-        {title}
-      </h3>
+      {icon && <div className="mb-4 text-[color:var(--color-text-muted)]">{icon}</div>}
+      <h3 className="text-base font-bold text-[color:var(--color-text-primary)]">{title}</h3>
       {description && (
         <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-[color:var(--color-text-muted)]">
           {description}

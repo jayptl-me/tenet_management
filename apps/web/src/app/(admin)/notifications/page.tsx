@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
-  Search,
   Send,
   Users,
   Building2,
@@ -22,7 +21,6 @@ import {
   Copy,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -83,7 +81,6 @@ const typeColors: Record<string, string> = {
 };
 
 export default function NotificationsPage() {
-  const user = useAuthStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
@@ -96,8 +93,6 @@ export default function NotificationsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [filterType, setFilterType] = useState<INotificationType | ''>('');
-  const [filterTarget, setFilterTarget] = useState<TargetFilter | ''>('');
-
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
@@ -289,38 +284,42 @@ export default function NotificationsPage() {
             />
 
             {/* WhatsApp Share Preview for Emergency */}
-            {form.type === 'emergency' && (() => {
-              const whatsappUrl = generateWhatsAppUrl('', `EMERGENCY: ${form.title}\n${form.body}`);
-              return (
-                <div className="mt-1 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text-primary)]">
-                    WhatsApp Share Preview
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 truncate font-[family:var(--font-mono)] text-xs text-[color:var(--color-brand-600)] underline"
-                    >
-                      {whatsappUrl}
-                    </a>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      onClick={() => {
-                        copyToClipboard(whatsappUrl);
-                        toast.success('WhatsApp link copied to clipboard');
-                      }}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy link
-                    </Button>
+            {form.type === 'emergency' &&
+              (() => {
+                const whatsappUrl = generateWhatsAppUrl(
+                  '',
+                  `EMERGENCY: ${form.title}\n${form.body}`,
+                );
+                return (
+                  <div className="mt-1 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text-primary)]">
+                      WhatsApp Share Preview
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-[family:var(--font-mono)] flex-1 truncate text-xs text-[color:var(--color-brand-600)] underline"
+                      >
+                        {whatsappUrl}
+                      </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                          copyToClipboard(whatsappUrl);
+                          toast.success('WhatsApp link copied to clipboard');
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        Copy link
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
 
             {/* Send Push Toggle */}
             <div className="flex items-center gap-3">
@@ -377,7 +376,7 @@ export default function NotificationsPage() {
                 </option>
               ))}
             </select>
-            <div className="ml-auto font-[family:var(--font-mono)] text-xs text-[color:var(--color-text-muted)]">
+            <div className="font-[family:var(--font-mono)] ml-auto text-xs text-[color:var(--color-text-muted)]">
               {total} notifications
             </div>
           </div>
@@ -415,20 +414,21 @@ export default function NotificationsPage() {
                         {notif.title}
                       </h3>
                       <span
-                        className={`inline-block rounded-full px-2 py-0.5 font-[family:var(--font-mono)] text-[10px] font-medium ${
-                          typeColors[notif.type] ?? 'bg-[color:var(--color-surface-200)] text-[color:var(--color-text-secondary)]'
+                        className={`font-[family:var(--font-mono)] inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          typeColors[notif.type] ??
+                          'bg-[color:var(--color-surface-200)] text-[color:var(--color-text-secondary)]'
                         }`}
                       >
                         {notif.type.replace(/_/g, ' ')}
                       </span>
-                      <span className="inline-block rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 font-[family:var(--font-mono)] text-[10px] text-[color:var(--color-text-muted)]">
+                      <span className="font-[family:var(--font-mono)] inline-block rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 text-[10px] text-[color:var(--color-text-muted)]">
                         {notif.targetType}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
                       {notif.body}
                     </p>
-                    <div className="mt-2 flex items-center gap-3 font-[family:var(--font-mono)] text-[11px] text-[color:var(--color-text-muted)]">
+                    <div className="font-[family:var(--font-mono)] mt-2 flex items-center gap-3 text-[11px] text-[color:var(--color-text-muted)]">
                       <span>{new Date(notif.sentAt).toLocaleString()}</span>
                       <span>•</span>
                       <span>{notif.unreadBy.length} unread</span>

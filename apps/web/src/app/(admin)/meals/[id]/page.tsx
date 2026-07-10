@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import {
-  User,
-  Home,
-  Star,
-  FileText,
-  Tag,
-  UtensilsCrossed,
-} from 'lucide-react';
+import { User, Home, Star, FileText, Tag, UtensilsCrossed } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -160,10 +153,7 @@ export default function MealFeedbackDetailPage() {
                   label="Meal Type"
                   value={<span className="capitalize">{feedback.mealType}</span>}
                 />
-                <DetailRow
-                  label="Date"
-                  value={formatDate(feedback.date || feedback.createdAt)}
-                />
+                <DetailRow label="Date" value={formatDate(feedback.date || feedback.createdAt)} />
               </DetailList>
             </DetailCard>
 

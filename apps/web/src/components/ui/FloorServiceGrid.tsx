@@ -142,9 +142,7 @@ export function FloorServiceGrid({
     const def = definitions.find((d) => d.key === serviceType);
     if (def) return def.label;
     // Fallback: format snake_case → Title Case
-    return serviceType
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return serviceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   // Resolve icon dynamically
@@ -157,9 +155,7 @@ export function FloorServiceGrid({
   // Filter to only per-floor amenities (if definitions loaded)
   const perFloorServices = useMemo(() => {
     if (definitions.length === 0) return services; // Can't filter, show all
-    const perFloorKeys = new Set(
-      definitions.filter((d) => d.isPerFloor).map((d) => d.key),
-    );
+    const perFloorKeys = new Set(definitions.filter((d) => d.isPerFloor).map((d) => d.key));
     return services.filter((s) => perFloorKeys.has(s.serviceType));
   }, [services, definitions]);
 
@@ -167,7 +163,7 @@ export function FloorServiceGrid({
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-xs text-[color:var(--color-surface-400)]">
-        <div className="h-3 w-3 animate-spin rounded-full border-[length:var(--bw-default)] border-t-[color:var(--color-brand-500)] border-[color:var(--color-surface-300)]" />
+        <div className="h-3 w-3 animate-spin rounded-full border-[length:var(--bw-default)] border-[color:var(--color-surface-300)] border-t-[color:var(--color-brand-500)]" />
         Loading services...
       </div>
     );
@@ -189,10 +185,7 @@ export function FloorServiceGrid({
   // ── Compute aggregates ──
   const anyDown = perFloorServices.some((s) => s.status === 'down');
   const anyDegraded = perFloorServices.some((s) => s.status === 'degraded');
-  const totalComplaints = perFloorServices.reduce(
-    (sum, s) => sum + (s.openComplaintCount ?? 0),
-    0,
-  );
+  const totalComplaints = perFloorServices.reduce((sum, s) => sum + (s.openComplaintCount ?? 0), 0);
 
   // ── Compact Mode ──
   if (compact) {
@@ -214,9 +207,7 @@ export function FloorServiceGrid({
               >
                 <span className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
                 <Icon className="hidden h-3 w-3 text-[color:var(--color-text-muted)] sm:inline" />
-                <span className="hidden sm:inline">
-                  {resolveLabel(svc.serviceType)}
-                </span>
+                <span className="hidden sm:inline">{resolveLabel(svc.serviceType)}</span>
                 {svc.openComplaintCount ? (
                   <span className="inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-[color:var(--color-danger-100)] px-1 font-mono text-[8px] font-bold text-[color:var(--color-danger-600)]">
                     {svc.openComplaintCount}
@@ -233,8 +224,7 @@ export function FloorServiceGrid({
               }}
               className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:text-[color:var(--color-text-secondary)]"
             >
-              +{perFloorServices.length - visibleCount} more{' '}
-              <ChevronDown className="h-3 w-3" />
+              +{perFloorServices.length - visibleCount} more <ChevronDown className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -251,16 +241,16 @@ export function FloorServiceGrid({
                   className="flex items-center justify-between gap-2 text-xs"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
+                    <span
+                      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`}
+                    />
                     <Icon className="h-3 w-3 text-[color:var(--color-text-muted)]" />
                     <span className="font-semibold text-[color:var(--color-text-primary)]">
                       {resolveLabel(svc.serviceType)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-semibold ${cfg.text}`}>
-                      {cfg.label}
-                    </span>
+                    <span className={`text-[10px] font-semibold ${cfg.text}`}>{cfg.label}</span>
                     {svc.openComplaintCount ? (
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-[color:var(--color-danger-100)] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[color:var(--color-danger-600)]">
                         <AlertTriangle className="h-2.5 w-2.5" />
@@ -273,7 +263,7 @@ export function FloorServiceGrid({
                           e.stopPropagation();
                           onReportIssue(svc.serviceType);
                         }}
-                        className="rounded px-1 py-0.5 text-[9px] font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] transition-colors duration-[var(--transition-duration)]"
+                        className="rounded px-1 py-0.5 text-[9px] font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
                       >
                         Report
                       </button>

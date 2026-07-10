@@ -13,13 +13,13 @@ The current admin panel is already well-structured with 51 functional page files
 
 **Goal**: Fix immediate bugs and merge artifacts that would cause runtime errors or crashes.
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx:78` | `++++++++ REPLACE` merge artifact | Remove merge artifact, ensure proper code structure |
-| `apps/web/src/app/(admin)/meals/[id]/edit/page.tsx:83` | `++++++++ REPLACE` merge artifact | Remove merge artifact, ensure proper code structure |
-| `apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx` | Status dropdown uses complaint statuses | Replace with correct attendance statuses (present/absent/on_leave/late) |
-| `apps/web/src/app/(admin)/menus/[id]/edit/page.tsx` | Cannot edit meal items | Add meal items form fields |
-| `apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx` | Status options mismatch with detail schema | Sync status options with zod schema |
+| File                                                      | Issue                                      | Fix                                                                     |
+| --------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------- |
+| `apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx:78` | `++++++++ REPLACE` merge artifact          | Remove merge artifact, ensure proper code structure                     |
+| `apps/web/src/app/(admin)/meals/[id]/edit/page.tsx:83`    | `++++++++ REPLACE` merge artifact          | Remove merge artifact, ensure proper code structure                     |
+| `apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx`  | Status dropdown uses complaint statuses    | Replace with correct attendance statuses (present/absent/on_leave/late) |
+| `apps/web/src/app/(admin)/menus/[id]/edit/page.tsx`       | Cannot edit meal items                     | Add meal items form fields                                              |
+| `apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx`   | Status options mismatch with detail schema | Sync status options with zod schema                                     |
 
 **Files modified**: ~5 files
 **Scope**: Frontend only
@@ -31,18 +31,18 @@ The current admin panel is already well-structured with 51 functional page files
 
 **Goal**: Fix all edit forms that are missing relation fields (tenant, floor, etc.) and convert plain-text ObjectId inputs to ResourceSelect components.
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `guardians/[id]/edit/page.tsx` | Missing tenantId field | Add tenantId ResourceSelect |
-| `visitors/[id]/edit/page.tsx` | Missing tenant field | Add tenantId ResourceSelect |
-| `attendance/[id]/edit/page.tsx` | Missing tenant field | Add tenantId ResourceSelect |
-| `meals/[id]/edit/page.tsx` | Missing tenant field | Add tenantId ResourceSelect |
-| `leaves/[id]/edit/page.tsx` | Missing tenant field | Add tenantId ResourceSelect |
-| `services/[id]/edit/page.tsx` | Missing floorId field | Add floorId ResourceSelect |
-| `attendance/new/page.tsx` | tenantId is plain-text Input | Convert to ResourceSelect |
-| `meals/new/page.tsx` | tenantId is plain-text Input | Convert to ResourceSelect |
-| `leaves/new/page.tsx` | tenantId is plain-text Input | Convert to ResourceSelect |
-| `leaves/new/page.tsx` | `fromDate`/`toDate` vs `startDate`/`endDate` mismatch | Standardize field names |
+| File                            | Issue                                                 | Fix                         |
+| ------------------------------- | ----------------------------------------------------- | --------------------------- |
+| `guardians/[id]/edit/page.tsx`  | Missing tenantId field                                | Add tenantId ResourceSelect |
+| `visitors/[id]/edit/page.tsx`   | Missing tenant field                                  | Add tenantId ResourceSelect |
+| `attendance/[id]/edit/page.tsx` | Missing tenant field                                  | Add tenantId ResourceSelect |
+| `meals/[id]/edit/page.tsx`      | Missing tenant field                                  | Add tenantId ResourceSelect |
+| `leaves/[id]/edit/page.tsx`     | Missing tenant field                                  | Add tenantId ResourceSelect |
+| `services/[id]/edit/page.tsx`   | Missing floorId field                                 | Add floorId ResourceSelect  |
+| `attendance/new/page.tsx`       | tenantId is plain-text Input                          | Convert to ResourceSelect   |
+| `meals/new/page.tsx`            | tenantId is plain-text Input                          | Convert to ResourceSelect   |
+| `leaves/new/page.tsx`           | tenantId is plain-text Input                          | Convert to ResourceSelect   |
+| `leaves/new/page.tsx`           | `fromDate`/`toDate` vs `startDate`/`endDate` mismatch | Standardize field names     |
 
 **Files modified**: ~10 files
 **Scope**: Frontend only
@@ -55,12 +55,14 @@ The current admin panel is already well-structured with 51 functional page files
 **Goal**: Audit and fix all missing CRUD endpoints, fix backend issues found during research.
 
 **Backend tasks**:
+
 - Audit all route files for missing PUT/DELETE endpoints
 - Ensure consistent response structure (`{ success, data/meta }`)
 - Fix any pagination missing on list endpoints
 - Add missing population of referenced documents
 
 **Frontend API client fixes**:
+
 - Fix auth token double source-of-truth (localStorage + Zustand)
 - Fix `useSidebarBadges` broken SSE connection (no auth token, hardcoded URL)
 - Ensure consistent error handling across all API calls
@@ -78,6 +80,7 @@ The current admin panel is already well-structured with 51 functional page files
 **Current state**: Already sophisticated with SaaS theme (light + dark), brand/semantic color scales, typography, shadow system, micro-interactions via motion.
 
 **Enhancements**:
+
 - Add additional semantic status indicator components (StatusBadge already exists -- ensure all pages use consistent variants)
 - Add date-range picker component for filtering
 - Add a proper multi-select component
@@ -99,6 +102,7 @@ The current admin panel is already well-structured with 51 functional page files
 **Current state**: Dashboard already has LineChart, GaugeChart, DonutChart, FunnelChart, StackedBarChart, HeatmapCalendar, Sparkline, Timeline.
 
 **Enhancements**:
+
 - Add line chart to payment detail page showing payment history over time
 - Add occupancy trend visualization to room detail page
 - Add complaint trend visualization to complaint pages
@@ -117,6 +121,7 @@ The current admin panel is already well-structured with 51 functional page files
 **Goal**: Ensure every create/edit form is production-ready with consistent UX patterns.
 
 **Checklist for each form**:
+
 - [ ] Uses react-hook-form with zodResolver
 - [ ] All relation fields use ResourceSelect (not plain-text ObjectId)
 - [ ] Zod schema matches backend validation
@@ -129,6 +134,7 @@ The current admin panel is already well-structured with 51 functional page files
 - [ ] Form field ordering matches logical grouping
 
 **Priority targets** (forms with most issues):
+
 1. `attendance/new/page.tsx` + `attendance/[id]/edit/page.tsx` -- 4 bugs
 2. `menus/[id]/edit/page.tsx` -- missing meal items
 3. `leaves/new/page.tsx` -- plain-text + field naming mismatch
@@ -147,6 +153,7 @@ The current admin panel is already well-structured with 51 functional page files
 **Goal**: Run all quality gates, verify integration, document changes.
 
 **Verification gates**:
+
 - [ ] `bun run typecheck` exits with code 0
 - [ ] `bun run lint` exits with code 0
 - [ ] `bun run format:check` passes
@@ -167,6 +174,7 @@ The current admin panel is already well-structured with 51 functional page files
 
 Passes 1-2 are quick, sequential fixes that I'll handle directly.
 Passes 3-6 can be parallelized using sub-agents (Sonnet 5 models as requested):
+
 - Sub-agent A: Pass 3 (API + Backend)
 - Sub-agent B: Pass 4 (Design System)
 - Sub-agent C: Pass 5 (Data Visualization)

@@ -112,7 +112,9 @@ appConfig.get('/', async (c) => {
   }
 
   // Exclude sensitive fields (gstNumber, panNumber) from public response
-  const { gstNumber, panNumber, ...publicConfig } = config as unknown as Record<string, unknown>;
+  const { ...publicConfig } = config as unknown as Record<string, unknown>;
+  delete (publicConfig as Record<string, unknown>).gstNumber;
+  delete (publicConfig as Record<string, unknown>).panNumber;
 
   return c.json({ success: true, data: publicConfig });
 });

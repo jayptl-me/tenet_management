@@ -94,12 +94,33 @@ export default function NewGuardianPage() {
             )}
           />
           <FormGrid>
-            <Input label="Name" placeholder="Full name" error={errors.name?.message} {...register('name')} />
-            <Input label="Phone" placeholder="10-digit number" error={errors.phone?.message} {...register('phone')} />
+            <Input
+              label="Name"
+              placeholder="Full name"
+              error={errors.name?.message}
+              {...register('name')}
+            />
+            <Input
+              label="Phone"
+              placeholder="10-digit number"
+              error={errors.phone?.message}
+              {...register('phone')}
+            />
           </FormGrid>
           <FormGrid>
-            <Input label="Email" type="email" placeholder="email@example.com" error={errors.email?.message} {...register('email')} />
-            <Select label="Relation" options={RELATION_OPTIONS} error={errors.relation?.message} {...register('relation')} />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="email@example.com"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+            <Select
+              label="Relation"
+              options={RELATION_OPTIONS}
+              error={errors.relation?.message}
+              {...register('relation')}
+            />
           </FormGrid>
         </div>
       </FormCard>

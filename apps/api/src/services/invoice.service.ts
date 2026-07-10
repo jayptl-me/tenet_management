@@ -179,12 +179,20 @@ export async function calculateElectricityShare(tenantId: string, month: string)
   const roomEntry = roomEntries.find((entry) => String(entry.roomId ?? '') === tenantRoomIdStr);
   if (!roomEntry) return 0;
 
-  // Count active tenants in this room for the given month
+  // Count active tenants in this room for the given month.
+  // Use the last day of the billing month as the cut-off so tenants
+  // who checked out mid-month or moved in late are accurately counted.
+  const [year, monthNum] = month.split('-').map(Number);
+  const lastDayOfMonth = new Date(year!, monthNum!, 0).getDate();
+  const monthEnd = new Date(`${month}-${String(lastDayOfMonth).padStart(2, '0')}`);
+  const monthStart = new Date(`${month}-01`);
+
   const activeRoomTenants = await tenantCountDocs(
     safeFilter({
       roomId: new mongoose.Types.ObjectId(tenantRoomIdStr),
       isActive: true,
-      moveInDate: { $lte: new Date(`${month}-28`) },
+      moveInDate: { $lte: monthEnd },
+      $or: [{ moveOutDate: { $gte: monthStart } }, { moveOutDate: null }],
     }),
   );
 

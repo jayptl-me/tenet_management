@@ -8,6 +8,7 @@ import { connectDatabase, disconnectDatabase, isDatabaseConnected } from './lib/
 import { securityHeaders } from './middleware/security.js';
 import { requestId } from './middleware/requestId.js';
 import { globalErrorHandler } from './middleware/errorHandler.js';
+import { generalMutationLimiter } from './middleware/rateLimiter.js';
 import authRoutes from './routes/auth.js';
 import floorRoutes from './routes/floors.js';
 import roomRoutes from './routes/rooms.js';
@@ -34,7 +35,6 @@ import sseRoutes from './routes/sse.js';
 import laundryRoutes from './routes/laundry.js';
 import auditRoutes from './routes/audit.js';
 import { startScheduler } from './jobs/scheduler.js';
-import { checkServiceAvailability, getServiceAvailability } from './lib/serviceAvailability.js';
 
 const app = new Hono();
 
@@ -60,6 +60,9 @@ if (env.NODE_ENV === 'development') {
 
 // ── API v1 ──────────────────────────────────────────────
 const api = new Hono().basePath('/api/v1');
+
+// Apply mutation rate limiter to all API routes (30 req/min for POST/PUT/DELETE)
+api.use('*', generalMutationLimiter);
 
 api.get('/health', (c) =>
   c.json({

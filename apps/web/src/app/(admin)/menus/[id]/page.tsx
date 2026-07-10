@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Calendar,
-  Sun,
-  Sunset,
-  Moon,
-  MessageCircle,
-  Pencil,
-} from 'lucide-react';
+import { Calendar, Sun, Sunset, Moon, MessageCircle, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -92,9 +85,7 @@ export default function MenuDetailPage() {
       backHref="/menus"
       isLoading={isLoading}
       maxWidth="4xl"
-      badge={
-        menu ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined
-      }
+      badge={menu ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined}
       actions={
         menu ? (
           <Button
@@ -120,7 +111,11 @@ export default function MenuDetailPage() {
             ).map(({ key, icon }) => {
               const items = menu.meals?.[key] ?? [];
               return (
-                <DetailCard key={key} title={key.charAt(0).toUpperCase() + key.slice(1)} icon={icon}>
+                <DetailCard
+                  key={key}
+                  title={key.charAt(0).toUpperCase() + key.slice(1)}
+                  icon={icon}
+                >
                   {items.length === 0 ? (
                     <p className="text-sm italic text-[color:var(--color-text-muted)]">Not set</p>
                   ) : (

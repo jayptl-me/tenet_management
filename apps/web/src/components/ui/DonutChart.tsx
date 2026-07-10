@@ -66,7 +66,7 @@ export function DonutChart({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="transform -rotate-90"
+        className="-rotate-90 transform"
         role="img"
         aria-label={segments.map((s) => `${s.label}: ${s.value}`).join(', ')}
       >
@@ -135,18 +135,13 @@ export function DonutChart({
       {/* Legend */}
       <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {segments.map((segment) => (
-          <div
-            key={segment.label}
-            className="flex items-center gap-1.5 text-[11px] font-semibold"
-          >
+          <div key={segment.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: segment.color }}
               aria-hidden
             />
-            <span className="text-[color:var(--color-text-secondary)]">
-              {segment.label}
-            </span>
+            <span className="text-[color:var(--color-text-secondary)]">{segment.label}</span>
             <span className="font-mono tabular-nums text-[color:var(--color-text-primary)]">
               {segment.value}
             </span>

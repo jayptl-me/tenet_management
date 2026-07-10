@@ -14,10 +14,7 @@ interface SkeletonProps {
 export function ShimmerBlock({ className, style }: SkeletonProps) {
   return (
     <div
-      className={clsx(
-        'animate-pulse rounded-md bg-[color:var(--shimmer-base)]',
-        className,
-      )}
+      className={clsx('animate-pulse rounded-md bg-[color:var(--shimmer-base)]', className)}
       style={style}
     />
   );
@@ -36,10 +33,7 @@ export function TextSkeleton({ lines = 3, lastLineShort = true, className }: Tex
       {Array.from({ length: lines }).map((_, i) => (
         <ShimmerBlock
           key={i}
-          className={clsx(
-            'h-3.5',
-            i === lines - 1 && lastLineShort ? 'w-2/3' : 'w-full',
-          )}
+          className={clsx('h-3.5', i === lines - 1 && lastLineShort ? 'w-2/3' : 'w-full')}
         />
       ))}
     </div>
@@ -72,9 +66,7 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
           <ShimmerBlock className="h-3 w-20" />
           <ShimmerBlock className="h-8 w-28" />
         </div>
-        {withIcon && (
-          <ShimmerBlock className="h-9 w-9 rounded-lg" />
-        )}
+        {withIcon && <ShimmerBlock className="h-9 w-9 rounded-lg" />}
       </div>
       <div className="mt-3 flex items-center gap-2">
         <ShimmerBlock className="h-5 w-16 rounded-full" />
@@ -112,11 +104,7 @@ interface TableSkeletonProps extends SkeletonProps {
   columns?: number;
 }
 
-export function TableSkeleton({
-  className,
-  rows = 5,
-  columns = 4,
-}: TableSkeletonProps) {
+export function TableSkeleton({ className, rows = 5, columns = 4 }: TableSkeletonProps) {
   return (
     <div
       className={clsx(
@@ -125,12 +113,9 @@ export function TableSkeleton({
       )}
     >
       {/* Table header */}
-      <div className="flex border-b border-b-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-3 gap-4">
+      <div className="flex gap-4 border-b border-b-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-3">
         {Array.from({ length: columns }).map((_, i) => (
-          <ShimmerBlock
-            key={`header-${i}`}
-            className="h-4 flex-1"
-          />
+          <ShimmerBlock key={`header-${i}`} className="h-4 flex-1" />
         ))}
       </div>
 
@@ -139,17 +124,14 @@ export function TableSkeleton({
         <div
           key={rowIdx}
           className={clsx(
-            'flex px-4 py-3 gap-4',
+            'flex gap-4 px-4 py-3',
             rowIdx < rows - 1 && 'border-b border-b-[color:var(--color-surface-200)]',
           )}
         >
           {Array.from({ length: columns }).map((_, colIdx) => (
             <ShimmerBlock
               key={`cell-${rowIdx}-${colIdx}`}
-              className={clsx(
-                'h-3.5 flex-1',
-                colIdx === 0 && 'w-2/3',
-              )}
+              className={clsx('h-3.5 flex-1', colIdx === 0 && 'w-2/3')}
             />
           ))}
         </div>
@@ -173,10 +155,7 @@ export function ChartSkeleton({ className, height = 240 }: ChartSkeletonProps) {
       )}
     >
       <ShimmerBlock className="mb-4 h-6 w-1/3" />
-      <ShimmerBlock
-        className="w-full rounded-lg"
-        style={{ height }}
-      />
+      <ShimmerBlock className="w-full rounded-lg" style={{ height }} />
     </div>
   );
 }
@@ -219,7 +198,7 @@ export function DashboardSkeleton() {
 export function CircleSkeleton({ className, size = 10 }: SkeletonProps & { size?: number }) {
   return (
     <ShimmerBlock
-      className={clsx('rounded-full flex-shrink-0', className)}
+      className={clsx('flex-shrink-0 rounded-full', className)}
       style={{ width: size * 4, height: size * 4 }}
     />
   );

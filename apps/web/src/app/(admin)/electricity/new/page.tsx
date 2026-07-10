@@ -1,103 +1,102 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus, Trash2, Calculator, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { roomLabel } from '@/lib/resource-select-presets';
+import { surfaceNestedClass } from '@/lib/field-styles';
+import { clsx } from 'clsx';
 
-interface RoomOption {
-  _id: string;
-  roomNumber: string;
-  sharingType?: number;
-  monthlyRent?: number;
-}
+// ── Schema ──────────────────────────────────────────────
 
-interface RoomEntryForm {
-  roomId: string;
-  previousReading: number;
-  currentReading: number;
-  ratePerUnit: number;
-}
+const roomEntrySchema = z.object({
+  roomId: z.string().min(1, 'Room is required'),
+  previousReading: z.coerce.number().min(0, 'Cannot be negative'),
+  currentReading: z.coerce.number().min(0, 'Cannot be negative'),
+  ratePerUnit: z.coerce.number().min(0, 'Rate must be >= 0'),
+});
+
+const formSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
+    totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    notes: z.string().optional(),
+    roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
+  })
+  .refine((data) => data.roomEntries.every((e) => e.currentReading >= e.previousReading), {
+    message: 'Current reading must be >= previous reading for all entries',
+  })
+  .refine(
+    (data) => {
+      const ids = data.roomEntries.map((e) => e.roomId);
+      return new Set(ids).size === ids.length;
+    },
+    { message: 'Each room can only appear once' },
+  );
+
+type FormData = z.infer<typeof formSchema>;
 
 function currentMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// ── Component ───────────────────────────────────────────
+
 export default function NewElectricityPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [month, setMonth] = useState(currentMonth());
-  const [totalBillAmount, setTotalBillAmount] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [rooms, setRooms] = useState<RoomOption[]>([]);
-  const [entries, setEntries] = useState<RoomEntryForm[]>([
-    { roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 },
-  ]);
 
-  useEffect(() => {
-    api
-      .get('rooms?limit=100&isActive=true')
-      .json<{ success: boolean; data: RoomOption[] }>()
-      .then((res) => setRooms(res.data ?? []))
-      .catch(() => setRooms([]));
-  }, []);
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      month: currentMonth(),
+      totalBillAmount: 0,
+      notes: '',
+      roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
+    },
+  });
 
-  const addEntry = () => {
-    setEntries((prev) => [
-      ...prev,
-      { roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 },
-    ]);
+  const { fields, append, remove } = useFieldArray({ control, name: 'roomEntries' });
+  const entries = useWatch({ control, name: 'roomEntries' });
+
+  const computeAutoTotal = (entries: FormData['roomEntries']) => {
+    return entries.reduce((sum, e) => {
+      const units = Math.max(0, (e.currentReading || 0) - (e.previousReading || 0));
+      return sum + units * (e.ratePerUnit || 0);
+    }, 0);
   };
 
-  const removeEntry = (idx: number) => {
-    setEntries((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
-  };
+  const autoTotal = computeAutoTotal(entries);
 
-  const updateEntry = (idx: number, patch: Partial<RoomEntryForm>) => {
-    setEntries((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
-  };
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: FormData) => {
     setSubmitError('');
 
-    if (!/^\d{4}-\d{2}$/.test(month)) {
-      setSubmitError('Month must be YYYY-MM');
-      return;
-    }
-    if (entries.some((en) => !en.roomId)) {
-      setSubmitError('Select a room for every entry');
-      return;
-    }
-    if (entries.some((en) => en.currentReading < en.previousReading)) {
-      setSubmitError('Current reading must be >= previous reading for all rooms');
-      return;
-    }
-    const roomIds = entries.map((en) => en.roomId);
-    if (new Set(roomIds).size !== roomIds.length) {
-      setSubmitError('Each room can only appear once');
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
       await api
         .post('electricity', {
           json: {
-            month,
-            totalBillAmount,
-            notes: notes || undefined,
-            roomEntries: entries.map((en) => ({
+            month: data.month,
+            totalBillAmount: data.totalBillAmount,
+            notes: data.notes || undefined,
+            roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
               previousReading: en.previousReading,
               currentReading: en.currentReading,
@@ -111,15 +110,10 @@ export default function NewElectricityPage() {
       setSubmitError(
         'Failed to create bill. A bill for this month may already exist, or validation failed.',
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const roomOptions = rooms.map((r) => ({
-    value: r._id,
-    label: roomLabel(r),
-  }));
+  const err = errors as Record<string, { message?: string }>;
 
   return (
     <FormPage
@@ -130,7 +124,7 @@ export default function NewElectricityPage() {
       maxWidth="4xl"
     >
       <FormCard
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         footer={
           <FormActions
             loading={isSubmitting}
@@ -140,128 +134,174 @@ export default function NewElectricityPage() {
           />
         }
       >
-        <FormSection
-          title="Bill details"
-          description="Billing month and total amount for this cycle"
-        >
-          <FormGrid>
-            <Input
-              label="Month"
-              placeholder="YYYY-MM"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-            />
-            <Input
-              label="Total bill amount (₹)"
-              type="number"
-              min={0}
-              step="0.01"
-              value={totalBillAmount}
-              onChange={(e) => setTotalBillAmount(Number(e.target.value))}
-            />
-          </FormGrid>
-        </FormSection>
+        <div className="space-y-6">
+          <FormSection
+            title="Bill details"
+            description="Billing month and total amount for this cycle"
+          >
+            <FormGrid>
+              <Input
+                label="Month"
+                placeholder="YYYY-MM"
+                error={err.month?.message}
+                {...register('month')}
+              />
+              <Input
+                label="Total bill amount (₹)"
+                type="number"
+                min={0}
+                step="0.01"
+                error={err.totalBillAmount?.message}
+                {...register('totalBillAmount')}
+              />
+            </FormGrid>
+          </FormSection>
 
-        <FormSection
-          title="Room readings"
-          description="Per-room meter readings for this billing period"
-          divided
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={addEntry}>
-              <Plus className="h-4 w-4" /> Add room
-            </Button>
-          }
-        >
-          <div className="space-y-3">
-            {entries.map((entry, idx) => {
-              const units = Math.max(0, entry.currentReading - entry.previousReading);
-              const amount = units * entry.ratePerUnit;
-              return (
-                <div
-                  key={idx}
-                  className="grid grid-cols-1 gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]"
-                >
-                  <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
-                    <label
-                      className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
-                      htmlFor={`elec-new-room-${idx}`}
-                    >
-                      Room
-                    </label>
-                    <select
-                      id={`elec-new-room-${idx}`}
-                      className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)]"
-                      value={entry.roomId}
-                      onChange={(e) => updateEntry(idx, { roomId: e.target.value })}
-                      required
-                    >
-                      <option value="">Select room...</option>
-                      {roomOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Input
-                    label="Previous"
-                    type="number"
-                    min={0}
-                    value={entry.previousReading}
-                    onChange={(e) =>
-                      updateEntry(idx, { previousReading: Number(e.target.value) })
-                    }
-                  />
-                  <Input
-                    label="Current"
-                    type="number"
-                    min={0}
-                    value={entry.currentReading}
-                    onChange={(e) =>
-                      updateEntry(idx, { currentReading: Number(e.target.value) })
-                    }
-                  />
-                  <Input
-                    label="Rate / unit"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={entry.ratePerUnit}
-                    onChange={(e) =>
-                      updateEntry(idx, { ratePerUnit: Number(e.target.value) })
-                    }
-                  />
-                  <div className="flex flex-col items-end justify-end gap-1 sm:col-span-2 lg:col-span-1">
-                    {entries.length > 1 && (
+          <FormSection
+            title="Room readings"
+            description="Per-room meter readings for this billing period"
+            divided
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
+                }
+              >
+                <Plus className="h-4 w-4" /> Add room
+              </Button>
+            }
+          >
+            <div className="space-y-3">
+              {fields.map((field, idx) => {
+                const entry = entries?.[idx];
+                const units = entry
+                  ? Math.max(0, (entry.currentReading || 0) - (entry.previousReading || 0))
+                  : 0;
+                const amount = units * (entry?.ratePerUnit || 0);
+
+                return (
+                  <div
+                    key={field.id}
+                    className={clsx(
+                      surfaceNestedClass,
+                      'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
+                    )}
+                  >
+                    <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                      <Controller
+                        name={`roomEntries.${idx}.roomId`}
+                        control={control}
+                        render={({ field: rf }) => (
+                          <ResourceSelect
+                            label="Room"
+                            endpoint="rooms?limit=100&isActive=true"
+                            value={rf.value}
+                            onChange={rf.onChange}
+                            placeholder="Select room..."
+                            labelKey={roomLabel}
+                            valueKey="_id"
+                            dataPath="data"
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <Input
+                      label="Previous reading"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { previousReading?: { message?: string } })
+                          ?.previousReading?.message
+                      }
+                      {...register(`roomEntries.${idx}.previousReading` as const)}
+                    />
+                    <Input
+                      label="Current reading"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { currentReading?: { message?: string } })
+                          ?.currentReading?.message
+                      }
+                      {...register(`roomEntries.${idx}.currentReading` as const)}
+                    />
+                    <Input
+                      label="Rate/unit (₹)"
+                      type="number"
+                      step="0.01"
+                      inputMode="decimal"
+                      min={0}
+                      error={
+                        (errors.roomEntries?.[idx] as { ratePerUnit?: { message?: string } })
+                          ?.ratePerUnit?.message
+                      }
+                      {...register(`roomEntries.${idx}.ratePerUnit` as const)}
+                    />
+
+                    <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
                         aria-label={`Remove room reading ${idx + 1}`}
-                        onClick={() => removeEntry(idx)}
+                        onClick={() => remove(idx)}
+                        disabled={fields.length <= 1}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                      {units} units · ₹{amount.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </FormSection>
+                    </div>
 
-        <FormSection title="Notes" description="Optional remarks for this bill" divided>
-          <Textarea
-            label="Notes"
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional notes..."
-          />
-        </FormSection>
+                    <div className="col-span-full flex items-center gap-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface-50)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                      <Calculator className="h-3.5 w-3.5" />
+                      <span>
+                        Units:{' '}
+                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                          {units}
+                        </strong>
+                      </span>
+                      <span className="text-[color:var(--border-color)]">|</span>
+                      <span>
+                        Amount:{' '}
+                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                          ₹{amount.toLocaleString('en-IN')}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {fields.length > 0 && (
+              <div
+                className={clsx(surfaceNestedClass, 'mt-4 flex items-center justify-between p-4')}
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                  <Zap className="h-4 w-4" />
+                  Computed total from readings
+                </span>
+                <span className="font-mono text-xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                  ₹{autoTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
+          </FormSection>
+
+          <FormSection title="Notes" description="Optional remarks for this bill" divided>
+            <Textarea
+              label="Notes"
+              rows={3}
+              placeholder="Optional notes..."
+              {...register('notes')}
+            />
+          </FormSection>
+        </div>
       </FormCard>
     </FormPage>
   );

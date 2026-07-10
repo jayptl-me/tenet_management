@@ -135,17 +135,19 @@ export default function EditRoomPage() {
         status: data[`amenity_${a.key}`] ?? 'operational',
       }));
 
-      await api.put(`rooms/${roomId}`, {
-        json: {
-          roomNumber: data.roomNumber,
-          floorId: data.floorId,
-          sharingType: Number(data.sharingType),
-          monthlyRent: Number(data.monthlyRent),
-          isActive: data.isActive,
-          description: data.description || undefined,
-          roomAmenities,
-        },
-      }).json<{ success: boolean }>();
+      await api
+        .put(`rooms/${roomId}`, {
+          json: {
+            roomNumber: data.roomNumber,
+            floorId: data.floorId,
+            sharingType: Number(data.sharingType),
+            monthlyRent: Number(data.monthlyRent),
+            isActive: data.isActive,
+            description: data.description || undefined,
+            roomAmenities,
+          },
+        })
+        .json<{ success: boolean }>();
 
       router.push('/rooms');
     } catch {
@@ -179,10 +181,7 @@ export default function EditRoomPage() {
           />
         }
       >
-        <FormSection
-          title="Room details"
-          description="Identity and commercial settings"
-        >
+        <FormSection title="Room details" description="Identity and commercial settings">
           <FormGrid>
             <Input
               label="Room number"

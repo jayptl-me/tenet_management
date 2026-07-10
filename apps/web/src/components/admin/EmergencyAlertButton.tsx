@@ -17,16 +17,18 @@ export function EmergencyAlertButton() {
     setSending(true);
     setError('');
     try {
-      await api.post('notifications', {
-        json: {
-          targetType: 'all',
-          targetIds: [],
-          title: `[EMERGENCY] ${title}`,
-          body,
-          type: 'emergency',
-          sendPush: true,
-        },
-      }).json();
+      await api
+        .post('notifications', {
+          json: {
+            targetType: 'all',
+            targetIds: [],
+            title: `[EMERGENCY] ${title}`,
+            body,
+            type: 'emergency',
+            sendPush: true,
+          },
+        })
+        .json();
       setSent(true);
       setTimeout(() => {
         setIsOpen(false);
@@ -45,7 +47,7 @@ export function EmergencyAlertButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="bg-danger-500 hover:bg-danger-600 inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-3 py-1.5 font-display text-xs font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] active:scale-[var(--active-press-scale)]"
+        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
         title="Send Emergency Alert"
       >
         <AlertTriangle className="h-4 w-4" />
@@ -57,19 +59,21 @@ export function EmergencyAlertButton() {
           <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-danger-100 flex h-10 w-10 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--color-danger-300)]">
-                  <AlertTriangle className="text-danger-600 h-5 w-5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-100)]">
+                  <AlertTriangle className="h-5 w-5 text-[color:var(--color-danger-600)]" />
                 </div>
                 <div>
-                  <h3 className="font-display text-surface-900 text-lg font-bold">Emergency Alert</h3>
-                  <p className="text-surface-500 text-sm">
+                  <h3 className="font-display text-lg font-bold text-[color:var(--color-surface-900)]">
+                    Emergency Alert
+                  </h3>
+                  <p className="text-sm text-[color:var(--color-surface-500)]">
                     This will notify ALL tenants immediately via push + in-app
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-surface-400 hover:text-surface-600 rounded-md p-1 transition-colors"
+                className="rounded-md p-1 text-[color:var(--color-surface-400)] transition-colors hover:text-[color:var(--color-surface-600)]"
                 disabled={sending}
               >
                 <X className="h-5 w-5" />
@@ -77,34 +81,34 @@ export function EmergencyAlertButton() {
             </div>
 
             {error && (
-              <div className="border-danger-500 bg-danger-100 text-danger-800 mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] p-3 text-sm font-semibold">
+              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-3 text-sm font-semibold text-[color:var(--color-danger-800)]">
                 {error}
               </div>
             )}
 
             {sent ? (
-              <div className="border-success-500 bg-success-100 text-success-800 mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] p-4 text-center">
+              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] p-4 text-center text-[color:var(--color-success-800)]">
                 <p className="font-display text-lg font-bold">Alert Sent!</p>
                 <p className="text-sm">All tenants and guardians have been notified.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="font-body text-surface-700 mb-1 block text-sm font-semibold">
+                  <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
                     Alert Title
                   </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Fire Drill — Exit Immediately"
-                    className="font-body focus:border-danger-500 w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:outline-none"
+                    placeholder="e.g., Fire Drill -- Exit Immediately"
+                    className="font-body w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:border-[color:var(--color-danger-500)] focus:outline-none"
                     maxLength={150}
                     autoFocus
                   />
                 </div>
                 <div>
-                  <label className="font-body text-surface-700 mb-1 block text-sm font-semibold">
+                  <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
                     Message
                   </label>
                   <textarea
@@ -112,7 +116,7 @@ export function EmergencyAlertButton() {
                     onChange={(e) => setBody(e.target.value)}
                     placeholder="Describe the emergency and what tenants should do..."
                     rows={3}
-                    className="font-body focus:border-danger-500 w-full resize-none rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:outline-none"
+                    className="font-body w-full resize-none rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:border-[color:var(--color-danger-500)] focus:outline-none"
                     maxLength={500}
                   />
                 </div>
@@ -123,7 +127,7 @@ export function EmergencyAlertButton() {
               <div className="mt-6 flex items-center justify-end gap-3">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="font-body text-surface-600 hover:text-surface-800 rounded-[var(--radius-md)] px-4 py-2 text-sm font-semibold transition-colors"
+                  className="font-body rounded-[var(--radius-md)] px-4 py-2 text-sm font-semibold text-[color:var(--color-surface-600)] transition-colors hover:text-[color:var(--color-surface-800)]"
                   disabled={sending}
                 >
                   Cancel
@@ -131,7 +135,7 @@ export function EmergencyAlertButton() {
                 <button
                   onClick={handleSend}
                   disabled={sending || !title.trim() || !body.trim()}
-                  className="bg-danger-500 hover:bg-danger-600 inline-flex items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-5 py-2.5 font-display text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="font-display inline-flex items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-5 py-2.5 text-sm font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sending ? (
                     <>

@@ -19,25 +19,20 @@ export const fieldControlBase = clsx(
   'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)] disabled:shadow-none',
 );
 
-export const fieldControlBorderOk =
-  'border-[color:var(--color-field-border)]';
+export const fieldControlBorderOk = 'border-[color:var(--color-field-border)]';
 
 export const fieldControlBorderError = clsx(
   'border-[color:var(--border-color-error)]',
   'focus:ring-[color:var(--color-danger-400)] focus:border-[color:var(--border-color-error)]',
 );
 
-export const fieldLabelClass =
-  'text-[13px] font-semibold text-[color:var(--color-text-primary)]';
+export const fieldLabelClass = 'text-[13px] font-semibold text-[color:var(--color-text-primary)]';
 
-export const fieldHintClass =
-  'text-[11px] font-medium text-[color:var(--color-text-secondary)]';
+export const fieldHintClass = 'text-[11px] font-medium text-[color:var(--color-text-secondary)]';
 
-export const fieldErrorClass =
-  'text-[12px] font-medium text-[color:var(--color-danger-600)]';
+export const fieldErrorClass = 'text-[12px] font-medium text-[color:var(--color-danger-600)]';
 
-export const fieldHelperClass =
-  'text-[12px] font-medium text-[color:var(--color-text-secondary)]';
+export const fieldHelperClass = 'text-[12px] font-medium text-[color:var(--color-text-secondary)]';
 
 /** Elevated card surface used by forms, tables, detail panels, dashboard panels. */
 export const surfaceCardClass = clsx(

@@ -87,17 +87,11 @@ export function FunnelChart({
                 fontFamily={chartTokens.fontBody}
                 fontWeight={600}
               >
-                {stage.label.length > 12
-                  ? `${stage.label.slice(0, 11)}…`
-                  : stage.label}
+                {stage.label.length > 12 ? `${stage.label.slice(0, 11)}…` : stage.label}
               </text>
               {/* Value */}
               <text
-                x={
-                  width > 44
-                    ? x + width - 10
-                    : padLeft + Math.max(width, 4) + 8
-                }
+                x={width > 44 ? x + width - 10 : padLeft + Math.max(width, 4) + 8}
                 y={y + barHeight / 2}
                 textAnchor={width > 44 ? 'end' : 'start'}
                 dominantBaseline="middle"
@@ -115,18 +109,13 @@ export function FunnelChart({
 
       <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {stages.map((stage) => (
-          <div
-            key={stage.label}
-            className="flex items-center gap-1.5 text-[11px] font-semibold"
-          >
+          <div key={stage.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: stage.color }}
               aria-hidden
             />
-            <span className="text-[color:var(--color-text-secondary)]">
-              {stage.label}
-            </span>
+            <span className="text-[color:var(--color-text-secondary)]">{stage.label}</span>
             <span className="font-mono tabular-nums text-[color:var(--color-text-primary)]">
               {stage.value}
             </span>

@@ -5,15 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Save,
-  UserPlus,
-  Phone,
-  Mail,
-  Tag,
-  FileText,
-  User,
-} from 'lucide-react';
+import { Save, UserPlus, Phone, Mail, Tag, FileText, User } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -156,10 +148,7 @@ export default function EnquiryDetailPage() {
       maxWidth="4xl"
       badge={
         enquiry ? (
-          <StatusBadge
-            variant={statusVariant}
-            label={enquiry.status.replace(/_/g, ' ')}
-          />
+          <StatusBadge variant={statusVariant} label={enquiry.status.replace(/_/g, ' ')} />
         ) : undefined
       }
     >
@@ -193,11 +182,7 @@ export default function EnquiryDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <DetailCard
-              title="Enquiry Details"
-              icon={<User />}
-              className="lg:col-span-2"
-            >
+            <DetailCard title="Enquiry Details" icon={<User />} className="lg:col-span-2">
               <DetailList>
                 <DetailRow label="Name" value={enquiry.name} />
                 <DetailRow label="Phone" value={enquiry.phone} />
@@ -226,10 +211,7 @@ export default function EnquiryDetailPage() {
                   }
                 />
                 {enquiry.followUpDate && (
-                  <DetailRow
-                    label="Follow-up Date"
-                    value={formatDate(enquiry.followUpDate)}
-                  />
+                  <DetailRow label="Follow-up Date" value={formatDate(enquiry.followUpDate)} />
                 )}
               </DetailList>
 
@@ -257,9 +239,7 @@ export default function EnquiryDetailPage() {
               </DetailList>
               {enquiry.notes && (
                 <div className="mt-3 border-t border-[color:var(--border-color)] pt-3">
-                  <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                    Notes
-                  </p>
+                  <p className="text-xs font-medium text-[color:var(--color-text-muted)]">Notes</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--color-text-secondary)]">
                     {enquiry.notes}
                   </p>
@@ -290,8 +270,8 @@ export default function EnquiryDetailPage() {
 
           <DetailCard title="Actions" icon={<UserPlus />}>
             <p className="mb-4 text-sm text-[color:var(--color-text-secondary)]">
-              Convert this enquiry into a tenant. This will pre-fill the new tenant form with
-              the enquirer details.
+              Convert this enquiry into a tenant. This will pre-fill the new tenant form with the
+              enquirer details.
             </p>
             <Button
               variant="primary"

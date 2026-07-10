@@ -60,6 +60,15 @@ All commands are run using the Bun CLI.
 - **Re-read before write:** Always view the target file content immediately before modifying it to prevent code overwrite or applying stale versions.
 - **Backward Compatibility:** When changing database schemas, always specify a default value or fallback to preserve support for historical documents.
 
+## Context7 MCP (Library Documentation)
+
+Context7 MCP is installed and provides up-to-date documentation for React, Next.js, TypeScript, and all dependencies.
+
+- **Auto-invoke rule:** Always use Context7 when code generation, setup/configuration steps, or library/API documentation is needed. Automatically resolve library IDs and fetch docs without being explicitly asked.
+- Uses `resolve-library-id` and `get-library-docs` tools.
+- Connected via stdio: `npx -y @upstash/context7-mcp`
+- API key is optional (get one at https://context7.com/dashboard for higher rate limits).
+
 ## Detailed Workflows Reference
 
 For complete guidelines on execution loops, search protocols, quality gates, and database/monorepo policies, refer to the files under `.sixthrules/workflows/`:

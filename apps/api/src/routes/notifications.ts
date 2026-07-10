@@ -9,8 +9,9 @@ import {
   markAsRead,
   markAllAsRead,
   listNotifications,
+  deleteNotification,
 } from '../services/notification.service.js';
-import { parsePagination } from '../lib/routeUtils.js';
+import { parsePagination, parseId, notFound, badRequest } from '../lib/routeUtils.js';
 
 const notifRoutes = new Hono();
 
@@ -25,6 +26,7 @@ notifRoutes.get('/', async (c) => {
   const unreadOnly = c.req.query('unreadOnly') === 'true';
 
   const result = await listNotifications(user.sub, user.role, page, limit, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: type as any,
     unreadOnly,
   });
@@ -128,6 +130,23 @@ notifRoutes.patch('/read-all', async (c) => {
   return c.json({
     success: true,
     message: `Marked ${result.modifiedCount} notifications as read`,
+  });
+});
+
+// ── DELETE /api/v1/notifications/:id ─────────────────────
+notifRoutes.delete('/:id', adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid notification ID');
+
+  const result = await deleteNotification(id);
+
+  if (result.deletedCount === 0) {
+    return notFound(c, 'Notification');
+  }
+
+  return c.json({
+    success: true,
+    message: 'Notification deleted',
   });
 });
 

@@ -23,8 +23,12 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface TenantOption { _id: string; user?: { name: string; phone: string }; room?: { roomNumber: string }; bedId?: string }
+interface TenantOption {
+  _id: string;
+  user?: { name: string; phone: string };
+  room?: { roomNumber: string };
+  bedId?: string;
+}
 
 export default function NewLeavePage() {
   const router = useRouter();
@@ -83,9 +87,7 @@ export default function NewLeavePage() {
                 placeholder="Select tenant..."
                 error={err.tenantId?.message}
                 valueKey="_id"
-                labelKey={(item) =>
-                  (item as unknown as TenantOption).user?.name ?? 'Unknown'
-                }
+                labelKey={(item) => (item as unknown as TenantOption).user?.name ?? 'Unknown'}
                 sublabelFn={(item) =>
                   `Room ${(item as unknown as TenantOption).room?.roomNumber ?? 'N/A'}`
                 }

@@ -1,0 +1,4 @@
+- [Visitor Fixes Applied](visitor-fixes-applied.md) -- P0/P1: backend + frontend visitor creation/view/edit fully fixed
+- [Test Infrastructure Created](test-infra-created.md) -- P0: 20 tests across 3 model suites with vitest setup
+- [Auth & Business Logic Gaps](auth-business-gaps.md) -- P1: no password reset, overdue cron, or floor totalRooms guard
+- [Audit v5 Complete](audit-v2-complete.md) -- Full re-audit: all P0/P1/P2 resolved. Build clean (0 errors, 0 warnings). Gap analysis updated.

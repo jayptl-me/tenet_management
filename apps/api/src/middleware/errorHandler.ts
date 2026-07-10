@@ -7,10 +7,7 @@ export const globalErrorHandler: ErrorHandler = (err, c) => {
 
   // Log all errors with context
   if (err instanceof AppError) {
-    logger.warn(
-      { err, requestId, code: err.code, status: err.status },
-      'Application error caught',
-    );
+    logger.warn({ err, requestId, code: err.code, status: err.status }, 'Application error caught');
   } else {
     logger.error({ err, requestId }, 'Unhandled error');
   }

@@ -92,6 +92,26 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
     );
   }
 
+  // Cooldown: prevent duplicate complaints in same category within 30 minutes
+  const recentCount = await Complaint.countDocuments({
+    tenantId: tenant._id,
+    category: body.category,
+    createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
+  });
+  if (recentCount > 0) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'COMPLAINT_COOLDOWN',
+          message:
+            'You already submitted a complaint in this category recently. Please wait 30 minutes before filing another.',
+        },
+      },
+      429,
+    );
+  }
+
   const complaint = await (
     Complaint as unknown as { create: (doc: Record<string, unknown>) => Promise<unknown> }
   ).create({

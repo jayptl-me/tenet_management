@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Shield, UserPlus } from 'lucide-react';
+import { Shield, UserPlus, UserRound, Mail, Phone, CalendarDays, Banknote } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -37,14 +37,24 @@ const schema = z.object({
   monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
   // Emergency contact (optional)
   emergencyName: z.string().optional(),
-  emergencyPhone: z.string().regex(/^\d{10}$/, 'Must be 10 digits').optional().or(z.literal('')),
+  emergencyPhone: z
+    .string()
+    .regex(/^\d{10}$/, 'Must be 10 digits')
+    .optional()
+    .or(z.literal('')),
   emergencyRelation: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface RoomOption { _id: string; roomNumber: string; sharingType: number; monthlyRent: number; floor?: { label: string; floorNumber?: number }; beds?: Array<{ bedId: string; isOccupied: boolean }> }
+interface RoomOption {
+  _id: string;
+  roomNumber: string;
+  sharingType: number;
+  monthlyRent: number;
+  floor?: { label: string; floorNumber?: number };
+  beds?: Array<{ bedId: string; isOccupied: boolean }>;
+}
 
 function TenantForm() {
   const router = useRouter();
@@ -97,7 +107,9 @@ function TenantForm() {
 
       // Filter available beds based on room sharing type
       const maxBeds = room.sharingType ?? 4;
-      const occupiedBeds = new Set(room.beds?.filter((b) => b.isOccupied).map((b) => b.bedId) ?? []);
+      const occupiedBeds = new Set(
+        room.beds?.filter((b) => b.isOccupied).map((b) => b.bedId) ?? [],
+      );
       const beds = BED_OPTIONS.slice(0, maxBeds).map((b) => ({
         ...b,
         label: occupiedBeds.has(b.value) ? `${b.label} (Occupied)` : b.label,
@@ -159,15 +171,13 @@ function TenantForm() {
           />
         }
       >
-        <FormSection
-          title="Personal information"
-          description="Basic identity and contact details"
-        >
+        <FormSection title="Personal information" description="Basic identity and contact details">
           <FormGrid>
             <Input
               label="Full name"
               placeholder="Tenant name"
               error={err.name?.message}
+              leftIcon={<UserRound className="h-4 w-4" />}
               {...register('name')}
             />
             <Input
@@ -175,22 +185,20 @@ function TenantForm() {
               type="email"
               placeholder="tenant@email.com"
               error={err.email?.message}
+              leftIcon={<Mail className="h-4 w-4" />}
               {...register('email')}
             />
             <Input
               label="Phone"
               placeholder="+919876543210"
               error={err.phone?.message}
+              leftIcon={<Phone className="h-4 w-4" />}
               {...register('phone')}
             />
           </FormGrid>
         </FormSection>
 
-        <FormSection
-          title="Room assignment"
-          description="Select an available room and bed"
-          divided
-        >
+        <FormSection title="Room assignment" description="Select an available room and bed" divided>
           <FormGrid>
             <Controller
               name="roomId"
@@ -230,9 +238,9 @@ function TenantForm() {
           {selectedRoom && (
             <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
               <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
-                Selected: Room {selectedRoom.roomNumber} · Floor{' '}
-                {selectedRoom.floor?.label ?? '?'} · {selectedRoom.sharingType} sharing · ₹
-                {selectedRoom.monthlyRent?.toLocaleString()}/mo
+                Selected: Room {selectedRoom.roomNumber} · Floor {selectedRoom.floor?.label ?? '?'}{' '}
+                · {selectedRoom.sharingType} sharing · ₹{selectedRoom.monthlyRent?.toLocaleString()}
+                /mo
               </p>
             </div>
           )}
@@ -248,18 +256,21 @@ function TenantForm() {
               label="Move-in date"
               type="date"
               error={err.moveInDate?.message}
+              leftIcon={<CalendarDays className="h-4 w-4" />}
               {...register('moveInDate')}
             />
             <Input
               label="Deposit paid (₹)"
               type="number"
               error={err.depositPaid?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
               {...register('depositPaid')}
             />
             <Input
               label="Monthly rent (₹)"
               type="number"
               error={err.monthlyRent?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
               {...register('monthlyRent')}
             />
           </FormGrid>

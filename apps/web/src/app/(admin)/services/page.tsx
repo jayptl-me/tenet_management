@@ -1,13 +1,29 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, Pencil, Trash2, Plus, Wrench, Wifi, Zap, Droplets, Thermometer, Shirt, Sparkles, BedSingle, ScrollText, MoonStar, Fan, Refrigerator, type LucideIcon } from 'lucide-react';
+import {
+  Plus,
+  Wrench,
+  Wifi,
+  Zap,
+  Droplets,
+  Thermometer,
+  Shirt,
+  Sparkles,
+  BedSingle,
+  ScrollText,
+  MoonStar,
+  Fan,
+  Refrigerator,
+  type LucideIcon,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
+import { TableActions } from '@/components/ui/TableActions';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -48,10 +64,14 @@ interface ServiceStatusRow {
 
 function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (status) {
-    case 'operational': return 'success';
-    case 'degraded': return 'warning';
-    case 'down': return 'danger';
-    default: return 'neutral';
+    case 'operational':
+      return 'success';
+    case 'degraded':
+      return 'warning';
+    case 'down':
+      return 'danger';
+    default:
+      return 'neutral';
   }
 }
 
@@ -68,7 +88,6 @@ export default function ServicesPage() {
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch amenity definitions once
   useEffect(() => {
     api
       .get('app-config')
@@ -120,14 +139,12 @@ export default function ServicesPage() {
     fetchServices();
   }, [fetchServices]);
 
-  // Dynamic label resolver
   const getLabel = (serviceType: string): string => {
     const def = definitions.find((d) => d.key === serviceType);
     if (def) return def.label;
     return serviceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  // Dynamic icon resolver
   const getIcon = (serviceType: string): LucideIcon => {
     const def = definitions.find((d) => d.key === serviceType);
     if (def) return resolveIcon(def.icon);
@@ -165,10 +182,7 @@ export default function ServicesPage() {
     {
       header: 'Status',
       accessor: (row) => (
-        <StatusBadge
-          variant={statusVariant(row.status)}
-          label={row.status.replace(/_/g, ' ')}
-        />
+        <StatusBadge variant={statusVariant(row.status)} label={row.status.replace(/_/g, ' ')} />
       ),
     },
     {
@@ -198,38 +212,11 @@ export default function ServicesPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/services/${row._id}`);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)]"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/services/${row._id}/edit`);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-danger-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/services/${row._id}`)}
+          onEdit={() => router.push(`/services/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -298,7 +285,7 @@ export default function ServicesPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-                  <span className="font-semibold text-[color:var(--color-text-primary)] text-sm">
+                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                     {getLabel(row.serviceType)}
                   </span>
                 </div>
@@ -319,36 +306,11 @@ export default function ServicesPage() {
                 )}
               </div>
               <div className="flex items-center gap-1 pt-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/services/${row._id}`);
-                  }}
-                  className="text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-field-bg-hover)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                  title="View"
-                >
-                  <Eye className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/services/${row._id}/edit`);
-                  }}
-                  className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                  title="Edit"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(row);
-                  }}
-                  className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                <TableActions
+                  onView={() => router.push(`/services/${row._id}`)}
+                  onEdit={() => router.push(`/services/${row._id}/edit`)}
+                  onDelete={() => setDeleteTarget(row)}
+                />
               </div>
             </div>
           );

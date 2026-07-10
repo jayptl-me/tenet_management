@@ -86,20 +86,14 @@ export function StatCard({
         className,
       )}
     >
-      <div
-        className={clsx(
-          'absolute inset-x-0 top-0 h-0.5',
-          accentBars[variant],
-        )}
-        aria-hidden
-      />
+      <div className={clsx('absolute inset-x-0 top-0 h-0.5', accentBars[variant])} aria-hidden />
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-semibold tracking-tight text-[color:var(--color-text-secondary)]">
             {title}
           </p>
-          <p className="mt-1 font-[family:var(--font-display)] text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
+          <p className="font-[family:var(--font-display)] mt-1 text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
             {value}
           </p>
         </div>

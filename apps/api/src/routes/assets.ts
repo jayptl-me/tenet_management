@@ -3,13 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import {
-  notFound,
-  badRequest,
-  parseId,
-  parsePagination,
-  paginatedResponse,
-} from '../lib/routeUtils.js';
+import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
 import { Asset } from '../models/asset.js';
 
 const assets = new Hono();
@@ -40,7 +34,7 @@ const updateAssetSchema = createAssetSchema.partial();
 
 // ── GET /assets ─────────────────────────────────────────
 assets.get('/', authGuard, adminOnly, async (c) => {
-  const { page, limit, sort, order, skip } = parsePagination(c);
+  const { page, limit, skip } = parsePagination(c);
   const category = c.req.query('category');
   const status = c.req.query('status');
   const search = c.req.query('search');
@@ -119,7 +113,11 @@ assets.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid asset ID');
 
-  const asset = await Asset.findByIdAndUpdate(id, { status: 'retired' }, { returnDocument: 'after' }).lean();
+  const asset = await Asset.findByIdAndUpdate(
+    id,
+    { status: 'retired' },
+    { returnDocument: 'after' },
+  ).lean();
 
   if (!asset) return notFound(c, 'Asset');
 

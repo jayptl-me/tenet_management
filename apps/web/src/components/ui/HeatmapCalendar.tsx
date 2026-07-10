@@ -85,13 +85,9 @@ export function HeatmapCalendar({
     return chunked;
   }, [data, year, month]);
 
-  const computedMax =
-    maxValue ?? Math.max(1, ...weeks.flat().map((c) => c.count));
+  const computedMax = maxValue ?? Math.max(1, ...weeks.flat().map((c) => c.count));
 
-  const colors = useMemo(
-    () => heatmapRamp(colorScale, customColors),
-    [colorScale, customColors],
-  );
+  const colors = useMemo(() => heatmapRamp(colorScale, customColors), [colorScale, customColors]);
 
   const cellSize = size;
   const cellGap = 3;
@@ -176,17 +172,12 @@ export function HeatmapCalendar({
                   strokeWidth={isEmpty ? 1 : 0}
                   className={clsx(
                     'transition-opacity duration-150 motion-reduce:transition-none',
-                    clickable &&
-                      'cursor-pointer hover:opacity-85 focus:outline-none',
+                    clickable && 'cursor-pointer hover:opacity-85 focus:outline-none',
                   )}
                   tabIndex={clickable ? 0 : undefined}
                   role={clickable ? 'button' : undefined}
                   aria-label={`${cell.date}: ${cell.count}${cell.count === 1 ? ' event' : ' events'}`}
-                  onClick={
-                    clickable
-                      ? () => onDayClick?.(cell.date, cell.count)
-                      : undefined
-                  }
+                  onClick={clickable ? () => onDayClick?.(cell.date, cell.count) : undefined}
                   onKeyDown={
                     clickable
                       ? (e) => {

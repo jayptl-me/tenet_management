@@ -88,9 +88,13 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
   type RoomDoc = { beds?: Array<{ isOccupied: boolean }>; length?: number };
   const allActiveRooms: RoomDoc[] = (await Room.find({ isActive: true }).lean()) as RoomDoc[];
   const totalRooms = allActiveRooms.length;
-  const totalBeds = allActiveRooms.reduce((sum: number, r: RoomDoc) => sum + (r.beds?.length ?? 0), 0);
+  const totalBeds = allActiveRooms.reduce(
+    (sum: number, r: RoomDoc) => sum + (r.beds?.length ?? 0),
+    0,
+  );
   const occupiedBeds = allActiveRooms.reduce(
-    (sum: number, r: RoomDoc) => sum + (r.beds?.filter((b: { isOccupied: boolean }) => b.isOccupied).length ?? 0),
+    (sum: number, r: RoomDoc) =>
+      sum + (r.beds?.filter((b: { isOccupied: boolean }) => b.isOccupied).length ?? 0),
     0,
   );
 
@@ -127,7 +131,10 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
 
   // Build complaint status counts map
   const complaintStatusMap: Record<string, number> = {
-    open: 0, in_progress: 0, resolved: 0, dismissed: 0,
+    open: 0,
+    in_progress: 0,
+    resolved: 0,
+    dismissed: 0,
   };
   for (const entry of complaintsByStatus as Array<{ _id: string; count: number }>) {
     complaintStatusMap[entry._id] = entry.count;
@@ -171,7 +178,10 @@ dashboard.get('/stats', authGuard, adminOnly, async (c) => {
     { $sort: { '_id.serviceType': 1 } },
   ])) as Array<{ _id: { serviceType: string; status: string }; count: number }>;
 
-  const amenityHealth: Record<string, { operational: number; degraded: number; down: number; total: number }> = {};
+  const amenityHealth: Record<
+    string,
+    { operational: number; degraded: number; down: number; total: number }
+  > = {};
   for (const entry of amenityBreakdownRaw) {
     const type = entry._id.serviceType;
     if (!amenityHealth[type]) {

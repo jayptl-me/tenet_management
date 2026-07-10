@@ -89,12 +89,7 @@ export function FormCard({
   }
 
   return (
-    <motion.div
-      variants={fadeScaleIn}
-      initial="hidden"
-      animate="visible"
-      className={classes}
-    >
+    <motion.div variants={fadeScaleIn} initial="hidden" animate="visible" className={classes}>
       {body}
     </motion.div>
   );

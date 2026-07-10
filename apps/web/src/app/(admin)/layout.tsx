@@ -11,6 +11,7 @@ import { EmergencyAlertButton } from '@/components/admin/EmergencyAlertButton';
 import { Breadcrumbs } from '@/components/admin/Breadcrumbs';
 import { CommandPalette } from '@/components/admin/CommandPalette';
 import { QuickCreate } from '@/components/admin/QuickCreate';
+import { GlobalLoadingBar } from '@/components/admin/GlobalLoadingBar';
 import { useTheme } from '@/hooks/useTheme';
 import { motion } from 'motion/react';
 import { pageReveal } from '@/lib/animations';
@@ -90,11 +91,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[color:var(--color-page-bg)]">
+      <GlobalLoadingBar />
       <Sidebar />
 
       <main className="flex min-w-0 flex-1 flex-col">
         {/* ── Top Bar (Glass morphism) ────────────── */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)] px-6 py-3">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-6 py-3 backdrop-blur-[var(--glass-blur)]">
           <div className="flex items-center gap-3">
             {/* Mobile spacer for hamburger */}
             <div className="w-8 md:hidden" />
@@ -107,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Cmd+K hint */}
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-text-secondary)] hover:shadow-[var(--shadow-sm)]"
+              className="hidden items-center gap-1.5 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-text-secondary)] hover:shadow-[var(--shadow-sm)] sm:flex"
             >
               <Search className="h-3 w-3" />
               <span>Search</span>

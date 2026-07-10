@@ -19,7 +19,7 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(1, 'Content is required'),
   pinned: z.boolean().optional(),
-  targetType: z.enum(['all', 'floor', 'room']).optional(),
+  targetType: z.enum(['all', 'floor', 'individual']).optional(),
   targetIds: z.string().optional(),
 });
 
@@ -28,7 +28,7 @@ type FormData = z.infer<typeof schema>;
 const TARGET_OPTIONS = [
   { value: 'all', label: 'All Tenants' },
   { value: 'floor', label: 'By Floor' },
-  { value: 'room', label: 'By Room' },
+  { value: 'individual', label: 'Specific Tenant' },
 ];
 
 export default function NewNoticePage() {

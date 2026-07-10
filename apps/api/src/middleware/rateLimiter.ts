@@ -75,8 +75,23 @@ export function rateLimiter(maxRequests: number, windowMs: number): MiddlewareHa
  * Pre-configured rate limiters matching the spec:
  * - authLimiter: 5 requests per 15 minutes (brute force protection)
  * - generalLimiter: 300 requests per minute (general API)
+ * - generalMutationLimiter: 30 requests per minute for POST/PUT/DELETE
  * - publicLimiter: 3 requests per hour (enquiry form spam protection)
  */
 export const authLimiter = rateLimiter(5, 15 * 60 * 1000);
+export const passwordResetLimiter = rateLimiter(3, 60 * 60 * 1000);
 export const generalLimiter = rateLimiter(300, 60 * 1000);
 export const publicLimiter = rateLimiter(3, 60 * 60 * 1000);
+
+const _mutationLimiter = rateLimiter(30, 60 * 1000);
+
+/**
+ * Rate limiter that only applies to mutation methods (POST, PUT, DELETE, PATCH).
+ * Allows 30 requests per minute per IP address.
+ */
+export const generalMutationLimiter: MiddlewareHandler = async (c, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(c.req.method)) {
+    return _mutationLimiter(c, next);
+  }
+  return next();
+};

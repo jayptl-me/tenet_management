@@ -6,45 +6,33 @@ import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { Visitor } from '../models/visitor.js';
 import { Tenant } from '../models/tenant.js';
+import mongoose from 'mongoose';
 
 const visitors = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
+// Matches the Mongoose model fields: visitorName, visitorPhone, expectedArrival
 const createVisitorSchema = z.strictObject({
-  name: z
+  tenantId: z.string().min(1, 'Tenant is required'),
+  visitorName: z
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(100, 'Name cannot exceed 100 characters'),
-  phone: z.string().regex(/^\+91[6-9]\d{9}$/, 'Must be +91 format Indian mobile number'),
-  purpose: z.enum(['delivery', 'guest', 'interview', 'maintenance', 'other']),
-  expectedVisitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-  expectedVisitTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format')
-    .optional(),
-  notes: z.string().max(300, 'Notes cannot exceed 300 characters').optional(),
+  visitorPhone: z.string().regex(/^\+91[6-9]\d{9}$/, 'Must be +91 format Indian mobile number'),
+  purpose: z.string().min(1, 'Purpose is required').max(200),
+  expectedArrival: z.string().min(1, 'Expected arrival is required'),
 });
 
 const updateVisitorSchema = z.strictObject({
-  name: z.string().min(2).max(100).optional(),
-  phone: z
+  visitorName: z.string().min(2).max(100).optional(),
+  visitorPhone: z
     .string()
     .regex(/^\+91[6-9]\d{9}$/, 'Must be +91 format Indian mobile number')
     .optional(),
-  purpose: z.enum(['delivery', 'guest', 'interview', 'maintenance', 'other']).optional(),
-  expectedVisitDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  expectedVisitTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
-  notes: z.string().max(300).optional(),
-  status: z.enum(['pending', 'approved', 'arrived', 'departed', 'cancelled']).optional(),
+  purpose: z.string().min(1).max(200).optional(),
+  expectedArrival: z.string().optional(),
+  status: z.enum(['expected', 'arrived', 'departed', 'cancelled']).optional(),
 });
-
-type CreateFunc = (doc: Record<string, unknown>) => Promise<{ _id: string }>;
 
 // ── POST /visitors ──────────────────────────────────────
 visitors.post('/', authGuard, tenantOnly, zValidator('json', createVisitorSchema), async (c) => {
@@ -56,14 +44,18 @@ visitors.post('/', authGuard, tenantOnly, zValidator('json', createVisitorSchema
     return notFound(c, 'Active tenant profile');
   }
 
-  const visitor = await (Visitor as unknown as { create: CreateFunc }).create({
-    ...body,
-    tenantId: tenant._id,
-    roomId: tenant.roomId,
+  const doc = new Visitor({
+    tenantId: new mongoose.Types.ObjectId(body.tenantId),
+    visitorName: body.visitorName,
+    visitorPhone: body.visitorPhone,
+    purpose: body.purpose,
+    expectedArrival: new Date(body.expectedArrival),
+    status: 'expected',
   });
+  await doc.save();
 
-  const populated = await Visitor.findById((visitor as { _id: string })._id)
-    .populate({ path: 'tenant', populate: { path: 'user', select: 'name' } })
+  const populated = await Visitor.findById(doc._id)
+    .populate({ path: 'tenant', populate: { path: 'user', select: 'name email phone' } })
     .lean();
 
   return c.json({ success: true, data: populated }, 201);
@@ -76,20 +68,17 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
   const status = c.req.query('status');
   if (status) filter.status = status;
 
-  const date = c.req.query('date');
-  if (date) filter.expectedVisitDate = date;
-
   const pagination = parsePagination(c);
   const { sort, order, skip, limit, page } = pagination;
 
   const [data, total] = await Promise.all([
-    Visitor.find(filter as Record<string, unknown>)
+    Visitor.find(safeFilter(filter))
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({ path: 'tenant', populate: { path: 'user', select: 'name' } })
+      .populate({ path: 'tenant', populate: { path: 'user', select: 'name email phone' } })
       .lean(),
-    Visitor.countDocuments(filter as Record<string, unknown>),
+    Visitor.countDocuments(safeFilter(filter)),
   ]);
 
   return c.json({
@@ -104,6 +93,25 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
   });
 });
 
+// ── GET /visitors/:id ─────────────────────────────────
+visitors.get('/:id', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid visitor ID');
+
+  const visitor = await Visitor.findById(id)
+    .populate({
+      path: 'tenant',
+      populate: [
+        { path: 'user', select: 'name email phone' },
+        { path: 'room', select: 'roomNumber' },
+      ],
+    })
+    .lean();
+
+  if (!visitor) return notFound(c, 'Visitor');
+  return c.json({ success: true, data: visitor });
+});
+
 // ── POST /visitors/:id/approve ──────────────────────────
 visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
@@ -113,9 +121,8 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
   const visitor = await Visitor.findByIdAndUpdate(
     id,
     {
-      status: 'approved',
-      approvedBy: user.sub,
-      approvedAt: new Date(),
+      status: 'expected',
+      approvedBy: new mongoose.Types.ObjectId(user.sub),
     },
     { returnDocument: 'after' },
   ).lean();
@@ -167,7 +174,15 @@ visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchem
 
   const body = c.req.valid('json');
 
-  const visitor = await Visitor.findByIdAndUpdate(id, body, {
+  const updateData: Record<string, unknown> = {};
+  if (body.visitorName !== undefined) updateData.visitorName = body.visitorName;
+  if (body.visitorPhone !== undefined) updateData.visitorPhone = body.visitorPhone;
+  if (body.purpose !== undefined) updateData.purpose = body.purpose;
+  if (body.expectedArrival !== undefined)
+    updateData.expectedArrival = new Date(body.expectedArrival);
+  if (body.status !== undefined) updateData.status = body.status;
+
+  const visitor = await Visitor.findByIdAndUpdate(id, updateData, {
     returnDocument: 'after',
     runValidators: true,
   }).lean();
@@ -186,7 +201,7 @@ visitors.get('/my', authGuard, tenantOnly, async (c) => {
   }
 
   const data = await Visitor.find(safeFilter({ tenantId: tenant._id }))
-    .sort({ expectedVisitDate: -1 })
+    .sort({ createdAt: -1 })
     .lean();
 
   return c.json({ success: true, data });

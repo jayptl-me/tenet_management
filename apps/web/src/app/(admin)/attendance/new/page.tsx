@@ -40,8 +40,12 @@ const METHOD_OPTIONS = [
   { value: 'app', label: 'Mobile App' },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface TenantOption { _id: string; user?: { name: string; phone: string }; room?: { roomNumber: string }; bedId?: string }
+interface TenantOption {
+  _id: string;
+  user?: { name: string; phone: string };
+  room?: { roomNumber: string };
+  bedId?: string;
+}
 
 export default function NewAttendancePage() {
   const router = useRouter();

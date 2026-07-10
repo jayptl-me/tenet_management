@@ -139,14 +139,14 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
   /* Font sizes — rational scale */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.8125rem;  /* 13px — slightly larger for readability */
-  --text-base: 0.9375rem;/* 15px */
-  --text-lg: 1.0625rem;  /* 17px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  --text-4xl: 2.25rem;   /* 36px */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px — slightly larger for readability */
+  --text-base: 0.9375rem; /* 15px */
+  --text-lg: 1.0625rem; /* 17px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem; /* 36px */
 
   /* Letter spacing */
   --tracking-tight: -0.02em;
@@ -238,13 +238,37 @@
   --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 42%, var(--color-surface-100));
   --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 68%, var(--color-surface-100));
   --chart-heatmap-4: var(--color-brand-500);
-  --chart-heatmap-danger-1: color-mix(in srgb, var(--color-danger-500) 22%, var(--color-surface-100));
-  --chart-heatmap-danger-2: color-mix(in srgb, var(--color-danger-500) 42%, var(--color-surface-100));
-  --chart-heatmap-danger-3: color-mix(in srgb, var(--color-danger-500) 68%, var(--color-surface-100));
+  --chart-heatmap-danger-1: color-mix(
+    in srgb,
+    var(--color-danger-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-2: color-mix(
+    in srgb,
+    var(--color-danger-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-3: color-mix(
+    in srgb,
+    var(--color-danger-500) 68%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-danger-4: var(--color-danger-500);
-  --chart-heatmap-success-1: color-mix(in srgb, var(--color-success-500) 22%, var(--color-surface-100));
-  --chart-heatmap-success-2: color-mix(in srgb, var(--color-success-500) 42%, var(--color-surface-100));
-  --chart-heatmap-success-3: color-mix(in srgb, var(--color-success-500) 68%, var(--color-surface-100));
+  --chart-heatmap-success-1: color-mix(
+    in srgb,
+    var(--color-success-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-2: color-mix(
+    in srgb,
+    var(--color-success-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-3: color-mix(
+    in srgb,
+    var(--color-success-500) 68%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-success-4: var(--color-success-500);
   --chart-cell-border: var(--border-color);
   --chart-cell-radius: 3px;
@@ -470,13 +494,37 @@
   --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 48%, var(--color-surface-100));
   --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 72%, var(--color-surface-100));
   --chart-heatmap-4: var(--color-brand-500);
-  --chart-heatmap-danger-1: color-mix(in srgb, var(--color-danger-500) 28%, var(--color-surface-100));
-  --chart-heatmap-danger-2: color-mix(in srgb, var(--color-danger-500) 48%, var(--color-surface-100));
-  --chart-heatmap-danger-3: color-mix(in srgb, var(--color-danger-500) 72%, var(--color-surface-100));
+  --chart-heatmap-danger-1: color-mix(
+    in srgb,
+    var(--color-danger-500) 28%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-2: color-mix(
+    in srgb,
+    var(--color-danger-500) 48%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-3: color-mix(
+    in srgb,
+    var(--color-danger-500) 72%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-danger-4: var(--color-danger-500);
-  --chart-heatmap-success-1: color-mix(in srgb, var(--color-success-500) 28%, var(--color-surface-100));
-  --chart-heatmap-success-2: color-mix(in srgb, var(--color-success-500) 48%, var(--color-surface-100));
-  --chart-heatmap-success-3: color-mix(in srgb, var(--color-success-500) 72%, var(--color-surface-100));
+  --chart-heatmap-success-1: color-mix(
+    in srgb,
+    var(--color-success-500) 28%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-2: color-mix(
+    in srgb,
+    var(--color-success-500) 48%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-3: color-mix(
+    in srgb,
+    var(--color-success-500) 72%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-success-4: var(--color-success-500);
   --chart-cell-border: rgba(255, 255, 255, 0.06);
   --chart-cell-radius: 3px;

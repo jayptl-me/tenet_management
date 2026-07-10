@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Zap,
-  Pencil,
-  CheckCircle2,
-  Send,
-  FileText,
-} from 'lucide-react';
+import { Zap, Pencil, CheckCircle2, Send, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -132,8 +126,7 @@ export default function ElectricityBillDetailPage() {
   }
 
   const totalUnits = bill?.roomEntries?.reduce((s, e) => s + (e.unitsConsumed ?? 0), 0) ?? 0;
-  const totalRoomAmount =
-    bill?.roomEntries?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0;
+  const totalRoomAmount = bill?.roomEntries?.reduce((s, e) => s + (e.amount ?? 0), 0) ?? 0;
 
   return (
     <FormPage

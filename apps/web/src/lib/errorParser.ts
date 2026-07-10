@@ -41,8 +41,7 @@ const STATUS_MESSAGES: Record<number, string> = {
 const CODE_MESSAGES: Record<string, string> = {
   SERVICE_UNAVAILABLE:
     'This feature is not currently available because a required service is not configured. Please contact your administrator.',
-  FEATURE_DISABLED:
-    'This feature is currently disabled. You can enable it from the Settings page.',
+  FEATURE_DISABLED: 'This feature is currently disabled. You can enable it from the Settings page.',
   INVALID_CREDENTIALS: 'The email or password you entered is incorrect. Please try again.',
   ACCOUNT_DISABLED: 'Your account has been deactivated. Please contact your administrator.',
   TOKEN_REUSE_DETECTED:
@@ -85,7 +84,12 @@ export async function parseApiError(error: unknown): Promise<ParsedError> {
     try {
       const body = (await res.json()) as {
         success: boolean;
-        error?: { code?: string; message?: string; details?: { fields?: Record<string, string[]> }; requestId?: string };
+        error?: {
+          code?: string;
+          message?: string;
+          details?: { fields?: Record<string, string[]> };
+          requestId?: string;
+        };
       };
 
       if (body?.error) {
@@ -137,8 +141,6 @@ export async function parseApiError(error: unknown): Promise<ParsedError> {
   return {
     code: 'UNKNOWN_ERROR',
     message:
-      error instanceof Error
-        ? error.message
-        : 'An unexpected error occurred. Please try again.',
+      error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
   };
 }

@@ -51,10 +51,7 @@ export function LineChart({
   const legend = showLegend && lines.length > 0 && (
     <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
       {lines.map((line) => (
-        <div
-          key={line.key}
-          className="flex items-center gap-1.5 text-[11px] font-semibold"
-        >
+        <div key={line.key} className="flex items-center gap-1.5 text-[11px] font-semibold">
           <span
             className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
             style={{ backgroundColor: line.color || chartTokens.bar }}
@@ -83,8 +80,7 @@ export function LineChart({
     return { y, value: rawVal };
   });
 
-  const formatVal = (v: number) =>
-    isCurrency ? formatCurrencyLabel(v) : String(Math.round(v));
+  const formatVal = (v: number) => (isCurrency ? formatCurrencyLabel(v) : String(Math.round(v)));
 
   if (mode === 'bar') {
     const bars = data.map((d) =>
@@ -137,14 +133,14 @@ export function LineChart({
                     top: gr.y,
                     opacity: i === gridCount ? 0.9 : 0.5,
                     borderStyle: i === gridCount ? 'solid' : 'dashed',
-                    borderColor:
-                      i === gridCount
-                        ? 'var(--chart-grid-strong)'
-                        : 'var(--chart-grid)',
+                    borderColor: i === gridCount ? 'var(--chart-grid-strong)' : 'var(--chart-grid)',
                   }}
                 />
               ))}
-            <div className="relative flex items-end gap-[6px] sm:gap-2" style={{ height: chartAreaH }}>
+            <div
+              className="relative flex items-end gap-[6px] sm:gap-2"
+              style={{ height: chartAreaH }}
+            >
               {bars.map((barGroup, i) => (
                 <div
                   key={i}
@@ -204,8 +200,7 @@ export function LineChart({
   const innerW = width - padX * 2;
   const pointsFor = (key: string) =>
     data.map((d, i) => {
-      const x =
-        data.length <= 1 ? padX + innerW / 2 : padX + (i / (data.length - 1)) * innerW;
+      const x = data.length <= 1 ? padX + innerW / 2 : padX + (i / (data.length - 1)) * innerW;
       const val = d[key] ?? 0;
       const y = chartAreaH - ((val - minVal) / range) * chartAreaH;
       return { x, y, val };
@@ -215,10 +210,7 @@ export function LineChart({
     <div className="w-full">
       <div className="flex gap-0">
         {showGrid && (
-          <div
-            className="relative flex-shrink-0"
-            style={{ width: yLabelW, height: chartAreaH }}
-          >
+          <div className="relative flex-shrink-0" style={{ width: yLabelW, height: chartAreaH }}>
             {gridRows.map((gr, i) => (
               <div
                 key={i}
@@ -255,9 +247,7 @@ export function LineChart({
               ))}
             {lines.map((line) => {
               const pts = pointsFor(line.key);
-              const path = pts
-                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-                .join(' ');
+              const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
               return (
                 <g key={line.key}>
                   <path
@@ -303,10 +293,7 @@ export function LineChart({
           <div className="mt-1 flex justify-between px-1">
             {labels.map((lab, i) =>
               i % labelInterval === 0 ? (
-                <span
-                  key={i}
-                  className="text-[10px] font-medium text-[color:var(--chart-axis)]"
-                >
+                <span key={i} className="text-[10px] font-medium text-[color:var(--chart-axis)]">
                   {lab}
                 </span>
               ) : (

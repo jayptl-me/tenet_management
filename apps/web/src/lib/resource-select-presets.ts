@@ -17,10 +17,7 @@ export function tenantSublabel(item: { monthlyRent?: number }): string {
   return item.monthlyRent != null ? `₹${item.monthlyRent}/mo` : '';
 }
 
-export function floorLabel(item: {
-  label?: string;
-  floorNumber?: number;
-}): string {
+export function floorLabel(item: { label?: string; floorNumber?: number }): string {
   if (item.label) return item.label;
   if (item.floorNumber != null) return `Floor ${item.floorNumber}`;
   return 'Floor';

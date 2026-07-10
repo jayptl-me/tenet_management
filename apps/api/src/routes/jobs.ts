@@ -34,6 +34,7 @@ jobs.post('/generate-invoices', async (c) => {
       message: 'Monthly invoice generation complete',
       data: result,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     logger.error({ err, month }, 'Job generate-invoices failed');
     return c.json(
@@ -75,6 +76,7 @@ jobs.post('/overdue-check', async (c) => {
         invoicesOverdue: invoiceResult.modifiedCount,
       },
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     logger.error({ err }, 'Job overdue-check failed');
     return c.json(
@@ -126,6 +128,7 @@ jobs.post('/send-reminders', async (c) => {
         invoicesMarkedOverdue: invoiceUpdate.modifiedCount,
       },
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     logger.error({ err, month }, 'Job send-reminders failed');
     return c.json(
@@ -157,6 +160,7 @@ jobs.post('/meal-prompts', async (c) => {
         tenantsPromptedCount: activeTenants.length,
       },
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     logger.error({ err }, 'Job meal-prompts failed');
     return c.json(

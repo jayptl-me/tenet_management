@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -21,8 +21,17 @@ const complaintSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.enum([
-    'wifi', 'water', 'electricity', 'food_quality', 'cleaning_room',
-    'cleaning_washroom', 'washing_machine', 'fridge', 'lights', 'noise', 'other',
+    'wifi',
+    'water',
+    'electricity',
+    'food_quality',
+    'cleaning_room',
+    'cleaning_washroom',
+    'washing_machine',
+    'fridge',
+    'lights',
+    'noise',
+    'other',
   ]),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
 });
@@ -77,8 +86,8 @@ function ComplaintForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
-    watch,
     setValue,
   } = useForm<ComplaintFormData>({
     resolver: zodResolver(complaintSchema),
@@ -96,8 +105,17 @@ function ComplaintForm() {
   useEffect(() => {
     if (prefilledCategory) {
       const validCategories = [
-        'wifi', 'water', 'electricity', 'food_quality', 'cleaning_room',
-        'cleaning_washroom', 'washing_machine', 'fridge', 'lights', 'noise', 'other',
+        'wifi',
+        'water',
+        'electricity',
+        'food_quality',
+        'cleaning_room',
+        'cleaning_washroom',
+        'washing_machine',
+        'fridge',
+        'lights',
+        'noise',
+        'other',
       ];
       if (validCategories.includes(prefilledCategory)) {
         setValue('category', prefilledCategory as ComplaintFormData['category']);
@@ -105,7 +123,7 @@ function ComplaintForm() {
     }
   }, [prefilledCategory, setValue]);
 
-  const selectedTenantId = watch('tenantId');
+  const selectedTenantId = useWatch({ control, name: 'tenantId' });
 
   useEffect(() => {
     api
@@ -176,11 +194,7 @@ function ComplaintForm() {
   }));
 
   return (
-    <FormPage
-      title="New Complaint"
-      description="Report an issue"
-      backHref="/complaints"
-    >
+    <FormPage title="New Complaint" description="Report an issue" backHref="/complaints">
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
         footer={
@@ -250,7 +264,12 @@ export default function NewComplaintPage() {
   return (
     <Suspense
       fallback={
-        <FormPage title="New Complaint" description="Report an issue" backHref="/complaints" isLoading>
+        <FormPage
+          title="New Complaint"
+          description="Report an issue"
+          backHref="/complaints"
+          isLoading
+        >
           {null}
         </FormPage>
       }

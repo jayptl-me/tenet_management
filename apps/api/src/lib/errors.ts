@@ -47,7 +47,13 @@ export class ResourceNotFoundError extends AppError {
 
 export class ValidationError extends AppError {
   constructor(message: string, fieldErrors?: Record<string, string[]>) {
-    super(message, 400, 'VALIDATION_ERROR', fieldErrors ? { fields: fieldErrors } : undefined, message);
+    super(
+      message,
+      400,
+      'VALIDATION_ERROR',
+      fieldErrors ? { fields: fieldErrors } : undefined,
+      message,
+    );
     this.name = 'ValidationError';
   }
 }
@@ -74,10 +80,7 @@ export class ConflictError extends AppError {
 }
 
 export class ServiceUnavailableError extends AppError {
-  constructor(
-    serviceName: string,
-    reason?: string,
-  ) {
+  constructor(serviceName: string, reason?: string) {
     const defaultReason = `${serviceName} service is not configured. Please contact your administrator to enable this feature.`;
     super(
       reason ?? defaultReason,
@@ -126,10 +129,7 @@ export class DatabaseError extends AppError {
  * Build a consistent JSON error response for any error type.
  * Used by globalErrorHandler but also usable directly in routes.
  */
-export function buildErrorResponse(
-  c: Context,
-  err: unknown,
-): Response {
+export function buildErrorResponse(c: Context, err: unknown): Response {
   const requestId = c.get('requestId') as string | undefined;
   const isProduction = process.env.NODE_ENV === 'production';
 

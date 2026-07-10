@@ -27,7 +27,9 @@ export function generateColorScale(hex: string): string[] {
     else hDeg = (4 + (r - g) / (max - min)) * 60;
     if (hDeg < 0) hDeg += 360;
 
-    return LIGHT_LEVELS.map((light) => `hsl(${Math.round(hDeg)}, ${Math.round(s * 100)}%, ${light}%)`);
+    return LIGHT_LEVELS.map(
+      (light) => `hsl(${Math.round(hDeg)}, ${Math.round(s * 100)}%, ${light}%)`,
+    );
   } catch {
     return Array(11).fill(hex);
   }
@@ -37,7 +39,10 @@ export function generateColorScale(hex: string): string[] {
  * Apply a full 11-step color scale to the document root as inline styles.
  * Also removes any previously set inline brand color steps.
  */
-export function applyColorScaleToDOM(hex: string, root: HTMLElement = document.documentElement): void {
+export function applyColorScaleToDOM(
+  hex: string,
+  root: HTMLElement = document.documentElement,
+): void {
   // Remove old custom token inline styles first
   STEPS.forEach((step) => root.style.removeProperty(`--color-brand-${step}`));
 

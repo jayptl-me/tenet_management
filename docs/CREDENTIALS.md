@@ -12,12 +12,12 @@ URI:      mongodb+srv://pg:<db_password>@pg-prod.sqmu1sc.mongodb.net/pg_manageme
 
 ## Demo Accounts
 
-| Role   | Email                      | Password       |
-| ------ | -------------------------- | -------------- |
-| Admin  | admin@pgmanagement.local   | Admin@123456   |
-| Tenant | rahul@example.com          | password123    |
-| Tenant | priya@example.com          | password123    |
-| Tenant | amit@example.com           | password123    |
+| Role   | Email                    | Password     |
+| ------ | ------------------------ | ------------ |
+| Admin  | admin@pgmanagement.local | Admin@123456 |
+| Tenant | rahul@example.com        | password123  |
+| Tenant | priya@example.com        | password123  |
+| Tenant | amit@example.com         | password123  |
 
 ## Environment
 

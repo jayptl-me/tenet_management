@@ -187,17 +187,17 @@
   --elevation-sticky: 0 2px 8px rgba(0, 0, 0, 0.06);
 
   /* ── Depth Layer System (z-index + shadow mapping) ───── */
-  --depth-level-0: 0;    /* Page background, surface-50 + shadow-xs */
-  --depth-level-1: 10;   /* Cards, tables, stat cards — surface-100 + shadow-sm/card */
-  --depth-level-2: 50;   /* Dropdowns, popovers, tooltips — surface-100 + shadow-lg/dropdown */
-  --depth-level-3: 100;  /* Modals, drawers — surface-100 + shadow-modal */
-  --depth-level-4: 200;  /* Toasts, notifications — surface-800/900 + shadow-dropdown */
+  --depth-level-0: 0; /* Page background, surface-50 + shadow-xs */
+  --depth-level-1: 10; /* Cards, tables, stat cards — surface-100 + shadow-sm/card */
+  --depth-level-2: 50; /* Dropdowns, popovers, tooltips — surface-100 + shadow-lg/dropdown */
+  --depth-level-3: 100; /* Modals, drawers — surface-100 + shadow-modal */
+  --depth-level-4: 200; /* Toasts, notifications — surface-800/900 + shadow-dropdown */
 
   /* ── Interaction Speed Tokens (hierarchy by feel) ─────── */
-  --duration-press: 80ms;           /* Button press, active states, scale 0.98 */
-  --duration-hover: 120ms;          /* Tooltip reveal, overlay fade-in */
-  --duration-surface: 200ms;        /* Card depth shift, menu open, bg color transition */
-  --duration-page: 300ms;           /* Route change, modal enter/exit */
+  --duration-press: 80ms; /* Button press, active states, scale 0.98 */
+  --duration-hover: 120ms; /* Tooltip reveal, overlay fade-in */
+  --duration-surface: 200ms; /* Card depth shift, menu open, bg color transition */
+  --duration-page: 300ms; /* Route change, modal enter/exit */
 
   /* ── Refined Border Tokens (NEW — semantic naming) ────── */
   --border-width-hairline: 0.5px;
@@ -263,13 +263,37 @@
   --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 42%, var(--color-surface-100));
   --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 68%, var(--color-surface-100));
   --chart-heatmap-4: var(--color-brand-500);
-  --chart-heatmap-danger-1: color-mix(in srgb, var(--color-danger-500) 22%, var(--color-surface-100));
-  --chart-heatmap-danger-2: color-mix(in srgb, var(--color-danger-500) 42%, var(--color-surface-100));
-  --chart-heatmap-danger-3: color-mix(in srgb, var(--color-danger-500) 68%, var(--color-surface-100));
+  --chart-heatmap-danger-1: color-mix(
+    in srgb,
+    var(--color-danger-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-2: color-mix(
+    in srgb,
+    var(--color-danger-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-3: color-mix(
+    in srgb,
+    var(--color-danger-500) 68%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-danger-4: var(--color-danger-500);
-  --chart-heatmap-success-1: color-mix(in srgb, var(--color-success-500) 22%, var(--color-surface-100));
-  --chart-heatmap-success-2: color-mix(in srgb, var(--color-success-500) 42%, var(--color-surface-100));
-  --chart-heatmap-success-3: color-mix(in srgb, var(--color-success-500) 68%, var(--color-surface-100));
+  --chart-heatmap-success-1: color-mix(
+    in srgb,
+    var(--color-success-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-2: color-mix(
+    in srgb,
+    var(--color-success-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-3: color-mix(
+    in srgb,
+    var(--color-success-500) 68%,
+    var(--color-surface-100)
+  );
   --chart-heatmap-success-4: var(--color-success-500);
   --chart-cell-border: var(--border-color);
   --chart-cell-radius: 3px;
@@ -564,7 +588,7 @@ input[type='radio'] {
 }
 
 /* Native <select> elements (not using Select component) */
-select:not([class*="rounded-"]):not([class*="border-"]) {
+select:not([class*='rounded-']):not([class*='border-']) {
   border-width: var(--bw-default);
   border-color: var(--border-color);
   border-radius: var(--radius-md);

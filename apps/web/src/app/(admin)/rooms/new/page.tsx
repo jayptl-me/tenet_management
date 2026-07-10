@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { Hash, Banknote } from 'lucide-react';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -40,7 +41,8 @@ function NewRoomForm() {
   const [loadingDefs, setLoadingDefs] = useState(true);
 
   useEffect(() => {
-    api.get('app-config')
+    api
+      .get('app-config')
       .json<{ success: boolean; data: IAppConfig }>()
       .then((res) => {
         const defs = (res.data.amenityDefinitions ?? [])
@@ -100,16 +102,18 @@ function NewRoomForm() {
         status: data[`amenity_${a.key}`] ?? 'operational',
       }));
 
-      await api.post('rooms', {
-        json: {
-          roomNumber: data.roomNumber,
-          floorId: data.floorId,
-          sharingType: Number(data.sharingType),
-          monthlyRent: Number(data.monthlyRent),
-          description: data.description || undefined,
-          roomAmenities,
-        },
-      }).json<{ success: boolean }>();
+      await api
+        .post('rooms', {
+          json: {
+            roomNumber: data.roomNumber,
+            floorId: data.floorId,
+            sharingType: Number(data.sharingType),
+            monthlyRent: Number(data.monthlyRent),
+            description: data.description || undefined,
+            roomAmenities,
+          },
+        })
+        .json<{ success: boolean }>();
 
       router.push('/rooms');
     } catch {
@@ -139,15 +143,13 @@ function NewRoomForm() {
           />
         }
       >
-        <FormSection
-          title="Room details"
-          description="Number, floor, sharing, and rent"
-        >
+        <FormSection title="Room details" description="Number, floor, sharing, and rent">
           <FormGrid>
             <Input
               label="Room number"
               placeholder="e.g. 101, G2"
               error={err.roomNumber?.message}
+              leftIcon={<Hash className="h-4 w-4" />}
               {...register('roomNumber')}
             />
             <Controller
@@ -175,6 +177,7 @@ function NewRoomForm() {
               label="Monthly rent (₹)"
               type="number"
               error={err.monthlyRent?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
               {...register('monthlyRent')}
             />
           </FormGrid>
@@ -217,11 +220,13 @@ function NewRoomForm() {
 
 export default function NewRoomPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
       <NewRoomForm />
     </Suspense>
   );

@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Eye, Pencil, Trash2, Megaphone } from 'lucide-react';
+import { Plus, Megaphone } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -31,6 +33,7 @@ export default function NoticesPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<NoticeRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -42,6 +45,7 @@ export default function NoticesPage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
+      if (search) params.set('search', search);
       if (priorityFilter) params.set('priority', priorityFilter);
 
       const res = await api.get(`notices?${params.toString()}`).json<{
@@ -56,7 +60,7 @@ export default function NoticesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, priorityFilter]);
+  }, [page, perPage, search, priorityFilter]);
 
   useEffect(() => {
     fetchNotices();
@@ -79,12 +83,16 @@ export default function NoticesPage() {
   const columns: DataTableColumn<NoticeRow>[] = [
     {
       header: 'Title',
-      accessor: (row) => <span className="text-[color:var(--color-text-primary)] font-semibold">{row.title}</span>,
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
+      ),
     },
     {
       header: 'Content',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-muted)] block max-w-[250px] truncate text-xs">{row.content}</span>
+        <span className="block max-w-[250px] truncate text-xs text-[color:var(--color-text-muted)]">
+          {row.content}
+        </span>
       ),
     },
     {
@@ -116,38 +124,11 @@ export default function NoticesPage() {
     {
       header: 'Actions',
       accessor: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/notices/${row._id}`);
-            }}
-            className="text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="View"
-          >
-            <Eye className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/notices/${row._id}/edit`);
-            }}
-            className="text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget(row);
-            }}
-            className="text-[color:var(--color-danger-600)] hover:bg-[color:var(--color-danger-50)] inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+        <TableActions
+          onView={() => router.push(`/notices/${row._id}`)}
+          onEdit={() => router.push(`/notices/${row._id}/edit`)}
+          onDelete={() => setDeleteTarget(row)}
+        />
       ),
       className: 'w-[130px]',
     },
@@ -167,6 +148,15 @@ export default function NoticesPage() {
       />
       <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
+        <Input
+          placeholder="Search by title..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-xs"
+        />
         <Select
           options={[
             { value: '', label: 'All Priorities' },
@@ -210,15 +200,18 @@ export default function NoticesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-[color:var(--color-text-primary)] text-sm truncate max-w-[70%]">
+              <span className="max-w-[70%] truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.title}
               </span>
               <StatusBadge
                 variant={
-                  row.priority === 'emergency' ? 'danger'
-                    : row.priority === 'high' ? 'warning'
-                    : row.priority === 'medium' ? 'info'
-                    : 'neutral'
+                  row.priority === 'emergency'
+                    ? 'danger'
+                    : row.priority === 'high'
+                      ? 'warning'
+                      : row.priority === 'medium'
+                        ? 'info'
+                        : 'neutral'
                 }
                 label={row.priority}
               />
@@ -228,15 +221,20 @@ export default function NoticesPage() {
                 variant={statusToVariant(row.isPublished ? 'published' : 'draft')}
                 label={row.isPublished ? 'Published' : 'Draft'}
               />
-              <span>{new Date(row.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              <span>
+                {new Date(row.createdAt).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
             </div>
             <div className="flex items-center gap-1 pt-1">
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/notices/${row._id}`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]">
-                <Eye className="h-3 w-3" /> View
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); router.push(`/notices/${row._id}/edit`); }} className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]">
-                <Pencil className="h-3 w-3" /> Edit
-              </button>
+              <TableActions
+                onView={() => router.push(`/notices/${row._id}`)}
+                onEdit={() => router.push(`/notices/${row._id}/edit`)}
+                showDelete={false}
+              />
             </div>
           </div>
         )}

@@ -101,12 +101,7 @@ export function Sparkline({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle
-        cx={getX(data.length - 1)}
-        cy={getY(lastPoint)}
-        r={2}
-        fill={lineColor}
-      />
+      <circle cx={getX(data.length - 1)} cy={getY(lastPoint)} r={2} fill={lineColor} />
     </svg>
   );
 }
