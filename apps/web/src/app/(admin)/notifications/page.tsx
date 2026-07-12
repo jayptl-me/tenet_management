@@ -8,7 +8,6 @@ import {
   Building2,
   DoorOpen,
   User,
-  Filter,
   Megaphone,
   AlertTriangle,
   CreditCard,
@@ -21,12 +20,18 @@ import {
   Copy,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { Select } from '@/components/ui/Select';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { TableActions } from '@/components/ui/TableActions';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+import { useRouter } from 'next/navigation';
 import type { INotification, INotificationType } from '@pg/types';
 
 type TargetFilter = 'all' | 'floor' | 'room' | 'individual';
@@ -73,14 +78,8 @@ const typeOptions: { value: INotificationType; label: string }[] = [
   { value: 'meal_feedback', label: 'Meal Feedback' },
 ];
 
-const typeColors: Record<string, string> = {
-  emergency: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)]',
-  payment_verified: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)]',
-  payment_reminder: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-800)]',
-  welcome: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)]',
-};
-
 export default function NotificationsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
@@ -89,14 +88,14 @@ export default function NotificationsPage() {
   // History state
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [filterType, setFilterType] = useState<INotificationType | ''>('');
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
-      const params: Record<string, string | number> = { page, limit: 20 };
+      const params: Record<string, string | number> = { page, limit: perPage };
       if (filterType) params.type = filterType;
       const res = await api.get('notifications', { searchParams: params }).json<{
         success: boolean;
@@ -105,13 +104,12 @@ export default function NotificationsPage() {
       }>();
       setNotifications(res.data);
       setTotal(res.meta.total);
-      setTotalPages(res.meta.totalPages);
     } catch {
       setNotifications([]);
     } finally {
       setLoadingHistory(false);
     }
-  }, [page, filterType]);
+  }, [page, perPage, filterType]);
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -152,6 +150,75 @@ export default function NotificationsPage() {
     room: 'By Room',
     individual: 'Specific Tenant',
   };
+
+  const historyColumns: DataTableColumn<INotification>[] = [
+    {
+      header: 'Title',
+      accessor: (row) => (
+        <span className="font-semibold text-[color:var(--color-text-primary)]">
+          {row.title}
+        </span>
+      ),
+    },
+    {
+      header: 'Type',
+      accessor: (row) => (
+        <span className="inline-flex items-center gap-1.5">
+          {typeIconsMap[row.type] ?? <Bell className="h-4 w-4" />}
+          <span className="capitalize text-[color:var(--color-text-secondary)]">
+            {row.type.replace(/_/g, ' ')}
+          </span>
+        </span>
+      ),
+    },
+    {
+      header: 'Target',
+      accessor: (row) => (
+        <span className="text-[color:var(--color-text-secondary)]">
+          {targetLabels[row.targetType as TargetFilter] ?? row.targetType}
+          {row.targetIds.length > 0 && (
+            <span className="text-[color:var(--color-text-muted)]">
+              {' '}({row.targetIds.length})
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      header: 'Sent At',
+      accessor: (row) => (
+        <span className="text-[color:var(--color-text-secondary)]">
+          {new Date(row.sentAt).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
+      ),
+    },
+    {
+      header: 'Status',
+      accessor: (row) =>
+        row.unreadBy.length > 0 ? (
+          <StatusBadge variant="warning" label={`${row.unreadBy.length} unread`} />
+        ) : (
+          <StatusBadge variant="success" label="All read" />
+        ),
+    },
+    {
+      header: 'Actions',
+      accessor: (row) => (
+        <TableActions
+          onView={() => router.push(`/notifications/${row.id}`)}
+          onEdit={() => router.push(`/notifications/${row.id}/edit`)}
+          showDelete={false}
+        />
+      ),
+      className: 'w-[130px]',
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -357,116 +424,86 @@ export default function NotificationsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]">
+        <div className="space-y-4">
           {/* Filters */}
-          <div className="flex items-center gap-3 border-b-[length:var(--bw-strong)] border-b-[color:var(--color-surface-200)] p-4">
-            <Filter className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-            <select
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
               value={filterType}
               onChange={(e) => {
                 setFilterType(e.target.value as INotificationType | '');
                 setPage(1);
               }}
-              className="rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-primary)]"
-            >
-              <option value="">All Types</option>
-              {typeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <div className="font-[family:var(--font-mono)] ml-auto text-xs text-[color:var(--color-text-muted)]">
-              {total} notifications
-            </div>
+              className="min-h-8 w-auto min-w-[10rem] py-1.5 text-xs font-semibold"
+              options={[
+                { value: '', label: 'All Types' },
+                ...typeOptions.map((opt) => ({ value: opt.value, label: opt.label })),
+              ]}
+            />
+            <span className="font-[family:var(--font-mono)] ml-auto text-xs text-[color:var(--color-text-muted)]">
+              {total} notification{total !== 1 ? 's' : ''}
+            </span>
           </div>
 
-          {/* List */}
-          {loadingHistory ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--color-surface-200)] border-t-[color:var(--color-brand-500)]" />
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <Bell className="h-12 w-12 text-[color:var(--color-text-muted)]" />
-              <p className="mt-3 text-sm text-[color:var(--color-text-muted)]">
-                No notifications sent yet
-              </p>
-              <p className="text-xs text-[color:var(--color-text-muted)]">
-                Compose a notification to get started
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[color:var(--color-surface-200)]">
-              {notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  className="flex items-start gap-4 p-4 transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-50)]"
-                >
-                  <span className="mt-0.5 flex-shrink-0">
-                    {typeIconsMap[notif.type as INotificationType] ?? (
-                      <Bell className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-                    )}
+          <DataTable
+            columns={historyColumns}
+            data={notifications}
+            keyExtractor={(row) => row.id}
+            isLoading={loadingHistory}
+            pagination={{
+              page,
+              perPage,
+              total,
+              onPageChange: setPage,
+              onPerPageChange: (pp) => {
+                setPerPage(pp);
+                setPage(1);
+              },
+            }}
+            emptyState={
+              <EmptyState
+                icon={<Bell className="h-12 w-12" />}
+                title="No notifications sent yet"
+                description="Compose a notification to get started"
+              />
+            }
+            mobileCardRenderer={(row) => (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    {row.title}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-[color:var(--color-text-primary)]">
-                        {notif.title}
-                      </h3>
-                      <span
-                        className={`font-[family:var(--font-mono)] inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          typeColors[notif.type] ??
-                          'bg-[color:var(--color-surface-200)] text-[color:var(--color-text-secondary)]'
-                        }`}
-                      >
-                        {notif.type.replace(/_/g, ' ')}
-                      </span>
-                      <span className="font-[family:var(--font-mono)] inline-block rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 text-[10px] text-[color:var(--color-text-muted)]">
-                        {notif.targetType}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
-                      {notif.body}
-                    </p>
-                    <div className="font-[family:var(--font-mono)] mt-2 flex items-center gap-3 text-[11px] text-[color:var(--color-text-muted)]">
-                      <span>{new Date(notif.sentAt).toLocaleString()}</span>
-                      <span>•</span>
-                      <span>{notif.unreadBy.length} unread</span>
-                      {notif.targetIds.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span>{notif.targetIds.length} target(s)</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  {row.unreadBy.length > 0 ? (
+                    <StatusBadge variant="warning" label={`${row.unreadBy.length} unread`} />
+                  ) : (
+                    <StatusBadge variant="success" label="All read" />
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] p-4">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-1.5 text-xs font-semibold transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] active:scale-[var(--active-press-scale)] disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                Previous
-              </button>
-              <span className="font-[family:var(--font-mono)] text-xs text-[color:var(--color-text-muted)]">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-1.5 text-xs font-semibold transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] active:scale-[var(--active-press-scale)] disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                Next
-              </button>
-            </div>
-          )}
+                <p className="line-clamp-2 text-xs text-[color:var(--color-text-secondary)]">
+                  {row.body}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-[color:var(--color-text-muted)]">
+                  <span className="inline-flex items-center gap-1 capitalize">
+                    {typeIconsMap[row.type] ?? <Bell className="h-3.5 w-3.5" />}
+                    {row.type.replace(/_/g, ' ')}
+                  </span>
+                  <span>{targetLabels[row.targetType as TargetFilter] ?? row.targetType}</span>
+                  <span>
+                    {new Date(row.sentAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 pt-1">
+                  <TableActions
+                    onView={() => router.push(`/notifications/${row.id}`)}
+                    onEdit={() => router.push(`/notifications/${row.id}/edit`)}
+                    showDelete={false}
+                  />
+                </div>
+              </div>
+            )}
+          />
         </div>
       )}
     </div>

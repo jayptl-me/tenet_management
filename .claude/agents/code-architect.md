@@ -2,7 +2,6 @@
 name: code-architect
 description: System architecture analyst for large-scale codebase understanding and planning
 tools: Bash, Read, Write, Edit, Grep, Glob
-model: claude-opus-4-20250514
 memory: project
 maxTurns: 80
 ---

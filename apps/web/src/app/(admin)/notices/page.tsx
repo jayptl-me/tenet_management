@@ -20,8 +20,8 @@ interface NoticeRow {
   _id: string;
   title: string;
   content: string;
-  priority: string;
-  isPublished: boolean;
+  pinned?: boolean;
+  targetType?: string;
   createdAt: string;
 }
 
@@ -32,7 +32,7 @@ export default function NoticesPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const [targetFilter, setTargetFilter] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<NoticeRow | null>(null);
@@ -46,7 +46,7 @@ export default function NoticesPage() {
       params.set('page', String(page));
       params.set('limit', String(perPage));
       if (search) params.set('search', search);
-      if (priorityFilter) params.set('priority', priorityFilter);
+      if (targetFilter) params.set('targetType', targetFilter);
 
       const res = await api.get(`notices?${params.toString()}`).json<{
         success: boolean;
@@ -60,7 +60,7 @@ export default function NoticesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, priorityFilter]);
+  }, [page, perPage, search, targetFilter]);
 
   useEffect(() => {
     fetchNotices();
@@ -96,28 +96,20 @@ export default function NoticesPage() {
       ),
     },
     {
-      header: 'Priority',
+      header: 'Audience',
       accessor: (row) => (
         <StatusBadge
-          variant={
-            row.priority === 'emergency'
-              ? 'danger'
-              : row.priority === 'high'
-                ? 'warning'
-                : row.priority === 'medium'
-                  ? 'info'
-                  : 'neutral'
-          }
-          label={row.priority}
+          variant="info"
+          label={(row.targetType ?? 'all').replace(/_/g, ' ')}
         />
       ),
     },
     {
-      header: 'Status',
+      header: 'Pinned',
       accessor: (row) => (
         <StatusBadge
-          variant={statusToVariant(row.isPublished ? 'published' : 'draft')}
-          label={row.isPublished ? 'Published' : 'Draft'}
+          variant={statusToVariant(row.pinned ? 'published' : 'draft')}
+          label={row.pinned ? 'Pinned' : 'Normal'}
         />
       ),
     },
@@ -159,15 +151,15 @@ export default function NoticesPage() {
         />
         <Select
           options={[
-            { value: '', label: 'All Priorities' },
-            { value: 'emergency', label: 'Emergency' },
-            { value: 'high', label: 'High' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'low', label: 'Low' },
+            { value: '', label: 'All audiences' },
+            { value: 'all', label: 'All tenants' },
+            { value: 'floor', label: 'By floor' },
+            { value: 'room', label: 'By room' },
+            { value: 'individual', label: 'Individual' },
           ]}
-          value={priorityFilter}
+          value={targetFilter}
           onChange={(e) => {
-            setPriorityFilter(e.target.value);
+            setTargetFilter(e.target.value);
             setPage(1);
           }}
           className="max-w-[200px]"
@@ -204,22 +196,14 @@ export default function NoticesPage() {
                 {row.title}
               </span>
               <StatusBadge
-                variant={
-                  row.priority === 'emergency'
-                    ? 'danger'
-                    : row.priority === 'high'
-                      ? 'warning'
-                      : row.priority === 'medium'
-                        ? 'info'
-                        : 'neutral'
-                }
-                label={row.priority}
+                variant="info"
+                label={(row.targetType ?? 'all').replace(/_/g, ' ')}
               />
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <StatusBadge
-                variant={statusToVariant(row.isPublished ? 'published' : 'draft')}
-                label={row.isPublished ? 'Published' : 'Draft'}
+                variant={statusToVariant(row.pinned ? 'published' : 'draft')}
+                label={row.pinned ? 'Pinned' : 'Normal'}
               />
               <span>
                 {new Date(row.createdAt).toLocaleDateString('en-IN', {

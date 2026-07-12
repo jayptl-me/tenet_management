@@ -26,7 +26,9 @@ export interface ITenant {
 }
 
 export interface ITenantCreate {
-  userId: string;
+  name: string;
+  email: string;
+  phone: string;
   roomId: string;
   bedId: string;
   moveInDate: string;

@@ -17,6 +17,7 @@ import {
   safeFilter,
   AppError,
 } from '../lib/routeUtils.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateArrFn = (
@@ -36,7 +37,8 @@ const createGuardianSchema = z.strictObject({
     .string()
     .trim()
     .regex(/^\+91[6-9]\d{9}$/, 'Must be +91 format Indian mobile number'),
-  email: z.string().email().max(255).toLowerCase().trim().optional(),
+  /** Required so the guardian User can log in and reset password. */
+  email: z.string().email().max(255).toLowerCase().trim(),
   relation: z.enum(['father', 'mother', 'guardian', 'other']),
 });
 
@@ -54,15 +56,26 @@ const updateGuardianSchema = z.strictObject({
 
 // ── Helper: map lean doc to frontend-friendly shape ─────
 function mapGuardian(doc: Record<string, unknown>) {
-  const tenant = doc.tenantId as Record<string, unknown> | undefined;
+  const tenantRaw = doc.tenantId;
+  const tenant =
+    tenantRaw && typeof tenantRaw === 'object'
+      ? (tenantRaw as Record<string, unknown>)
+      : undefined;
   const tenantUser = tenant?.userId as Record<string, unknown> | undefined;
   const room = tenant?.roomId as Record<string, unknown> | undefined;
+  const tenantIdStr = tenant
+    ? String(tenant._id ?? '')
+    : tenantRaw
+      ? String(tenantRaw)
+      : '';
 
   return {
     ...doc,
+    // Flat string for ResourceSelect / form reset
+    tenantId: tenantIdStr,
     tenant: tenant
       ? {
-          _id: String(tenant._id ?? ''),
+          _id: tenantIdStr,
           user: tenantUser
             ? {
                 _id: String(tenantUser._id ?? ''),
@@ -81,15 +94,18 @@ function mapGuardian(doc: Record<string, unknown>) {
 // ── Router ───────────────────────────────────────────────
 
 const guardians = new Hono();
+guardians.use('*', requireFeature('guardianPortalEnabled'));
 
 // ── POST /guardians — create guardian (admin only) ──────
 guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchema), async (c) => {
   const body = c.req.valid('json');
-  const passwordHash = crypto.randomBytes(8).toString('hex');
+  // Plain temporary password — User pre-save hashes passwordHash field
+  const temporaryPassword = crypto.randomBytes(4).toString('hex') + 'A1!';
   const session = await mongoose.startSession();
 
   try {
     let result: unknown;
+    let userId: mongoose.Types.ObjectId | undefined;
 
     await session.withTransaction(async () => {
       // Validate tenant exists
@@ -103,7 +119,7 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
             name: body.name,
             phone: body.phone,
             email: body.email,
-            passwordHash,
+            passwordHash: temporaryPassword,
             role: 'guardian',
             isActive: true,
           },
@@ -114,6 +130,7 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
       if (!createdUser)
         throw new AppError('Failed to create guardian user', 500, 'USER_CREATE_FAILED');
       const u = createdUser as { _id: mongoose.Types.ObjectId };
+      userId = u._id;
 
       // Create guardian record
       const [createdGuardian] = await guardianCreate(
@@ -134,6 +151,9 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
       if (!createdGuardian)
         throw new AppError('Failed to create guardian', 500, 'GUARDIAN_CREATE_FAILED');
 
+      const g = createdGuardian as { _id: mongoose.Types.ObjectId };
+      await User.findByIdAndUpdate(u._id, { guardianId: String(g._id) }, { session });
+
       result = createdGuardian;
     });
 
@@ -151,7 +171,15 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
       .lean();
 
     return c.json(
-      { success: true, data: mapGuardian(populated as unknown as Record<string, unknown>) },
+      {
+        success: true,
+        data: {
+          ...mapGuardian(populated as unknown as Record<string, unknown>),
+          // One-time credential for admin to share — never stored as plain text after create
+          temporaryPassword,
+          userId: userId ? String(userId) : undefined,
+        },
+      },
       201,
     );
   } catch (err: unknown) {
@@ -159,6 +187,19 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
       return c.json(
         { success: false, error: { code: err.code, message: err.message } },
         err.status as 400 | 404,
+      );
+    }
+    // Duplicate phone/email
+    if ((err as { code?: number })?.code === 11000) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'DUPLICATE_USER',
+            message: 'A user with this phone or email already exists.',
+          },
+        },
+        409,
       );
     }
     throw err;
@@ -171,10 +212,16 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
 guardians.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit } = parsePagination(c);
   const search = c.req.query('search');
+  const tenantIdQ = c.req.query('tenantId');
 
   const filter: Record<string, unknown> = {};
   if (search) {
     filter.name = { $regex: search, $options: 'i' };
+  }
+  if (tenantIdQ) {
+    const tid = parseId(tenantIdQ);
+    if (!tid) return badRequest(c, 'Invalid tenantId');
+    filter.tenantId = tid;
   }
 
   const skip = (page - 1) * limit;
@@ -197,6 +244,86 @@ guardians.get('/', authGuard, adminOnly, async (c) => {
   ]);
 
   const mapped = (data as unknown[]).map((doc) => mapGuardian(doc as Record<string, unknown>));
+
+  return c.json({
+    success: true,
+    data: mapped,
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+// ── GET /guardians/me/ward — guardian views linked tenant
+// Static paths MUST be registered before /:id
+guardians.get('/me/ward', authGuard, async (c) => {
+  const authUser = c.get('user');
+
+  if (authUser?.role !== 'guardian') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only guardians can access this endpoint.' },
+      },
+      403,
+    );
+  }
+
+  const guardian = await Guardian.findOne(safeFilter({ userId: authUser.sub, isActive: true }))
+    .populate({
+      path: 'tenantId',
+      populate: { path: 'userId', select: 'name email phone' },
+    })
+    .populate({
+      path: 'tenantId',
+      populate: { path: 'roomId', select: 'roomNumber' },
+    })
+    .lean();
+
+  if (!guardian) return notFound(c, 'Guardian record');
+
+  return c.json({
+    success: true,
+    data: mapGuardian(guardian as unknown as Record<string, unknown>),
+  });
+});
+
+// ── GET /guardians/me/ward/attendance ───────────────────
+guardians.get('/me/ward/attendance', authGuard, async (c) => {
+  const authUser = c.get('user');
+  const { page, limit } = parsePagination(c);
+
+  if (authUser?.role !== 'guardian') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only guardians can access this endpoint.' },
+      },
+      403,
+    );
+  }
+
+  const guardian = await Guardian.findOne(
+    safeFilter({ userId: authUser.sub, isActive: true }),
+  ).lean();
+  if (!guardian) return notFound(c, 'Guardian record');
+
+  const tenantId = (guardian as unknown as Record<string, unknown>).tenantId?.toString();
+  const skip = (page - 1) * limit;
+
+  const filter = safeFilter({ tenantId });
+
+  const [data, total] = await Promise.all([
+    AttendanceRecord.find(filter)
+      .sort({ date: -1 } as Record<string, 1 | -1>)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    AttendanceRecord.countDocuments(filter),
+  ]);
+
+  const mapped = (data as unknown[]).map((doc) => {
+    const d = doc as Record<string, unknown>;
+    return { ...d, checkInTime: d.checkIn, checkOutTime: d.checkOut };
+  });
 
   return c.json({
     success: true,
@@ -252,6 +379,18 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
 
   if (!guardian) return notFound(c, 'Guardian');
 
+  // Keep linked User identity + active flag in sync
+  const g = guardian as unknown as { userId?: unknown };
+  const userId = g.userId;
+  if (userId && (body.name || body.phone || body.email !== undefined || body.isActive !== undefined)) {
+    const userUpdate: Record<string, unknown> = {};
+    if (body.name) userUpdate.name = body.name;
+    if (body.phone) userUpdate.phone = body.phone;
+    if (body.email !== undefined) userUpdate.email = body.email;
+    if (body.isActive !== undefined) userUpdate.isActive = body.isActive;
+    await User.findByIdAndUpdate(userId, userUpdate);
+  }
+
   return c.json({
     success: true,
     data: mapGuardian(guardian as unknown as Record<string, unknown>),
@@ -266,11 +405,9 @@ guardians.delete('/:id', authGuard, adminOnly, async (c) => {
   const guardian = await Guardian.findById(id);
   if (!guardian) return notFound(c, 'Guardian');
 
-  // Deactivate guardian record
   guardian.isActive = false;
   await guardian.save();
 
-  // Deactivate the associated User account
   const userResult = await User.findByIdAndUpdate(
     guardian.userId,
     { isActive: false },
@@ -283,86 +420,6 @@ guardians.delete('/:id', authGuard, adminOnly, async (c) => {
       message: 'Guardian deactivated',
       userDeactivated: !!userResult,
     },
-  });
-});
-
-// ── GET /guardians/me/ward — guardian views linked tenant
-guardians.get('/me/ward', authGuard, async (c) => {
-  const authUser = c.get('user');
-
-  // Only guardian role users
-  if (authUser?.role !== 'guardian') {
-    return c.json(
-      {
-        success: false,
-        error: { code: 'FORBIDDEN', message: 'Only guardians can access this endpoint.' },
-      },
-      403,
-    );
-  }
-
-  const guardian = await Guardian.findOne(safeFilter({ userId: authUser.sub, isActive: true }))
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'userId', select: 'name email phone' },
-    })
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
-    })
-    .lean();
-
-  if (!guardian) return notFound(c, 'Guardian record');
-
-  return c.json({
-    success: true,
-    data: mapGuardian(guardian as unknown as Record<string, unknown>),
-  });
-});
-
-// ── GET /guardians/me/ward/attendance — guardian views tenant attendance
-guardians.get('/me/ward/attendance', authGuard, async (c) => {
-  const authUser = c.get('user');
-  const { page, limit } = parsePagination(c);
-
-  if (authUser?.role !== 'guardian') {
-    return c.json(
-      {
-        success: false,
-        error: { code: 'FORBIDDEN', message: 'Only guardians can access this endpoint.' },
-      },
-      403,
-    );
-  }
-
-  const guardian = await Guardian.findOne(
-    safeFilter({ userId: authUser.sub, isActive: true }),
-  ).lean();
-  if (!guardian) return notFound(c, 'Guardian record');
-
-  const tenantId = (guardian as unknown as Record<string, unknown>).tenantId?.toString();
-  const skip = (page - 1) * limit;
-
-  const filter = safeFilter({ tenantId });
-
-  const [data, total] = await Promise.all([
-    AttendanceRecord.find(filter)
-      .sort({ date: -1 } as Record<string, 1 | -1>)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    AttendanceRecord.countDocuments(filter),
-  ]);
-
-  const mapped = (data as unknown[]).map((doc) => {
-    const d = doc as Record<string, unknown>;
-    return { ...d, checkInTime: d.checkIn, checkOutTime: d.checkOut };
-  });
-
-  return c.json({
-    success: true,
-    data: mapped,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
 

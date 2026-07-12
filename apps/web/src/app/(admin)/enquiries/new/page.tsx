@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -15,10 +16,14 @@ import { FormActions } from '@/components/ui/FormActions';
 import { FormGrid } from '@/components/ui/FormSection';
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(10, 'Phone must be at least 10 digits'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  phone: z
+    .string()
+    .min(10, 'Phone is required')
+    .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   preferredSharing: z.enum(['2', '3', '4', 'single']),
+  source: z.enum(['landing_page', 'referral', 'walk_in', 'phone_call', 'other']),
   message: z.string().optional(),
 });
 
@@ -31,6 +36,14 @@ const SHARING_OPTIONS = [
   { value: 'single', label: 'Single' },
 ];
 
+const SOURCE_OPTIONS = [
+  { value: 'walk_in', label: 'Walk-in' },
+  { value: 'phone_call', label: 'Phone call' },
+  { value: 'referral', label: 'Referral' },
+  { value: 'landing_page', label: 'Landing page' },
+  { value: 'other', label: 'Other' },
+];
+
 export default function NewEnquiryPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
@@ -41,17 +54,32 @@ export default function NewEnquiryPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', message: '' },
+    defaultValues: {
+      email: '',
+      message: '',
+      preferredSharing: '2',
+      source: 'walk_in',
+    },
   });
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
-    const payload = { ...data, email: data.email || undefined };
     try {
-      await api.post('enquiries', { json: payload }).json<{ success: boolean }>();
+      await api
+        .post('enquiries', {
+          json: {
+            name: data.name.trim(),
+            phone: normalizeInPhone(data.phone),
+            email: data.email || undefined,
+            preferredSharing: data.preferredSharing,
+            source: data.source,
+            message: data.message || undefined,
+          },
+        })
+        .json<{ success: boolean }>();
       router.push('/enquiries');
     } catch {
-      setSubmitError('Failed to create enquiry. Please try again.');
+      setSubmitError('Failed to create enquiry. Check phone format (+91...) and try again.');
     }
   };
 
@@ -83,7 +111,7 @@ export default function NewEnquiryPage() {
             />
             <Input
               label="Phone"
-              placeholder="10-digit phone number"
+              placeholder="+919876543210"
               error={errors.phone?.message}
               {...register('phone')}
             />
@@ -103,6 +131,12 @@ export default function NewEnquiryPage() {
               {...register('preferredSharing')}
             />
           </FormGrid>
+          <Select
+            label="Source"
+            options={SOURCE_OPTIONS}
+            error={errors.source?.message}
+            {...register('source')}
+          />
           <Textarea
             label="Message"
             rows={4}

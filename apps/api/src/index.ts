@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
 import { logger as honoLogger } from 'hono/logger';
 import { env } from './lib/env.js';
+import { resolveCorsOrigin } from './lib/cors-origins.js';
 import { logger } from './lib/logger.js';
 import { connectDatabase, disconnectDatabase, isDatabaseConnected } from './lib/db.js';
 import { securityHeaders } from './middleware/security.js';
@@ -40,15 +41,19 @@ const app = new Hono();
 
 // ── Global Middleware Stack ──────────────────────────────
 app.use('*', compress());
+// CORS: admin web (FRONTEND_URL) + Flutter portal (PORTAL_URL / localhost dev)
 app.use(
   '*',
   cors({
-    origin:
-      env.NODE_ENV === 'production'
-        ? [env.FRONTEND_URL]
-        : ['http://localhost:3000', 'http://localhost:5173', 'capacitor://localhost'],
+    origin: (origin) => {
+      // Native Flutter / curl / server-to-server: no Origin header
+      if (!origin) return origin;
+      return resolveCorsOrigin(origin) ?? '';
+    },
     credentials: true,
     maxAge: 86400,
+    allowHeaders: ['Authorization', 'Content-Type', 'X-Request-Id'],
+    exposeHeaders: ['X-Request-Id'],
   }),
 );
 app.use('*', requestId);

@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { Switch } from '@/components/ui/Switch';
 import { triggerThemeUpdate } from '@/themes/ThemeProvider';
 import type {
   IAppConfig,
@@ -649,29 +650,21 @@ export default function SettingsPage() {
           renderSection(
             'Feature Toggles',
             'Enable or disable optional modules',
-            <div className="space-y-3">
+            <div className="space-y-1">
               {(Object.keys(config.features) as (keyof IFeatureFlags)[]).map((key) => (
-                <label
+                <Switch
                   key={key}
-                  className="flex cursor-pointer items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--color-surface-200)] px-3 py-2 transition-colors duration-[var(--transition-duration)] hover:border-[color:var(--border-color)]"
-                >
-                  <span className="font-[family:var(--font-body)] text-sm font-semibold text-[color:var(--color-text-primary)]">
-                    {key
-                      .replace(/([A-Z])/g, ' $1')
-                      .replace(/^./, (s) => s.toUpperCase())
-                      .trim()}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={config.features[key]}
-                    onChange={(e) =>
-                      updateNested('features', {
-                        [key]: e.target.checked,
-                      } as Partial<IFeatureFlags>)
-                    }
-                    className="h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] text-[color:var(--color-brand-500)] focus:ring-[length:var(--bw-default)] focus:ring-[color:var(--color-brand-500)]"
-                  />
-                </label>
+                  label={key
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, (s) => s.toUpperCase())
+                    .trim()}
+                  checked={config.features[key]}
+                  onChange={(e) =>
+                    updateNested('features', {
+                      [key]: e.target.checked,
+                    } as Partial<IFeatureFlags>)
+                  }
+                />
               ))}
             </div>,
           )}

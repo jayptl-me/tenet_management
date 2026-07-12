@@ -11,6 +11,7 @@ import {
   listNotifications,
   deleteNotification,
 } from '../services/notification.service.js';
+import { Notification } from '../models/notification.js';
 import { parsePagination, parseId, notFound, badRequest } from '../lib/routeUtils.js';
 
 const notifRoutes = new Hono();
@@ -95,6 +96,67 @@ notifRoutes.post('/', adminOnly, zValidator('json', createSchema), async (c) => 
   );
 });
 
+// ── PATCH /api/v1/notifications/read-all ──────────────────
+// Static path must be registered before /:id routes
+notifRoutes.patch('/read-all', async (c) => {
+  const user = c.get('user');
+
+  const result = await markAllAsRead(user.sub);
+
+  return c.json({
+    success: true,
+    message: `Marked ${result.modifiedCount} notifications as read`,
+  });
+});
+
+const updateSchema = z.strictObject({
+  title: z.string().min(1).max(200).optional(),
+  body: z.string().min(1).max(2000).optional(),
+  type: z
+    .enum([
+      'payment_reminder',
+      'payment_verified',
+      'complaint_update',
+      'announcement',
+      'service_update',
+      'electricity_bill',
+      'welcome',
+      'emergency',
+      'meal_feedback',
+    ])
+    .optional(),
+  targetType: z.enum(['all', 'individual', 'room', 'floor']).optional(),
+  targetIds: z.array(z.string()).optional(),
+});
+
+// ── GET /api/v1/notifications/:id ────────────────────────
+notifRoutes.get('/:id', async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid notification ID');
+
+  const notification = await Notification.findById(id).lean();
+  if (!notification) return notFound(c, 'Notification');
+
+  return c.json({ success: true, data: notification });
+});
+
+// ── PUT /api/v1/notifications/:id ────────────────────────
+// Admin metadata edit (does not re-broadcast)
+notifRoutes.put('/:id', adminOnly, zValidator('json', updateSchema), async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid notification ID');
+
+  const body = c.req.valid('json');
+  const notification = await Notification.findByIdAndUpdate(id, body, {
+    returnDocument: 'after',
+    runValidators: true,
+  }).lean();
+
+  if (!notification) return notFound(c, 'Notification');
+
+  return c.json({ success: true, data: notification });
+});
+
 // ── PATCH /api/v1/notifications/:id/read ─────────────────
 notifRoutes.patch('/:id/read', async (c) => {
   const user = c.get('user');
@@ -118,18 +180,6 @@ notifRoutes.patch('/:id/read', async (c) => {
   return c.json({
     success: true,
     message: 'Notification marked as read',
-  });
-});
-
-// ── PATCH /api/v1/notifications/read-all ──────────────────
-notifRoutes.patch('/read-all', async (c) => {
-  const user = c.get('user');
-
-  const result = await markAllAsRead(user.sub);
-
-  return c.json({
-    success: true,
-    message: `Marked ${result.modifiedCount} notifications as read`,
   });
 });
 

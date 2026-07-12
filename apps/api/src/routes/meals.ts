@@ -7,8 +7,11 @@ import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { MealFeedback } from '../models/mealFeedback.js';
 import { Tenant } from '../models/tenant.js';
+import { User } from '../models/user.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 const meals = new Hono();
+meals.use('*', requireFeature('messFeedbackEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
 const createFeedbackSchema = z.strictObject({
@@ -160,6 +163,35 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
   const mealType = c.req.query('mealType');
   if (mealType) filter.mealType = mealType;
 
+  const rating = c.req.query('rating');
+  if (rating) filter.rating = Number(rating);
+
+  const search = c.req.query('search');
+
+  // Resolve search by tenant name (same pattern as tenants route)
+  if (search) {
+    const users = await User.find(
+      safeFilter({ name: { $regex: search, $options: 'i' } }),
+    )
+      .select('_id')
+      .lean();
+    const userIds = users.map((u) => u._id);
+
+    if (userIds.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        meta: { total: 0, page: 1, limit: 25, totalPages: 0 },
+      });
+    }
+
+    const tenants = await Tenant.find(safeFilter({ userId: { $in: userIds } }))
+      .select('_id')
+      .lean();
+    const tenantIds = tenants.map((t) => String(t._id));
+    filter.tenantId = { $in: tenantIds };
+  }
+
   const pagination = parsePagination(c);
   const { sort, order, skip, limit, page } = pagination;
 
@@ -219,9 +251,13 @@ meals.put(
   zValidator(
     'json',
     z.strictObject({
+      mealType: z.enum(['breakfast', 'lunch', 'dinner']).optional(),
       rating: z.number().int().min(1).max(5).optional(),
       comment: z.string().max(500).optional(),
-      status: z.string().optional(),
+      status: z.enum(['submitted', 'acknowledged', 'actioned']).optional(),
+      categories: z
+        .array(z.enum(['taste', 'variety', 'quantity', 'cleanliness', 'service']))
+        .optional(),
     }),
   ),
   async (c) => {

@@ -33,6 +33,12 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Flutter portal web origin (tenant/guardian/visitor) for production CORS
+      - key: PORTAL_URL
+        sync: false
+      # Optional comma-separated extra CORS origins
+      - key: CORS_EXTRA_ORIGINS
+        sync: false
 
   - type: static
     name: pg-web

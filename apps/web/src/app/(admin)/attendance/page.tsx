@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TodayAttendanceBoard } from '@/components/ui/TodayAttendanceBoard';
 import { useRouter } from 'next/navigation';
 
 interface AttendanceRow {
@@ -155,6 +156,7 @@ export default function AttendancePage() {
         }
       />
       <ErrorBanner message={error} />
+      <TodayAttendanceBoard />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by tenant name..."

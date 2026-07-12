@@ -6,6 +6,7 @@ import { Tenant } from '../models/tenant.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
@@ -69,6 +70,7 @@ function mapRecord(doc: Record<string, unknown>) {
 // ── Router ───────────────────────────────────────────────
 
 const attendance = new Hono();
+attendance.use('*', requireFeature('attendanceEnabled'));
 
 // ── POST /attendance/check-in — tenant self check-in ────
 attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async (c) => {
@@ -326,6 +328,82 @@ attendance.get('/:id', authGuard, async (c) => {
 
   return c.json({ success: true, data: mapRecord(record as unknown as Record<string, unknown>) });
 });
+
+const updateAttendanceSchema = z.strictObject({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  status: z.enum(['present', 'absent', 'on_leave', 'not_returned']).optional(),
+  // FE sends HH:mm; also accept ISO
+  checkInTime: z.string().optional(),
+  checkOutTime: z.string().optional(),
+  checkIn: z.string().optional(),
+  checkOut: z.string().optional(),
+  notes: z.string().max(500).optional(),
+});
+
+function parseTimeOnDate(dateStr: string, timeStr: string): Date | null {
+  if (!timeStr) return null;
+  // ISO datetime
+  if (timeStr.includes('T') || timeStr.length > 8) {
+    const d = new Date(timeStr);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  // HH:mm or HH:mm:ss
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(timeStr);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] ?? 0);
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setHours(hours, minutes, seconds, 0);
+  return d;
+}
+
+// ── PUT /attendance/:id — admin correction ──────────────
+attendance.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator('json', updateAttendanceSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid attendance ID');
+
+    const body = c.req.valid('json');
+    const existing = await AttendanceRecord.findById(id);
+    if (!existing) return notFound(c, 'Attendance record');
+
+    const dateStr = body.date ?? existing.date;
+    if (body.date !== undefined) existing.date = body.date;
+    if (body.status !== undefined) existing.status = body.status;
+    if (body.notes !== undefined) existing.notes = body.notes;
+
+    const checkInRaw = body.checkInTime ?? body.checkIn;
+    const checkOutRaw = body.checkOutTime ?? body.checkOut;
+    if (checkInRaw !== undefined) {
+      existing.checkIn = checkInRaw === '' || checkInRaw === null
+        ? null
+        : parseTimeOnDate(dateStr, checkInRaw);
+    }
+    if (checkOutRaw !== undefined) {
+      existing.checkOut = checkOutRaw === '' || checkOutRaw === null
+        ? null
+        : parseTimeOnDate(dateStr, checkOutRaw);
+    }
+
+    await existing.save();
+
+    const populated = await AttendanceRecord.findById(id)
+      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+      .populate('recordedBy', 'name')
+      .lean();
+
+    return c.json({
+      success: true,
+      data: mapRecord(populated as unknown as Record<string, unknown>),
+    });
+  },
+);
 
 // ── DELETE /attendance/:id — admin deletes a record ─────
 attendance.delete('/:id', authGuard, adminOnly, async (c) => {

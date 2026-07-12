@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { staggerContainer } from '@/lib/animations';
 import { Input } from './Input';
 import { Button } from './Button';
+import { Select } from './Select';
 import { ShimmerBlock } from '@/components/ui/Skeleton';
 
 // ── Types ──────────────────────────────────────────────
@@ -224,17 +225,12 @@ export function DataTable<T>({
             <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
               Rows per page:
             </span>
-            <select
-              value={pagination.perPage}
+            <Select
+              options={PER_PAGE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
+              value={String(pagination.perPage)}
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
-              className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]"
-            >
-              {PER_PAGE_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+              className="min-h-8 w-[4.5rem] py-1 text-[13px] font-semibold"
+            />
           </div>
 
           <div className="flex items-center gap-3">

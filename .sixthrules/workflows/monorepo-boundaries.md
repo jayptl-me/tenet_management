@@ -1,76 +1,101 @@
 # monorepo-boundaries.md
 
-> Enforces monorepo boundaries, package encapsulation, and shared TypeScript type structures.
+> Enforces monorepo boundaries, package encapsulation, and multi-client communication.
 
-This protocol is active when working on cross-package imports, adding NPM dependencies, modifying types in `packages/types/`, or configuring workspaces.
+This protocol is active when working on cross-package imports, adding NPM dependencies, modifying types in `packages/types/`, configuring workspaces, or changing admin/portal connectivity.
 
 ## When to Use
 
-- When sharing data structures or models between `@pg/api` and `@pg/web`.
-- When adding, updating, or removing a node module dependency.
-- When importing backend configurations, models, or types into components.
+- Sharing data structures between `@pg/api` and `@pg/web`.
+- Adding, updating, or removing a node module dependency.
+- Changing Flutter portal API clients or CORS.
+- Importing backend configurations, models, or types into UI packages.
 
 ## Boundary Rules
 
 ```
-     +-------------------------------------------------------------+
-     |                       @pg/web (React)                       |
-     +-------------------------------------------------------------+
-               |                                         |
-               | (HTTP/REST / SSE)                       | (Imports types)
-               v                                         v
-     +-------------------------------------+   +-------------------+
-     |           @pg/api (Hono)            |   |     @pg/types     |
-     +-------------------------------------+   +-------------------+
-               |                                         ^
-               | (Imports types)                         |
-               +-----------------------------------------+
+     +---------------------------+     +----------------------------------+
+     |  @pg/web (Next.js)        |     |  mobile/ (Flutter -- ONE app)    |
+     |  ADMIN ONLY (browser)     |     |  targets: Flutter Web + iOS +    |
+     |                           |     |  Android                         |
+     |                           |     |  roles: tenant / guardian /      |
+     |                           |     |  visitor desk                    |
+     +-------------+-------------+     +-------------+--------------------+
+                   | HTTP/SSE                          | HTTP (Dio)
+                   v                                   v
+     +-------------+-----------------------------------+
+     |              @pg/api (Hono + Mongoose)            |
+     +-------------+-----------------------------------+
+                   |
+                   | imports types (TS clients only)
+                   v
+     +-------------+-----------------------------------+
+     |              @pg/types (TS only)                  |
+     +-------------------------------------------------+
 ```
+
+Flutter does not import `@pg/types` at runtime; it talks HTTP only. Same Flutter codebase builds web, iOS, and Android.
 
 ### Encapsulation Rules
 
-1. **No Backend Imports on Frontend:** `@pg/web` must not import any modules directly from `apps/api/src/`. This includes Mongoose models, Express/Hono controllers, environment configs, or backend libraries. All communication between the frontend and backend must occur over HTTP/HTTPS networks (REST endpoints, SSE streams).
-2. **Types Workspace Integration:** All shared request/response models, state entities, and DTOs must live inside [packages/types/src/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/packages/types/src/). Both the API and Frontend must import from `@pg/types`.
-3. **Workspace Link Format:** Dependencies in `package.json` referencing monorepo workspaces must use workspace flags:
-   - `"@pg/types": "workspace:*"`
-4. **Single-Version Policy:** Maintain matched versions of shared dependencies (e.g. `zod`, `typescript`, `eslint`) across all workspaces.
+1. **No Backend Imports on Admin Web:** `@pg/web` must not import any modules from `apps/api/src/`. Communication only over HTTP/HTTPS (REST, SSE).
+2. **No Backend Imports on Flutter:** `mobile/` must not import TypeScript packages as runtime deps. Use Dio against `/api/v1`. Mirror DTO shapes in Dart repositories; optionally document in `@pg/types` for API/web.
+3. **No Resident UI in Admin Web:** Do not create `apps/web` routes for tenant, guardian, or visitor portals. Those live under `mobile/`.
+4. **Types Workspace Integration:** Shared request/response models for API + admin web live in `packages/types/src/`. Import as `@pg/types`.
+5. **Workspace Link Format:** Use `"@pg/types": "workspace:*"` in JS package.json files.
+6. **Single-Version Policy:** Match shared TS deps (`zod`, `typescript`, `eslint`) across JS workspaces.
 
 ## Step-by-Step Protocol (Modifying Shared Structs)
 
-### Phase 1: Shared Definition
+### Phase 1: Shared Definition (TS)
 
-1. Create or edit the entity typescript file inside [packages/types/src/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/packages/types/src/).
-2. Export the types and validation schemas (Zod schemas) in the entity file.
-3. Register the exports inside the barrel file [packages/types/src/index.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/packages/types/src/index.ts).
-4. Run `bun --filter '@pg/types' typecheck` to verify no syntactic errors exist.
+1. Edit entity file in `packages/types/src/`.
+2. Export from `packages/types/src/index.ts`.
+3. Run `bun --filter '@pg/types' typecheck`.
 
 ### Phase 2: Backend Synchronization
 
-1. Import the types and Zod schemas into the relevant Mongoose schemas and Hono routes (e.g. using `@hono/zod-validator`).
-2. Run `bun --filter '@pg/api' typecheck` to ensure compile-time safety.
-3. Update and run local API test suites using `bun --filter '@pg/api' test`.
+1. Import types/Zod into models and Hono routes.
+2. Run `bun --filter '@pg/api' typecheck` and `bun --filter '@pg/api' test`.
 
-### Phase 3: Frontend Synchronization
+### Phase 3: Admin Web Synchronization
 
-1. Import the updated types into Ky HTTP client calls, React components, React hooks, or Zustand stores in `apps/web/src/`.
-2. Run `bun --filter '@pg/web' typecheck` to verify layout compliance.
-3. Run `bun run lint` to clean formatting issues.
+1. Import types into Ky clients / components / stores.
+2. Run `bun --filter '@pg/web' typecheck` and lint.
+
+### Phase 4: Flutter Portal Synchronization (when portal-facing)
+
+1. Update Dart repositories under `mobile/lib/features/*/data/`.
+2. Run `cd mobile && flutter analyze`.
+3. If CORS or base URL changed, update `docs/PORTAL_CONNECTIVITY.md` and env examples.
+
+## Connectivity / CORS Protocol
+
+When adding a new browser client origin:
+
+1. Prefer `PORTAL_URL` or `CORS_EXTRA_ORIGINS` env (see `apps/api/src/lib/env.ts`).
+2. Keep `apps/api/src/lib/cors-origins.ts` as the single allowlist implementation.
+3. Document in `docs/PORTAL_CONNECTIVITY.md` and `apps/api/.env.example`.
+4. Add production keys to `render.yaml` when introducing new env vars.
 
 ## Verification & Gates
 
-Before code changes are committed, confirm:
-
-- Run `bun run typecheck` across all workspaces. Exit code must be 0.
-- Check that no files in `apps/web/src/` import files in `apps/api/src/`.
-- Verify that `packages/types/package.json` is not importing external client libraries (like React or Hono components).
+- `bun run typecheck` exits 0 for JS workspaces.
+- No `apps/web` imports from `apps/api/src/`.
+- No new resident portal pages under `apps/web`.
+- `flutter analyze` clean for portal work.
+- CORS smoke for Flutter web origin in development (localhost any port).
 
 ## Failure Modes & Anti-Patterns
 
-- **Direct API Import:** Importing `import { User } from '../../api/src/models/user'` from a Next.js component. This causes build breaks during deployment. Use `import type { User } from '@pg/types'` instead.
-- **Out of Sync Types:** Updating the Hono endpoint return shape without updating the corresponding interface in `@pg/types`. This leads to runtime failures on the frontend.
-- **Direct Workspace Pathing:** Using relative paths across directories (e.g. `../../packages/types/src/user`) instead of importing from `@pg/types`. Always use the workspace alias.
+- **Direct API Import from Next:** `import { User } from '../../api/src/models/user'` -- use `@pg/types` + HTTP.
+- **Resident portals in Next:** Re-adding `app/(tenant)` after Flutter migration -- forbidden.
+- **CORS hardcode only production FRONTEND_URL:** Breaks Flutter web -- set `PORTAL_URL` or use `cors-origins` localhost rule in dev.
+- **Out of Sync Types:** Changing Hono response without updating admin types and/or Flutter parsers.
 
 ## Cross-References
 
-- See [automation-loop.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/automation-loop.md) for compilation checks.
-- See [code-quality-verification-gates.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/code-quality-verification-gates.md) Gate 1 (Type Safety) and Gate 7 (Integration).
+- [docs/PORTAL_CONNECTIVITY.md](../../docs/PORTAL_CONNECTIVITY.md)
+- [automation-loop.md](automation-loop.md)
+- [code-quality-verification-gates.md](code-quality-verification-gates.md)
+- [codebase-index.md](codebase-index.md)

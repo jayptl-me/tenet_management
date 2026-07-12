@@ -74,9 +74,9 @@ Group identified issues into parallelizable tasks.
    - Validation Commands (Typecheck and Lint).
 
 ### PHASE 6: DOCUMENTATION REGENERATION & GAP ANALYSIS
-1. **Spec Updates**: Update `docs/specs/11-gap-analysis.md` and any modified spec files.
-2. **Timestamping**: Update `docs/specs/README.md`.
-3. **Documentation Lifecycle Management**: Purge obsolete documentation. Generate new, exhaustive specification files for all entities, flows, and functions. These new documents must include deep-dive task lists for any newly discovered gaps to provide maximum operational depth for subsequent agents.
+1. **Gap Updates**: Update `docs/audit/` (README + relevant `features/*.md` and interconnections). Do not revive a single monolithic gap file.
+2. **Spec touch-ups**: Update `docs/specs/` only when domain contracts change; keep them as reference, not gap scores.
+3. **Documentation Lifecycle**: Delete obsolete plans/memory notes. Prefer `docs/audit/` for agent work queues.
 
 ## OUTPUT CONTRACT
 Every execution must conclude with a structured report containing:

@@ -38,7 +38,8 @@ const noticePostSchema = new Schema<INoticePostDocument>(
     },
     targetType: {
       type: String,
-      enum: ['all', 'floor', 'room'],
+      // `individual` targets user IDs; `room`/`floor` target those entity IDs
+      enum: ['all', 'floor', 'room', 'individual'],
       default: 'all',
     },
     targetIds: {

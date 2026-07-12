@@ -73,24 +73,37 @@ At the start of every turn:
 
 ## Protocol Router
 
+**Before routing UI work:** load [docs/AGENT_CONTEXT.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/AGENT_CONTEXT.md). Next.js is admin-only; tenant/guardian/visitor UI is Flutter (`mobile/`) for Web + iOS + Android.
+
 - **Request is a Question / Code Investigation:**
   - Route to [adaptive-research-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/adaptive-research-protocol.md) Phase 0.
   - Read files and respond directly. Do not make code changes.
 
+- **Request is Admin Web UI (Next.js):**
+  - Work only under `apps/web`. Never add resident portal routes.
+  - Route to [automation-loop.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/automation-loop.md).
+
+- **Request is Resident Portal UI (tenant / guardian / visitor):**
+  - Work only under `mobile/` (Flutter Web, iOS, Android -- one codebase).
+  - Do not implement these UIs in `apps/web`.
+  - Verify with `flutter analyze` and smoke on Web and/or iOS when relevant.
+  - Connectivity: [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md).
+
 - **Request is a Simple Code Change (1-3 files, single sub-project):**
   - Route to [automation-loop.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/automation-loop.md).
-  - Execute sequentially, run `bun run typecheck` + `bun run lint`.
+  - Execute sequentially, run `bun run typecheck` + `bun run lint` for JS; `flutter analyze` for Flutter.
 
 - **Request is a Medium/Large Feature (multi-domain or cross-cutting changes):**
   - Route to [multi-pass-batch-planning.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/multi-pass-batch-planning.md).
   - Define passes, run sub-agents if needed via [sub-agent-orchestration.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/sub-agent-orchestration.md).
+  - Split admin (web) vs portal (Flutter) into separate passes.
 
 - **Request involves Mongoose Models, Data Seed, Schema updates:**
   - Route to [database-schema-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/database-schema-protocol.md).
   - Enforce backward compatibility, version validations, and test with `bun run seed`.
 
-- **Request involves Monorepo setup, typescript package references:**
-  - Route to [monorepo-boundaries.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/monorepo-boundaries.md).
+- **Request involves Monorepo setup, typescript package references, or CORS/portal clients:**
+  - Route to [monorepo-boundaries.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/monorepo-boundaries.md) and [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md).
 
 - **Request is a Bug Fix / Error Report:**
   - Locate trace/logs. Check [adaptive-research-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/adaptive-research-protocol.md).
@@ -99,6 +112,7 @@ At the start of every turn:
 
 - **Request involves Deployments, Render configuration, or CI Actions:**
   - Route to [deployment-verification.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/deployment-verification.md).
+  - Remember `PORTAL_URL` for production Flutter Web CORS.
 
 ## Quick Reference Limits
 
@@ -108,7 +122,9 @@ At the start of every turn:
 
 ## Per-Turn Checklist
 
+- [ ] Product split: admin UI in `apps/web` only; tenant/guardian/visitor UI in `mobile/` (Flutter Web + iOS + Android).
 - [ ] Check if codebase layout has changed. If so, update [codebase-index.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/codebase-index.md).
-- [ ] Confirm no emojis are used in code edits, comments, or workflow logs.
+- [ ] Confirm no emojis are used in code edits, comments, docs, or workflow logs (ASCII only).
 - [ ] Confirm the target files are re-read prior to editing.
 - [ ] Verify that new imports do not bypass package boundaries defined in [monorepo-boundaries.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/monorepo-boundaries.md).
+- [ ] If CORS/auth/env changed: update [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md) and `.env.example` / `render.yaml` as needed.

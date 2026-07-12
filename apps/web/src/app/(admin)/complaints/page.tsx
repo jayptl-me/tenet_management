@@ -32,7 +32,7 @@ interface ComplaintRow {
   tenant?: { user?: { name: string }; room?: { roomNumber: string } };
   title: string;
   description: string;
-  severity: string;
+  priority: string;
   status: string;
   category: string;
   createdAt: string;
@@ -121,9 +121,9 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
     : undefined;
 
   const priorityVariant =
-    complaint.severity === 'critical'
+    complaint.priority === 'urgent'
       ? 'danger'
-      : complaint.severity === 'high'
+      : complaint.priority === 'high'
         ? 'warning'
         : 'info';
 
@@ -140,7 +140,7 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
         <p className="font-display flex-1 truncate text-sm font-bold text-[color:var(--color-text-primary)]">
           {complaint.title}
         </p>
-        <StatusBadge variant={priorityVariant} label={complaint.severity} />
+        <StatusBadge variant={priorityVariant} label={complaint.priority} />
       </div>
       <p className="mb-2 line-clamp-2 text-xs text-[color:var(--color-text-muted)]">
         {complaint.description}
@@ -326,9 +326,9 @@ export default function ComplaintsPage() {
       accessor: (row) => (
         <StatusBadge
           variant={
-            row.severity === 'critical' ? 'danger' : row.severity === 'high' ? 'warning' : 'info'
+            row.priority === 'urgent' ? 'danger' : row.priority === 'high' ? 'warning' : 'info'
           }
-          label={row.severity}
+          label={row.priority}
         />
       ),
     },
@@ -459,13 +459,13 @@ export default function ComplaintsPage() {
                   <span>{row.tenant?.user?.name ?? 'N/A'}</span>
                   <StatusBadge
                     variant={
-                      row.severity === 'critical'
+                      row.priority === 'urgent'
                         ? 'danger'
-                        : row.severity === 'high'
+                        : row.priority === 'high'
                           ? 'warning'
                           : 'info'
                     }
-                    label={row.severity}
+                    label={row.priority}
                   />
                 </div>
                 <div className="flex items-center gap-1 pt-1">

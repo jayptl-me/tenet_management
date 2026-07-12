@@ -23,7 +23,7 @@
     "cloudinary": "^2.5.0",
     "hono": "^4.7.0",
     "jose": "^6.0.0",
-    "mongoose": "^8.9.0",
+    "mongoose": "^9.0.0",
     "node-cron": "^3.0.3",
     "pino": "^9.6.0",
     "pino-pretty": "^11.3.0",
@@ -42,6 +42,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "19.2.17",
     "@types/uuid": "^10.0.0",
+    "mongodb-memory-server": "11.2.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

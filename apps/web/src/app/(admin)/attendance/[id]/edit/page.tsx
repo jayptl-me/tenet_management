@@ -15,6 +15,7 @@ import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { toTimeInputValue } from '@/lib/api-shapes';
 
 const schema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -40,6 +41,14 @@ interface AttendanceDetail {
   checkInTime?: string;
   checkOutTime?: string;
   notes?: string;
+  bedId?: string;
+  /** Mapped shape from API mapRecord */
+  tenant?: {
+    _id?: string;
+    user?: { name?: string } | null;
+    room?: { roomNumber?: string } | null;
+  } | null;
+  /** Raw populate fallback */
   tenantId?: {
     _id?: string;
     userId?: { name?: string };
@@ -100,8 +109,8 @@ export default function EditAttendancePage() {
         reset({
           date: d.date ? String(d.date).slice(0, 10) : '',
           status: (d.status as FormData['status']) ?? 'present',
-          checkInTime: d.checkInTime ?? '',
-          checkOutTime: d.checkOutTime ?? '',
+          checkInTime: toTimeInputValue(d.checkInTime),
+          checkOutTime: toTimeInputValue(d.checkOutTime),
           notes: d.notes ?? '',
         });
         setIsLoading(false);
@@ -122,7 +131,12 @@ export default function EditAttendancePage() {
     }
   };
 
-  const tenant = attendanceData?.tenantId;
+  const tenantMapped = attendanceData?.tenant;
+  const tenantRaw = attendanceData?.tenantId;
+  const tenantName = tenantMapped?.user?.name ?? tenantRaw?.userId?.name ?? 'N/A';
+  const roomNumber = tenantMapped?.room?.roomNumber ?? tenantRaw?.roomId?.roomNumber ?? 'N/A';
+  const bedId = tenantRaw?.bedId ?? attendanceData?.bedId ?? 'N/A';
+  const hasTenant = Boolean(tenantMapped || tenantRaw);
   const err = errors as Record<string, { message?: string }>;
 
   return (
@@ -135,16 +149,16 @@ export default function EditAttendancePage() {
       maxWidth="3xl"
     >
       <div className="space-y-5">
-        {tenant && (
+        {hasTenant && (
           <DetailCard title="Tenant" icon={<UserRound />}>
             <DetailList>
-              <DetailRow label="Name" value={tenant.userId?.name ?? 'N/A'} />
+              <DetailRow label="Name" value={tenantName} />
               <DetailRow
                 label="Room"
                 value={
                   <span className="inline-flex items-center gap-1.5">
                     <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                    {tenant.roomId?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
+                    {roomNumber} · Bed {bedId}
                   </span>
                 }
               />
