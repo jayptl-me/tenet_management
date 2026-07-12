@@ -13,6 +13,7 @@ import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LowStockBanner } from '@/components/ui/LowStockBanner';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -20,8 +21,8 @@ interface AssetRow {
   _id: string;
   name: string;
   category: string;
-  serialNumber?: string;
-  assignedTo?: { user?: { name: string }; room?: { roomNumber: string } };
+  location?: string;
+  quantity?: number;
   status: string;
   createdAt: string;
 }
@@ -93,16 +94,12 @@ export default function AssetsPage() {
       accessor: (row) => <span className="capitalize">{row.category}</span>,
     },
     {
-      header: 'Serial #',
-      accessor: (row) => row.serialNumber ?? '—',
+      header: 'Location',
+      accessor: (row) => row.location ?? '—',
     },
     {
-      header: 'Assigned To',
-      accessor: (row) => row.assignedTo?.user?.name ?? '—',
-    },
-    {
-      header: 'Room',
-      accessor: (row) => row.assignedTo?.room?.roomNumber ?? '—',
+      header: 'Qty',
+      accessor: (row) => row.quantity ?? '—',
     },
     {
       header: 'Status',
@@ -139,6 +136,7 @@ export default function AssetsPage() {
         }
       />
       <ErrorBanner message={error} />
+      <LowStockBanner />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by name..."
@@ -153,9 +151,10 @@ export default function AssetsPage() {
           options={[
             { value: '', label: 'All Status' },
             { value: 'available', label: 'Available' },
-            { value: 'assigned', label: 'Assigned' },
-            { value: 'maintenance', label: 'Maintenance' },
+            { value: 'in_use', label: 'In Use' },
+            { value: 'under_maintenance', label: 'Under Maintenance' },
             { value: 'damaged', label: 'Damaged' },
+            { value: 'retired', label: 'Retired' },
           ]}
           value={statusFilter}
           onChange={(e) => {
@@ -202,8 +201,8 @@ export default function AssetsPage() {
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <span className="capitalize">{row.category}</span>
-              <span>{row.assignedTo?.user?.name ?? 'Unassigned'}</span>
-              {row.assignedTo?.room?.roomNumber && <span>Rm {row.assignedTo.room.roomNumber}</span>}
+              <span>{row.location ?? '—'}</span>
+              <span>Qty {row.quantity ?? '—'}</span>
             </div>
             <div className="flex items-center gap-1 pt-1">
               <TableActions

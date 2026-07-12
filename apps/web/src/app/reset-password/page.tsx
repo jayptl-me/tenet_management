@@ -66,7 +66,7 @@ function ResetPasswordForm() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 text-center shadow-[var(--shadow-lg)]"
         >
-          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-500" />
+          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[color:var(--color-success-500)]" />
           <h1 className="text-xl font-bold text-[color:var(--color-text-primary)]">
             Password Reset Successful
           </h1>
@@ -96,7 +96,7 @@ function ResetPasswordForm() {
         </div>
 
         {!token ? (
-          <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <div className="flex items-center gap-2 rounded-lg bg-[color:var(--color-danger-50)] p-3 text-sm text-[color:var(--color-danger-700)]">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>Invalid or missing reset token. Please request a new password reset.</span>
           </div>
@@ -120,7 +120,7 @@ function ResetPasswordForm() {
             />
 
             {errorMsg && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              <div className="flex items-center gap-2 rounded-lg bg-[color:var(--color-danger-50)] p-3 text-sm text-[color:var(--color-danger-700)]">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>

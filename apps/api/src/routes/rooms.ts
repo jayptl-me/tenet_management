@@ -329,27 +329,17 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid room ID');
 
-  // Check for ANY tenant references to this room (active + inactive)
-  const tenantCount = await Tenant.countDocuments({
+  // Only block if active tenants still occupy this room
+  const activeCount = await Tenant.countDocuments({
     roomId: id,
+    isActive: true,
   } as Record<string, unknown>);
 
-  if (tenantCount > 0) {
-    const activeCount = await Tenant.countDocuments({
-      roomId: id,
-      isActive: true,
-    } as Record<string, unknown>);
-    if (activeCount > 0) {
-      return conflict(
-        c,
-        `Cannot delete room: ${activeCount} active tenant(s) still occupy this room. Please check them out first.`,
-        'ACTIVE_TENANTS',
-      );
-    }
+  if (activeCount > 0) {
     return conflict(
       c,
-      `Cannot delete room: ${tenantCount} tenant record(s) still reference this room (including checked-out tenants). Please delete or reassign those tenants first.`,
-      'TENANT_REFERENCES',
+      `Cannot delete room: ${activeCount} active tenant(s) still occupy this room. Please check them out first.`,
+      'ACTIVE_TENANTS',
     );
   }
 
@@ -360,6 +350,17 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
   ).lean();
 
   if (!room) return notFound(c, 'Room');
+
+  // Soft-delete skips document middleware; recompute Floor.totalRooms explicitly
+  try {
+    const floorId = (room as { floorId?: unknown }).floorId;
+    if (floorId) {
+      const count = await Room.countDocuments({ floorId, isActive: true });
+      await Floor.findByIdAndUpdate(floorId, { totalRooms: count });
+    }
+  } catch {
+    // Non-fatal — room is already soft-deleted
+  }
 
   return c.json({ success: true, data: room });
 });

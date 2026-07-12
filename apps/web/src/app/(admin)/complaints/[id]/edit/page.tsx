@@ -21,7 +21,7 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   category: z.string().min(1, 'Category is required'),
-  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']),
   adminNotes: z.string().optional(),
 });
@@ -32,7 +32,7 @@ const priorityOptions = [
   { value: 'low', label: 'Low' },
   { value: 'medium', label: 'Medium' },
   { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' },
+  { value: 'urgent', label: 'Urgent' },
 ];
 
 const statusOptions = [
@@ -87,7 +87,10 @@ export default function EditComplaintPage() {
           title: res.data.title ?? '',
           description: res.data.description ?? '',
           category: res.data.category ?? '',
-          priority: (res.data.priority as FormData['priority']) ?? 'medium',
+          priority:
+            res.data.priority === 'critical'
+              ? 'urgent'
+              : ((res.data.priority as FormData['priority']) ?? 'medium'),
           status: (res.data.status as FormData['status']) ?? 'open',
           adminNotes: res.data.adminNotes ?? '',
         });
@@ -102,7 +105,19 @@ export default function EditComplaintPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.put(`complaints/${id}`, { json: data }).json();
+      // Whitelist keys accepted by updateComplaintSchema
+      await api
+        .put(`complaints/${id}`, {
+          json: {
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            priority: data.priority,
+            status: data.status,
+            adminNotes: data.adminNotes,
+          },
+        })
+        .json();
       router.push('/complaints');
     } catch {
       setSubmitError('Failed to update complaint');
@@ -116,7 +131,7 @@ export default function EditComplaintPage() {
     low: 'bg-[color:var(--color-neutral-100)] text-[color:var(--color-neutral-700)]',
     medium: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
     high: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-    critical:
+    urgent:
       'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)] ring-2 ring-[color:var(--color-danger-300)]',
   };
 

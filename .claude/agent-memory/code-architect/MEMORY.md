@@ -1,4 +1,15 @@
-- [Visitor Fixes Applied](visitor-fixes-applied.md) -- P0/P1: backend + frontend visitor creation/view/edit fully fixed
-- [Test Infrastructure Created](test-infra-created.md) -- P0: 20 tests across 3 model suites with vitest setup
-- [Auth & Business Logic Gaps](auth-business-gaps.md) -- P1: no password reset, overdue cron, or floor totalRooms guard
-- [Audit v5 Complete](audit-v2-complete.md) -- Full re-audit: all P0/P1/P2 resolved. Build clean (0 errors, 0 warnings). Gap analysis updated.
+# Code Architect Memory
+
+Do not trust historical audit notes in this folder. They were removed as stale.
+
+## Source of truth
+
+| Concern | Location |
+|---------|----------|
+| Active gaps / edit-page P0s | [docs/audit/README.md](../../../docs/audit/README.md) |
+| Per-feature work items | [docs/audit/features/](../../../docs/audit/features/) |
+| Domain reference (entities, flows) | [docs/specs/](../../../docs/specs/) |
+| Agent playbook | [docs/audit/AGENT_PLAYBOOK.md](../../../docs/audit/AGENT_PLAYBOOK.md) |
+| Project rules | [AGENTS.md](../../../AGENTS.md), [CLAUDE.md](../../../CLAUDE.md) |
+
+Always re-verify against source code before implementing.

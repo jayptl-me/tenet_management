@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * Client-only CSV export.
+ *
+ * This page fetches up to 5,000 records per resource via the standard
+ * list API and converts them to CSV entirely in the browser. There is no
+ * server-side export endpoint. Supported resources: tenants, payments,
+ * invoices, complaints. To add more resources, append an entry to
+ * exportOptions below — the only requirement is that the resource list
+ * API returns { success, data: Record<string, unknown>[] }.
+ */
+
 import { useState } from 'react';
 import { Download, Users, CreditCard, Receipt, AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -201,6 +212,14 @@ export default function ExportPage() {
           <strong>Export limit:</strong> Up to 5,000 records per export. For larger exports, use
           date range filters on the respective resource pages to narrow your selection before
           exporting.
+        </p>
+      </div>
+
+      <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 text-sm text-[color:var(--color-text-secondary)]">
+        <p className="font-[family:var(--font-body)]">
+          <strong>Client-side export:</strong> CSV files are generated in the browser from the
+          standard list API. No server-side export endpoint is used. Currently supports tenants,
+          payments, invoices, and complaints.
         </p>
       </div>
     </div>

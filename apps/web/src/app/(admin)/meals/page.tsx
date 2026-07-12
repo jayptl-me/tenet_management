@@ -13,6 +13,8 @@ import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FeedbackSummaryStrip } from '@/components/ui/FeedbackSummaryStrip';
+import { StarRating } from '@/components/ui/StarRating';
 import { useRouter } from 'next/navigation';
 
 interface MealFeedbackRow {
@@ -22,6 +24,7 @@ interface MealFeedbackRow {
   rating: number;
   comment?: string;
   status: string;
+  date?: string;
   createdAt: string;
 }
 
@@ -34,6 +37,7 @@ export default function MealsPage() {
   const [perPage, setPerPage] = useState(25);
   const [mealFilter, setMealFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MealFeedbackRow | null>(null);
@@ -49,6 +53,7 @@ export default function MealsPage() {
       if (search) params.set('search', search);
       if (mealFilter) params.set('mealType', mealFilter);
       if (ratingFilter) params.set('rating', ratingFilter);
+      if (dateFilter) params.set('date', dateFilter);
 
       const res = await api.get(`meals/feedback?${params.toString()}`).json<{
         success: boolean;
@@ -62,7 +67,7 @@ export default function MealsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, mealFilter, ratingFilter]);
+  }, [page, perPage, search, mealFilter, ratingFilter, dateFilter]);
 
   useEffect(() => {
     fetchFeedbacks();
@@ -100,11 +105,30 @@ export default function MealsPage() {
       accessor: (row) => <span className="capitalize">{row.mealType}</span>,
     },
     {
+      header: 'Date',
+      accessor: (row) => {
+        const dateStr = row.date ?? row.createdAt;
+        if (!dateStr) return '—';
+        try {
+          return new Date(dateStr).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+        } catch {
+          return '—';
+        }
+      },
+    },
+    {
       header: 'Rating',
       accessor: (row) => (
-        <span className="font-display text-sm font-bold text-[color:var(--color-warning-500)]">
-          {row.rating}/5
-        </span>
+        <div className="flex items-center gap-2">
+          <StarRating value={row.rating} readonly size="sm" />
+          <span className="font-display text-xs font-bold text-[color:var(--color-warning-500)]">
+            {row.rating}/5
+          </span>
+        </div>
       ),
     },
     {
@@ -145,6 +169,7 @@ export default function MealsPage() {
         }
       />
       <ErrorBanner message={error} />
+      <FeedbackSummaryStrip />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by tenant name..."
@@ -154,6 +179,15 @@ export default function MealsPage() {
             setPage(1);
           }}
           className="max-w-xs"
+        />
+        <Input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => {
+            setDateFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[160px]"
         />
         <Select
           options={[
@@ -216,19 +250,25 @@ export default function MealsPage() {
               <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
-              <span className="font-display text-sm font-bold text-[color:var(--color-warning-500)]">
-                {row.rating}/5
-              </span>
+              <StarRating value={row.rating} readonly size="sm" />
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <span className="capitalize">{row.mealType}</span>
+              {(row.date ?? row.createdAt) && (
+                <span>
+                  {new Date(row.date ?? row.createdAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              )}
               <StatusBadge variant={statusToVariant(row.status)} label={row.status} />
             </div>
             <div className="flex items-center gap-1 pt-1">
               <TableActions
                 onView={() => router.push(`/meals/${row._id}`)}
                 onEdit={() => router.push(`/meals/${row._id}/edit`)}
-                showDelete={false}
+                onDelete={() => setDeleteTarget(row)}
               />
             </div>
           </div>

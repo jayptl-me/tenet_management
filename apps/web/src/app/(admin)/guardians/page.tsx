@@ -198,7 +198,7 @@ export default function GuardiansPage() {
               <TableActions
                 onView={() => router.push(`/guardians/${row._id}`)}
                 onEdit={() => router.push(`/guardians/${row._id}/edit`)}
-                showDelete={false}
+                onDelete={() => setDeleteTarget(row)}
               />
             </div>
           </div>

@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Phone, Mail, UserRound, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
+import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -17,7 +18,10 @@ import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSectio
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(10, 'Phone must be at least 10 digits'),
+  phone: z
+    .string()
+    .min(10, 'Phone is required')
+    .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   message: z.string().optional(),
   source: z.enum(['landing_page', 'referral', 'walk_in', 'phone_call', 'other']),
@@ -88,10 +92,22 @@ export default function EditEnquiryPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.put(`enquiries/${id}`, { json: data }).json();
+      await api
+        .put(`enquiries/${id}`, {
+          json: {
+            name: data.name.trim(),
+            phone: normalizeInPhone(data.phone),
+            email: data.email || undefined,
+            message: data.message,
+            source: data.source,
+            status: data.status,
+            notes: data.notes,
+          },
+        })
+        .json();
       router.push('/enquiries');
     } catch {
-      setSubmitError('Failed to update enquiry');
+      setSubmitError('Failed to update enquiry. Check phone format (+91...).');
     }
   };
 

@@ -3,50 +3,29 @@
 ## Monorepo Structure
 
 ```
-tenet_management/
-├── packages/types/          # Shared TypeScript types (19 domain modules)
+tenet_pg_management/
+├── packages/types/          # Shared TypeScript types (API + admin web)
+├── apps/api/                # Backend — Bun + Hono + Mongoose
 │   └── src/
-│       ├── index.ts         # Re-exports all types
-│       ├── tokens.ts        # IBrandTokens, STATUS_COLOR_MAP, StatusVariant
-│       ├── common.ts        # IPaginationParams, IPaginatedResponse, IApiResponse
-│       ├── user.ts          # IUser, IUserRole, ILoginRequest
-│       ├── tenant.ts        # ITenant, ITenantCreate, ITenantTransfer
-│       ├── room.ts          # IRoom, IRoomCreate, SharingType, IBed
-│       ├── floor.ts         # IFloor, IFloorCreate, AmenityCount
-│       ├── payment.ts       # IPayment, IPaymentStatus, IPaymentMethod
-│       ├── invoice.ts       # IInvoice, IInvoiceStatus, IInvoiceLineItem
-│       ├── complaint.ts     # IComplaint, IComplaintCategory, IComplaintPriority
-│       ├── dashboard.ts     # IDashboardStats, IRevenueHistoryPoint, etc.
-│       └── ... (19 files total)
-├── apps/api/                # Backend — Hono + Mongoose 8
-│   └── src/
-│       ├── index.ts         # Express entry, route registration
-│       ├── models/          # 19 Mongoose models (each in own file)
-│       ├── routes/          # 25 Hono routers (one per domain + dashboard, auth, SSE, export, jobs)
-│       ├── middleware/       # auth, roles, rateLimiter, errorHandler, security, requestId
-│       ├── lib/             # db, env, jwt, errors, eventBus, logger, upi, whatsapp, serviceAvailability, routeUtils, ntfy
-│       ├── services/        # invoice.service.ts, notification.service.ts
-│       ├── jobs/            # scheduler.ts (cron jobs)
-│       └── templates/       # InvoicePdf.tsx (React PDF template)
-├── apps/web/                # Frontend — Next.js 16 + React 19 + Tailwind v4
-│   └── src/
-│       ├── app/(admin)/     # 22 admin pages (layout + 21 feature pages)
-│       ├── app/login/       # Login page
-│       ├── app/tenant/      # Tenant-facing routes (minimal)
-│       ├── app/guardian/    # Guardian-facing routes (minimal)
-│       ├── components/admin/# 9 admin shell components (Sidebar, NotifBell, DarkModeToggle, etc.)
-│       ├── components/ui/   # 33 reusable UI components
-│       ├── components/shared/ # AppProviders, ErrorBoundary, ServerWakeupOverlay
-│       ├── hooks/           # useTheme, useSSE, useAppConfig, useSidebarBadges
-│       ├── lib/             # api.ts (ky wrapper), api-shapes.ts, brand.ts, chart-theme.ts, field-styles.ts, animations.ts, colorScale.ts, errorParser.ts, resource-select-presets.ts, whatsapp.ts
-│       ├── store/           # auth.ts (Zustand), apiLoading.ts (Zustand)
-│       └── themes/          # saas.css, brutalist.css, neumorphic.css, soft-ui.css, ThemeProvider.tsx, types.ts
-└── docs/                    # Documentation
-    ├── specs/               # This folder — comprehensive specs
-    ├── CREDENTIALS.md
-    ├── TENANT_LIFECYCLE_UX_DESIGN.md
-    └── THEMING_ARCHITECTURE.md
+│       ├── index.ts         # Hono entry, CORS, route mounting
+│       ├── lib/cors-origins.ts  # Multi-client CORS (admin + Flutter)
+│       ├── models/ routes/ middleware/ services/ jobs/
+├── apps/web/                # ADMIN ONLY — Next.js 16 + React 19 + Tailwind v4
+│   └── src/app/(admin)/     # Admin CRUD surfaces
+│   └── src/app/login/       # Admin login (rejects tenant/guardian)
+├── mobile/                  # Flutter portals — tenant / guardian / visitor desk
+│   └── lib/core/            # Dio, router, env (API_BASE_URL)
+│   └── lib/features/        # auth, tenant, guardian, visitor
+└── docs/
+    ├── PORTAL_CONNECTIVITY.md  # Multi-client connectivity (agents MUST read)
+    ├── audit/                  # Gap matrix
+    └── specs/                  # Domain reference
 ```
+
+**Portal rule:** Resident UIs are Flutter-only. Do not add `apps/web` tenant/guardian App Router trees.
+
+See [docs/PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) for CORS, auth roles, and API base URLs.
+
 
 ## Auth Flow
 
@@ -62,11 +41,19 @@ tenet_management/
 ### Middleware Chain
 
 1. `requestId` — attaches UUID to every request
-2. `security` — helmet, CORS, body limits
-3. `rateLimiter` — basic rate limiting
-4. `authGuard` — validates JWT from `Authorization: Bearer <token>` header, decodes payload, attaches `user` to Hono context
-5. `adminOnly` — checks `user.role === 'admin'`, returns 403 if not
-6. `errorHandler` — catches all errors, formats as `{ success: false, error: { code, message } }`
+2. `cors` — multi-client allowlist via `lib/cors-origins.ts` (`FRONTEND_URL`, `PORTAL_URL`, localhost in dev)
+3. `security` — security headers
+4. `rateLimiter` — mutation rate limiting
+5. `authGuard` — validates JWT from `Authorization: Bearer <token>` header, decodes payload, attaches `user` to Hono context
+6. `adminOnly` / `tenantOnly` / feature flags — role and AppConfig gates
+7. `errorHandler` — catches all errors, formats as `{ success: false, error: { code, message } }`
+
+### Clients
+
+| Client | Package | Roles |
+|--------|---------|-------|
+| Admin web | `apps/web` | admin |
+| Flutter portal | `mobile/` | tenant, guardian (+ visitor desk for tenants) |
 
 ### Ky Wrapper (Frontend)
 

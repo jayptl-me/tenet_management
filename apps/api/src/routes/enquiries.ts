@@ -9,7 +9,10 @@ import { Enquiry } from '../models/enquiry.js';
 
 const enquiries = new Hono();
 
-// ── Schemas ─────────────────────────────────────────────
+// ── Schemas (aligned with Enquiry model: preferredSharing, optional email) ──
+const preferredSharingEnum = z.enum(['2', '3', '4', 'single']);
+const sourceEnum = z.enum(['landing_page', 'referral', 'walk_in', 'phone_call', 'other']);
+
 const createEnquirySchema = z.strictObject({
   name: z
     .string()
@@ -18,9 +21,11 @@ const createEnquirySchema = z.strictObject({
   phone: z
     .string()
     .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number (+91 followed by 10 digits)'),
-  email: z.string().email('Invalid email address'),
-  sharingPreference: z.enum(['2', '3', '4', 'any']),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  preferredSharing: preferredSharingEnum,
   message: z.string().max(1000, 'Message cannot exceed 1000 characters').optional(),
+  /** Admin create may set source; public landing always stored as landing_page. */
+  source: sourceEnum.optional(),
 });
 
 const updateStatusSchema = z.strictObject({
@@ -28,14 +33,33 @@ const updateStatusSchema = z.strictObject({
   notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional(),
 });
 
+const updateEnquirySchema = z.strictObject({
+  name: z.string().min(2).max(100).optional(),
+  phone: z
+    .string()
+    .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number (+91 followed by 10 digits)')
+    .optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  message: z.string().max(1000).optional(),
+  source: sourceEnum.optional(),
+  status: z.enum(['new', 'contacted', 'converted', 'lost']).optional(),
+  notes: z.string().max(1000).optional(),
+  preferredSharing: preferredSharingEnum.optional(),
+});
+
 // ── POST /enquiries ─────────────────────────────────────
 enquiries.post('/', publicLimiter, zValidator('json', createEnquirySchema), async (c) => {
   const body = c.req.valid('json');
 
   const enquiry = await Enquiry.create({
-    ...body,
+    name: body.name,
+    phone: body.phone,
+    email: body.email || undefined,
+    preferredSharing: body.preferredSharing,
+    message: body.message ?? '',
     status: 'new',
-    source: 'landing_page',
+    // Public landing and unauthenticated posts always land as landing_page unless admin source provided
+    source: body.source ?? 'landing_page',
   });
 
   return c.json({ success: true, data: enquiry }, 201);
@@ -110,6 +134,31 @@ enquiries.put(
     const body = c.req.valid('json');
 
     const enquiry = await Enquiry.findByIdAndUpdate(id, body, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+
+    if (!enquiry) return notFound(c, 'Enquiry');
+
+    return c.json({ success: true, data: enquiry });
+  },
+);
+
+// ── PUT /enquiries/:id — full admin edit ─────────────────
+enquiries.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator('json', updateEnquirySchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid enquiry ID');
+
+    const body = c.req.valid('json');
+    const update: Record<string, unknown> = { ...body };
+    if (body.email === '') update.email = undefined;
+
+    const enquiry = await Enquiry.findByIdAndUpdate(id, update, {
       returnDocument: 'after',
       runValidators: true,
     }).lean();

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PaintBucket, Monitor, Moon, Sun } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import type { ThemeSettings } from '@pg/types';
 
 const themePresets: { value: ThemeSettings['preset']; label: string; description: string }[] = [
@@ -187,57 +188,24 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
-              Display Font
-            </label>
-            <select
-              value={theme.fonts?.display ?? ''}
-              onChange={(e) => updateFont('display', e.target.value)}
-              className="font-[family:var(--font-body)] w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] focus:border-[color:var(--border-color-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
-            >
-              <option value="">Theme default</option>
-              {fontOptions.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
-              Body Font
-            </label>
-            <select
-              value={theme.fonts?.body ?? ''}
-              onChange={(e) => updateFont('body', e.target.value)}
-              className="font-[family:var(--font-body)] w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] focus:border-[color:var(--border-color-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
-            >
-              <option value="">Theme default</option>
-              {fontOptions.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
-              Mono Font
-            </label>
-            <select
-              value={theme.fonts?.mono ?? ''}
-              onChange={(e) => updateFont('mono', e.target.value)}
-              className="font-[family:var(--font-body)] w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] focus:border-[color:var(--border-color-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
-            >
-              <option value="">Theme default</option>
-              {fontOptions.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Display Font"
+            value={theme.fonts?.display ?? ''}
+            onChange={(e) => updateFont('display', e.target.value)}
+            options={[{ value: '', label: 'Theme default' }, ...fontOptions]}
+          />
+          <Select
+            label="Body Font"
+            value={theme.fonts?.body ?? ''}
+            onChange={(e) => updateFont('body', e.target.value)}
+            options={[{ value: '', label: 'Theme default' }, ...fontOptions]}
+          />
+          <Select
+            label="Mono Font"
+            value={theme.fonts?.mono ?? ''}
+            onChange={(e) => updateFont('mono', e.target.value)}
+            options={[{ value: '', label: 'Theme default' }, ...fontOptions]}
+          />
         </div>
       </section>
 

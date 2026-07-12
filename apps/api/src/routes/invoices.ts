@@ -269,6 +269,25 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
   if (body.dueDate !== undefined) invoice.dueDate = new Date(body.dueDate);
   if (body.status !== undefined) invoice.status = body.status;
 
+  // When amounts change without explicit lineItems, rebuild line items so PDF stays in sync
+  if (
+    body.lineItems === undefined &&
+    (body.rentAmount !== undefined ||
+      body.electricityAmount !== undefined ||
+      body.otherCharges !== undefined)
+  ) {
+    const items: Array<{ description: string; amount: number }> = [
+      { description: 'Monthly Rent', amount: invoice.rentAmount },
+    ];
+    if (invoice.electricityAmount > 0) {
+      items.push({ description: 'Electricity', amount: invoice.electricityAmount });
+    }
+    if (invoice.otherCharges > 0) {
+      items.push({ description: 'Other Charges', amount: invoice.otherCharges });
+    }
+    invoice.lineItems = items;
+  }
+
   // pre-save recomputes totalAmount
   await invoice.save();
 

@@ -70,11 +70,13 @@ leaves.post('/', authGuard, zValidator('json', createLeaveSchema), async (c) => 
   }
 
   // Check for overlapping leave applications
-  const existingOverlap = await LeaveApplication.findOne({
-    tenantId: body.tenantId,
-    status: { $in: ['pending', 'approved'] },
-    $or: [{ fromDate: { $lte: body.toDate }, toDate: { $gte: body.fromDate } }],
-  });
+  const existingOverlap = await LeaveApplication.findOne(
+    safeFilter({
+      tenantId: body.tenantId,
+      status: { $in: ['pending', 'approved'] },
+      $or: [{ fromDate: { $lte: body.toDate }, toDate: { $gte: body.fromDate } }],
+    }),
+  );
   if (existingOverlap) {
     return c.json(
       {

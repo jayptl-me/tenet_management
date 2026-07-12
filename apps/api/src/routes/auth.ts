@@ -197,7 +197,33 @@ auth.get('/me', authGuard, async (c) => {
     );
   }
 
-  return c.json({ success: true, data: user.toPublicJSON() });
+  const publicData = user.toPublicJSON() as Record<string, unknown>;
+
+  // Enrich with tenantId for tenant role (P0-F1)
+  // Self-heal legacy users whose tenantId was never backfilled by seed.
+  if (user.role === 'tenant' && !publicData.tenantId) {
+    try {
+      const { Tenant } = await import('../models/tenant.js');
+      const tenantDoc = await (Tenant as unknown as {
+        findOne: (filter: Record<string, unknown>) => {
+          select: (fields: string) => { lean: () => Promise<Record<string, unknown> | null> };
+        };
+      }).findOne({ userId: String(user._id), isActive: true })
+        .select('_id')
+        .lean();
+      if (tenantDoc) {
+        const tenantIdStr = String(tenantDoc._id);
+        publicData.tenantId = tenantIdStr;
+        // Self-heal: persist tenantId so future /auth/me calls skip the lookup
+        user.tenantId = tenantIdStr;
+        await user.save();
+      }
+    } catch {
+      // Non-fatal — tenantId enrichment is best-effort
+    }
+  }
+
+  return c.json({ success: true, data: publicData });
 });
 
 // ── POST /auth/forgot-password ───────────────────────────

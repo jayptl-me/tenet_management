@@ -19,6 +19,10 @@ import {
   Pencil,
   FileText,
   Activity,
+  Users,
+  Receipt,
+  RotateCcw,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -93,6 +97,20 @@ export default function TenantDetailPage() {
   } | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
+  const [reinstating, setReinstating] = useState(false);
+  const [relatedError, setRelatedError] = useState('');
+  const [guardians, setGuardians] = useState<
+    Array<{ _id: string; name: string; phone?: string; relation?: string; isActive?: boolean }>
+  >([]);
+  const [recentPayments, setRecentPayments] = useState<
+    Array<{ _id: string; amount: number; status: string; createdAt: string }>
+  >([]);
+  const [recentInvoices, setRecentInvoices] = useState<
+    Array<{ _id: string; invoiceNumber?: string; month?: string; totalAmount?: number; status?: string }>
+  >([]);
+  const [recentComplaints, setRecentComplaints] = useState<
+    Array<{ _id: string; title: string; status: string; priority?: string }>
+  >([]);
 
   useEffect(() => {
     if (!id) return;
@@ -104,6 +122,37 @@ export default function TenantDetailPage() {
       .then((res) => setTenant(res.data))
       .catch(() => setError('Failed to load tenant details'))
       .finally(() => setIsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setRelatedError('');
+    Promise.all([
+      api
+        .get(`guardians?tenantId=${id}&limit=20`)
+        .json<{ success: boolean; data: typeof guardians }>()
+        .catch(() => ({ success: false, data: [] as typeof guardians })),
+      api
+        .get(`tenants/${id}/payments`)
+        .json<{ success: boolean; data: typeof recentPayments }>()
+        .catch(() => ({ success: false, data: [] as typeof recentPayments })),
+      api
+        .get(`tenants/${id}/invoices`)
+        .json<{ success: boolean; data: typeof recentInvoices }>()
+        .catch(() => ({ success: false, data: [] as typeof recentInvoices })),
+      api
+        .get(`tenants/${id}/complaints`)
+        .json<{ success: boolean; data: typeof recentComplaints }>()
+        .catch(() => ({ success: false, data: [] as typeof recentComplaints })),
+    ]).then(([g, p, inv, c]) => {
+      setGuardians(Array.isArray(g.data) ? g.data.slice(0, 5) : []);
+      setRecentPayments(Array.isArray(p.data) ? p.data.slice(0, 5) : []);
+      setRecentInvoices(Array.isArray(inv.data) ? inv.data.slice(0, 5) : []);
+      setRecentComplaints(Array.isArray(c.data) ? c.data.slice(0, 5) : []);
+      if (!g.success && !p.success && !inv.success && !c.success) {
+        setRelatedError('Could not load related records');
+      }
+    });
   }, [id]);
 
   const handleCheckoutClick = async () => {
@@ -133,9 +182,27 @@ export default function TenantDetailPage() {
       setShowCheckoutModal(false);
       window.location.reload();
     } catch {
-      setCheckoutError('Failed to checkout tenant.');
+      setCheckoutError(
+        'Failed to checkout tenant. Unpaid invoices or unresolved payments may be blocking checkout.',
+      );
     } finally {
       setCheckingOut(false);
+    }
+  };
+
+  const handleReinstate = async () => {
+    if (!tenant) return;
+    setReinstating(true);
+    setError('');
+    try {
+      await api.post(`tenants/${tenant._id}/reinstate`, { json: {} }).json();
+      window.location.reload();
+    } catch {
+      setError(
+        'Failed to reinstate. Original bed may be occupied — reassign room/bed on edit first.',
+      );
+    } finally {
+      setReinstating(false);
     }
   };
 
@@ -325,8 +392,142 @@ export default function TenantDetailPage() {
                   <LogOut className="h-4 w-4" /> Check Out
                 </Button>
               )}
+              {!tenant.isActive && (
+                <Button variant="primary" loading={reinstating} onClick={() => void handleReinstate()}>
+                  <RotateCcw className="h-4 w-4" /> Reinstate
+                </Button>
+              )}
             </div>
           </DetailCard>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DetailCard title="Guardians" icon={<Users />}>
+              {relatedError && guardians.length === 0 ? (
+                <p className="text-sm text-[color:var(--color-text-muted)]">{relatedError}</p>
+              ) : guardians.length === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-[color:var(--color-text-muted)]">No guardians linked.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/guardians/new?tenantId=${tenant._id}`)}
+                  >
+                    Add guardian
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {guardians.map((g) => (
+                    <button
+                      key={g._id}
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      onClick={() => router.push(`/guardians/${g._id}`)}
+                    >
+                      <span>
+                        <span className="font-semibold text-[color:var(--color-text-primary)]">
+                          {g.name}
+                        </span>
+                        <span className="ml-2 text-xs capitalize text-[color:var(--color-text-muted)]">
+                          {g.relation ?? ''}
+                        </span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    </button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/guardians?search=`)}
+                  >
+                    View all guardians
+                  </Button>
+                </div>
+              )}
+            </DetailCard>
+
+            <DetailCard title="Recent payments" icon={<CreditCard />}>
+              {recentPayments.length === 0 ? (
+                <p className="text-sm text-[color:var(--color-text-muted)]">No payments yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentPayments.map((p) => (
+                    <button
+                      key={p._id}
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      onClick={() => router.push(`/payments/${p._id}`)}
+                    >
+                      <span className="font-semibold">{formatCurrency(p.amount)}</span>
+                      <StatusBadge
+                        variant={statusToVariant(p.status)}
+                        label={p.status.replace(/_/g, ' ')}
+                      />
+                    </button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/payments/new?tenantId=${tenant._id}`)}
+                  >
+                    Record payment
+                  </Button>
+                </div>
+              )}
+            </DetailCard>
+
+            <DetailCard title="Recent invoices" icon={<Receipt />}>
+              {recentInvoices.length === 0 ? (
+                <p className="text-sm text-[color:var(--color-text-muted)]">No invoices yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentInvoices.map((inv) => (
+                    <button
+                      key={inv._id}
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      onClick={() => router.push(`/invoices/${inv._id}`)}
+                    >
+                      <span>
+                        <span className="font-mono text-xs font-bold">
+                          {inv.invoiceNumber ?? inv._id.slice(-6)}
+                        </span>
+                        <span className="ml-2 text-xs text-[color:var(--color-text-muted)]">
+                          {inv.month ?? ''}
+                        </span>
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(inv.totalAmount ?? 0)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DetailCard>
+
+            <DetailCard title="Recent complaints" icon={<AlertTriangle />}>
+              {recentComplaints.length === 0 ? (
+                <p className="text-sm text-[color:var(--color-text-muted)]">No complaints.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentComplaints.map((c) => (
+                    <button
+                      key={c._id}
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      onClick={() => router.push(`/complaints/${c._id}`)}
+                    >
+                      <span className="truncate font-semibold">{c.title}</span>
+                      <StatusBadge
+                        variant={statusToVariant(c.status)}
+                        label={c.status.replace(/_/g, ' ')}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DetailCard>
+          </div>
 
           {showCheckoutModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

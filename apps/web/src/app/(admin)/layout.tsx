@@ -29,9 +29,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [commandOpen, setCommandOpen] = useState(false);
 
-  // Auth guard
+  // Auth guard — admin web shell only (tenant/guardian/visitor live in Flutter)
   useEffect(() => {
     if (!accessToken) {
+      router.replace('/login');
+      return;
+    }
+
+    if (user && user.role !== 'admin') {
+      logout();
       router.replace('/login');
       return;
     }
@@ -41,6 +47,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .get('auth/me')
         .json<{ success: boolean; data: IUser }>()
         .then((res) => {
+          if (res.data.role !== 'admin') {
+            logout();
+            router.replace('/login');
+            return;
+          }
           login(res.data, accessToken, refreshToken ?? '');
         })
         .catch(async () => {
@@ -58,6 +69,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               success: boolean;
               data: IUser;
             }>();
+            if (meRes.data.role !== 'admin') {
+              logout();
+              router.replace('/login');
+              return;
+            }
             login(meRes.data, newAt, newRt);
           } catch {
             logout();

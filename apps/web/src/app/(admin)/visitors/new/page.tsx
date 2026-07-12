@@ -6,6 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
@@ -17,7 +18,10 @@ import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   visitorName: z.string().min(1, 'Visitor name is required'),
-  visitorPhone: z.string().min(10, 'Phone must be at least 10 digits'),
+  visitorPhone: z
+    .string()
+    .min(10, 'Phone is required')
+    .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   purpose: z.string().min(1, 'Purpose is required'),
   expectedArrival: z.string().min(1, 'Expected arrival is required'),
 });
@@ -40,10 +44,18 @@ export default function NewVisitorPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.post('visitors', { json: data }).json<{ success: boolean }>();
+      await api
+        .post('visitors', {
+          json: {
+            ...data,
+            visitorName: data.visitorName.trim(),
+            visitorPhone: normalizeInPhone(data.visitorPhone),
+          },
+        })
+        .json<{ success: boolean }>();
       router.push('/visitors');
     } catch {
-      setSubmitError('Failed to register visitor. Please try again.');
+      setSubmitError('Failed to register visitor. Check phone format (+91...) and try again.');
     }
   };
 
@@ -92,7 +104,7 @@ export default function NewVisitorPage() {
             />
             <Input
               label="Visitor Phone"
-              placeholder="10-digit number"
+              placeholder="+919876543210"
               error={errors.visitorPhone?.message}
               {...register('visitorPhone')}
             />

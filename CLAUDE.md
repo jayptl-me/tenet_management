@@ -1,86 +1,144 @@
 # AGENTS.md
 
-> Root steering file and instruction set for AI agents.
+> Root steering file for AI agents. ASCII only. No emojis in code, commits, or docs.
 
-This file provides the structural overview, styling patterns, build/test scripts, and rules for coding agents working on this project.
+Load for multi-step work: **[docs/AGENT_CONTEXT.md](docs/AGENT_CONTEXT.md)** and **[docs/PORTAL_CONNECTIVITY.md](docs/PORTAL_CONNECTIVITY.md)**.
 
-## Build and Test Commands
+Code is truth. Specs and audits can lag; re-verify against source before implementing.
 
-All commands are run using the Bun CLI.
+---
 
-- Start development servers (Frontend & Backend):
-  - `bun run dev`
-- Build all projects:
-  - `bun run build`
-- Run linter:
-  - `bun run lint`
-- Run typecheck check:
-  - `bun run typecheck`
-- Run backend unit tests:
-  - `bun run test`
-- Run frontend E2E integration tests:
-  - `bun run test:e2e`
-- Format entire codebase:
-  - `bun run format`
-- Check formatting style:
-  - `bun run format:check`
-- Reset database and seed with configuration:
-  - `bun run seed`
-- Seed database with configuration and sample records:
-  - `bun run seed:sample`
-- Generate SEO files:
-  - `bun run seo`
-- Clean all workspace build directories:
-  - `bun run clean`
-- Android/iOS Flutter Setup (Optional):
-  - `bun run mobile:setup`
-  - `bun run mobile:gen`
+## Product split (non-negotiable)
 
-## Code Style and Conventions
+| Surface | Path | Platforms | Roles |
+|---------|------|-----------|-------|
+| Admin panel | `apps/web` | Browser (Next.js) | `admin` only |
+| Resident portal | `mobile/` | **Flutter Web + iOS + Android** (one app) | `tenant`, `guardian`, visitor desk |
+| API | `apps/api` | Server | JWT for all roles |
 
-1. **Naming Conventions:**
-   - Files and directories must be kebab-case (lowercase with hyphens, e.g. `laundry-slot.ts`).
-   - React components must be PascalCase (e.g. `AttendanceCard.tsx`).
-   - Customs React hooks must prefix with `use` (e.g. `useSSE.ts`).
-2. **Type Safety:** Use TypeScript for all projects. Enforce strict types. Do not use `any`. All API request/response models must be defined inside `packages/types/`.
-3. **Encapsulation:** Export types and models using barrel files (`index.ts`) in types and models directories.
-4. **Logic Separation:** Keep route handlers focused on requests and input validation (using Zod validation schemas). Business logic must be moved to dedicated services (e.g. `apps/api/src/services/`).
+```
+  [Next.js apps/web]  ADMIN ONLY
+         | HTTP + SSE
+         v
+  [apps/api /api/v1]
+         ^
+         | HTTP (Dio)
+  [mobile/ Flutter ONE codebase]
+     +-- web/      Flutter Web
+     +-- ios/      iOS
+     +-- android/  Android
+```
 
-## Project Architecture Map
+Rules:
 
-- `apps/api/` -> Bun + Hono backend service. Uses Mongoose for MongoDB.
-- `apps/web/` -> Next.js 16 + React 19 App Router frontend. Uses Tailwind CSS v4, Zustand, and Ky client.
-- `packages/types/` -> Shared TypeScript declarations and validation schemas between backend and frontend.
-- `render.yaml` -> Production deployment services definitions on Render.
+1. Next.js = admin only. Login rejects tenant/guardian. No resident App Router trees under `apps/web`.
+2. Everyone else = Flutter `mobile/` (Web and iOS and Android). Do not re-add Next tenant/guardian routes.
+3. Clients never import `apps/api` source. HTTP only.
+4. CORS: admin origin + Flutter Web origins (`cors-origins.ts`). Native iOS/Android do not rely on CORS.
+5. No emojis anywhere in the repo content agents write.
 
-## Critical Rules
+---
 
-- **Never direct import:** `@pg/web` must not import any modules from `apps/api/`. Communication must go through HTTP endpoints.
-- **No emojis:** Do not write or commit emojis in comments, commits, code strings, or documentation files. Use standard ASCII connections only.
-- **Re-read before write:** Always view the target file content immediately before modifying it to prevent code overwrite or applying stale versions.
-- **Backward Compatibility:** When changing database schemas, always specify a default value or fallback to preserve support for historical documents.
+## Build and test commands
 
-## Context7 MCP (Library Documentation)
+### Bun (API + admin web)
 
-Context7 MCP is installed and provides up-to-date documentation for React, Next.js, TypeScript, and all dependencies.
+- `bun run dev` -- API + Next admin
+- `bun run build` / `typecheck` / `lint` / `test` / `test:e2e`
+- `bun run seed` / `seed:sample`
+- `bun run format` / `format:check` / `clean` / `seo`
 
-- **Auto-invoke rule:** Always use Context7 when code generation, setup/configuration steps, or library/API documentation is needed. Automatically resolve library IDs and fetch docs without being explicitly asked.
-- Uses `resolve-library-id` and `get-library-docs` tools.
-- Connected via stdio: `npx -y @upstash/context7-mcp`
-- API key is optional (get one at https://context7.com/dashboard for higher rate limits).
+### Flutter (resident portal)
 
-## Detailed Workflows Reference
+- `bun run mobile:setup` -- `flutter pub get` in `mobile/`
+- `bun run mobile:gen` -- codegen if configured
+- Web: `cd mobile && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000/api/v1`
+- iOS: `cd mobile && flutter run -d ios --dart-define=API_BASE_URL=http://localhost:8000/api/v1`
+- Android emulator: `cd mobile && flutter run -d android --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1`
+- `cd mobile && flutter analyze`
 
-For complete guidelines on execution loops, search protocols, quality gates, and database/monorepo policies, refer to the files under `.sixthrules/workflows/`:
+---
 
-- [master.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/master.md) - Turn router and global state machine.
-- [codebase-index.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/codebase-index.md) - Living map of file paths and domains.
-- [automation-loop.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/automation-loop.md) - Core goal-driven R-P-E-V-I loop guidelines.
-- [adaptive-research-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/adaptive-research-protocol.md) - Anti-hallucination research protocols.
-- [sub-agent-orchestration.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/sub-agent-orchestration.md) - Sub-agent spawning rules and contract designs.
-- [multi-pass-batch-planning.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/multi-pass-batch-planning.md) - Breaking complex tasks into passes.
-- [code-quality-verification-gates.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/code-quality-verification-gates.md) - Mandatory checks (Type, Lint, Build, Test).
-- [codebase-index-update-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/codebase-index-update-protocol.md) - How to update codebase-index.md.
-- [monorepo-boundaries.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/monorepo-boundaries.md) - Workspace linkage and boundaries.
-- [database-schema-protocol.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/database-schema-protocol.md) - Mongoose validation safety, indexing, and seeds.
-- [deployment-verification.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/deployment-verification.md) - Render deployment and environment configuration check gates.
+## Architecture map
+
+| Path | Role |
+|------|------|
+| `apps/api/` | Bun + Hono + Mongoose. HTTP contracts. |
+| `apps/web/` | Next.js admin UI only. |
+| `mobile/` | Flutter resident portal (Web + iOS + Android). |
+| `packages/types/` | Shared TS types for API + admin web. |
+| `docs/AGENT_CONTEXT.md` | Full agent context load. |
+| `docs/PORTAL_CONNECTIVITY.md` | Connectivity, CORS, auth, API map. |
+| `docs/audit/` | Gap backlog. |
+| `render.yaml` | Render deploy. |
+
+---
+
+## Backend connectivity (quick)
+
+| Concern | Location |
+|---------|----------|
+| Env | `apps/api/src/lib/env.ts` -- `FRONTEND_URL`, `PORTAL_URL`, `CORS_EXTRA_ORIGINS` |
+| CORS | `apps/api/src/lib/cors-origins.ts`, wired in `apps/api/src/index.ts` |
+| Env template | `apps/api/.env.example` |
+| Flutter API base | `mobile/lib/core/config/env.dart` (`API_BASE_URL`) |
+| Admin API base | `NEXT_PUBLIC_API_URL` in apps/web |
+| Guide | [docs/PORTAL_CONNECTIVITY.md](docs/PORTAL_CONNECTIVITY.md) |
+
+When changing auth, CORS, or portal APIs: update API + env + render.yaml if needed + Flutter data layer + connectivity docs. Smoke health, admin login, Flutter tenant and guardian login (Web and/or iOS).
+
+---
+
+## Code style
+
+1. Files/dirs kebab-case; React components PascalCase; hooks `use*`.
+2. TypeScript strict; no `any`. Shared DTOs in `packages/types/`.
+3. API: Zod in routes; logic in `apps/api/src/services/`.
+4. Flutter: `mobile/lib/features/{auth,tenant,guardian,visitor}` + `mobile/lib/core/`.
+5. Barrel exports for types/models.
+6. Schema changes: defaults for backward compatibility.
+7. No emojis.
+
+---
+
+## Critical rules
+
+- Never direct-import API into web/Flutter.
+- Re-read files immediately before editing.
+- Feature flags may 403 portal routes (`guardianPortalEnabled`, `visitorManagementEnabled`, `laundryEnabled`, etc.).
+- After file tree changes: update `.sixthrules/workflows/codebase-index.md` (and `.claude/rules` mirror).
+
+---
+
+## Task routing
+
+| Topic | Primary work area |
+|-------|-------------------|
+| Admin CRUD / settings / dashboard UI | `apps/web` |
+| Tenant / guardian / visitor UI | `mobile/` only |
+| API / CORS / auth | `apps/api` (+ clients) |
+| Shared TS contracts | `packages/types` then API + web |
+
+---
+
+## Workflows
+
+`.sixthrules/workflows/` (mirrored under `.claude/rules/`):
+
+- master.md
+- codebase-index.md
+- monorepo-boundaries.md
+- automation-loop.md
+- adaptive-research-protocol.md
+- code-quality-verification-gates.md
+- database-schema-protocol.md
+- deployment-verification.md
+
+---
+
+## Definition of done (minimum)
+
+1. Portal boundaries respected (admin Next / residents Flutter).
+2. `bun run typecheck` and lint green for JS changes; `flutter analyze` for Flutter changes.
+3. No emojis introduced.
+4. Connectivity and agent docs updated when architecture or CORS changes.

@@ -59,7 +59,19 @@ export default function NewAssetPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.post('assets', { json: data }).json<{ success: boolean }>();
+      const payload: Record<string, unknown> = {
+        name: data.name,
+        category: data.category,
+        location: data.location,
+        quantity: data.quantity,
+        lowStockThreshold: data.lowStockThreshold,
+        status: data.status,
+        notes: data.notes || undefined,
+      };
+      if (data.purchasedDate) {
+        payload.purchasedDate = new Date(`${data.purchasedDate}T00:00:00.000Z`).toISOString();
+      }
+      await api.post('assets', { json: payload }).json<{ success: boolean }>();
       router.push('/assets');
     } catch {
       setSubmitError('Failed to create asset. Please try again.');

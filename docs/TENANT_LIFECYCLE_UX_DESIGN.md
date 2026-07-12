@@ -144,8 +144,8 @@ Timeline of ALL events:
 ### 3. ServiceHealthWidget — Room-level quick-view status dots
 
 ```
-Room 201:     [🟢 WiFi] [🔴 Power] [🟢 Water] [🟢 Geyser]
-Room 202:     [🟢 WiFi] [🟢 Power] [🟢 Water] [🟢 Geyser]
+Room 201:     [ WiFi] [ Power] [ Water] [ Geyser]
+Room 202:     [ WiFi] [ Power] [ Water] [ Geyser]
 ```
 
 ### 4. ComplaintQuickCreate — One-click complaint from service status

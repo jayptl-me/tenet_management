@@ -20,6 +20,7 @@ Follow this checklist prior to pushing changes:
 1. Verify that all environment variables used in `apps/api/src/lib/env.ts` are documented in [apps/api/.env.example](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/.env.example).
 2. Verify that all public environment variables used in `apps/web/` are documented in [apps/web/.env.example](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/.env.example).
 3. If new environment configurations are introduced, check that they are added to the services configuration in [render.yaml](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/render.yaml).
+4. Multi-client CORS: production must set `FRONTEND_URL` (admin) and `PORTAL_URL` (Flutter web) when the portal is hosted. See [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md).
 
 ### Phase 2: Local Production Build Emulation
 

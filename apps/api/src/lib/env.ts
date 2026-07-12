@@ -6,7 +6,26 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+  /** Admin Next.js app origin (password reset links, admin CORS). */
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  /**
+   * Flutter portal origin (tenant/guardian/visitor) for production CORS.
+   * In development, any localhost origin is also allowed (see cors-origins.ts).
+   */
+  PORTAL_URL: z.string().url().optional(),
+  /**
+   * Comma-separated extra CORS origins (e.g. preview deploys).
+   * Example: https://preview.example.com,https://portal-staging.example.com
+   */
+  CORS_EXTRA_ORIGINS: z
+    .string()
+    .default('')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
   CLOUDINARY_CLOUD_NAME: z.string().min(1).default('demo'),
   CLOUDINARY_API_KEY: z.string().min(1).default('demo'),
   CLOUDINARY_API_SECRET: z.string().min(1).default('demo'),

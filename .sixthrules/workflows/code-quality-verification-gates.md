@@ -85,7 +85,9 @@ Every code change must pass through these quality gates before the agent can req
 
 Before submitting any work to the user, the agent must confirm:
 
-1. `bun run typecheck` exits with code 0.
-2. `bun run lint` exits with code 0.
-3. `bun run build` exits with code 0.
-4. All modified files are documented in [codebase-index.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/codebase-index.md).
+1. For JS/TS changes: `bun run typecheck` and `bun run lint` exit 0; build when production-sensitive.
+2. For Flutter (`mobile/`) changes: `cd mobile && flutter analyze` exits 0.
+3. Portal boundaries held: admin UI only in `apps/web`; resident UI only in `mobile/` (Flutter Web + iOS + Android).
+4. No emojis introduced in code or docs.
+5. Structural file changes documented in [codebase-index.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/.sixthrules/workflows/codebase-index.md).
+6. Connectivity/env changes reflected in [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md) and `.env.example` / `render.yaml` when needed.

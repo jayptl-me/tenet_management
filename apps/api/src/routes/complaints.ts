@@ -12,6 +12,8 @@ const complaints = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
 const createComplaintSchema = z.strictObject({
+  /** Required when an admin files on behalf of a tenant. Ignored for tenant role. */
+  tenantId: z.string().min(1).optional(),
   roomId: z.string().min(1, 'Room ID is required'),
   category: z.string().min(1, 'Category is required').max(50),
   title: z
@@ -25,9 +27,60 @@ const createComplaintSchema = z.strictObject({
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
 });
 
+/** Map lean complaint so FE can use tenant.user / tenant.room consistently. */
+function mapComplaint(doc: Record<string, unknown>) {
+  const tenantRaw = doc.tenant;
+  const tenant =
+    tenantRaw && typeof tenantRaw === 'object'
+      ? (tenantRaw as Record<string, unknown>)
+      : undefined;
+  const userRaw = tenant?.userId;
+  const user =
+    userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;
+  const roomFromTenant = tenant?.roomId;
+  const roomNested =
+    roomFromTenant && typeof roomFromTenant === 'object'
+      ? (roomFromTenant as Record<string, unknown>)
+      : undefined;
+  const roomRaw = doc.room;
+  const room =
+    roomRaw && typeof roomRaw === 'object' ? (roomRaw as Record<string, unknown>) : undefined;
+
+  return {
+    ...doc,
+    tenant: tenant
+      ? {
+          _id: String(tenant._id ?? ''),
+          user: user
+            ? {
+                _id: String(user._id ?? ''),
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+              }
+            : undefined,
+          room: roomNested
+            ? { _id: String(roomNested._id ?? ''), roomNumber: roomNested.roomNumber }
+            : room
+              ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber }
+              : undefined,
+        }
+      : undefined,
+  };
+}
+
 const updateStatusSchema = z.strictObject({
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']),
   adminNotes: z.string().optional(),
+});
+
+const updateComplaintSchema = z.strictObject({
+  title: z.string().min(5).max(200).optional(),
+  description: z.string().min(10).max(2000).optional(),
+  category: z.string().min(1).max(50).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
+  adminNotes: z.string().max(2000).optional(),
 });
 
 // ── GET /complaints/stats ───────────────────────────────
@@ -73,7 +126,8 @@ complaints.get('/my', authGuard, tenantOnly, async (c) => {
 // ── POST /complaints ────────────────────────────────────
 complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async (c) => {
   const body = c.req.valid('json');
-  const userId = c.get('user').sub;
+  const authUser = c.get('user');
+  const userId = authUser.sub;
 
   // Validate room exists
   const roomId = parseId(body.roomId);
@@ -82,22 +136,37 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
   const room = await Room.findById(roomId).lean();
   if (!room) return notFound(c, 'Room');
 
-  // Find tenant doc for this user
-  const tenant = await Tenant.findOne(safeFilter({ userId })).lean();
-  if (!tenant) {
-    return badRequest(
-      c,
-      'No tenant profile found for this user. Only tenants can create complaints.',
-      'TENANT_REQUIRED',
-    );
+  // Resolve tenant: admin may pass tenantId; tenants always use their own profile
+  let tenant: { _id: unknown };
+  if (authUser.role === 'admin') {
+    if (!body.tenantId) {
+      return badRequest(c, 'Tenant is required when filing a complaint as admin.', 'TENANT_REQUIRED');
+    }
+    const tid = parseId(body.tenantId);
+    if (!tid) return badRequest(c, 'Invalid tenant ID');
+    const adminTenant = await Tenant.findById(tid).lean();
+    if (!adminTenant) return notFound(c, 'Tenant');
+    tenant = adminTenant;
+  } else {
+    const selfTenant = await Tenant.findOne(safeFilter({ userId })).lean();
+    if (!selfTenant) {
+      return badRequest(
+        c,
+        'No tenant profile found for this user. Only tenants can create complaints.',
+        'TENANT_REQUIRED',
+      );
+    }
+    tenant = selfTenant;
   }
 
   // Cooldown: prevent duplicate complaints in same category within 30 minutes
-  const recentCount = await Complaint.countDocuments({
-    tenantId: tenant._id,
-    category: body.category,
-    createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
-  });
+  const recentCount = await Complaint.countDocuments(
+    safeFilter({
+      tenantId: tenant._id,
+      category: body.category,
+      createdAt: { $gte: new Date(Date.now() - 30 * 60 * 1000) },
+    }),
+  );
   if (recentCount > 0) {
     return c.json(
       {
@@ -164,15 +233,18 @@ complaints.get('/', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate('tenant')
-      .populate('room')
+      .populate([
+        { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
+        { path: 'tenant', populate: { path: 'roomId', select: 'roomNumber' } },
+        { path: 'room', select: 'roomNumber' },
+      ])
       .lean(),
     Complaint.countDocuments(filter as Record<string, unknown>),
   ]);
 
   return c.json({
     success: true,
-    data,
+    data: (data as unknown as Record<string, unknown>[]).map(mapComplaint),
     meta: {
       total,
       page,
@@ -187,10 +259,19 @@ complaints.get('/:id', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid complaint ID');
 
-  const complaint = await Complaint.findById(id).populate('tenant').populate('room').lean();
+  const complaint = await Complaint.findById(id)
+    .populate([
+      { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
+      { path: 'tenant', populate: { path: 'roomId', select: 'roomNumber' } },
+      { path: 'room', select: 'roomNumber' },
+    ])
+    .lean();
   if (!complaint) return notFound(c, 'Complaint');
 
-  return c.json({ success: true, data: complaint });
+  return c.json({
+    success: true,
+    data: mapComplaint(complaint as unknown as Record<string, unknown>),
+  });
 });
 
 // ── PUT /complaints/:id/status ──────────────────────────
@@ -212,6 +293,34 @@ complaints.put(
     if (body.adminNotes !== undefined) {
       updateData.adminNotes = body.adminNotes;
     }
+
+    if (body.status === 'resolved') {
+      updateData.resolvedAt = new Date();
+    }
+
+    const complaint = await Complaint.findByIdAndUpdate(id, updateData, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+
+    if (!complaint) return notFound(c, 'Complaint');
+
+    return c.json({ success: true, data: complaint });
+  },
+);
+
+// ── PUT /complaints/:id — full admin edit ────────────────
+complaints.put(
+  '/:id',
+  authGuard,
+  adminOnly,
+  zValidator('json', updateComplaintSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid complaint ID');
+
+    const body = c.req.valid('json');
+    const updateData: Record<string, unknown> = { ...body };
 
     if (body.status === 'resolved') {
       updateData.resolvedAt = new Date();

@@ -18,7 +18,7 @@ import { FormGrid } from '@/components/ui/FormSection';
 const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   roomId: z.string().min(1, 'Room is required'),
-  title: z.string().min(3, 'Title must be at least 3 characters'),
+  title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   category: z.enum([
     'wifi',
@@ -171,7 +171,19 @@ function ComplaintForm() {
   const onSubmit = async (data: ComplaintFormData) => {
     setIsSubmitting(true);
     try {
-      await api.post('complaints', { json: data }).json();
+      // Whitelist body to match API createComplaintSchema (tenantId required for admin)
+      await api
+        .post('complaints', {
+          json: {
+            tenantId: data.tenantId,
+            roomId: data.roomId,
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            priority: data.priority,
+          },
+        })
+        .json();
       toast.success('Complaint submitted successfully');
       router.push('/complaints');
     } catch {

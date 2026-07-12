@@ -48,3 +48,20 @@ export function invoiceIdOf(
   if (typeof invoice === 'string') return invoice;
   return String(invoice._id ?? invoice.id ?? '');
 }
+
+/** Extract HH:mm from ISO datetime or pass through if already HH:mm. */
+export function toTimeInputValue(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const s = String(value);
+  if (/^\d{2}:\d{2}$/.test(s)) return s;
+  if (/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0, 5);
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return '';
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  } catch {
+    return '';
+  }
+}

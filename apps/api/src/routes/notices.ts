@@ -5,8 +5,10 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
 import { NoticePost } from '../models/noticePost.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 const notices = new Hono();
+notices.use('*', requireFeature('noticeBoardEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
 const createNoticeSchema = z.strictObject({
@@ -21,17 +23,60 @@ const createNoticeSchema = z.strictObject({
     .max(5000, 'Content cannot exceed 5000 characters')
     .trim(),
   pinned: z.boolean().optional().default(false),
-  targetType: z.enum(['all', 'floor', 'individual']),
+  targetType: z.enum(['all', 'floor', 'room', 'individual']),
   targetIds: z.array(z.string()).optional().default([]),
 });
 
-const updateNoticeSchema = createNoticeSchema.partial();
+const updateNoticeSchema = z.strictObject({
+  title: createNoticeSchema.shape.title.optional(),
+  content: createNoticeSchema.shape.content.optional(),
+  pinned: z.boolean().optional(),
+  targetType: z.enum(['all', 'floor', 'room', 'individual']).optional(),
+  targetIds: z.array(z.string()).optional(),
+});
 
 // ── GET /notices ────────────────────────────────────────
 notices.get('/', authGuard, async (c) => {
   const user = c.get('user');
   const userFloorId = user.floorId;
 
+  // Admin list with pagination (admin UI uses this endpoint)
+  if (user.role === 'admin') {
+    const pagination = parsePagination(c);
+    const targetType = c.req.query('targetType');
+    const search = c.req.query('search');
+
+    const filter: Record<string, unknown> = {};
+    if (targetType && ['all', 'floor', 'room', 'individual'].includes(targetType)) {
+      filter.targetType = targetType;
+    }
+    if (search) {
+      filter.title = { $regex: search, $options: 'i' };
+    }
+
+    const [data, total] = await Promise.all([
+      NoticePost.find(filter)
+        .sort({ pinned: -1, createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .populate('author', 'name email')
+        .lean(),
+      NoticePost.countDocuments(filter),
+    ]);
+
+    return c.json({
+      success: true,
+      data,
+      meta: {
+        total,
+        page: pagination.page,
+        limit: pagination.limit,
+        totalPages: Math.ceil(total / pagination.limit),
+      },
+    });
+  }
+
+  // Tenant/guardian feed
   const orConditions: Record<string, unknown>[] = [{ targetType: 'all' }];
 
   if (userFloorId) {
@@ -61,7 +106,7 @@ notices.get('/admin', authGuard, adminOnly, async (c) => {
   const targetType = c.req.query('targetType');
 
   const filter: Record<string, unknown> = {};
-  if (targetType && ['all', 'floor', 'individual'].includes(targetType)) {
+  if (targetType && ['all', 'floor', 'room', 'individual'].includes(targetType)) {
     filter.targetType = targetType;
   }
 
@@ -85,6 +130,17 @@ notices.get('/admin', authGuard, adminOnly, async (c) => {
       totalPages: Math.ceil(total / pagination.limit),
     },
   });
+});
+
+// ── GET /notices/:id ────────────────────────────────────
+notices.get('/:id', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid notice ID');
+
+  const notice = await NoticePost.findById(id).populate('author', 'name email').lean();
+  if (!notice) return notFound(c, 'Notice');
+
+  return c.json({ success: true, data: notice });
 });
 
 // ── POST /notices ───────────────────────────────────────

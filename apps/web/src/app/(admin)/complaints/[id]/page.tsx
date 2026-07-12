@@ -31,7 +31,7 @@ interface ComplaintDetail {
   };
   title: string;
   description: string;
-  severity: string;
+  priority: string;
   status: string;
   category: string;
   adminNotes?: string;
@@ -48,9 +48,9 @@ const STATUS_OPTIONS = [
   { value: 'dismissed', label: 'Dismissed' },
 ];
 
-function getSeverityVariant(severity: string): 'danger' | 'warning' | 'info' {
-  switch (severity) {
-    case 'critical':
+function getPriorityVariant(priority: string): 'danger' | 'warning' | 'info' {
+  switch (priority) {
+    case 'urgent':
       return 'danger';
     case 'high':
       return 'warning';
@@ -153,7 +153,7 @@ export default function ComplaintDetailPage() {
     );
   }
 
-  const severityVariant = complaint ? getSeverityVariant(complaint.severity) : 'info';
+  const priorityVariant = complaint ? getPriorityVariant(complaint.priority) : 'info';
   const statusVariant = complaint ? statusToVariant(complaint.status) : 'neutral';
 
   return (
@@ -182,7 +182,7 @@ export default function ComplaintDetailPage() {
                 />
                 <DetailRow
                   label="Severity"
-                  value={<StatusBadge variant={severityVariant} label={complaint.severity} />}
+                  value={<StatusBadge variant={priorityVariant} label={complaint.priority} />}
                 />
                 <DetailRow
                   label="Status"

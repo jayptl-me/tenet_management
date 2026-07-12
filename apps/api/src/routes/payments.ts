@@ -596,6 +596,44 @@ payments.post(
   },
 );
 
+/** Map lean payment so FE can use tenant.user / invoiceNumber consistently. */
+function mapPayment(doc: Record<string, unknown>) {
+  const tenantRaw = doc.tenantId;
+  const tenant =
+    tenantRaw && typeof tenantRaw === 'object'
+      ? (tenantRaw as Record<string, unknown>)
+      : undefined;
+  const userRaw = tenant?.userId;
+  const user =
+    userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;
+  const roomRaw = tenant?.roomId;
+  const room =
+    roomRaw && typeof roomRaw === 'object' ? (roomRaw as Record<string, unknown>) : undefined;
+  const invRaw = doc.invoiceId;
+  const inv = invRaw && typeof invRaw === 'object' ? (invRaw as Record<string, unknown>) : undefined;
+
+  return {
+    ...doc,
+    tenant: tenant
+      ? {
+          _id: String(tenant._id ?? ''),
+          user: user
+            ? {
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+              }
+            : undefined,
+          room: room
+            ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber }
+            : undefined,
+        }
+      : undefined,
+    invoiceId: inv ? String(inv._id ?? '') : invRaw ? String(invRaw) : undefined,
+    invoiceNumber: inv?.invoiceNumber as string | undefined,
+  };
+}
+
 // ── GET /payments/pending-verification ──────────────────
 payments.get('/pending-verification', authGuard, adminOnly, async (c) => {
   const { page, limit, skip } = parsePagination(c);
@@ -606,6 +644,7 @@ payments.get('/pending-verification', authGuard, adminOnly, async (c) => {
       .skip(skip)
       .limit(limit)
       .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
       .populate('invoiceId')
       .lean() as unknown,
     paymentCountDocs(safeFilter({ status: 'pending_verification' })),
@@ -613,7 +652,7 @@ payments.get('/pending-verification', authGuard, adminOnly, async (c) => {
 
   return c.json({
     success: true,
-    data,
+    data: (data as Record<string, unknown>[]).map(mapPayment),
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
@@ -654,6 +693,7 @@ payments.get('/:id', authGuard, async (c) => {
 
   const paymentRaw = await (Payment.findById(id)
     .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
     .populate('invoiceId')
     .lean() as unknown);
 
@@ -673,7 +713,7 @@ payments.get('/:id', authGuard, async (c) => {
     }
   }
 
-  return c.json({ success: true, data: payment });
+  return c.json({ success: true, data: mapPayment(payment) });
 });
 
 // ── PUT /payments/:id ──────────────────────────────────

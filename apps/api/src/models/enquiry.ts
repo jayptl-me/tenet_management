@@ -9,6 +9,7 @@ export interface IEnquiryDocument extends Document {
   message?: string;
   status: string;
   source: string;
+  notes?: string;
   createdAt: Date;
 }
 
@@ -48,8 +49,14 @@ const enquirySchema = new Schema<IEnquiryDocument>(
     },
     source: {
       type: String,
-      enum: ['landing_page', 'referral', 'other'],
+      enum: ['landing_page', 'referral', 'walk_in', 'phone_call', 'other'],
       default: 'landing_page',
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Notes cannot exceed 1000 characters'],
+      default: '',
     },
   },
   {

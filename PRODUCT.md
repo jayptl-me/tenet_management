@@ -6,9 +6,11 @@ product
 
 ## Users
 
-PG (paying guest) accommodation administrators and staff. They manage daily operations across 15+ domains: tenant lifecycles, room assignments, payments, invoices, complaints, meals, attendance, visitors, laundry, notices, enquiries, and more. They work in shifts, often in a busy physical environment, and need the tool to be fast, clear, and error-resistant. The primary job: keep the PG running smoothly without the tool getting in the way.
+**Primary:** PG (paying guest) administrators. They use the **Next.js admin web app** (`apps/web`) for operations across tenants, rooms, finance, facilities, and settings. Fast, clear, error-resistant admin workflows are the core surface.
 
-Secondary users include tenants (via public-facing pages for complaints, meal feedback, and enquiries) but the admin panel is the core surface.
+**Secondary:** Tenants and guardians. They use the **Flutter resident portal** (`mobile/`), shipped as **Flutter Web and iOS** (and Android) -- one codebase. Tenant flows include invoices, payments/UTR, complaints, visitors, laundry, meals, notices. Guardians use ward overview and attendance. Visitor desk is tenant-owned inside Flutter, not a separate admin web module.
+
+**Not in scope for Next.js:** Tenant, guardian, or visitor App Router portals. Those live only under `mobile/`.
 
 ## Product Purpose
 

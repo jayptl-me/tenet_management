@@ -20,7 +20,7 @@ const schema = z.object({
   slotDate: z.string().min(1, 'Date is required'),
   slotTime: z.string().min(1, 'Time is required'),
   items: z.coerce.number().min(0, 'Must be >= 0').optional(),
-  status: z.enum(['booked', 'completed', 'cancelled', 'maintenance']),
+  status: z.enum(['booked', 'confirmed', 'completed', 'cancelled']),
   notes: z.string().optional(),
 });
 
@@ -28,9 +28,9 @@ type FormData = z.infer<typeof schema>;
 
 const STATUS_OPTIONS = [
   { value: 'booked', label: 'Booked' },
+  { value: 'confirmed', label: 'Confirmed' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
-  { value: 'maintenance', label: 'Maintenance' },
 ];
 
 interface LaundryDetail {

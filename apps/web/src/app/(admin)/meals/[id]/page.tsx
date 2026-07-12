@@ -8,6 +8,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { StarRating } from '@/components/ui/StarRating';
 
 interface MealFeedbackDetail {
   _id: string;
@@ -93,13 +94,8 @@ export default function MealFeedbackDetailPage() {
         <div className="space-y-6">
           <DetailCard title="Rating" icon={<Star />}>
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-9 w-9 ${i < feedback.rating ? 'fill-[color:var(--color-warning-500)] text-[color:var(--color-warning-500)]' : 'text-[color:var(--color-surface-300)]'}`}
-                  />
-                ))}
+              <div className="flex items-center justify-center">
+                <StarRating value={feedback.rating} readonly size="lg" />
               </div>
               <p className="mt-2 text-xl font-bold text-[color:var(--color-text-primary)]">
                 {feedback.rating} / 5

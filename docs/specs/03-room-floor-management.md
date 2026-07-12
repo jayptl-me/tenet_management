@@ -44,7 +44,7 @@ The beds array has a custom validator: `beds.length === sharingType`. This means
 
 Generates the correct beds array for a given sharing type, all marked `isOccupied: false, tenantId: null`.
 
-### ⚠️ CRITICAL: Sharing Type Change Bug (FIXED)
+### CRITICAL: Sharing Type Change Bug (FIXED)
 
 **The bug**: When editing a room's `sharingType`, the old PUT handler used `findByIdAndUpdate` with the partial body, which overwrote `sharingType` without regenerating the beds array. This caused the Mongoose validator to fail: `beds.length !== sharingType`.
 
