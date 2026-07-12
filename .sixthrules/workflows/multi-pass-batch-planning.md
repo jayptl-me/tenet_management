@@ -6,36 +6,38 @@ Complex tasks that cross multiple package boundaries (e.g. types, API, and web) 
 
 ## Pass-Based Execution Model
 
-For full-stack features in this monorepo, execute changes in the following sequence:
+For full-stack features, choose the client surface first (see docs/AGENT_CONTEXT.md):
+
+- **Admin features** -> Types, DB, API, then `apps/web` only.
+- **Resident features** -> Types (if shared), DB, API, then `mobile/` Flutter only (Web + iOS + Android). Never resident UI in Next.js.
 
 ```
    +---------------------------------------+
-   |            PASS 1: Types              |  <-- Define shared types in packages/types/src
+   |            PASS 1: Types              |  <-- packages/types when API+admin share contracts
    +---------------------------------------+
                        |
                        v
    +---------------------------------------+
-   |           PASS 2: Database            |  <-- Update models in apps/api/src/models
+   |           PASS 2: Database            |  <-- apps/api/src/models
    +---------------------------------------+
                        |
                        v
    +---------------------------------------+
-   |             PASS 3: API               |  <-- Create Hono routes & services in apps/api
+   |             PASS 3: API               |  <-- Hono routes and services
    +---------------------------------------+
                        |
+          +------------+------------+
+          v                         v
+   +------------------+    +------------------+
+   | PASS 4a: Admin   |    | PASS 4b: Flutter |
+   | apps/web         |    | mobile/          |
+   | (admin only)     |    | Web+iOS+Android  |
+   +------------------+    +------------------+
+          |                         |
+          +------------+------------+
                        v
    +---------------------------------------+
-   |            PASS 4: Frontend           |  <-- Build UI components & hooks in apps/web
-   +---------------------------------------+
-                       |
-                       v
-   +---------------------------------------+
-   |          PASS 5: Integration          |  <-- Wire pages, navigation, and API calls
-   +---------------------------------------+
-                       |
-                       v
-   +---------------------------------------+
-   |         PASS 6: Verification          |  <-- Run E2E tests, typechecks, and builds
+   |         PASS 5: Verification          |  <-- typecheck/lint; flutter analyze; smoke
    +---------------------------------------+
 ```
 

@@ -2,7 +2,7 @@
 
 > **Status:** IMPLEMENTED — Phases A-D complete, 458 var() token references across codebase
 > **Last updated:** 08/06/2026
-> **Build:** ✅ `bun run build` exits 0 for all 36 routes
+> **Build:** `bun run build` exits 0 for all 36 routes
 > **Scope:** Every component, every page, responsive for all screen sizes
 > **Goal:** Brand-adaptable UI with 4 preset themes + full CSS custom property override system
 >
@@ -15,7 +15,7 @@
 > - **React 19.2.4**, **Next.js 16.2.7**, **ky** for API calls, **zustand** for state
 > - **CSS-only cascade approach confirmed viable** — Tailwind v4 `@theme` (non-inline) emits `var(--color-brand-500)` references; CSS custom properties cascade on `data-theme` attribute; utilities resolve at runtime
 >
-> **⚠️ CRITICAL: `@theme` vs `@theme inline` — THE KEY ARCHITECTURAL DECISION**
+> **CRITICAL: `@theme` vs `@theme inline` -- THE KEY ARCHITECTURAL DECISION**
 >
 > The current `globals.css` uses `@theme inline`. This **must be changed to `@theme`** (non-inline) for multi-theme to function. Here's why:
 >
@@ -783,7 +783,7 @@ apps/web/src/
 
 ### 6.3 Tailwind v4 Integration — The Correct Approach
 
-**⚠️ CRITICAL: Use `@theme` (NOT `@theme inline`) for all tokens that need to flip across themes.**
+**CRITICAL: Use `@theme` (NOT `@theme inline`) for all tokens that need to flip across themes.**
 
 The approach has two layers:
 
@@ -839,7 +839,7 @@ The approach has two layers:
 @import './themes/soft-ui.css';
 @import './themes/saas.css';
 
-/* ⚠️ Use @theme (non-inline) so Tailwind emits var(--color-brand-500) instead of #f59e0b */
+/* Use @theme (non-inline) so Tailwind emits var(--color-brand-500) instead of #f59e0b */
 @theme {
   --color-brand-50: var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);
@@ -904,7 +904,7 @@ The approach has two layers:
 
 **How this differs from the original (incorrect) approach:**
 
-- ❌ Old: `@theme inline` everywhere → hex values baked into utilities → theme switching silently fails
+-  Old: `@theme inline` everywhere → hex values baked into utilities → theme switching silently fails
 
 ### 6.4 Component Migration Plan
 

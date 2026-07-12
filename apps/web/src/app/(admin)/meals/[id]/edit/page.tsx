@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Utensils, MessageSquare, Star } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Utensils, MessageSquare } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -15,12 +14,17 @@ import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { StarRating } from '@/components/ui/StarRating';
+import { CategoryChipSelect } from '@/components/ui/CategoryChipSelect';
 
 const schema = z.object({
   mealType: z.enum(['breakfast', 'lunch', 'dinner']),
   rating: z.coerce.number().min(1, 'Rating must be at least 1').max(5, 'Rating cannot exceed 5'),
   comment: z.string().optional(),
   status: z.enum(['submitted', 'acknowledged', 'actioned']),
+  categories: z
+    .array(z.enum(['taste', 'variety', 'quantity', 'cleanliness', 'service']))
+    .optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -44,6 +48,7 @@ interface MealFeedbackDetail {
   comment?: string;
   status: string;
   date?: string;
+  categories?: string[];
   tenantId?: {
     _id?: string;
     userId?: { name?: string };
@@ -73,9 +78,8 @@ export default function EditMealFeedbackPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { rating: 3, comment: '', categories: [] },
   });
-
-  const ratingWatch = useWatch({ control, name: 'rating' });
 
   useEffect(() => {
     if (!id) return;
@@ -89,6 +93,7 @@ export default function EditMealFeedbackPage() {
           rating: res.data.rating ?? 3,
           comment: res.data.comment ?? '',
           status: (res.data.status as FormData['status']) ?? 'submitted',
+          categories: (res.data.categories as FormData['categories']) ?? [],
         });
         setIsLoading(false);
       })
@@ -161,29 +166,22 @@ export default function EditMealFeedbackPage() {
                 <label className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
                   Rating
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={clsx(
-                          'h-5 w-5',
-                          star <= (ratingWatch ?? 0)
-                            ? 'fill-[color:var(--color-warning-500)] text-[color:var(--color-warning-500)]'
-                            : 'text-[color:var(--color-surface-300)]',
-                        )}
+                <Controller
+                  name="rating"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <StarRating
+                        value={field.value ?? 0}
+                        onChange={field.onChange}
+                        size="lg"
                       />
-                    ))}
-                  </div>
-                  <input
-                    type="number"
-                    min={1}
-                    max={5}
-                    step={1}
-                    className="w-16 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2 py-1.5 text-center text-sm font-bold text-[color:var(--color-text-primary)]"
-                    {...register('rating', { valueAsNumber: true })}
-                  />
-                </div>
+                      <span className="font-display text-sm font-bold text-[color:var(--color-warning-500)]">
+                        {field.value ?? 0}/5
+                      </span>
+                    </div>
+                  )}
+                />
                 {errors.rating?.message && (
                   <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">
                     {errors.rating.message}
@@ -197,6 +195,20 @@ export default function EditMealFeedbackPage() {
                 leftIcon={<MessageSquare className="h-4 w-4" />}
                 {...register('status')}
               />
+              <FormFullWidth>
+                <Controller
+                  name="categories"
+                  control={control}
+                  render={({ field }) => (
+                    <CategoryChipSelect
+                      label="Categories"
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      error={err.categories?.message}
+                    />
+                  )}
+                />
+              </FormFullWidth>
               <FormFullWidth>
                 <Textarea
                   label="Comment"

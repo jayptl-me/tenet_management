@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Package, MapPin, Hash, Calendar, Wrench, User, FileText, Pencil } from 'lucide-react';
+import { Package, MapPin, Calendar, Wrench, FileText, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -13,18 +13,12 @@ interface AssetDetail {
   _id: string;
   name: string;
   category: string;
-  serialNumber?: string;
   location?: string;
-  assignedTo?: {
-    _id: string;
-    user?: { _id: string; name: string };
-    room?: { _id: string; roomNumber: string };
-  };
   status: string;
   quantity: number;
   lowStockThreshold?: number;
-  purchaseDate?: string;
-  lastServiceDate?: string;
+  purchasedDate?: string;
+  lastServicedDate?: string;
   nextServiceDate?: string;
   notes?: string;
   createdAt: string;
@@ -130,15 +124,6 @@ export default function AssetDetailPage() {
                   value={<span className="capitalize">{asset.category}</span>}
                 />
                 <DetailRow
-                  label="Serial Number"
-                  value={
-                    <span className="inline-flex items-center gap-1">
-                      <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                      {asset.serialNumber ?? '—'}
-                    </span>
-                  }
-                />
-                <DetailRow
                   label="Location"
                   value={
                     <span className="inline-flex items-center gap-1">
@@ -150,7 +135,7 @@ export default function AssetDetailPage() {
               </DetailList>
             </DetailCard>
 
-            <DetailCard title="Status & Assignment" icon={<User />}>
+            <DetailCard title="Inventory" icon={<Package />}>
               <DetailList>
                 <DetailRow
                   label="Status"
@@ -165,21 +150,6 @@ export default function AssetDetailPage() {
                 {asset.lowStockThreshold != null && (
                   <DetailRow label="Low Stock Threshold" value={asset.lowStockThreshold} />
                 )}
-                {asset.assignedTo && (
-                  <DetailRow
-                    label="Assigned To"
-                    value={
-                      <span className="flex flex-col items-end gap-0.5">
-                        <span>{asset.assignedTo.user?.name ?? 'N/A'}</span>
-                        {asset.assignedTo.room && (
-                          <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                            Room {asset.assignedTo.room.roomNumber}
-                          </span>
-                        )}
-                      </span>
-                    }
-                  />
-                )}
               </DetailList>
             </DetailCard>
           </div>
@@ -192,7 +162,7 @@ export default function AssetDetailPage() {
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
                   <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                  {formatDate(asset.purchaseDate)}
+                  {formatDate(asset.purchasedDate)}
                 </p>
               </div>
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
@@ -201,7 +171,7 @@ export default function AssetDetailPage() {
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
                   <Wrench className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                  {formatDate(asset.lastServiceDate)}
+                  {formatDate(asset.lastServicedDate)}
                 </p>
               </div>
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">

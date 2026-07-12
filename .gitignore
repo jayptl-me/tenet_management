@@ -13,6 +13,17 @@ coverage/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+.pub-cache/
+.pub/
+**/doc/api/
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/android/app/build/
 *.jks
 *.keystore
 *.p8
@@ -27,8 +38,8 @@ bun.lock
 bun.lockb
 playwright-report/
 test-results/
+.claude/settings.json
 .claude/settings.local.json
 .claude/skills/monster-mode/
 .claude.json
-.claude/settings.local.json
 .claude/skills/monster-mode/

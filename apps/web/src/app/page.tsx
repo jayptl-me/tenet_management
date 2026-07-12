@@ -27,6 +27,7 @@ import {
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { normalizeInPhone } from '@/lib/phone';
 import { fadeInUp, staggerContainer, fadeScaleIn } from '@/lib/animations';
 import type { IAppConfigPublic } from '@pg/types';
 
@@ -226,19 +227,39 @@ export default function LandingPage() {
     setIsSubmitting(true);
     setFormError('');
     const form = e.currentTarget;
-    const data = {
-      name: (form.elements.namedItem('name') as HTMLInputElement).value,
-      phone: (form.elements.namedItem('phone') as HTMLInputElement).value,
-      email: (form.elements.namedItem('email') as HTMLInputElement).value,
-      message: (form.elements.namedItem('message') as HTMLTextAreaElement).value,
-      source: 'website',
+    const name = (form.elements.namedItem('name') as HTMLInputElement).value.trim();
+    const phoneRaw = (form.elements.namedItem('phone') as HTMLInputElement).value;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value.trim();
+    const message = (form.elements.namedItem('message') as HTMLTextAreaElement).value;
+    const sharingEl = form.elements.namedItem('preferredSharing') as HTMLSelectElement | null;
+    const preferredSharing = (sharingEl?.value || '2') as '2' | '3' | '4' | 'single';
+    const phone = normalizeInPhone(phoneRaw);
+
+    if (!/^\+91[6-9]\d{9}$/.test(phone)) {
+      setFormError('Please enter a valid 10-digit Indian mobile number.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (name.length < 2) {
+      setFormError('Please enter your full name.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const payload: Record<string, string> = {
+      name,
+      phone,
+      preferredSharing,
+      message: message || '',
     };
+    if (email) payload.email = email;
+
     try {
       const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
       const res = await fetch(`${API_BASE}/enquiries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to submit');
       setFormSent(true);
@@ -815,6 +836,25 @@ export default function LandingPage() {
                     type="email"
                     placeholder="john@example.com"
                   />
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="preferredSharing"
+                      className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+                    >
+                      Preferred sharing
+                    </label>
+                    <select
+                      id="preferredSharing"
+                      name="preferredSharing"
+                      defaultValue="2"
+                      className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
+                    >
+                      <option value="2">2 Sharing</option>
+                      <option value="3">3 Sharing</option>
+                      <option value="4">4 Sharing</option>
+                      <option value="single">Single</option>
+                    </select>
+                  </div>
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="message"

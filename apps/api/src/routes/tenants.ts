@@ -71,7 +71,6 @@ const createTenantSchema = z.strictObject({
 const updateTenantSchema = z.strictObject({
   monthlyRent: z.number().min(1000).max(50000).optional(),
   depositPaid: z.number().min(0).optional(),
-  isActive: z.boolean().optional(),
   bedId: z.enum(['A', 'B', 'C', 'D']).optional(),
   roomId: z.string().min(1).optional(),
   moveInDate: z.string().optional(),
@@ -124,7 +123,7 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
     );
   }
 
-  const passwordHash = crypto.randomBytes(8).toString('hex');
+  const temporaryPassword = crypto.randomBytes(4).toString('hex') + 'A1!';
   const session = await mongoose.startSession();
 
   try {
@@ -145,7 +144,7 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
             name: body.name,
             email: body.email,
             phone: body.phone,
-            passwordHash,
+            passwordHash: temporaryPassword,
             role: 'tenant',
             isActive: true,
             profilePhoto: body.photoUrl,
@@ -167,7 +166,10 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
             monthlyRent: body.monthlyRent,
             depositPaid: body.depositPaid ?? 0,
             emergencyContact: body.emergencyContact,
-            aadhaarUrl: body.aadhaarUrl,
+            documents: {
+              aadhaarUrl: body.aadhaarUrl,
+              photoUrl: body.photoUrl,
+            },
             isActive: true,
           },
         ],
@@ -192,7 +194,8 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
       result = createdTenant;
     });
 
-    return c.json({ success: true, data: result }, 201);
+    const responseData = result as Record<string, unknown>;
+    return c.json({ success: true, data: { ...responseData, temporaryPassword } }, 201);
   } catch (err: unknown) {
     if (err instanceof AppError) {
       return c.json(
@@ -306,7 +309,10 @@ router.get('/:id', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const tenant = await Tenant.findById(id).populate('user').populate('room').lean();
+  const tenant = await Tenant.findById(id)
+    .populate('user')
+    .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
+    .lean();
   if (!tenant) return notFound(c, 'Tenant');
 
   const user = c.get('user');
@@ -328,7 +334,7 @@ router.get('/:id', authGuard, async (c) => {
   return c.json({ success: true, data: tenant });
 });
 
-// ── PUT /:id — update (admin only)
+// ── PUT /:id — update (admin only) — atomic room/bed transfer
 router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema), async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
@@ -339,135 +345,176 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
   const tenant = await Tenant.findById(id);
   if (!tenant) return notFound(c, 'Tenant');
 
-  // Track room/bed changes for audit
   const oldRoomId = String(tenant.roomId);
   const oldBedId = tenant.bedId;
+  const changingRoom = body.roomId && body.roomId !== String(tenant.roomId);
+  const changingBed = body.bedId && body.bedId !== tenant.bedId;
 
-  // Update direct tenant fields
-  const typedTenant = tenant as unknown as Record<string, unknown>;
-  const directFields = ['monthlyRent', 'depositPaid', 'isActive', 'bedId'] as const;
-  for (const field of directFields) {
-    if (body[field] !== undefined) {
-      typedTenant[field] = body[field];
-    }
-  }
+  // ── Validate target bed BEFORE freeing old (P0-T1 fix) ──
+  let targetRoom: unknown = null;
 
-  if (body.moveInDate !== undefined) {
-    tenant.moveInDate = new Date(body.moveInDate);
-  }
+  if (changingRoom || changingBed) {
+    const roomIdToCheck = body.roomId ?? String(tenant.roomId);
+    targetRoom = await Room.findById(roomIdToCheck);
+    const roomDoc = targetRoom as Record<string, unknown> | null;
+    if (!roomDoc) return badRequest(c, 'Target room not found', 'ROOM_NOT_FOUND');
+    if (!roomDoc.isActive) return badRequest(c, 'Target room is not active', 'ROOM_INACTIVE');
 
-  if (body.emergencyContact !== undefined) {
-    tenant.emergencyContact = {
-      ...tenant.emergencyContact,
-      ...body.emergencyContact,
-    };
-  }
-
-  const tenantIdStr = String(tenant._id);
-
-  // Handle room transfer
-  if (body.roomId && body.roomId !== String(tenant.roomId)) {
-    const newRoom = await Room.findById(body.roomId);
-    if (!newRoom) return badRequest(c, 'New room not found', 'ROOM_NOT_FOUND');
-    if (!newRoom.isActive) return badRequest(c, 'New room is not active', 'ROOM_INACTIVE');
-
-    // Free old bed
-    const oldRoom = await Room.findById(tenant.roomId);
-    if (oldRoom) {
-      const oldBed = oldRoom.beds.find((b) => b.bedId === tenant.bedId);
-      if (oldBed) {
-        oldBed.isOccupied = false;
-        oldBed.tenantId = null;
-      }
-      oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
-      await oldRoom.save();
-    }
-
-    // Reserve new bed
+    const beds = roomDoc.beds as Array<Record<string, unknown>> | undefined;
     const newBedId = body.bedId ?? tenant.bedId;
-    const newBed = newRoom.beds.find((b) => b.bedId === newBedId);
-    if (!newBed) return badRequest(c, 'Bed not found in new room', 'BED_NOT_FOUND');
-    if (newBed.isOccupied && String(newBed.tenantId ?? '') !== tenantIdStr) {
-      return badRequest(c, 'Bed is already occupied', 'BED_OCCUPIED');
-    }
+    const newBed = beds?.find((b) => b.bedId === newBedId);
+    if (!newBed) return badRequest(c, 'Bed not found in target room', 'BED_NOT_FOUND');
 
-    newBed.isOccupied = true;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    newBed.tenantId = tenant._id as any;
-    newRoom.markModified('beds');
-    newRoom.occupancyCount = newRoom.beds.filter((b) => b.isOccupied).length;
-
-    await newRoom.save();
-
-    tenant.roomId = body.roomId as unknown as mongoose.Schema.Types.ObjectId;
-    tenant.bedId = newBedId;
-  } else if (body.bedId && body.bedId !== tenant.bedId) {
-    // Same room, different bed
-    const currentRoom = await Room.findById(tenant.roomId);
-    if (currentRoom) {
-      const oldBed = currentRoom.beds.find((b) => b.bedId === tenant.bedId);
-      if (oldBed) {
-        oldBed.isOccupied = false;
-        oldBed.tenantId = null;
-      }
-      const newBed = currentRoom.beds.find((b) => b.bedId === body.bedId);
-      if (newBed) {
-        if (newBed.isOccupied && String(newBed.tenantId ?? '') !== tenantIdStr) {
-          return badRequest(c, 'Target bed is already occupied', 'BED_OCCUPIED');
-        }
-        newBed.isOccupied = true;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        newBed.tenantId = tenant._id as any;
-      }
-      currentRoom.occupancyCount = currentRoom.beds.filter((b) => b.isOccupied).length;
-      await currentRoom.save();
-    }
-    tenant.bedId = body.bedId;
-  }
-
-  // Update user details if provided
-  if (body.user) {
-    const userFields: Record<string, string | undefined> = {};
-    if (body.user.name) userFields.name = body.user.name;
-    if (body.user.email) userFields.email = body.user.email;
-    if (body.user.phone) userFields.phone = body.user.phone;
-    if (Object.keys(userFields).length > 0) {
-      await User.findByIdAndUpdate(tenant.userId, userFields);
-    }
-  }
-
-  await tenant.save();
-
-  // Write audit log for room/bed transfers
-  const newRoomId = body.roomId ?? oldRoomId;
-  const newBedId = body.bedId ?? oldBedId;
-  if (oldRoomId !== String(newRoomId) || oldBedId !== newBedId) {
-    try {
-      const { writeAuditLog } = await import('../lib/write-audit-log.js');
-      await writeAuditLog({
-        userId: adminId,
-        action: 'update',
-        resource: 'tenant',
-        resourceId: id,
-        details: {
-          roomTransfer: oldRoomId !== String(newRoomId),
-          bedSwap: oldBedId !== newBedId,
-          fromRoomId: oldRoomId,
-          toRoomId: String(body.roomId ?? tenant.roomId),
-          fromBedId: oldBedId,
-          toBedId: newBedId,
+    const currentlyOwned = newBed.isOccupied && String(newBed.tenantId ?? '') === id;
+    if (newBed.isOccupied && !currentlyOwned) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'BED_OCCUPIED', message: 'Target bed is already occupied by another tenant.' },
         },
-      });
-    } catch {
-      // Audit log failure should not block the tenant update
+        409,
+      );
     }
   }
 
-  const populatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+  // ── Apply updates inside a transaction ──
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const sessionTenant = await Tenant.findById(id).session(session);
+      if (!sessionTenant) throw new AppError('Tenant not found after reload', 404, 'TENANT_NOT_FOUND');
 
-  return c.json({ success: true, data: populatedTenant });
+      // Update scalar fields
+      const typedTenant = sessionTenant as unknown as Record<string, unknown>;
+      const scalarFields = ['monthlyRent', 'depositPaid'] as const;
+      for (const field of scalarFields) {
+        if (body[field] !== undefined) typedTenant[field] = body[field];
+      }
+      // bedId is handled separately below
+      if (body.bedId !== undefined && !changingRoom) typedTenant.bedId = body.bedId;
+
+      if (body.moveInDate !== undefined) {
+        sessionTenant.moveInDate = new Date(body.moveInDate);
+      }
+      if (body.emergencyContact !== undefined) {
+        sessionTenant.emergencyContact = {
+          ...sessionTenant.emergencyContact,
+          ...body.emergencyContact,
+        };
+      }
+
+      // ── Transfer to new room ──
+      if (changingRoom && targetRoom) {
+        const targetRoomObj = targetRoom as Record<string, unknown>;
+        const newRoom = await Room.findById(targetRoomObj._id).session(session);
+        if (!newRoom) throw new AppError('Target room vanished', 500, 'ROOM_VANISHED');
+
+        const newBedId = body.bedId ?? sessionTenant.bedId;
+        const newBed = newRoom.beds.find((b) => b.bedId === newBedId);
+        if (!newBed) throw new AppError('Target bed disappeared', 500, 'BED_VANISHED');
+
+        // Validate target bed is free BEFORE freeing old bed (P0-T1 atomicity fix)
+        if (newBed.isOccupied && String(newBed.tenantId ?? '') !== String(sessionTenant._id)) {
+          throw new AppError('Bed is already occupied', 409, 'BED_OCCUPIED');
+        }
+
+        // Free old bed
+        const oldRoom = await Room.findById(sessionTenant.roomId).session(session);
+        if (oldRoom) {
+          const oldBed = oldRoom.beds.find((b) => b.bedId === sessionTenant.bedId);
+          if (oldBed) {
+            oldBed.isOccupied = false;
+            oldBed.tenantId = null;
+          }
+          oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
+          await oldRoom.save({ session });
+        }
+
+        // Occupy new bed
+        newBed.isOccupied = true;
+        newBed.tenantId = sessionTenant._id as unknown as Schema.Types.ObjectId;
+        newRoom.markModified('beds');
+        newRoom.occupancyCount = newRoom.beds.filter((b) => b.isOccupied).length;
+        await newRoom.save({ session });
+
+        sessionTenant.roomId = newRoom._id as unknown as Schema.Types.ObjectId;
+        sessionTenant.bedId = newBedId;
+      }
+
+      // ── Bed swap within same room ──
+      if (!changingRoom && changingBed && targetRoom) {
+        const currentRoom = await Room.findById(sessionTenant.roomId).session(session);
+        if (currentRoom) {
+          // Validate target bed is free BEFORE freeing old bed (P0-T1 atomicity fix)
+          const targetBed = currentRoom.beds.find((b) => b.bedId === body.bedId);
+          if (!targetBed) throw new AppError('Target bed disappeared', 500, 'BED_VANISHED');
+          if (targetBed.isOccupied && String(targetBed.tenantId ?? '') !== String(sessionTenant._id)) {
+            throw new AppError('Bed is already occupied', 409, 'BED_OCCUPIED');
+          }
+
+          const oldBed = currentRoom.beds.find((b) => b.bedId === sessionTenant.bedId);
+          if (oldBed) {
+            oldBed.isOccupied = false;
+            oldBed.tenantId = null;
+          }
+          targetBed.isOccupied = true;
+          targetBed.tenantId = sessionTenant._id as unknown as Schema.Types.ObjectId;
+          currentRoom.occupancyCount = currentRoom.beds.filter((b) => b.isOccupied).length;
+          await currentRoom.save({ session });
+        }
+        sessionTenant.bedId = body.bedId!;
+      }
+
+      // Update user details
+      if (body.user) {
+        const userFields: Record<string, string | undefined> = {};
+        if (body.user.name) userFields.name = body.user.name;
+        if (body.user.email) userFields.email = body.user.email;
+        if (body.user.phone) userFields.phone = body.user.phone;
+        if (Object.keys(userFields).length > 0) {
+          await (User as unknown as { findByIdAndUpdate: (...args: unknown[]) => Promise<unknown> }).findByIdAndUpdate(String(sessionTenant.userId), userFields, { session });
+        }
+      }
+
+      await sessionTenant.save({ session });
+    });
+
+    // Write audit log for room/bed transfers (outside transaction — best-effort)
+    if (oldRoomId !== (body.roomId ?? oldRoomId) || oldBedId !== (body.bedId ?? oldBedId)) {
+      try {
+        const { writeAuditLog } = await import('../lib/write-audit-log.js');
+        await writeAuditLog({
+          userId: adminId,
+          action: 'update',
+          resource: 'tenant',
+          resourceId: id,
+          details: {
+            roomTransfer: oldRoomId !== (body.roomId ?? oldRoomId),
+            bedSwap: oldBedId !== (body.bedId ?? oldBedId),
+            fromRoomId: oldRoomId,
+            toRoomId: body.roomId ?? oldRoomId,
+            fromBedId: oldBedId,
+            toBedId: body.bedId ?? oldBedId,
+          },
+        });
+      } catch {
+        // Non-fatal
+      }
+    }
+
+    const populatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+    return c.json({ success: true, data: populatedTenant });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return c.json(
+        { success: false, error: { code: err.code, message: err.message } },
+        err.status as 400 | 404 | 409,
+      );
+    }
+    throw err;
+  } finally {
+    session.endSession();
+  }
 });
 
 // ── POST /:id/checkout — checkout tenant (admin only)
@@ -538,7 +585,8 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
         await room.save({ session });
       }
 
-      await User.findByIdAndUpdate(tenant.userId, { isActive: false }, { session });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (User as any).findByIdAndUpdate(String(tenant.userId), { isActive: false }, { session });
     });
 
     const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
@@ -728,6 +776,17 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
 router.get('/:id/payments', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const user = c.get('user');
+  if (user?.role === 'tenant') {
+    const tenant = await Tenant.findById(id).select('userId').lean();
+    if (!tenant) return notFound(c, 'Tenant');
+    const tenantUserId = String(tenant.userId);
+    if (tenantUserId !== user.sub) {
+      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+    }
+  }
+
   const payments = await Payment.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: payments });
 });
@@ -736,6 +795,17 @@ router.get('/:id/payments', authGuard, async (c) => {
 router.get('/:id/complaints', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const user = c.get('user');
+  if (user?.role === 'tenant') {
+    const tenant = await Tenant.findById(id).select('userId').lean();
+    if (!tenant) return notFound(c, 'Tenant');
+    const tenantUserId = String(tenant.userId);
+    if (tenantUserId !== user.sub) {
+      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+    }
+  }
+
   const complaints = await Complaint.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: complaints });
 });
@@ -853,6 +923,17 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
 router.get('/:id/invoices', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const user = c.get('user');
+  if (user?.role === 'tenant') {
+    const tenant = await Tenant.findById(id).select('userId').lean();
+    if (!tenant) return notFound(c, 'Tenant');
+    const tenantUserId = String(tenant.userId);
+    if (tenantUserId !== user.sub) {
+      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+    }
+  }
+
   const invoices = await Invoice.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: invoices });
 });
@@ -932,6 +1013,16 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
 router.get('/:id/activity', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const user = c.get('user');
+  if (user?.role === 'tenant') {
+    const tenant = await Tenant.findById(id).select('userId').lean();
+    if (!tenant) return notFound(c, 'Tenant');
+    const tenantUserId = String(tenant.userId);
+    if (tenantUserId !== user.sub) {
+      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+    }
+  }
 
   const events: Array<Record<string, unknown>> = [];
 

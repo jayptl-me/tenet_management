@@ -14,8 +14,7 @@ interface NoticeDetail {
   _id: string;
   title: string;
   content: string;
-  priority: string;
-  isPublished: boolean;
+  pinned?: boolean;
   targetType?: string;
   targetIds?: string[];
   createdAt: string;
@@ -33,13 +32,6 @@ function formatDate(dateStr: string | null | undefined): string {
     return '—';
   }
 }
-
-const priorityVariantMap: Record<string, 'danger' | 'warning' | 'info' | 'neutral'> = {
-  emergency: 'danger',
-  high: 'warning',
-  medium: 'info',
-  low: 'neutral',
-};
 
 export default function NoticeDetailPage() {
   const params = useParams();
@@ -73,8 +65,6 @@ export default function NoticeDetailPage() {
     );
   }
 
-  const priorityVariant = notice ? (priorityVariantMap[notice.priority] ?? 'neutral') : 'neutral';
-
   return (
     <FormPage
       title={notice?.title ?? 'Notice Details'}
@@ -85,11 +75,16 @@ export default function NoticeDetailPage() {
       badge={
         notice ? (
           <div className="flex items-center gap-2">
-            <StatusBadge variant={priorityVariant} label={notice.priority} />
             <StatusBadge
-              variant={notice.isPublished ? 'success' : 'neutral'}
-              label={notice.isPublished ? 'Published' : 'Draft'}
+              variant={notice.pinned ? 'warning' : 'neutral'}
+              label={notice.pinned ? 'Pinned' : 'Normal'}
             />
+            {notice.targetType && (
+              <StatusBadge
+                variant="info"
+                label={notice.targetType.replace(/_/g, ' ')}
+              />
+            )}
           </div>
         ) : undefined
       }
@@ -105,15 +100,11 @@ export default function NoticeDetailPage() {
           <DetailCard title="Details" icon={<Info />}>
             <DetailList>
               <DetailRow
-                label="Priority"
-                value={<StatusBadge variant={priorityVariant} label={notice.priority} />}
-              />
-              <DetailRow
-                label="Status"
+                label="Pinned"
                 value={
                   <StatusBadge
-                    variant={notice.isPublished ? 'success' : 'neutral'}
-                    label={notice.isPublished ? 'Published' : 'Draft'}
+                    variant={notice.pinned ? 'warning' : 'neutral'}
+                    label={notice.pinned ? 'Pinned' : 'Normal'}
                   />
                 }
               />

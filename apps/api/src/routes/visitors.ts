@@ -7,11 +7,12 @@ import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../l
 import { Visitor } from '../models/visitor.js';
 import { Tenant } from '../models/tenant.js';
 import mongoose from 'mongoose';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 const visitors = new Hono();
+visitors.use('*', requireFeature('visitorManagementEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
-// Matches the Mongoose model fields: visitorName, visitorPhone, expectedArrival
 const createVisitorSchema = z.strictObject({
   tenantId: z.string().min(1, 'Tenant is required'),
   visitorName: z
@@ -34,18 +35,47 @@ const updateVisitorSchema = z.strictObject({
   status: z.enum(['expected', 'arrived', 'departed', 'cancelled']).optional(),
 });
 
-// ── POST /visitors ──────────────────────────────────────
-visitors.post('/', authGuard, tenantOnly, zValidator('json', createVisitorSchema), async (c) => {
+/** Normalize lean visitor for FE (name aliases + keep raw fields). */
+function mapVisitor(doc: Record<string, unknown>) {
+  return {
+    ...doc,
+    visitorName: doc.visitorName ?? doc.name,
+    visitorPhone: doc.visitorPhone ?? doc.phone,
+    name: doc.visitorName ?? doc.name,
+    phone: doc.visitorPhone ?? doc.phone,
+  };
+}
+
+// ── POST /visitors — admin or tenant ────────────────────
+visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c) => {
   const body = c.req.valid('json');
   const user = c.get('user');
+  const role = user?.role;
 
-  const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
-  if (!tenant) {
-    return notFound(c, 'Active tenant profile');
+  let tenantId = body.tenantId;
+
+  if (role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    if (!tenant) {
+      return notFound(c, 'Active tenant profile');
+    }
+    // Tenants can only register visitors against their own profile
+    tenantId = String(tenant._id);
+  } else if (role === 'admin') {
+    const tenant = await Tenant.findById(body.tenantId).lean();
+    if (!tenant) return notFound(c, 'Tenant');
+  } else {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can register visitors.' },
+      },
+      403,
+    );
   }
 
   const doc = new Visitor({
-    tenantId: new mongoose.Types.ObjectId(body.tenantId),
+    tenantId: new mongoose.Types.ObjectId(tenantId),
     visitorName: body.visitorName,
     visitorPhone: body.visitorPhone,
     purpose: body.purpose,
@@ -58,7 +88,10 @@ visitors.post('/', authGuard, tenantOnly, zValidator('json', createVisitorSchema
     .populate({ path: 'tenant', populate: { path: 'user', select: 'name email phone' } })
     .lean();
 
-  return c.json({ success: true, data: populated }, 201);
+  return c.json(
+    { success: true, data: mapVisitor(populated as unknown as Record<string, unknown>) },
+    201,
+  );
 });
 
 // ── GET /visitors ───────────────────────────────────────
@@ -71,7 +104,7 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
   const pagination = parsePagination(c);
   const { sort, order, skip, limit, page } = pagination;
 
-  const [data, total] = await Promise.all([
+  const [raw, total] = await Promise.all([
     Visitor.find(safeFilter(filter))
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
@@ -80,6 +113,8 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
       .lean(),
     Visitor.countDocuments(safeFilter(filter)),
   ]);
+
+  const data = (raw as unknown[]).map((d) => mapVisitor(d as Record<string, unknown>));
 
   return c.json({
     success: true,
@@ -91,6 +126,24 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
       totalPages: Math.ceil(total / limit),
     },
   });
+});
+
+// ── GET /visitors/my — static before /:id ────────────────
+visitors.get('/my', authGuard, tenantOnly, async (c) => {
+  const user = c.get('user');
+  const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+
+  if (!tenant) {
+    return notFound(c, 'Active tenant profile');
+  }
+
+  const raw = await Visitor.find(safeFilter({ tenantId: tenant._id }))
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const data = (raw as unknown[]).map((d) => mapVisitor(d as Record<string, unknown>));
+
+  return c.json({ success: true, data });
 });
 
 // ── GET /visitors/:id ─────────────────────────────────
@@ -109,7 +162,10 @@ visitors.get('/:id', authGuard, async (c) => {
     .lean();
 
   if (!visitor) return notFound(c, 'Visitor');
-  return c.json({ success: true, data: visitor });
+  return c.json({
+    success: true,
+    data: mapVisitor(visitor as unknown as Record<string, unknown>),
+  });
 });
 
 // ── POST /visitors/:id/approve ──────────────────────────
@@ -118,7 +174,24 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
   if (!id) return badRequest(c, 'Invalid visitor ID');
 
   const user = c.get('user');
-  const visitor = await Visitor.findByIdAndUpdate(
+  const visitor = await Visitor.findById(id).lean();
+  if (!visitor) return notFound(c, 'Visitor');
+
+  // Transition state machine: only 'cancelled' visitors can be re-approved
+  if (visitor.status !== 'cancelled') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot approve a visitor with status '${visitor.status}'. Only cancelled visitors can be re-approved.`,
+        },
+      },
+      409,
+    );
+  }
+
+  const updated = await Visitor.findByIdAndUpdate(
     id,
     {
       status: 'expected',
@@ -127,8 +200,11 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
     { returnDocument: 'after' },
   ).lean();
 
-  if (!visitor) return notFound(c, 'Visitor');
-  return c.json({ success: true, data: visitor });
+  if (!updated) return notFound(c, 'Visitor');
+  return c.json({
+    success: true,
+    data: mapVisitor(updated as unknown as Record<string, unknown>),
+  });
 });
 
 // ── POST /visitors/:id/arrive ───────────────────────────
@@ -136,7 +212,49 @@ visitors.post('/:id/arrive', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid visitor ID');
 
-  const visitor = await Visitor.findByIdAndUpdate(
+  const user = c.get('user');
+  const role = user?.role;
+
+  const visitor = await Visitor.findById(id).lean();
+  if (!visitor) return notFound(c, 'Visitor');
+
+  // Ownership: admin can act on any visitor; tenant can only act on their own
+  if (role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    if (!tenant || String(tenant._id) !== String(visitor.tenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only manage your own visitors.' },
+        },
+        403,
+      );
+    }
+  } else if (role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can manage visitors.' },
+      },
+      403,
+    );
+  }
+
+  // Transition state machine: only 'expected' visitors can arrive
+  if (visitor.status !== 'expected') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot arrive a visitor with status '${visitor.status}'. Visitor must be in 'expected' state.`,
+        },
+      },
+      409,
+    );
+  }
+
+  const updated = await Visitor.findByIdAndUpdate(
     id,
     {
       status: 'arrived',
@@ -145,8 +263,7 @@ visitors.post('/:id/arrive', authGuard, async (c) => {
     { returnDocument: 'after' },
   ).lean();
 
-  if (!visitor) return notFound(c, 'Visitor');
-  return c.json({ success: true, data: visitor });
+  return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
 });
 
 // ── POST /visitors/:id/depart ───────────────────────────
@@ -154,7 +271,49 @@ visitors.post('/:id/depart', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid visitor ID');
 
-  const visitor = await Visitor.findByIdAndUpdate(
+  const user = c.get('user');
+  const role = user?.role;
+
+  const visitor = await Visitor.findById(id).lean();
+  if (!visitor) return notFound(c, 'Visitor');
+
+  // Ownership: admin can act on any visitor; tenant can only act on their own
+  if (role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    if (!tenant || String(tenant._id) !== String(visitor.tenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only manage your own visitors.' },
+        },
+        403,
+      );
+    }
+  } else if (role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can manage visitors.' },
+      },
+      403,
+    );
+  }
+
+  // Transition state machine: only 'arrived' visitors can depart
+  if (visitor.status !== 'arrived') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot depart a visitor with status '${visitor.status}'. Visitor must be in 'arrived' state.`,
+        },
+      },
+      409,
+    );
+  }
+
+  const updated = await Visitor.findByIdAndUpdate(
     id,
     {
       status: 'departed',
@@ -163,8 +322,7 @@ visitors.post('/:id/depart', authGuard, async (c) => {
     { returnDocument: 'after' },
   ).lean();
 
-  if (!visitor) return notFound(c, 'Visitor');
-  return c.json({ success: true, data: visitor });
+  return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
 });
 
 // ── PUT /visitors/:id ───────────────────────────────────
@@ -188,23 +346,10 @@ visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchem
   }).lean();
   if (!visitor) return notFound(c, 'Visitor');
 
-  return c.json({ success: true, data: visitor });
-});
-
-// ── GET /visitors/my ────────────────────────────────────
-visitors.get('/my', authGuard, tenantOnly, async (c) => {
-  const user = c.get('user');
-  const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
-
-  if (!tenant) {
-    return notFound(c, 'Active tenant profile');
-  }
-
-  const data = await Visitor.find(safeFilter({ tenantId: tenant._id }))
-    .sort({ createdAt: -1 })
-    .lean();
-
-  return c.json({ success: true, data });
+  return c.json({
+    success: true,
+    data: mapVisitor(visitor as unknown as Record<string, unknown>),
+  });
 });
 
 // ── DELETE /visitors/:id ────────────────────────────────

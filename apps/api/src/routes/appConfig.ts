@@ -148,6 +148,10 @@ appConfig.put('/', authGuard, adminOnly, zValidator('json', appConfigUpdateSchem
     },
   ).lean();
 
+  // Feature-flag middleware caches flags for 30s — bust on admin update
+  const { invalidateFeatureFlagCache } = await import('../middleware/featureFlags.js');
+  invalidateFeatureFlagCache();
+
   return c.json({ success: true, data: config });
 });
 

@@ -9,6 +9,12 @@ import { Asset } from '../models/asset.js';
 const assets = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
+/** Accept ISO datetime or YYYY-MM-DD; store as Date. */
+const optionalDateString = z
+  .string()
+  .optional()
+  .refine((v) => !v || !Number.isNaN(Date.parse(v)), { message: 'Invalid date' });
+
 const createAssetSchema = z.strictObject({
   name: z
     .string()
@@ -24,13 +30,19 @@ const createAssetSchema = z.strictObject({
   status: z
     .enum(['available', 'in_use', 'under_maintenance', 'damaged', 'retired'])
     .default('available'),
-  purchasedDate: z.string().datetime({ message: 'Invalid ISO date' }).optional(),
-  lastServicedDate: z.string().datetime({ message: 'Invalid ISO date' }).optional(),
-  nextServiceDate: z.string().datetime({ message: 'Invalid ISO date' }).optional(),
+  purchasedDate: optionalDateString,
+  lastServicedDate: optionalDateString,
+  nextServiceDate: optionalDateString,
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
 });
 
 const updateAssetSchema = createAssetSchema.partial();
+
+function toDateOrUndefined(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
 // ── GET /assets ─────────────────────────────────────────
 assets.get('/', authGuard, adminOnly, async (c) => {
@@ -83,11 +95,33 @@ assets.get('/low-stock', authGuard, adminOnly, async (c) => {
   return c.json({ success: true, data });
 });
 
+// ── GET /assets/:id ─────────────────────────────────────
+assets.get('/:id', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid asset ID');
+
+  const asset = await Asset.findById(id).lean();
+  if (!asset) return notFound(c, 'Asset');
+
+  return c.json({ success: true, data: asset });
+});
+
 // ── POST /assets ────────────────────────────────────────
 assets.post('/', authGuard, adminOnly, zValidator('json', createAssetSchema), async (c) => {
   const body = c.req.valid('json');
 
-  const asset = await Asset.create(body);
+  const asset = await Asset.create({
+    name: body.name,
+    category: body.category,
+    location: body.location,
+    quantity: body.quantity,
+    lowStockThreshold: body.lowStockThreshold,
+    status: body.status,
+    purchasedDate: toDateOrUndefined(body.purchasedDate) ?? null,
+    lastServicedDate: toDateOrUndefined(body.lastServicedDate) ?? null,
+    nextServiceDate: toDateOrUndefined(body.nextServiceDate) ?? null,
+    notes: body.notes ?? '',
+  });
   return c.json({ success: true, data: asset }, 201);
 });
 
@@ -97,8 +131,18 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
   if (!id) return badRequest(c, 'Invalid asset ID');
 
   const body = c.req.valid('json');
+  const update: Record<string, unknown> = { ...body };
+  if (body.purchasedDate !== undefined) {
+    update.purchasedDate = toDateOrUndefined(body.purchasedDate) ?? null;
+  }
+  if (body.lastServicedDate !== undefined) {
+    update.lastServicedDate = toDateOrUndefined(body.lastServicedDate) ?? null;
+  }
+  if (body.nextServiceDate !== undefined) {
+    update.nextServiceDate = toDateOrUndefined(body.nextServiceDate) ?? null;
+  }
 
-  const asset = await Asset.findByIdAndUpdate(id, body, {
+  const asset = await Asset.findByIdAndUpdate(id, update, {
     returnDocument: 'after',
     runValidators: true,
   }).lean();

@@ -10,11 +10,10 @@
 |       +-- ci.yml
 +-- apps/
 |   +-- api/
-|   |   +-- dist/
 |   |   +-- src/
 |   |   |   +-- __tests__/
 |   |   |   +-- jobs/
-|   |   |   +-- lib/
+|   |   |   +-- lib/          # env, cors-origins, db, jwt, ...
 |   |   |   +-- middleware/
 |   |   |   +-- models/
 |   |   |   +-- routes/
@@ -22,25 +21,32 @@
 |   |   |   +-- services/
 |   |   |   +-- templates/
 |   |   |   +-- index.ts
-|   |   +-- package.json
-|   |   +-- tsconfig.json
-|   +-- web/
-|       +-- src/
-|       |   +-- app/
-|       |   +-- components/
-|       |   +-- hooks/
-|       |   +-- lib/
-|       |   +-- store/
-|       |   +-- themes/
-|       +-- package.json
-|       +-- tsconfig.json
+|   +-- web/                 # ADMIN ONLY Next.js app
+|       +-- src/app/(admin)/
+|       +-- src/components/
+|       +-- src/hooks/
+|       +-- src/lib/
+|       +-- src/store/
++-- mobile/                  # Flutter portals (tenant/guardian/visitor)
+|   +-- lib/
+|   |   +-- core/            # config, network, router, theme, storage
+|   |   +-- features/
+|   |   |   +-- auth/
+|   |   |   +-- tenant/
+|   |   |   +-- guardian/
+|   |   |   +-- visitor/
+|   |   |   +-- shared/
+|   |   +-- main.dart
+|   +-- android/ ios/ web/
+|   +-- pubspec.yaml
+|   +-- README.md
 +-- packages/
 |   +-- types/
-|       +-- src/
-|       +-- package.json
-|       +-- tsconfig.json
++-- docs/
+|   +-- PORTAL_CONNECTIVITY.md
+|   +-- audit/
+|   +-- specs/
 +-- package.json
-+-- bun.lock
 +-- render.yaml
 ```
 
@@ -49,7 +55,8 @@
 | Project     | Runtime    | Framework / Library  | Database / ORM           | Type Sharing / Build   |
 | ----------- | ---------- | -------------------- | ------------------------ | ---------------------- |
 | `@pg/api`   | Bun        | Hono                 | MongoDB + Mongoose       | Workspace Type Link    |
-| `@pg/web`   | Node/Bun   | Next.js (App Router) | None (REST + SSE Client) | Workspace Type Link    |
+| `@pg/web`   | Node/Bun   | Next.js (admin only) | None (REST + SSE Client) | Workspace Type Link    |
+| `mobile`    | Flutter    | Riverpod + go_router | None (Dio REST client)   | HTTP only              |
 | `@pg/types` | TypeScript | Node/Bun             | None                     | Workspace Shared Types |
 
 ## Sub-Project Paths and Purposes
@@ -59,21 +66,23 @@
 | Path                                                                                                                                                      | Purpose                                                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | [apps/api/src/index.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/index.ts)                             | Server entrypoint, CORS, global middleware stack, route mounting                    |
+| [apps/api/src/lib/cors-origins.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/lib/cors-origins.ts)       | CORS allowlist for admin web + Flutter portal origins                               |
+| [apps/api/src/lib/env.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/lib/env.ts)                         | Env validation including FRONTEND_URL, PORTAL_URL, CORS_EXTRA_ORIGINS               |
 | [apps/api/src/routes/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/)                               | Hono API route handlers (REST endpoints + SSE stream endpoint)                      |
 | [apps/api/src/models/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/models/)                               | Mongoose schemas and models definitions                                             |
 | [apps/api/src/services/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/services/)                           | Business logic, authentication, Cloudinary uploads, PDF generation, email templates |
 | [apps/api/src/lib/write-audit-log.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/lib/write-audit-log.ts) | Shared AuditLog writer using closed action enum                                     |
-| [docs/admin-panel-redesign.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/admin-panel-redesign.md)               | Design doc + PR plan for admin overhaul (finance-first)                             |
+| [docs/audit/README.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/audit/README.md)                             | Authoritative edit-page / FE-API gap matrix for agents                              |
 | [apps/api/src/middleware/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/middleware/)                       | Request logging, auth validation, error handling, security headers                  |
 | [apps/api/src/jobs/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/jobs/)                                   | Node-cron schedulers for daily updates and notifications                            |
 | [apps/api/src/scripts/seed.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/scripts/seed.ts)               | Database seeding script (accepts option --with-sample-data)                         |
 | [apps/api/src/**tests**/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/__tests__/)                         | Unit and integration test suites using Vitest                                       |
 
-### apps/web (Next.js Frontend)
+### apps/web (Next.js Admin Frontend -- admin role only)
 
 | Path                                                                                                                                                                    | Purpose                                                                                |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [apps/web/src/app/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/)                                                   | Next.js App Router layout, page definitions, and routing                               |
+| [apps/web/src/app/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/)                                                   | Admin App Router only (no tenant/guardian portal routes)                               |
 | [apps/web/src/components/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/)                                     | Reusable Radix UI & styled Tailwind React components                                   |
 | [apps/web/src/components/ui/FormPage.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormPage.tsx)       | Shared shell for create/edit admin pages (header, loading, error)                      |
 | [apps/web/src/components/ui/FormCard.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormCard.tsx)       | Elevated form surface with optional footer actions                                     |
@@ -87,6 +96,19 @@
 | [apps/web/src/store/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/store/)                                               | Zustand state stores (authentication, configurations, UI states)                       |
 | [apps/web/src/themes/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/themes/)                                             | Multi-preset design systems (saas, brutalist, neumorphic, soft-ui) + light/dark tokens |
 
+### mobile (Flutter portals -- tenant / guardian / visitor)
+
+| Path | Purpose |
+| ---- | ------- |
+| [mobile/lib/main.dart](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/main.dart) | Flutter entry |
+| [mobile/lib/core/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/core/) | Env, Dio client, CORS-facing base URL, router, theme, token storage |
+| [mobile/lib/features/auth/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/auth/) | Login, session restore (rejects admin) |
+| [mobile/lib/features/tenant/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/) | Tenant shell: invoices, payments, complaints, laundry, meals, notices |
+| [mobile/lib/features/guardian/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/guardian/) | Guardian shell: ward + attendance |
+| [mobile/lib/features/visitor/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/visitor/) | Visitor desk (tenant-authenticated) |
+| [mobile/README.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/README.md) | Flutter setup and routes |
+| [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md) | Multi-client connectivity + CORS |
+
 ### packages/types (Shared Typings Workspace)
 
 | Path                                                                                                                                      | Purpose                                                                 |
@@ -98,7 +120,8 @@
 
 | Concern           | Implementation Strategy                 | Locations                                                                                                                                                                                                                                                                                                    |
 | ----------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Authentication    | JWT (Jose library) + Bcrypt credentials | [apps/api/src/routes/auth.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/auth.ts), [apps/api/src/middleware/auth.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/middleware/auth.ts)                 |
+| Authentication    | JWT (Jose library) + Bcrypt credentials | [apps/api/src/routes/auth.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/auth.ts), [apps/api/src/middleware/auth.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/middleware/auth.ts); Flutter: [mobile/lib/features/auth/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/auth/) |
+| CORS / multi-client | FRONTEND_URL + PORTAL_URL + dev localhost | [apps/api/src/lib/cors-origins.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/lib/cors-origins.ts), [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md) |
 | Validation        | Zod schemas validator                   | [packages/types/src/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/packages/types/src/), [apps/api/src/routes/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/) (with `@hono/zod-validator`)                          |
 | Real-time Updates | Server-Sent Events (SSE) streams        | [apps/api/src/routes/sse.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/sse.ts), [apps/web/src/hooks/useSSE.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/hooks/useSSE.ts)                         |
 | Background Jobs   | Cron schedulers                         | [apps/api/src/jobs/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/jobs/)                                                                                                                                                                                      |

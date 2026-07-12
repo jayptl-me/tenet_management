@@ -18,7 +18,7 @@ import { floorLabel } from '@/lib/resource-select-presets';
 const schema = z.object({
   floorId: z.string().min(1, 'Floor is required'),
   serviceType: z.string().min(1, 'Service type is required'),
-  status: z.string().min(1, 'Status is required'),
+  status: z.enum(['operational', 'degraded', 'down']),
   note: z.string().optional(),
 });
 
@@ -43,6 +43,14 @@ const serviceStatusOptions = [
   { value: 'down', label: 'Down' },
 ];
 
+interface ServiceLoadShape {
+  floorId?: string | { _id?: string };
+  floor?: { _id?: string };
+  serviceType?: string;
+  status?: string;
+  note?: string;
+}
+
 export default function EditServicePage() {
   const router = useRouter();
   const params = useParams();
@@ -64,9 +72,20 @@ export default function EditServicePage() {
     if (!id) return;
     api
       .get(`services/${id}`)
-      .json<{ success: boolean; data: FormData }>()
+      .json<{ success: boolean; data: ServiceLoadShape }>()
       .then((res) => {
-        reset(res.data);
+        const d = res.data;
+        const rawFloor = d.floorId ?? d.floor;
+        const floorId =
+          typeof rawFloor === 'object' && rawFloor
+            ? String(rawFloor._id ?? '')
+            : String(rawFloor ?? '');
+        reset({
+          floorId,
+          serviceType: d.serviceType ?? '',
+          status: (d.status as FormData['status']) ?? 'operational',
+          note: d.note ?? '',
+        });
         setIsLoading(false);
       })
       .catch(() => {
@@ -78,7 +97,16 @@ export default function EditServicePage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.put(`services/${id}`, { json: data }).json();
+      // Full admin update path — status-only PUT rejects serviceType/floorId
+      await api
+        .put(`services/${id}/full`, {
+          json: {
+            serviceType: data.serviceType,
+            status: data.status,
+            note: data.note ?? '',
+          },
+        })
+        .json();
       router.push('/services');
     } catch {
       setSubmitError('Failed to update service');
@@ -123,6 +151,7 @@ export default function EditServicePage() {
                   valueKey="_id"
                   labelKey={floorLabel}
                   dataPath="data"
+                  disabled
                 />
               )}
             />

@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Phone, UserRound, DoorOpen } from 'lucide-react';
 import { api } from '@/lib/api';
+import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { FormPage } from '@/components/ui/FormPage';
@@ -16,7 +17,10 @@ import { FormSection, FormGrid } from '@/components/ui/FormSection';
 
 const schema = z.object({
   visitorName: z.string().min(1, 'Visitor name is required'),
-  visitorPhone: z.string().min(10, 'Phone must be at least 10 digits'),
+  visitorPhone: z
+    .string()
+    .min(10, 'Phone is required')
+    .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   purpose: z.string().min(1, 'Purpose is required'),
   status: z.enum(['expected', 'arrived', 'departed', 'cancelled']),
 });
@@ -52,12 +56,10 @@ export default function EditVisitorPage() {
       .get(`visitors/${id}`)
       .json<{ success: boolean; data: FormData & { _id: string } }>()
       .then((res) => {
-        // GET /visitors/:id returns name/phone (via model toJSON alias)
-        // Form expects visitorName/visitorPhone — map accordingly
         const d = res.data as Record<string, unknown>;
         reset({
-          visitorName: (d.name as string) ?? '',
-          visitorPhone: (d.phone as string) ?? '',
+          visitorName: (d.visitorName as string) ?? (d.name as string) ?? '',
+          visitorPhone: (d.visitorPhone as string) ?? (d.phone as string) ?? '',
           purpose: (d.purpose as string) ?? '',
           status: (d.status as 'expected' | 'arrived' | 'departed' | 'cancelled') ?? 'expected',
         });
@@ -72,10 +74,19 @@ export default function EditVisitorPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.put(`visitors/${id}`, { json: data }).json();
+      await api
+        .put(`visitors/${id}`, {
+          json: {
+            visitorName: data.visitorName.trim(),
+            visitorPhone: normalizeInPhone(data.visitorPhone),
+            purpose: data.purpose,
+            status: data.status,
+          },
+        })
+        .json();
       router.push('/visitors');
     } catch {
-      setSubmitError('Failed to update visitor');
+      setSubmitError('Failed to update visitor. Check phone format (+91...).');
     }
   };
 

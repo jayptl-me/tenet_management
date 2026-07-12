@@ -5,8 +5,12 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { LaundrySlot } from '../models/laundrySlot.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 const laundry = new Hono();
+
+// Feature gate for all laundry routes
+laundry.use('*', requireFeature('laundryEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
 const createSlotSchema = z.strictObject({
@@ -25,6 +29,36 @@ const updateSlotSchema = z.strictObject({
   notes: z.string().max(300).optional(),
 });
 
+/** Map lean slot so FE list/detail can use tenant.user / tenant.room. */
+function mapLaundrySlot(doc: Record<string, unknown>) {
+  const tenantRaw = doc.tenantId;
+  const tenant =
+    tenantRaw && typeof tenantRaw === 'object'
+      ? (tenantRaw as Record<string, unknown>)
+      : undefined;
+  const userRaw = tenant?.userId;
+  const user =
+    userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;
+  const roomRaw = tenant?.roomId;
+  const room =
+    roomRaw && typeof roomRaw === 'object' ? (roomRaw as Record<string, unknown>) : undefined;
+
+  return {
+    ...doc,
+    // Keep populated tenantId for edit forms; also expose flat tenant for list/detail
+    tenant: tenant
+      ? {
+          _id: String(tenant._id ?? ''),
+          user: user
+            ? { name: user.name as string, phone: user.phone as string | undefined }
+            : undefined,
+          room: room ? { roomNumber: room.roomNumber as string } : undefined,
+          bedId: tenant.bedId as string | undefined,
+        }
+      : undefined,
+  };
+}
+
 // ── GET /laundry-slots ──────────────────────────────────
 laundry.get('/', authGuard, async (c) => {
   const user = c.get('user');
@@ -39,7 +73,10 @@ laundry.get('/', authGuard, async (c) => {
       .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name' } })
       .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
       .lean();
-    return c.json({ success: true, data });
+    return c.json({
+      success: true,
+      data: (data as unknown as Record<string, unknown>[]).map(mapLaundrySlot),
+    });
   }
 
   // Admins see all — with pagination and status filter
@@ -63,7 +100,7 @@ laundry.get('/', authGuard, async (c) => {
 
   return c.json({
     success: true,
-    data,
+    data: (data as unknown as Record<string, unknown>[]).map(mapLaundrySlot),
     meta: {
       total,
       page,
@@ -84,29 +121,16 @@ laundry.get('/:id', authGuard, async (c) => {
     .lean();
   if (!slot) return notFound(c, 'Laundry slot');
 
-  return c.json({ success: true, data: slot });
+  return c.json({
+    success: true,
+    data: mapLaundrySlot(slot as unknown as Record<string, unknown>),
+  });
 });
 
 // ── POST /laundry-slots ─────────────────────────────────
 laundry.post('/', authGuard, zValidator('json', createSlotSchema), async (c) => {
   const body = c.req.valid('json');
   const user = c.get('user');
-
-  // Check feature flag
-  const { AppConfig } = await import('../models/appConfig.js');
-  const config = await AppConfig.findOne().select('features').lean();
-  if (config && !config.features.laundryEnabled) {
-    return c.json(
-      {
-        success: false,
-        error: {
-          code: 'FEATURE_DISABLED',
-          message: 'Laundry booking is currently disabled by the administrator.',
-        },
-      },
-      403,
-    );
-  }
 
   // If tenant, force their own tenantId
   if (user.role === 'tenant') {
@@ -125,7 +149,13 @@ laundry.post('/', authGuard, zValidator('json', createSlotSchema), async (c) => 
       .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
       .lean();
 
-    return c.json({ success: true, data: populated }, 201);
+    return c.json(
+      {
+        success: true,
+        data: mapLaundrySlot(populated as unknown as Record<string, unknown>),
+      },
+      201,
+    );
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {

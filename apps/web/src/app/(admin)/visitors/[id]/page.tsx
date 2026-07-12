@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { User, Phone, Home, Calendar, Clock } from 'lucide-react';
+import { User, Phone, Home, Calendar, Clock, CheckCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { VisitorLifecycleActions } from '@/components/ui/VisitorLifecycleActions';
 
 interface VisitorDetail {
   _id: string;
@@ -49,18 +50,43 @@ export default function VisitorDetailPage() {
   const [visitor, setVisitor] = useState<VisitorDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
     setError('');
-    api
-      .get(`visitors/${id}`)
-      .json<{ success: boolean; data: VisitorDetail }>()
-      .then((res) => setVisitor(res.data))
-      .catch(() => setError('Failed to load visitor details'))
-      .finally(() => setIsLoading(false));
+    try {
+      const res = await api.get(`visitors/${id}`).json<{ success: boolean; data: VisitorDetail }>();
+      setVisitor(res.data);
+    } catch {
+      setError('Failed to load visitor details');
+    } finally {
+      setIsLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleLifecycleAction = async (action: string) => {
+    if (!visitor) return;
+    setActionError('');
+    try {
+      const res =
+        action === 'cancel'
+          ? await api
+              .put(`visitors/${visitor._id}`, { json: { status: 'cancelled' } })
+              .json<{ success: boolean; data: VisitorDetail }>()
+          : await api
+              .post(`visitors/${visitor._id}/${action}`, { json: {} })
+              .json<{ success: boolean; data: VisitorDetail }>();
+      setVisitor(res.data);
+    } catch {
+      setActionError(`Failed to ${action} visitor`);
+    }
+  };
 
   if (!isLoading && (error || !visitor)) {
     return (
@@ -74,6 +100,10 @@ export default function VisitorDetailPage() {
     );
   }
 
+  // Model: expected | arrived | departed | cancelled
+  // approve -> expected; arrive -> arrived; depart -> departed; cancel -> cancelled
+  const status = visitor?.status ?? '';
+
   return (
     <FormPage
       title={visitor?.name ?? 'Visitor Details'}
@@ -81,6 +111,7 @@ export default function VisitorDetailPage() {
       backHref="/visitors"
       isLoading={isLoading}
       maxWidth="4xl"
+      error={actionError}
       badge={
         visitor ? (
           <StatusBadge
@@ -92,6 +123,14 @@ export default function VisitorDetailPage() {
     >
       {visitor && (
         <div className="space-y-6">
+          <DetailCard title="Lifecycle actions" icon={<CheckCircle />}>
+            <VisitorLifecycleActions
+              visitorId={visitor._id}
+              status={status}
+              onAction={handleLifecycleAction}
+            />
+          </DetailCard>
+
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <DetailCard title="Visitor Information" icon={<User />}>
               <DetailList>

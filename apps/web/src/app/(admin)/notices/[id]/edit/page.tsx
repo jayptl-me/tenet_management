@@ -19,8 +19,7 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(1, 'Content is required'),
   pinned: z.boolean().optional(),
-  isPublished: z.boolean(),
-  targetType: z.enum(['all', 'floor', 'individual']).optional(),
+  targetType: z.enum(['all', 'floor', 'room', 'individual']).optional(),
   targetIds: z.string().optional(),
 });
 
@@ -29,6 +28,7 @@ type FormData = z.infer<typeof schema>;
 const TARGET_OPTIONS = [
   { value: 'all', label: 'All tenants' },
   { value: 'floor', label: 'By floor' },
+  { value: 'room', label: 'By room' },
   { value: 'individual', label: 'Specific tenant' },
 ];
 
@@ -46,7 +46,7 @@ export default function EditNoticePage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { content: '', pinned: false, isPublished: false, targetIds: '' },
+    defaultValues: { content: '', pinned: false, targetIds: '', targetType: 'all' },
   });
 
   useEffect(() => {
@@ -60,8 +60,8 @@ export default function EditNoticePage() {
           title: (d.title as string) ?? '',
           content: (d.content as string) ?? '',
           pinned: (d.pinned as boolean) ?? false,
-          isPublished: (d.isPublished as boolean) ?? false,
-          targetType: (d.targetType as 'all' | 'floor' | 'individual') ?? 'all',
+          targetType:
+            (d.targetType as 'all' | 'floor' | 'room' | 'individual') ?? 'all',
           targetIds: Array.isArray(d.targetIds) ? (d.targetIds as string[]).join(', ') : '',
         });
         setIsLoading(false);
@@ -75,13 +75,16 @@ export default function EditNoticePage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     const payload = {
-      ...data,
+      title: data.title,
+      content: data.content,
+      pinned: data.pinned ?? false,
+      targetType: data.targetType ?? 'all',
       targetIds: data.targetIds
         ? data.targetIds
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
-        : undefined,
+        : [],
     };
     try {
       await api.put(`notices/${id}`, { json: payload }).json();
@@ -146,12 +149,11 @@ export default function EditNoticePage() {
 
         <FormSection
           title="Publishing"
-          description="Visibility and pin state on the notices board"
+          description="Pin state on the notices board"
           divided
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
             <Checkbox label="Pin this notice" {...register('pinned')} />
-            <Checkbox label="Published" {...register('isPublished')} />
           </div>
         </FormSection>
       </FormCard>

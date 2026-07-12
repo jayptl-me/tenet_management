@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Select } from '@/components/ui/Select';
+import { StatusFilterSelect } from '@/components/ui/StatusFilterSelect';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -125,21 +125,12 @@ export default function VisitorsPage() {
     },
     {
       header: 'Status',
-      accessor: (row) => {
-        const statusMap: Record<string, string> = {
-          arrived: 'active',
-          departed: 'completed',
-          pending: 'pending',
-          expected: 'pending',
-          cancelled: 'dismissed',
-        };
-        return (
-          <StatusBadge
-            variant={statusToVariant(statusMap[row.status] ?? 'pending')}
-            label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
-          />
-        );
-      },
+      accessor: (row) => (
+        <StatusBadge
+          variant={statusToVariant(row.status)}
+          label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+        />
+      ),
     },
     {
       header: 'Actions',
@@ -168,18 +159,13 @@ export default function VisitorsPage() {
       />
       <ErrorBanner message={error} />
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Select
-          options={[
-            { value: '', label: 'All Statuses' },
-            { value: 'arrived', label: 'Arrived' },
-            { value: 'departed', label: 'Departed' },
-            { value: 'pending', label: 'Pending' },
-          ]}
+        <StatusFilterSelect
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
+          onChange={(v) => {
+            setStatusFilter(v);
             setPage(1);
           }}
+          statuses={['expected', 'arrived', 'departed', 'cancelled']}
           className="max-w-[200px]"
         />
       </div>
@@ -214,13 +200,7 @@ export default function VisitorsPage() {
                 {row.name}
               </span>
               <StatusBadge
-                variant={statusToVariant(
-                  row.status === 'arrived'
-                    ? 'active'
-                    : row.status === 'departed'
-                      ? 'completed'
-                      : 'pending',
-                )}
+                variant={statusToVariant(row.status)}
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>

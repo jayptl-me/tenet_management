@@ -75,12 +75,16 @@ export default function AdminLoginPage() {
       const { user, accessToken, refreshToken } = response.data;
       login(user, accessToken, refreshToken);
 
-      // Admin-only: reject tenant/guardian credentials
+      // Web admin panel is admin-only. Tenant / guardian / visitor use the Flutter app.
       if (user.role !== 'admin') {
         const roleLabel =
-          user.role === 'tenant' ? 'Tenant' : user.role === 'guardian' ? 'Guardian' : user.role;
+          user.role === 'tenant'
+            ? 'Tenant'
+            : user.role === 'guardian'
+              ? 'Guardian'
+              : user.role;
         setError(
-          `This login is for administrators only. ${roleLabel}s should use the respective portal or mobile app.`,
+          `This login is for administrators only. ${roleLabel} accounts use the Tenet mobile / Flutter web portal.`,
         );
         useAuthStore.getState().logout();
         return;
@@ -146,12 +150,11 @@ export default function AdminLoginPage() {
                   <p className="text-[13px] font-semibold leading-snug text-[color:var(--color-danger-700)]">
                     {error}
                   </p>
-                  {error.includes('tenant') ||
-                  error.includes('guardian') ||
+                  {error.includes('Flutter') ||
                   error.includes('Tenant') ||
                   error.includes('Guardian') ? (
                     <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-danger-600)]">
-                      Use the mobile app or tenant/guardian portal to access your account.
+                      Use the Flutter app under /mobile (web or mobile) for resident portals.
                     </p>
                   ) : null}
                 </div>

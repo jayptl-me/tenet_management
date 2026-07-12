@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ClipboardList } from 'lucide-react';
+import { Plus, ClipboardList, List, CalendarRange } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,8 @@ import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { WeekMenuPlanner } from '@/components/ui/WeekMenuPlanner';
+import type { StatusVariant } from '@pg/types';
 import { useRouter } from 'next/navigation';
 
 interface MenuRow {
@@ -21,6 +23,18 @@ interface MenuRow {
   dayOfWeek?: string;
   isActive: boolean;
   createdAt: string;
+}
+
+/**
+ * Derives a status label and badge variant from the menu date.
+ * Past menus (date < today) get a neutral "Past" badge instead of
+ * the misleading "Draft" label. Today = "Active", future = "Scheduled".
+ */
+function getMenuStatusInfo(date: string): { label: string; variant: StatusVariant } {
+  const today = new Date().toISOString().slice(0, 10);
+  if (date < today) return { label: 'Past', variant: statusToVariant('past') };
+  if (date === today) return { label: 'Active', variant: statusToVariant('active') };
+  return { label: 'Scheduled', variant: 'info' };
 }
 
 export default function MenusPage() {
@@ -35,6 +49,7 @@ export default function MenusPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MenuRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [view, setView] = useState<'list' | 'week'>('list');
 
   const fetchMenus = useCallback(async () => {
     setIsLoading(true);
@@ -99,12 +114,10 @@ export default function MenusPage() {
     },
     {
       header: 'Status',
-      accessor: (row) => (
-        <StatusBadge
-          variant={statusToVariant(row.isActive ? 'active' : 'draft')}
-          label={row.isActive ? 'Active' : 'Draft'}
-        />
-      ),
+      accessor: (row) => {
+        const info = getMenuStatusInfo(row.date);
+        return <StatusBadge variant={info.variant} label={info.label} />;
+      },
     },
     {
       header: 'Actions',
@@ -125,13 +138,43 @@ export default function MenusPage() {
         title="Daily Menus"
         description="Plan daily meals for tenants"
         action={
-          <Button onClick={() => router.push('/menus/new')}>
-            <Plus className="h-4 w-4" /> Create Menu
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-0.5">
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  view === 'list'
+                    ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
+                    : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+                }`}
+              >
+                <List className="h-3.5 w-3.5" /> List
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('week')}
+                className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  view === 'week'
+                    ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
+                    : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+                }`}
+              >
+                <CalendarRange className="h-3.5 w-3.5" /> Week
+              </button>
+            </div>
+            <Button onClick={() => router.push('/menus/new')}>
+              <Plus className="h-4 w-4" /> Create Menu
+            </Button>
+          </div>
         }
       />
       <ErrorBanner message={error} />
-      <div className="flex flex-col gap-3 sm:flex-row">
+      {view === 'week' ? (
+        <WeekMenuPlanner onDayClick={(date) => router.push(`/menus/new?date=${date}`)} />
+      ) : (
+        <>
+        <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by date..."
           value={search}
@@ -144,8 +187,8 @@ export default function MenusPage() {
         <Select
           options={[
             { value: '', label: 'All Status' },
-            { value: 'true', label: 'Active' },
-            { value: 'false', label: 'Draft' },
+            { value: 'true', label: 'Active & Upcoming' },
+            { value: 'false', label: 'Past' },
           ]}
           value={statusFilter}
           onChange={(e) => {
@@ -189,16 +232,16 @@ export default function MenusPage() {
                   month: 'short',
                 })}
               </span>
-              <StatusBadge
-                variant={statusToVariant(row.isActive ? 'active' : 'draft')}
-                label={row.isActive ? 'Active' : 'Draft'}
-              />
+              {(() => {
+                const info = getMenuStatusInfo(row.date);
+                return <StatusBadge variant={info.variant} label={info.label} />;
+              })()}
             </div>
             <div className="flex items-center gap-1 pt-1">
               <TableActions
                 onView={() => router.push(`/menus/${row._id}`)}
                 onEdit={() => router.push(`/menus/${row._id}/edit`)}
-                showDelete={false}
+                onDelete={() => setDeleteTarget(row)}
               />
             </div>
           </div>
@@ -212,6 +255,8 @@ export default function MenusPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+        </>
+      )}
     </div>
   );
 }

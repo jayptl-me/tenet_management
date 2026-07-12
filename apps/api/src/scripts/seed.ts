@@ -247,6 +247,10 @@ async function seedSampleData(adminId: string): Promise<void> {
     room.beds[data.bedIdx].tenantId = tenant._id;
     await room.save();
 
+    // Backfill User.tenantId so Flutter portal can resolve tenantId (P0-F1)
+    user.tenantId = tenant._id.toString();
+    await user.save();
+
     tenantPairs.push({ userId: user.id, tenantId: tenant.id });
   }
   logger.info({ count: sampleTenants.length }, 'Tenants + Users seeded');

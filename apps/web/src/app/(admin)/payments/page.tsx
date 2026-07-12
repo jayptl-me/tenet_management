@@ -221,6 +221,17 @@ export default function PaymentsPage() {
             }}
           />
         </div>
+        <Button
+          variant={statusFilter === 'pending_verification' ? 'primary' : 'outline'}
+          onClick={() => {
+            setStatusFilter(
+              statusFilter === 'pending_verification' ? '' : 'pending_verification',
+            );
+            setPage(1);
+          }}
+        >
+          Pending verification
+        </Button>
       </div>
 
       {!isLoading && payments.length === 0 ? (
@@ -244,9 +255,46 @@ export default function PaymentsPage() {
             perPage,
             total,
             onPageChange: setPage,
-            onPerPageChange: setPerPage,
+            onPerPageChange: (pp) => {
+              setPerPage(pp);
+              setPage(1);
+            },
           }}
           onRowClick={(row) => router.push(`/payments/${row._id}`)}
+          mobileCardRenderer={(row) => (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  {tenantDisplayName(row.tenantId)}
+                </span>
+                <StatusBadge
+                  variant={statusToVariant(row.status)}
+                  label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+                />
+              </div>
+              <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+                <span className="font-semibold text-[color:var(--color-text-primary)]">
+                  Rs. {row.amount.toLocaleString('en-IN')}
+                </span>
+                <span className="capitalize">
+                  {row.method ? row.method.replace(/_/g, ' ') : 'N/A'}
+                </span>
+                <span>
+                  {new Date(row.paidAt || row.createdAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 pt-1">
+                <TableActions
+                  onView={() => router.push(`/payments/${row._id}`)}
+                  onEdit={() => router.push(`/payments/${row._id}/edit`)}
+                  showDelete={false}
+                />
+              </div>
+            </div>
+          )}
         />
       )}
 
