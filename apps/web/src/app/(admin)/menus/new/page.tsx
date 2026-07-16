@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,11 +16,24 @@ import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { surfaceNestedClass, fieldLabelClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
+function localTodayYmd(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isValidYmd(value: string | null): value is string {
+  return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 // ── Schema ──────────────────────────────────────────────
 
 const mealItemSchema = z.object({
-  name: z.string().min(1, 'Item name is required'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Item name is required').max(100),
+  description: z.string().max(300).optional(),
+  category: z.string().max(50).optional(),
 });
 
 const formSchema = z.object({
@@ -44,7 +57,10 @@ const MEAL_SECTIONS = [
 
 export default function NewMenuPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState('');
+  const dateParam = searchParams.get('date');
+  const defaultDate = isValidYmd(dateParam) ? dateParam : localTodayYmd();
 
   const {
     register,
@@ -54,10 +70,10 @@ export default function NewMenuPage() {
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: new Date().toISOString().slice(0, 10),
-      breakfast: [{ name: '', description: '' }],
-      lunch: [{ name: '', description: '' }],
-      dinner: [{ name: '', description: '' }],
+      date: defaultDate,
+      breakfast: [{ name: '', description: '', category: '' }],
+      lunch: [{ name: '', description: '', category: '' }],
+      dinner: [{ name: '', description: '', category: '' }],
     },
   });
 
@@ -101,18 +117,21 @@ export default function NewMenuPage() {
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
           lunch: data.lunch
             .filter((i) => i.name.trim())
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
           dinner: data.dinner
             .filter((i) => i.name.trim())
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
         },
       };
@@ -169,7 +188,7 @@ export default function NewMenuPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fieldArray.append({ name: '', description: '' })}
+                  onClick={() => fieldArray.append({ name: '', description: '', category: '' })}
                 >
                   <Plus className="h-4 w-4" /> Add item
                 </Button>
@@ -187,7 +206,7 @@ export default function NewMenuPage() {
                     key={field.id}
                     className={clsx(
                       surfaceNestedClass,
-                      'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end',
+                      'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end',
                     )}
                   >
                     <div className="flex flex-col gap-1.5">
@@ -204,6 +223,11 @@ export default function NewMenuPage() {
                     <input
                       {...register(`${key}.${itemIdx}.description` as const)}
                       placeholder="Description (optional)"
+                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                    />
+                    <input
+                      {...register(`${key}.${itemIdx}.category` as const)}
+                      placeholder="Category (optional)"
                       className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
                     />
                     <div className="flex justify-end sm:pb-0.5">

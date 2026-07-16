@@ -5,10 +5,57 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
 import { NoticePost } from '../models/noticePost.js';
+import { Tenant } from '../models/tenant.js';
+import { Room } from '../models/room.js';
+import { Guardian } from '../models/guardian.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const notices = new Hono();
 notices.use('*', requireFeature('noticeBoardEnabled'));
+
+/**
+ * N1/N2: Resolve floor/room for portal notice feed from tenant (or guardian ward),
+ * not from JWT (JWT only has sub + role).
+ */
+async function resolvePortalTargetContext(user: {
+  sub: string;
+  role: string;
+}): Promise<{ floorId?: string; roomId?: string; userId: string }> {
+  const userId = user.sub;
+  if (user.role === 'tenant') {
+    const tenant = await Tenant.findOne({ userId, isActive: true } as Record<string, unknown>)
+      .select('roomId')
+      .lean();
+    if (!tenant?.roomId) return { userId };
+    const roomId = String(tenant.roomId);
+    const room = await Room.findById(tenant.roomId).select('floorId').lean();
+    return {
+      userId,
+      roomId,
+      floorId: room?.floorId ? String(room.floorId) : undefined,
+    };
+  }
+  if (user.role === 'guardian') {
+    const guardian = await Guardian.findOne({
+      userId,
+      isActive: true,
+    } as Record<string, unknown>)
+      .select('tenantId')
+      .lean();
+    if (!guardian?.tenantId) return { userId };
+    const tenant = await Tenant.findById(guardian.tenantId).select('roomId isActive').lean();
+    if (!tenant?.roomId || tenant.isActive === false) return { userId };
+    const roomId = String(tenant.roomId);
+    const room = await Room.findById(tenant.roomId).select('floorId').lean();
+    return {
+      userId,
+      roomId,
+      floorId: room?.floorId ? String(room.floorId) : undefined,
+    };
+  }
+  return { userId };
+}
 
 // ── Schemas ─────────────────────────────────────────────
 const createNoticeSchema = z.strictObject({
@@ -38,7 +85,6 @@ const updateNoticeSchema = z.strictObject({
 // ── GET /notices ────────────────────────────────────────
 notices.get('/', authGuard, async (c) => {
   const user = c.get('user');
-  const userFloorId = user.floorId;
 
   // Admin list with pagination (admin UI uses this endpoint)
   if (user.role === 'admin') {
@@ -76,19 +122,27 @@ notices.get('/', authGuard, async (c) => {
     });
   }
 
-  // Tenant/guardian feed
+  // Tenant/guardian feed — resolve room/floor from DB (JWT has no floorId)
+  const ctx = await resolvePortalTargetContext({ sub: user.sub, role: user.role });
   const orConditions: Record<string, unknown>[] = [{ targetType: 'all' }];
 
-  if (userFloorId) {
+  if (ctx.floorId) {
     orConditions.push({
       targetType: 'floor',
-      targetIds: userFloorId,
+      targetIds: ctx.floorId,
+    });
+  }
+
+  if (ctx.roomId) {
+    orConditions.push({
+      targetType: 'room',
+      targetIds: ctx.roomId,
     });
   }
 
   orConditions.push({
     targetType: 'individual',
-    targetIds: user.sub,
+    targetIds: ctx.userId,
   });
 
   const data = await NoticePost.find({ $or: orConditions })
@@ -155,9 +209,16 @@ notices.post('/', authGuard, adminOnly, zValidator('json', createNoticeSchema), 
     authorId: user.sub,
   });
 
-  const populated = await NoticePost.findById((notice as { _id: string })._id)
-    .populate('author', 'name email')
-    .lean();
+  const noticeId = String((notice as { _id: string })._id);
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'create',
+    resource: 'notice',
+    resourceId: noticeId,
+    details: { title: body.title, targetType: body.targetType },
+  });
+
+  const populated = await NoticePost.findById(noticeId).populate('author', 'name email').lean();
 
   return c.json({ success: true, data: populated }, 201);
 });
@@ -168,6 +229,7 @@ notices.put('/:id', authGuard, adminOnly, zValidator('json', updateNoticeSchema)
   if (!id) return badRequest(c, 'Invalid notice ID');
 
   const body = c.req.valid('json');
+  const user = c.get('user');
 
   const notice = await NoticePost.findByIdAndUpdate(id, body, {
     returnDocument: 'after',
@@ -177,6 +239,15 @@ notices.put('/:id', authGuard, adminOnly, zValidator('json', updateNoticeSchema)
     .lean();
 
   if (!notice) return notFound(c, 'Notice');
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'notice',
+    resourceId: id,
+    details: { fields: Object.keys(body) },
+  });
+
   return c.json({ success: true, data: notice });
 });
 
@@ -185,8 +256,17 @@ notices.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid notice ID');
 
+  const user = c.get('user');
   const notice = await NoticePost.findByIdAndDelete(id);
   if (!notice) return notFound(c, 'Notice');
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'notice',
+    resourceId: id,
+  });
+
   return c.json({ success: true, data: { message: 'Notice deleted' } });
 });
 

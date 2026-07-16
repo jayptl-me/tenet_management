@@ -22,6 +22,7 @@ const schema = z.object({
   rentAmount: z.coerce.number().min(0, 'Rent amount cannot be negative'),
   electricityAmount: z.coerce.number().min(0, 'Electricity amount cannot be negative'),
   otherCharges: z.coerce.number().min(0, 'Other charges cannot be negative'),
+  dueDate: z.string().optional(),
   status: z.enum(['draft', 'sent', 'overdue', 'cancelled']),
 });
 
@@ -42,6 +43,7 @@ interface InvoiceData {
   electricityAmount: number;
   otherCharges: number;
   totalAmount: number;
+  dueDate?: string | null;
   status: string;
   tenantId?: {
     _id?: string;
@@ -85,15 +87,22 @@ export default function EditInvoicePage() {
       .then((res) => {
         setInvoiceData(res.data);
         const status = res.data.status;
+        // Never coerce paid/partial -> sent (that clobbers payment-driven status on save)
         const editableStatus = (['draft', 'sent', 'overdue', 'cancelled'] as const).includes(
           status as 'draft' | 'sent' | 'overdue' | 'cancelled',
         )
           ? (status as FormData['status'])
           : 'sent';
+        if (status === 'paid') {
+          setSubmitError(
+            'Paid invoices are locked. Amounts and status cannot be edited; adjust via payments if needed.',
+          );
+        }
         reset({
           rentAmount: res.data.rentAmount,
           electricityAmount: res.data.electricityAmount,
           otherCharges: res.data.otherCharges,
+          dueDate: res.data.dueDate ? String(res.data.dueDate).slice(0, 10) : '',
           status: editableStatus,
         });
         setIsLoading(false);
@@ -106,17 +115,24 @@ export default function EditInvoicePage() {
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
+    if (invoiceData?.status === 'paid') {
+      setSubmitError('Paid invoices are locked and cannot be updated.');
+      return;
+    }
     try {
-      await api
-        .put(`invoices/${id}`, {
-          json: {
-            rentAmount: data.rentAmount,
-            electricityAmount: data.electricityAmount,
-            otherCharges: data.otherCharges,
-            status: data.status,
-          },
-        })
-        .json();
+      const payload: Record<string, unknown> = {
+        rentAmount: data.rentAmount,
+        electricityAmount: data.electricityAmount,
+        otherCharges: data.otherCharges,
+        dueDate: data.dueDate
+          ? new Date(`${data.dueDate}T00:00:00.000Z`).toISOString()
+          : undefined,
+      };
+      // Do not send status for partial (payment-driven) — would overwrite to "sent"
+      if (invoiceData?.status !== 'partial') {
+        payload.status = data.status;
+      }
+      await api.put(`invoices/${id}`, { json: payload }).json();
       router.push('/invoices');
     } catch {
       setSubmitError(
@@ -127,6 +143,7 @@ export default function EditInvoicePage() {
 
   const tenant = invoiceData?.tenantId;
   const isPaymentDriven = invoiceData?.status === 'paid' || invoiceData?.status === 'partial';
+  const isPaidLocked = invoiceData?.status === 'paid';
 
   const descriptionParts: string[] = [];
   if (invoiceData?.invoiceNumber) descriptionParts.push(`#${invoiceData.invoiceNumber}`);
@@ -144,8 +161,11 @@ export default function EditInvoicePage() {
       maxWidth="3xl"
     >
       <div className="space-y-5">
-        {isPaymentDriven && (
-          <ErrorBanner message="This invoice is paid or partially paid. Amounts may still be adjusted; status paid/partial is controlled by payments and cannot be set manually." />
+        {isPaidLocked && (
+          <ErrorBanner message="This invoice is paid and locked. Amounts, due date, and status cannot be edited; adjust via payments if needed." />
+        )}
+        {invoiceData?.status === 'partial' && (
+          <ErrorBanner message="This invoice is partially paid. Amounts may still be adjusted; paid/partial status is controlled by payments and cannot be set manually." />
         )}
 
         {tenant && (
@@ -179,12 +199,19 @@ export default function EditInvoicePage() {
         )}
 
         <FormCard
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={
+            isPaidLocked
+              ? (e) => {
+                  e.preventDefault();
+                }
+              : handleSubmit(onSubmit)
+          }
           footer={
             <FormActions
               loading={isSubmitting}
               cancelHref="/invoices"
-              submitLabel="Save Changes"
+              submitLabel={isPaidLocked ? 'Locked (paid)' : 'Save Changes'}
+              hideSubmit={isPaidLocked}
               divided={false}
             />
           }
@@ -196,6 +223,7 @@ export default function EditInvoicePage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
+                disabled={isPaidLocked}
                 error={errors.rentAmount?.message}
                 leftIcon={<Banknote className="h-4 w-4" />}
                 {...register('rentAmount')}
@@ -205,6 +233,7 @@ export default function EditInvoicePage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
+                disabled={isPaidLocked}
                 error={errors.electricityAmount?.message}
                 leftIcon={<Zap className="h-4 w-4" />}
                 {...register('electricityAmount')}
@@ -214,6 +243,7 @@ export default function EditInvoicePage() {
                 type="number"
                 step="0.01"
                 inputMode="decimal"
+                disabled={isPaidLocked}
                 error={errors.otherCharges?.message}
                 leftIcon={<Receipt className="h-4 w-4" />}
                 {...register('otherCharges')}
@@ -229,6 +259,16 @@ export default function EditInvoicePage() {
                 </span>
               </div>
             </div>
+          </FormSection>
+
+          <FormSection title="Due date" description="Payment due date for this invoice" divided>
+            <Input
+              label="Due date"
+              type="date"
+              disabled={isPaidLocked}
+              error={errors.dueDate?.message}
+              {...register('dueDate')}
+            />
           </FormSection>
 
           {!isPaymentDriven && (

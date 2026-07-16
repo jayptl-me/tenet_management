@@ -198,6 +198,19 @@ export default function ElectricityBillDetailPage() {
             />
           </div>
 
+          {bill.billImageUrl && (
+            <DetailCard title="Bill image" icon={<Zap />}>
+              <a
+                href={bill.billImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-[color:var(--color-brand-600)] hover:underline break-all"
+              >
+                {bill.billImageUrl}
+              </a>
+            </DetailCard>
+          )}
+
           <DetailCard title="Room Entries" icon={<Zap />}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

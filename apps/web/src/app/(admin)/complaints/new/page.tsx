@@ -18,8 +18,11 @@ import { FormGrid } from '@/components/ui/FormSection';
 const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   roomId: z.string().min(1, 'Room is required'),
-  title: z.string().min(5, 'Title must be at least 5 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  title: z.string().min(5, 'Title must be at least 5 characters').max(200, 'Title cannot exceed 200 characters'),
+  description: z
+    .string()
+    .min(10, 'Description must be at least 10 characters')
+    .max(2000, 'Description cannot exceed 2000 characters'),
   category: z.enum([
     'wifi',
     'water',
@@ -34,6 +37,8 @@ const complaintSchema = z.object({
     'other',
   ]),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  /** Optional evidence URLs, one per line (max 5). */
+  photoUrls: z.string().optional(),
 });
 
 type ComplaintFormData = z.infer<typeof complaintSchema>;
@@ -98,6 +103,7 @@ function ComplaintForm() {
       description: '',
       category: 'other',
       priority: 'medium',
+      photoUrls: '',
     },
   });
 
@@ -171,6 +177,11 @@ function ComplaintForm() {
   const onSubmit = async (data: ComplaintFormData) => {
     setIsSubmitting(true);
     try {
+      const photos = (data.photoUrls ?? '')
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .slice(0, 5);
       // Whitelist body to match API createComplaintSchema (tenantId required for admin)
       await api
         .post('complaints', {
@@ -181,6 +192,7 @@ function ComplaintForm() {
             description: data.description,
             category: data.category,
             priority: data.priority,
+            ...(photos.length > 0 ? { photos } : {}),
           },
         })
         .json();
@@ -265,6 +277,14 @@ function ComplaintForm() {
             placeholder="Describe the issue in detail"
             error={errors.description?.message}
             {...register('description')}
+          />
+
+          <Textarea
+            label="Photo URLs (optional)"
+            rows={2}
+            placeholder="One HTTPS image URL per line (max 5)"
+            error={errors.photoUrls?.message}
+            {...register('photoUrls')}
           />
         </div>
       </FormCard>

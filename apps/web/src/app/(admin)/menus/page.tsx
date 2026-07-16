@@ -30,8 +30,16 @@ interface MenuRow {
  * Past menus (date < today) get a neutral "Past" badge instead of
  * the misleading "Draft" label. Today = "Active", future = "Scheduled".
  */
+function localTodayYmd(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getMenuStatusInfo(date: string): { label: string; variant: StatusVariant } {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayYmd();
   if (date < today) return { label: 'Past', variant: statusToVariant('past') };
   if (date === today) return { label: 'Active', variant: statusToVariant('active') };
   return { label: 'Scheduled', variant: 'info' };
@@ -121,13 +129,17 @@ export default function MenusPage() {
     },
     {
       header: 'Actions',
-      accessor: (row) => (
-        <TableActions
-          onView={() => router.push(`/menus/${row._id}`)}
-          onEdit={() => router.push(`/menus/${row._id}/edit`)}
-          onDelete={() => setDeleteTarget(row)}
-        />
-      ),
+      accessor: (row) => {
+        const isPast = row.date.slice(0, 10) < localTodayYmd();
+        return (
+          <TableActions
+            onView={() => router.push(`/menus/${row._id}`)}
+            showEdit={!isPast}
+            onEdit={() => router.push(`/menus/${row._id}/edit`)}
+            onDelete={() => setDeleteTarget(row)}
+          />
+        );
+      },
       className: 'w-[130px]',
     },
   ];
@@ -171,7 +183,11 @@ export default function MenusPage() {
       />
       <ErrorBanner message={error} />
       {view === 'week' ? (
-        <WeekMenuPlanner onDayClick={(date) => router.push(`/menus/new?date=${date}`)} />
+        <WeekMenuPlanner
+          onDayClick={(date, menu) =>
+            router.push(menu?._id ? `/menus/${menu._id}` : `/menus/new?date=${date}`)
+          }
+        />
       ) : (
         <>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -240,6 +256,7 @@ export default function MenusPage() {
             <div className="flex items-center gap-1 pt-1">
               <TableActions
                 onView={() => router.push(`/menus/${row._id}`)}
+                showEdit={row.date.slice(0, 10) >= localTodayYmd()}
                 onEdit={() => router.push(`/menus/${row._id}/edit`)}
                 onDelete={() => setDeleteTarget(row)}
               />

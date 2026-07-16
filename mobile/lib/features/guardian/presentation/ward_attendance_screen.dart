@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'ward_screen.dart';
 
@@ -12,9 +13,11 @@ class GuardianAttendanceScreen extends ConsumerStatefulWidget {
       _GuardianAttendanceScreenState();
 }
 
-class _GuardianAttendanceScreenState extends ConsumerState<GuardianAttendanceScreen> {
+class _GuardianAttendanceScreenState
+    extends ConsumerState<GuardianAttendanceScreen> {
   bool _loading = true;
   String? _error;
+  bool _featureDisabled = false;
   List<Map<String, dynamic>> _rows = [];
 
   @override
@@ -27,12 +30,20 @@ class _GuardianAttendanceScreenState extends ConsumerState<GuardianAttendanceScr
     setState(() {
       _loading = true;
       _error = null;
+      _featureDisabled = false;
     });
     try {
       final rows = await ref.read(guardianRepositoryProvider).wardAttendance();
       if (!mounted) return;
       setState(() {
         _rows = rows;
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _featureDisabled = e.isFeatureDisabled;
+        _error = e.message;
         _loading = false;
       });
     } catch (e) {
@@ -52,22 +63,36 @@ class _GuardianAttendanceScreenState extends ConsumerState<GuardianAttendanceScr
         onRefresh: _load,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (_error != null) ErrorBanner(message: _error!),
-                  if (_rows.isEmpty)
-                    const EmptyState(message: 'No attendance records')
-                  else
-                    ..._rows.map((r) {
-                      return ListCard(
-                        title: r['date']?.toString() ?? '—',
-                        subtitle: 'In: ${r['checkInTime'] ?? r['checkIn'] ?? '—'} · Out: ${r['checkOutTime'] ?? r['checkOut'] ?? '—'}',
-                        trailing: StatusChip(label: r['status']?.toString() ?? '—'),
-                      );
-                    }),
-                ],
-              ),
+            : _featureDisabled
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 80),
+                      FeatureDisabledWidget(
+                        message:
+                            'Guardian portal is not enabled. Contact the PG manager.',
+                      ),
+                    ],
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_rows.isEmpty)
+                        const EmptyState(message: 'No attendance records')
+                      else
+                        ..._rows.map((r) {
+                          return ListCard(
+                            title: formatDate(r['date']),
+                            subtitle:
+                                'In: ${r['checkInTime'] ?? r['checkIn'] ?? '--'} · Out: ${r['checkOutTime'] ?? r['checkOut'] ?? '--'}',
+                            trailing: StatusChip(
+                              label: r['status']?.toString() ?? '--',
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
       ),
     );
   }

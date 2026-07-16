@@ -54,4 +54,9 @@ class VisitorRepository {
   Future<void> markDepart(String id) async {
     await _api.postJson('visitors/$id/depart', body: {}, parse: (_) => null);
   }
+
+  /// Cancel an expected visitor (tenant or admin). FSM: expected -> cancelled.
+  Future<void> cancel(String id) async {
+    await _api.postJson('visitors/$id/cancel', body: {}, parse: (_) => null);
+  }
 }

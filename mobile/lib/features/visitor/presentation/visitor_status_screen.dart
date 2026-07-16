@@ -65,8 +65,10 @@ class _VisitorStatusScreenState extends ConsumerState<VisitorStatusScreen> {
       final repo = ref.read(visitorRepositoryProvider);
       if (action == 'arrive') {
         await repo.markArrive(id);
-      } else {
+      } else if (action == 'depart') {
         await repo.markDepart(id);
+      } else if (action == 'cancel') {
+        await repo.cancel(id);
       }
       await _load(id);
     } catch (e) {
@@ -129,12 +131,19 @@ class _VisitorStatusScreenState extends ConsumerState<VisitorStatusScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (status == 'expected')
+          if (status == 'expected') ...[
             FilledButton.icon(
               onPressed: () => _action('arrive'),
               icon: const Icon(Icons.login),
               label: const Text('Mark arrived'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => _action('cancel'),
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Cancel visit'),
+            ),
+          ],
           if (status == 'arrived')
             FilledButton.icon(
               onPressed: () => _action('depart'),

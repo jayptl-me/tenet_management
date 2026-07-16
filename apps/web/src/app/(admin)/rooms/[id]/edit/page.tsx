@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -60,12 +61,15 @@ export default function EditRoomPage() {
   type FormValues = Record<string, any>;
 
   const schema = z.object({
-    roomNumber: z.string().min(1, 'Room number is required'),
+    roomNumber: z.string().min(1, 'Room number is required').max(20, 'Room number max 20 chars'),
     floorId: z.string().min(1, 'Floor is required'),
     sharingType: z.coerce.number().refine((v) => [2, 3, 4].includes(v), 'Must be 2, 3, or 4'),
-    monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
+    monthlyRent: z.coerce
+      .number()
+      .min(1000, 'Monthly rent must be at least Rs 1000')
+      .max(50000, 'Monthly rent cannot exceed Rs 50000'),
     isActive: z.boolean(),
-    description: z.string().optional(),
+    description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
     ...Object.fromEntries(
       roomAmenityDefs.map((a) => [
         `amenity_${a.key}`,
@@ -150,8 +154,9 @@ export default function EditRoomPage() {
         .json<{ success: boolean }>();
 
       router.push('/rooms');
-    } catch {
-      setSubmitError('Failed to update room');
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setSubmitError(parsed.message || 'Failed to update room');
     }
   };
 

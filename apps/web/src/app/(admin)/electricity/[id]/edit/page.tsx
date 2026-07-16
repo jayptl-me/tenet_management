@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Zap, Calculator } from 'lucide-react';
+import { Plus, Trash2, Zap, Calculator, Lock, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -18,6 +19,9 @@ import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { roomLabel } from '@/lib/resource-select-presets';
 import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
+
+/** Block submit only when room sum vs bill total diverges by a clearly erroneous amount. */
+const RECONCILE_BLOCK_THRESHOLD = 10000;
 
 // ── Schema ──────────────────────────────────────────────
 
@@ -32,6 +36,11 @@ const formSchema = z
   .object({
     month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
     totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    billImageUrl: z
+      .string()
+      .optional()
+      .or(z.literal(''))
+      .refine((v) => !v || /^https?:\/\//i.test(v), 'Must be a valid http(s) URL'),
     notes: z.string().optional(),
     roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
   })
@@ -70,6 +79,7 @@ export default function EditElectricityPage() {
     defaultValues: {
       month: '',
       totalBillAmount: 0,
+      billImageUrl: '',
       notes: '',
       roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
     },
@@ -79,15 +89,21 @@ export default function EditElectricityPage() {
 
   // Watch entries for auto-calculations
   const entries = useWatch({ control, name: 'roomEntries' });
+  const totalBillAmount = useWatch({ control, name: 'totalBillAmount' });
 
-  const computeAutoTotal = useCallback((entries: FormData['roomEntries']) => {
-    return entries.reduce((sum, e) => {
+  const computeAutoTotal = useCallback((roomEntries: FormData['roomEntries']) => {
+    return (roomEntries ?? []).reduce((sum, e) => {
       const units = Math.max(0, (e.currentReading || 0) - (e.previousReading || 0));
       return sum + units * (e.ratePerUnit || 0);
     }, 0);
   }, []);
 
   const autoTotal = computeAutoTotal(entries);
+  const billTotal = Number(totalBillAmount) || 0;
+  const reconcileDiff = Math.abs(billTotal - autoTotal);
+  const showReconcileWarning = !isNaN(reconcileDiff) && reconcileDiff > 0.5;
+  const blockReconcile = reconcileDiff > RECONCILE_BLOCK_THRESHOLD;
+  const isLocked = billStatus === 'finalized' || billStatus === 'distributed';
 
   useEffect(() => {
     if (!id) return;
@@ -97,6 +113,7 @@ export default function EditElectricityPage() {
         data: {
           month: string;
           totalBillAmount: number;
+          billImageUrl?: string;
           notes?: string;
           status: string;
           roomEntries: Array<{
@@ -112,15 +129,10 @@ export default function EditElectricityPage() {
         const b = billRes.data;
         setBillStatus(b.status);
 
-        if (b.status === 'distributed') {
-          setSubmitError('Distributed bills cannot be edited');
-          setIsLoading(false);
-          return;
-        }
-
         reset({
           month: b.month ?? '',
           totalBillAmount: b.totalBillAmount ?? 0,
+          billImageUrl: b.billImageUrl ?? '',
           notes: b.notes ?? '',
           roomEntries: (b.roomEntries ?? []).map((e) => ({
             roomId:
@@ -141,8 +153,21 @@ export default function EditElectricityPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
 
-    if (billStatus === 'distributed') {
-      setSubmitError('Distributed bills cannot be edited');
+    if (billStatus === 'distributed' || billStatus === 'finalized') {
+      setSubmitError(
+        billStatus === 'finalized'
+          ? 'Finalized bills cannot be edited'
+          : 'Distributed bills cannot be edited',
+      );
+      return;
+    }
+
+    const roomSum = computeAutoTotal(data.roomEntries);
+    const diff = Math.abs(data.totalBillAmount - roomSum);
+    if (diff > RECONCILE_BLOCK_THRESHOLD) {
+      setSubmitError(
+        `Room amounts (₹${roomSum.toLocaleString('en-IN')}) and total bill (₹${data.totalBillAmount.toLocaleString('en-IN')}) differ by ₹${diff.toLocaleString('en-IN')}. Fix the readings or total before saving.`,
+      );
       return;
     }
 
@@ -152,6 +177,7 @@ export default function EditElectricityPage() {
           json: {
             month: data.month,
             totalBillAmount: data.totalBillAmount,
+            billImageUrl: data.billImageUrl?.trim() || undefined,
             notes: data.notes || undefined,
             roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
@@ -186,23 +212,47 @@ export default function EditElectricityPage() {
     <FormPage
       title="Edit Electricity Bill"
       description={
-        billStatus === 'distributed'
-          ? 'This bill has been distributed and cannot be edited'
+        isLocked
+          ? `This bill is locked (${billStatus}) and cannot be edited`
           : `Status: ${billStatus} — units and amounts recompute automatically`
       }
       backHref="/electricity"
       error={submitError}
       maxWidth="4xl"
     >
+      {isLocked && (
+        <div className="mb-5 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-400)] bg-[color:var(--color-warning-50)] p-4 text-[color:var(--color-warning-800)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Lock className="mt-0.5 h-5 w-5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-bold">
+                Bill is locked ({billStatus})
+              </p>
+              <p className="mt-0.5 text-xs font-semibold opacity-90">
+                {billStatus === 'finalized'
+                  ? 'Finalized bills cannot be edited. Create a new draft if needed.'
+                  : 'Distributed bills cannot be edited.'}
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/electricity/${id}`}
+            className="inline-flex items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--color-warning-400)] bg-[color:var(--color-card-bg)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-warning-800)] hover:bg-[color:var(--color-warning-100)]"
+          >
+            Back to detail
+          </Link>
+        </div>
+      )}
+
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
         footer={
           <FormActions
             loading={isSubmitting}
-            cancelHref="/electricity"
-            submitLabel={billStatus === 'distributed' ? 'Read Only' : 'Save Changes'}
+            cancelHref={`/electricity/${id}`}
+            submitLabel={isLocked ? 'Read Only' : 'Save Changes'}
             divided={false}
-            hideSubmit={billStatus === 'distributed'}
+            hideSubmit={isLocked}
           />
         }
       >
@@ -217,7 +267,7 @@ export default function EditElectricityPage() {
                 placeholder="2025-01"
                 error={err.month?.message}
                 {...register('month')}
-                disabled={billStatus === 'distributed'}
+                disabled={isLocked}
               />
               <Input
                 label="Total bill amount (₹)"
@@ -226,7 +276,15 @@ export default function EditElectricityPage() {
                 min={0}
                 error={err.totalBillAmount?.message}
                 {...register('totalBillAmount')}
-                disabled={billStatus === 'distributed'}
+                disabled={isLocked}
+              />
+              <Input
+                label="Bill image URL (optional)"
+                type="url"
+                placeholder="https://..."
+                error={err.billImageUrl?.message}
+                {...register('billImageUrl')}
+                disabled={isLocked}
               />
             </FormGrid>
           </FormSection>
@@ -243,7 +301,7 @@ export default function EditElectricityPage() {
                 onClick={() =>
                   append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
                 }
-                disabled={billStatus === 'distributed'}
+                disabled={isLocked}
               >
                 <Plus className="h-4 w-4" /> Add room
               </Button>
@@ -285,7 +343,7 @@ export default function EditElectricityPage() {
                             labelKey={roomLabel}
                             valueKey="_id"
                             dataPath="data"
-                            disabled={billStatus === 'distributed'}
+                            disabled={isLocked}
                           />
                         )}
                       />
@@ -301,7 +359,7 @@ export default function EditElectricityPage() {
                           ?.previousReading?.message
                       }
                       {...register(`roomEntries.${idx}.previousReading` as const)}
-                      disabled={billStatus === 'distributed'}
+                      disabled={isLocked}
                     />
                     <Input
                       label="Current reading"
@@ -313,7 +371,7 @@ export default function EditElectricityPage() {
                           ?.currentReading?.message
                       }
                       {...register(`roomEntries.${idx}.currentReading` as const)}
-                      disabled={billStatus === 'distributed'}
+                      disabled={isLocked}
                     />
                     <Input
                       label="Rate/unit (₹)"
@@ -326,7 +384,7 @@ export default function EditElectricityPage() {
                           ?.ratePerUnit?.message
                       }
                       {...register(`roomEntries.${idx}.ratePerUnit` as const)}
-                      disabled={billStatus === 'distributed'}
+                      disabled={isLocked}
                     />
 
                     <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
@@ -336,7 +394,7 @@ export default function EditElectricityPage() {
                         size="icon"
                         aria-label={`Remove room ${idx + 1}`}
                         onClick={() => remove(idx)}
-                        disabled={fields.length <= 1 || billStatus === 'distributed'}
+                        disabled={fields.length <= 1 || isLocked}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -377,6 +435,37 @@ export default function EditElectricityPage() {
                 </span>
               </div>
             )}
+
+            {showReconcileWarning && !isLocked && (
+              <div
+                className={clsx(
+                  'mt-4 flex items-start gap-3 rounded-[var(--radius-lg)] border p-4',
+                  blockReconcile
+                    ? 'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]'
+                    : 'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
+                )}
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+                <div className="min-w-0 text-sm">
+                  <p className="font-bold">
+                    {blockReconcile
+                      ? 'Bill total and room amounts are far apart'
+                      : 'Bill total and room amounts do not match'}
+                  </p>
+                  <p className="mt-0.5 font-medium opacity-90">
+                    Total bill: ₹{billTotal.toLocaleString('en-IN')} · Room sum: ₹
+                    {autoTotal.toLocaleString('en-IN')} · Difference: ₹
+                    {reconcileDiff.toLocaleString('en-IN', {
+                      maximumFractionDigits: 2,
+                    })}
+                    {blockReconcile
+                      ? '. Correct values before saving.'
+                      : '. You can still save; common-area or fixed charges may explain a small gap.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </FormSection>
 
           <FormSection title="Notes" description="Optional remarks for this bill" divided>
@@ -385,7 +474,7 @@ export default function EditElectricityPage() {
               rows={3}
               placeholder="Optional notes..."
               {...register('notes')}
-              disabled={billStatus === 'distributed'}
+              disabled={isLocked}
             />
           </FormSection>
         </div>

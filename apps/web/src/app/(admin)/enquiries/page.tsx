@@ -23,7 +23,14 @@ interface EnquiryRow {
   message?: string;
   status: string;
   source: string;
+  preferredSharing?: string;
   createdAt: string;
+}
+
+function formatPreferredSharing(value?: string): string {
+  if (!value) return '—';
+  if (value === 'single') return 'Single';
+  return `${value}-share`;
 }
 
 export default function EnquiriesPage() {
@@ -99,6 +106,10 @@ export default function EnquiriesPage() {
       accessor: (row) => <span className="capitalize">{row.source}</span>,
     },
     {
+      header: 'Sharing',
+      accessor: (row) => formatPreferredSharing(row.preferredSharing),
+    },
+    {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
@@ -149,9 +160,8 @@ export default function EnquiriesPage() {
             { value: '', label: 'All Statuses' },
             { value: 'new', label: 'New' },
             { value: 'contacted', label: 'Contacted' },
-            { value: 'follow_up', label: 'Follow Up' },
             { value: 'converted', label: 'Converted' },
-            { value: 'closed', label: 'Closed' },
+            { value: 'lost', label: 'Lost' },
           ]}
           value={statusFilter}
           onChange={(e) => {
@@ -199,6 +209,7 @@ export default function EnquiriesPage() {
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <span>{row.phone}</span>
               <span className="capitalize">{row.source}</span>
+              <span>{formatPreferredSharing(row.preferredSharing)}</span>
               <span>
                 {new Date(row.createdAt).toLocaleDateString('en-IN', {
                   day: '2-digit',

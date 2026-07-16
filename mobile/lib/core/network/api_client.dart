@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -119,6 +121,51 @@ class ApiClient {
     } on DioException catch (e) {
       throw _mapError(e);
     }
+  }
+
+  /// Authenticated binary download (e.g. invoice PDF). Does not unwrap JSON.
+  Future<List<int>> getBytes(
+    String path, {
+    Map<String, dynamic>? query,
+    String accept = 'application/pdf',
+  }) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        path,
+        queryParameters: query,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': accept},
+        ),
+      );
+      final data = res.data;
+      if (data == null) {
+        throw ApiException(message: 'Empty file response');
+      }
+      return data;
+    } on DioException catch (e) {
+      throw _mapBytesError(e);
+    }
+  }
+
+  ApiException _mapBytesError(DioException e) {
+    final raw = e.response?.data;
+    if (raw is List<int>) {
+      try {
+        final decoded = jsonDecode(utf8.decode(raw));
+        if (decoded is Map && decoded['error'] is Map) {
+          final err = decoded['error'] as Map;
+          return ApiException(
+            message: err['message']?.toString() ?? 'Request failed',
+            code: err['code']?.toString(),
+            statusCode: e.response?.statusCode,
+          );
+        }
+      } catch (_) {
+        // fall through
+      }
+    }
+    return _mapError(e);
   }
 
   dynamic _unwrap(dynamic body) {

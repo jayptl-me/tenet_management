@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { AppConfig } from '../models/appConfig.js';
+import { verifyAccessToken } from '../lib/jwt.js';
 import chroma from 'chroma-js';
 
 const appConfig = new Hono();
@@ -27,11 +28,18 @@ const appConfigUpdateSchema = z.object({
       pincode: z.string().min(1),
     })
     .optional(),
-  phone: z
-    .string()
-    .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number')
-    .optional(),
-  email: z.string().email('Invalid email').optional(),
+  // FE form state uses ''; treat empty as omitted optional
+  phone: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z
+      .string()
+      .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number')
+      .optional(),
+  ),
+  email: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().email('Invalid email').optional(),
+  ),
   upiId: z.string().optional(),
   upiPayeeName: z.string().optional(),
   socialLinks: z
@@ -39,6 +47,7 @@ const appConfigUpdateSchema = z.object({
       facebook: z.string().optional(),
       instagram: z.string().optional(),
       whatsapp: z.string().optional(),
+      youtube: z.string().optional(),
     })
     .optional(),
   googleMapsEmbedUrl: z.string().optional(),
@@ -98,6 +107,26 @@ const appConfigUpdateSchema = z.object({
         .optional(),
     })
     .optional(),
+  // Admin settings fields previously stripped by Zod — must persist for FE settings UI
+  gstNumber: z.string().max(20).optional(),
+  panNumber: z.string().max(20).optional(),
+  amenityDefinitions: z
+    .array(
+      z.object({
+        key: z
+          .string()
+          .min(1)
+          .regex(/^[a-z][a-z0-9_]*$/, 'Key must be lowercase alphanumeric with underscores'),
+        label: z.string().min(1).max(50),
+        icon: z.string().min(1),
+        category: z.enum(['essential', 'appliance', 'furnishing', 'other']),
+        showAsStatusLabel: z.boolean().optional().default(false),
+        isPerFloor: z.boolean().optional().default(true),
+        maxPerFloor: z.number().int().min(0).max(10).optional(),
+        applicableComplaintCategories: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
 });
 
 // ── GET /app-config ─────────────────────────────────────
@@ -111,12 +140,25 @@ appConfig.get('/', async (c) => {
     });
   }
 
-  // Exclude sensitive fields (gstNumber, panNumber) from public response
-  const { ...publicConfig } = config as unknown as Record<string, unknown>;
-  delete (publicConfig as Record<string, unknown>).gstNumber;
-  delete (publicConfig as Record<string, unknown>).panNumber;
+  const data = { ...(config as unknown as Record<string, unknown>) };
 
-  return c.json({ success: true, data: publicConfig });
+  // Public callers: hide tax IDs. Admin JWT: return full settings (GST/PAN).
+  let isAdmin = false;
+  const authHeader = c.req.header('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const payload = await verifyAccessToken(authHeader.slice(7));
+      isAdmin = payload.role === 'admin';
+    } catch {
+      isAdmin = false;
+    }
+  }
+  if (!isAdmin) {
+    delete data.gstNumber;
+    delete data.panNumber;
+  }
+
+  return c.json({ success: true, data });
 });
 
 // ── PUT /app-config ─────────────────────────────────────

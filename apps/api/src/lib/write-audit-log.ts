@@ -34,7 +34,7 @@ export interface WriteAuditLogParams {
 export async function writeAuditLog(params: WriteAuditLogParams): Promise<void> {
   try {
     type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
-    const create = AuditLog.create as unknown as CreateFn;
+    const create = AuditLog.create.bind(AuditLog) as unknown as CreateFn;
     await create({
       userId: new mongoose.Types.ObjectId(params.userId),
       action: params.action,

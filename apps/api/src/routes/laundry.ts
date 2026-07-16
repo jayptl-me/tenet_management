@@ -222,7 +222,10 @@ laundry.put('/:id', authGuard, adminOnly, zValidator('json', updateSlotSchema), 
     .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
     .lean();
 
-  return c.json({ success: true, data: populated });
+  return c.json({
+    success: true,
+    data: mapLaundrySlot(populated as unknown as Record<string, unknown>),
+  });
 });
 
 // ── DELETE /laundry-slots/:id ───────────────────────────

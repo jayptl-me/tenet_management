@@ -8,8 +8,8 @@ import { Complaint } from '../models/complaint.js';
 import { ServiceStatus } from '../models/serviceStatus.js';
 import { Enquiry } from '../models/enquiry.js';
 import { MealFeedback } from '../models/mealFeedback.js';
-import { Notification } from '../models/notification.js';
 import { Tenant } from '../models/tenant.js';
+import { getBadgeCounts } from '../lib/broadcast-badges.js';
 
 const dashboard = new Hono();
 
@@ -26,20 +26,12 @@ function getDateString(date: Date): string {
 }
 
 // ── GET /dashboard/badges ────────────────────────────────
+// Shape shared with SSE event `badges-update` (broadcast-badges.ts)
 dashboard.get('/badges', authGuard, adminOnly, async (c) => {
-  const [unreadNotifications, openComplaints, pendingEnquiries] = await Promise.all([
-    Notification.countDocuments({ readBy: { $size: 0 } } as Record<string, unknown>),
-    Complaint.countDocuments({ status: 'open' } as Record<string, unknown>),
-    Enquiry.countDocuments({ status: 'new' } as Record<string, unknown>),
-  ]);
-
+  const data = await getBadgeCounts();
   return c.json({
     success: true,
-    data: {
-      unreadNotifications,
-      openComplaints,
-      pendingEnquiries,
-    },
+    data,
   });
 });
 

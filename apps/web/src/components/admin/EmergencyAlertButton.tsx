@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { AlertTriangle, Send, X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useAppConfigPublic } from '@/hooks/useAppConfig';
 
 export function EmergencyAlertButton() {
+  const { data: appConfig } = useAppConfigPublic();
+  const enabled = appConfig?.features?.emergencyAlertsEnabled !== false;
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -14,6 +17,10 @@ export function EmergencyAlertButton() {
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) return;
+    if (!enabled) {
+      setError('Emergency alerts are disabled in Settings.');
+      return;
+    }
     setSending(true);
     setError('');
     try {
@@ -42,6 +49,8 @@ export function EmergencyAlertButton() {
       setSending(false);
     }
   };
+
+  if (!enabled) return null;
 
   return (
     <>

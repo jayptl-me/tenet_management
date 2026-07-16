@@ -17,7 +17,11 @@ export interface INotification {
   body: string;
   type: INotificationType;
   data?: Record<string, string>;
+  /** Permanent recipient set for history after mark-read (F1). */
+  recipientUserIds: string[];
   unreadBy: string[];
+  /** Present on list responses for the authenticated user (F2). */
+  isRead?: boolean;
   sentAt: string;
   createdAt: string;
 }

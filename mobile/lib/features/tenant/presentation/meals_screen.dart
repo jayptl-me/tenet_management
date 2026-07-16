@@ -49,6 +49,12 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
         _menu = menu;
         _loading = false;
       });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -59,6 +65,11 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
     _loadFeedbackHistory();
   }
 
+  String _mealLabel(String mealType) {
+    if (mealType.isEmpty) return mealType;
+    return mealType[0].toUpperCase() + mealType.substring(1);
+  }
+
   Future<void> _loadFeedbackHistory() async {
     try {
       final rows =
@@ -66,7 +77,7 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
       if (!mounted) return;
       setState(() => _feedbackHistory = rows);
     } on ApiException catch (e) {
-      if (e.statusCode == 403 && mounted) {
+      if (e.isFeatureDisabled && mounted) {
         setState(() => _featureDisabled = true);
       }
     } catch (_) {
@@ -91,7 +102,7 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
       _comment.clear();
       _loadFeedbackHistory();
     } on ApiException catch (e) {
-      if (e.statusCode == 403) {
+      if (e.isFeatureDisabled) {
         setState(() => _featureDisabled = true);
       } else {
         setState(() => _error = e.message);
@@ -109,7 +120,10 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (_error != null) ErrorBanner(message: _error!),
+          if (_error != null) ...[
+            ErrorBanner(message: _error!),
+            const SizedBox(height: 12),
+          ],
           if (_loading)
             const Center(child: CircularProgressIndicator())
           else ...[
@@ -118,13 +132,15 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            if (meals == null)
+            if (_error != null && _menu == null)
+              const SizedBox.shrink()
+            else if (meals == null)
               const EmptyState(message: 'No menu published for today')
             else
               ...['breakfast', 'lunch', 'dinner'].map((slot) {
                 final items = meals[slot];
                 return ListCard(
-                  title: slot[0].toUpperCase() + slot.substring(1),
+                  title: _mealLabel(slot),
                   subtitle: items is List
                       ? items.map((e) => e is Map ? e['name'] : e).join(', ')
                       : items?.toString() ?? '—',
@@ -150,8 +166,14 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                         decoration:
                             const InputDecoration(labelText: 'Meal'),
                         items: const ['breakfast', 'lunch', 'dinner']
-                            .map((m) => DropdownMenuItem(
-                                value: m, child: Text(m)))
+                            .map(
+                              (m) => DropdownMenuItem(
+                                value: m,
+                                child: Text(
+                                  m[0].toUpperCase() + m.substring(1),
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: (v) =>
                             setState(() => _mealType = v ?? 'lunch'),
@@ -220,13 +242,19 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
               if (_feedbackHistory.isEmpty)
                 const EmptyState(message: 'No feedback submitted yet')
               else
-                ..._feedbackHistory.map((f) => ListCard(
-                      title:
-                          '${f['date']?.toString() ?? '--'} - ${f['mealType']?.toString() ?? '--'}',
-                      subtitle:
-                          'Rating: ${f['rating']}/5${f['comment'] != null && f['comment'].toString().isNotEmpty ? ' - ${f['comment']}' : ''}',
-                      trailing: StatusChip(label: '${f['rating']}/5'),
-                    )),
+                ..._feedbackHistory.map((f) {
+                  final mealType = f['mealType']?.toString() ?? '--';
+                  final mealTitle = mealType == '--'
+                      ? mealType
+                      : _mealLabel(mealType);
+                  return ListCard(
+                    title:
+                        '${f['date']?.toString() ?? '--'} - $mealTitle',
+                    subtitle:
+                        'Rating: ${f['rating']}/5${f['comment'] != null && f['comment'].toString().isNotEmpty ? ' - ${f['comment']}' : ''}',
+                    trailing: StatusChip(label: '${f['rating']}/5'),
+                  );
+                }),
             ],
           ],
         ],

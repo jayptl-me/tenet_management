@@ -6,6 +6,7 @@ export type SSEEventType =
   | 'payment_verified'
   | 'new_enquiry'
   | 'notification_created'
+  | 'badges-update'
   | 'tenant_checkin'
   | 'tenant_checkout'
   | 'meal_feedback_submitted'

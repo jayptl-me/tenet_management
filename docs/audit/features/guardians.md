@@ -1,6 +1,12 @@
-# Guardians -- Gap Analysis
+# Guardians -- Feature Audit
 
-**Priority:** P0 -- edit save dead; portal routes shadowed; phone validation mismatch.
+**Last verified:** 2026-07-16  
+**Auditor:** code-verified source pass  
+**Grade:** A-
+
+> Admin CRUD + portal ward endpoints are wired and aligned with the model. Feature flag gates the entire router. P1-G1 (cascade Users) and P1-G2 (Flutter FeatureDisabledWidget) are **closed**. Residual: P2 phantom detail fields and TempCredentialsDialog reuse.
+
+---
 
 ## Source map
 
@@ -9,92 +15,156 @@
 | Model | `apps/api/src/models/guardian.ts` |
 | Routes | `apps/api/src/routes/guardians.ts` |
 | Types | `packages/types/src/guardian.ts` |
-| FE | `apps/web/src/app/(admin)/guardians/**` |
+| Admin list | `apps/web/src/app/(admin)/guardians/page.tsx` |
+| Admin new | `apps/web/src/app/(admin)/guardians/new/page.tsx` |
+| Admin detail | `apps/web/src/app/(admin)/guardians/[id]/page.tsx` |
+| Admin edit | `apps/web/src/app/(admin)/guardians/[id]/edit/page.tsx` |
+| Flutter | `mobile/lib/features/guardian/**` |
+| Feature flag | `guardianPortalEnabled` via `requireFeature` on router |
 
-## Model fields (truth)
-
-- userId (unique, ref User)
-- tenantId (ref Tenant)
-- name, phone (+91 regex), email?, relation enum `father|mother|guardian|other`
-- isActive default true
-- **No** `isEmergencyContact` field (computed in mapGuardian as father/mother)
+---
 
 ## API surface
 
-| Method | Path | Notes |
-|--------|------|-------|
-| POST | `/guardians` | admin; transaction User role=guardian + Guardian |
-| GET | `/guardians` | admin list + mapGuardian populate |
-| GET | `/guardians/:id` | **registered before /me/** |
-| PUT | `/guardians/:id` | updateGuardianSchema strictObject |
-| DELETE | `/guardians/:id` | soft deactivate guardian + user |
-| GET | `/guardians/me/ward` | **DEAD** -- matched as id="me" |
-| GET | `/guardians/me/ward/attendance` | **DEAD** same |
+| Method | Path | Role | Notes |
+|--------|------|------|-------|
+| POST | `/guardians` | admin | Transaction User(role=guardian) + Guardian; returns `temporaryPassword`; 409 on duplicate phone/email |
+| GET | `/guardians` | admin | Paginated; `search`, `tenantId`; `mapGuardian` populate |
+| GET | `/guardians/me/ward` | guardian JWT | **Registered before `/:id`** |
+| GET | `/guardians/me/ward/attendance` | guardian JWT | Paginated attendance for ward |
+| GET | `/guardians/:id` | admin | Single + mapGuardian |
+| PUT | `/guardians/:id` | admin | Whitelist fields; syncs User name/phone/email/isActive |
+| DELETE | `/guardians/:id` | admin | Soft deactivate guardian + User |
 
-### updateGuardianSchema allows only
+All routes: `requireFeature('guardianPortalEnabled')` (defaults true if config missing).
+
+### Schemas (truth)
+
+**createGuardianSchema:** `tenantId`, `name`, `phone` (+91), **`email` required**, `relation` enum `father|mother|guardian|other`.  
+**updateGuardianSchema (strictObject):** `name?`, `phone?`, `email?`, `relation?`, `isActive?`.  
+Does **not** allow: `tenantId`, `isEmergencyContact`, extra keys.
+
+### mapGuardian
+
+- Flattens `tenantId` string for ResourceSelect.
+- Nested `tenant.user` / `tenant.room`.
+- Computes **`isEmergencyContact`** = relation is father or mother (not a stored field).
+
+---
+
+## FE page matrix
+
+| Page | Stack | Verdict |
+|------|-------|---------|
+| List | PageHeader, DataTable, TableActions, mobileCardRenderer, StatusBadge, ConfirmModal, search | **PASS** |
+| Detail | FormPage, DetailCard, Edit + View Tenant CTAs, emergency badge | **PASS** (phantom types only) |
+| New | FormPage, ResourceSelect tenant, relation enum correct, phone normalize, temp password banner | **PASS** |
+| Edit | FormPage, tenant ResourceSelect **disabled**, whitelist PUT payload, relation enum, isActive checkbox, emergency display-only | **PASS** |
+
+Sidebar / QuickCreate respect `guardianPortalEnabled`.
+
+---
+
+## Field coverage
+
+| Model field | List | Detail | New | Edit | Notes |
+|-------------|:----:|:------:|:---:|:----:|-------|
+| userId | -- | -- | created server-side | -- | Unique User link |
+| tenantId | via tenant name | linked tenant | ResourceSelect | display-only (disabled) | Not reassignable on PUT |
+| name | Y | Y | Y | Y | |
+| phone | Y | Y | normalize +91 | normalize +91 | |
+| email | -- | Y if present | **required** | optional | Create requires email for login |
+| relation | Y | Y | enum 4 | enum 4 | Matches model |
+| isActive | Y badge | Y badge | default true | Checkbox | Syncs User on PUT |
+| isEmergencyContact | Y (computed) | Y (computed) | n/a | display-only disabled | **Not in model** |
+| address | -- | typed only | -- | -- | **Phantom** -- never from API |
+| notes | -- | conditional render | -- | -- | **Phantom** -- never from API |
+| temporaryPassword | n/a | n/a | inline banner | n/a | One-time create response |
+| createdAt / updatedAt | -- | Y | n/a | n/a | |
+
+---
+
+## Lifecycle
 
 ```
-name?, phone? (+91), email?, relation? (enum 4), isActive?
+Admin POST create -> User(role=guardian) + Guardian(isActive) + temp password
+  -> PUT name/phone/email/relation/isActive (User sync)
+  -> DELETE soft-deactivates Guardian + User
+Guardian JWT -> GET /me/ward + /me/ward/attendance
+Tenant DELETE cascade -> deactivates guardian Users then deletes Guardian docs (P1-G1 closed)
 ```
 
-Does **not** allow: tenantId, isEmergencyContact, any extra keys (strictObject).
+| Step | Status |
+|------|--------|
+| Create + credentials | **PASS** |
+| Edit save (whitelist) | **PASS** |
+| Soft delete | **PASS** API + UI -- ConfirmModal "Deactivate Guardian" / reinstate later |
+| /me/ward portal | **PASS** route order + Flutter repo |
+| Feature flag off | **PASS** API 403; FE nav hidden |
 
-## FE failures (brutal)
+---
 
-### Edit page `guardians/[id]/edit/page.tsx`
+## Design / stack
 
-1. **Load reset:** `reset(res.data)` expects flat FormData with `tenantId` string and `isEmergencyContact`. API returns nested `tenant` object and computed isEmergencyContact; `tenantId` may be populated object after populate -- ResourceSelect value breaks.
+- CSS variable tokens; FormPage / DataTable SaaS stack.
+- ResourceSelect for tenant (no free-text Mongo IDs on create/edit).
+- Emergency contact is derived UI, not a form field on create.
+- New page uses **inline** temp-password banner (not shared `TempCredentialsDialog`) -- functional.
 
-2. **Submit:** `api.put(..., { json: data })` sends full form including:
-   - `tenantId` -- **rejected**
-   - `isEmergencyContact` -- **rejected**
-   - phone as 10-digit possible -- **rejected** by +91 regex
-   - relation may be brother/sister/spouse/friend from options -- **rejected** by enum
+---
 
-3. **Relation options** include values outside model enum (edit only; new page is correct enum).
+## Open gaps
 
-### New page
+### P0
 
-- Relation enum correct.
-- Phone `min(10)` without forcing `+91[6-9]\d{9}` -- create fails unless user types full E.164.
+_None verified open._
 
-### List / Detail
+### P1
 
-- Component stack OK (PageHeader, DataTable, StatusBadge, TableActions).
-- Detail uses mapGuardian tenant nesting -- OK for display.
+| ID | Gap | Proof |
+|----|-----|-------|
 
-## Feature flag
+### P2
 
-`guardianPortalEnabled` never checked in routes.
+| ID | Gap | Proof |
+|----|-----|-------|
+| P2-G1 | Detail TypeScript interface includes `address` / `notes` never returned by API (dead branches). | `guardians/[id]/page.tsx` |
+| P2-G3 | New guardian temp password not using shared `TempCredentialsDialog`. | `guardians/new/page.tsx` |
+| P2-G4 | No admin path to reassign `tenantId` (product choice; create new link instead). | update schema |
 
-## Required fixes (ordered)
+---
 
-1. **Route order:** Register `/me/ward` and `/me/ward/attendance` **before** `/:id`.
-2. **Edit submit whitelist:**
-   ```ts
-   const payload = {
-     name: data.name,
-     phone: normalizeInPhone(data.phone),
-     email: data.email || undefined,
-     relation: data.relation, // constrained enum
-     isActive: data.isActive,
-   };
-   ```
-3. **Edit load map:**
-   ```ts
-   tenantId: typeof d.tenantId === 'string' ? d.tenantId : d.tenantId?._id ?? d.tenant?._id
-   // do not put isEmergencyContact in PUT body; display-only checkbox or remove
-   ```
-4. **Phone helper** shared: strip non-digits, if 10 digits prepend +91, validate.
-5. **Relation options** on edit = new page enum only.
-6. Optional: allow tenant reassignment with explicit schema field + validation.
-7. Handle user unique phone 11000 on create.
-8. Gate portal routes with `guardianPortalEnabled`.
+## Closed / do-not-refile
 
-## Acceptance
+| Old claim | Live status |
+|-----------|-------------|
+| `/me/ward` shadowed by `/:id` | **FIXED** -- static routes registered first |
+| Edit PUT sends tenantId + isEmergencyContact + bad relation enum | **FIXED** -- whitelist + enum aligned |
+| Phone min(10) without +91 | **FIXED** -- `normalizeInPhone` + `isValidInPhone` |
+| `guardianPortalEnabled` never checked | **FIXED** -- `requireFeature` on router |
+| Relation options brother/sister/spouse on edit | **FIXED** -- father/mother/guardian/other only |
+| PUT does not sync User | **FIXED** -- name/phone/email/isActive sync |
+| ConfirmModal hard-delete copy (P2-G2) | **FIXED** -- "Deactivate Guardian" + reinstate later message |
+| P1-G1 orphaned guardian Users on tenant DELETE | **FIXED** -- deactivate Users before Guardian.deleteMany (`tenants.ts`) |
+| P1-G2 Flutter 403 swallow as empty ward | **FIXED** -- FeatureDisabledWidget on ward screens |
 
-- [ ] Create guardian with +91 phone succeeds; User role guardian
-- [ ] Edit name/phone/relation/isActive succeeds
-- [ ] Edit no longer 400 on strictObject
-- [ ] GET /guardians/me/ward returns 200 for guardian JWT
-- [ ] DELETE deactivates guardian + user
+---
+
+## Acceptance checklist
+
+- [x] Create guardian with +91 phone succeeds; User role guardian
+- [x] Create returns temporaryPassword once
+- [x] Edit name/phone/relation/isActive succeeds (no strictObject 400)
+- [x] GET `/guardians/me/ward` returns 200 for guardian JWT (when flag on)
+- [x] DELETE deactivates guardian + user
+- [x] Feature flag gates API + admin nav
+- [x] Tenant cascade deactivates guardian Users
+- [x] Flutter surfaces FEATURE_DISABLED distinctly from empty ward
+- [x] Soft-delete UX copy accurate (Deactivate Guardian)
+
+---
+
+## Remediation log
+
+- Prior audit claimed edit save dead, portal routes shadowed, flag missing -- all obsolete against 2026-07-16 source.
+- **2026-07-16:** Full re-verify. Grade **A**. Open P1 empty. Closed P1-G1/P1-G2. Residual P2 phantoms/TempCredentialsDialog.

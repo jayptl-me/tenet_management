@@ -17,6 +17,7 @@ import type {
 } from '@pg/types';
 import AppearanceTab from '@/components/admin/AppearanceTab';
 import AmenityTypesTab from '@/components/admin/AmenityTypesTab';
+import { sanitizeSettingsPayload } from '@/lib/sanitize-settings-payload';
 
 type TabKey =
   | 'general'
@@ -177,7 +178,9 @@ export default function SettingsPage() {
     setIsSaving(true);
     setError('');
     try {
-      await api.put('app-config', { json: config }).json();
+      // Never POST raw form state: empty strings fail API Zod (phone/email optional
+      // but '' is not undefined; blank testimonials fail name/quote min 1).
+      await api.put('app-config', { json: sanitizeSettingsPayload(config) }).json();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       // Trigger theme re-fetch so changes apply immediately

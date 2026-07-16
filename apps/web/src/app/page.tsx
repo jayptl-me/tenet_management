@@ -15,6 +15,7 @@ import {
   Mail,
   Instagram,
   Facebook,
+  Youtube,
   ArrowRight,
   ExternalLink,
   Wifi,
@@ -938,6 +939,16 @@ export default function LandingPage() {
                   rel="noopener noreferrer"
                 >
                   <Phone className="h-4 w-4" />
+                </a>
+              )}
+              {social.youtube && (
+                <a
+                  href={social.youtube}
+                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Youtube className="h-4 w-4" />
                 </a>
               )}
             </div>

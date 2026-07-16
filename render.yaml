@@ -40,14 +40,18 @@ services:
       - key: CORS_EXTRA_ORIGINS
         sync: false
 
-  - type: static
+  # Next.js admin app is server-rendered (dynamic [id] routes). Deploy as a
+  # Bun web service so `next start` serves `.next` — static `out/` is not produced
+  # without `output: 'export'`.
+  - type: web
     name: pg-web
+    runtime: bun
     buildCommand: cd apps/web && bun install && bun run build
-    staticPublishPath: apps/web/out
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: cd apps/web && bun run start
     envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
       - key: NEXT_PUBLIC_API_URL
         sync: false

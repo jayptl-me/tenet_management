@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserRound, Hash, Tag, AlertTriangle, MessageSquare } from 'lucide-react';
+import { UserRound, Hash, Tag, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
@@ -16,14 +16,40 @@ import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import {
+  tenantDisplayName,
+  tenantRoomNumber,
+  type PopulatedTenantRef,
+} from '@/lib/api-shapes';
+
+const CATEGORY_OPTIONS = [
+  { value: 'wifi', label: 'Wi-Fi' },
+  { value: 'water', label: 'Water' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'food_quality', label: 'Food Quality' },
+  { value: 'cleaning_room', label: 'Cleaning - Room' },
+  { value: 'cleaning_washroom', label: 'Cleaning - Washroom' },
+  { value: 'washing_machine', label: 'Washing Machine' },
+  { value: 'fridge', label: 'Fridge' },
+  { value: 'lights', label: 'Lights' },
+  { value: 'noise', label: 'Noise' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+const categoryValues = CATEGORY_OPTIONS.map((o) => o.value) as [
+  (typeof CATEGORY_OPTIONS)[number]['value'],
+  ...(typeof CATEGORY_OPTIONS)[number]['value'][],
+];
 
 const schema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
+  title: z.string().min(5, 'Title must be at least 5 characters').max(200),
+  description: z.string().min(10, 'Description must be at least 10 characters').max(2000),
+  category: z.enum(categoryValues),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']),
-  adminNotes: z.string().optional(),
+  adminNotes: z.string().max(2000).optional(),
+  /** One URL per line (max 5). */
+  photoUrls: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -50,13 +76,29 @@ interface ComplaintDetail {
   priority: string;
   status: string;
   adminNotes?: string;
-  tenantId?: {
-    _id?: string;
-    userId?: { name?: string; phone?: string };
-    roomId?: { roomNumber?: string };
-    bedId?: string;
-  };
+  photos?: string[];
+  /** API mapComplaint shape */
+  tenant?: PopulatedTenantRef & { bedId?: string };
+  /** Legacy / dual-read shape */
+  tenantId?: PopulatedTenantRef & { bedId?: string };
   createdAt: string;
+}
+
+function resolveTenant(data: ComplaintDetail | null): (PopulatedTenantRef & { bedId?: string }) | null {
+  if (!data) return null;
+  const t = data.tenant ?? data.tenantId;
+  if (!t || typeof t === 'string') return null;
+  return t;
+}
+
+function tenantPhone(tenant: PopulatedTenantRef | null): string {
+  if (!tenant) return 'N/A';
+  return tenant.user?.phone ?? tenant.userId?.phone ?? 'N/A';
+}
+
+function tenantBed(tenant: (PopulatedTenantRef & { bedId?: string }) | null): string {
+  if (!tenant) return 'N/A';
+  return tenant.bedId ?? 'N/A';
 }
 
 export default function EditComplaintPage() {
@@ -83,16 +125,21 @@ export default function EditComplaintPage() {
       .json<{ success: boolean; data: ComplaintDetail }>()
       .then((res) => {
         setComplaintData(res.data);
+        const rawCategory = res.data.category ?? 'other';
+        const category = (categoryValues as readonly string[]).includes(rawCategory)
+          ? (rawCategory as FormData['category'])
+          : 'other';
         reset({
           title: res.data.title ?? '',
           description: res.data.description ?? '',
-          category: res.data.category ?? '',
+          category,
           priority:
             res.data.priority === 'critical'
               ? 'urgent'
               : ((res.data.priority as FormData['priority']) ?? 'medium'),
           status: (res.data.status as FormData['status']) ?? 'open',
           adminNotes: res.data.adminNotes ?? '',
+          photoUrls: (res.data.photos ?? []).join('\n'),
         });
         setIsLoading(false);
       })
@@ -106,6 +153,11 @@ export default function EditComplaintPage() {
     setSubmitError('');
     try {
       // Whitelist keys accepted by updateComplaintSchema
+      const photos = (data.photoUrls ?? '')
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .slice(0, 5);
       await api
         .put(`complaints/${id}`, {
           json: {
@@ -115,6 +167,7 @@ export default function EditComplaintPage() {
             priority: data.priority,
             status: data.status,
             adminNotes: data.adminNotes,
+            photos,
           },
         })
         .json();
@@ -124,7 +177,7 @@ export default function EditComplaintPage() {
     }
   };
 
-  const tenant = complaintData?.tenantId;
+  const tenant = resolveTenant(complaintData);
   const err = errors as Record<string, { message?: string }>;
 
   const priorityColors: Record<string, string> = {
@@ -148,17 +201,17 @@ export default function EditComplaintPage() {
         {tenant && (
           <DetailCard title="Reported by" icon={<UserRound />}>
             <DetailList>
-              <DetailRow label="Name" value={tenant.userId?.name ?? 'N/A'} />
+              <DetailRow label="Name" value={tenantDisplayName(tenant)} />
               <DetailRow
                 label="Room"
                 value={
                   <span className="inline-flex items-center gap-1.5">
                     <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                    {tenant.roomId?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
+                    {tenantRoomNumber(tenant)} · Bed {tenantBed(tenant)}
                   </span>
                 }
               />
-              <DetailRow label="Phone" value={tenant.userId?.phone ?? 'N/A'} />
+              <DetailRow label="Phone" value={tenantPhone(tenant)} />
               <DetailRow
                 label="Reported"
                 value={
@@ -194,11 +247,10 @@ export default function EditComplaintPage() {
                 leftIcon={<Tag className="h-4 w-4" />}
                 {...register('title')}
               />
-              <Input
+              <Select
                 label="Category"
-                placeholder="e.g. WiFi, Water, Electricity"
+                options={[...CATEGORY_OPTIONS]}
                 error={err.category?.message}
-                leftIcon={<AlertTriangle className="h-4 w-4" />}
                 {...register('category')}
               />
               <FormFullWidth>
@@ -247,6 +299,20 @@ export default function EditComplaintPage() {
                 {...register('status')}
               />
             </FormGrid>
+          </FormSection>
+
+          <FormSection
+            title="Evidence photos"
+            description="HTTPS image URLs, one per line (max 5)"
+            divided
+          >
+            <Textarea
+              label="Photo URLs"
+              rows={3}
+              placeholder="https://..."
+              error={err.photoUrls?.message}
+              {...register('photoUrls')}
+            />
           </FormSection>
 
           <FormSection

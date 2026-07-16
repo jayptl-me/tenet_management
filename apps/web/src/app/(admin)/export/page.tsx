@@ -3,12 +3,9 @@
 /**
  * Client-only CSV export.
  *
- * This page fetches up to 5,000 records per resource via the standard
- * list API and converts them to CSV entirely in the browser. There is no
- * server-side export endpoint. Supported resources: tenants, payments,
- * invoices, complaints. To add more resources, append an entry to
- * exportOptions below — the only requirement is that the resource list
- * API returns { success, data: Record<string, unknown>[] }.
+ * Paginates the standard list API (max 100 rows per page from parsePagination)
+ * until all pages are fetched, then converts to CSV in the browser.
+ * Supported resources: tenants, payments, invoices, complaints.
  */
 
 import { useState } from 'react';
@@ -65,18 +62,43 @@ export default function ExportPage() {
     setSuccess(null);
 
     try {
-      const res = await api.get(`${resource}?limit=5000`).json<{
-        success: boolean;
-        data: Record<string, unknown>[];
-      }>();
+      // API caps page size at 100 — walk pages until complete.
+      const pageSize = 100;
+      let page = 1;
+      let totalPages = 1;
+      const allRows: Record<string, unknown>[] = [];
 
-      if (!res.success || !res.data || res.data.length === 0) {
+      while (page <= totalPages) {
+        const res = await api
+          .get(`${resource}?limit=${pageSize}&page=${page}`)
+          .json<{
+            success: boolean;
+            data: Record<string, unknown>[];
+            meta?: { totalPages?: number; total?: number };
+          }>();
+
+        if (!res.success) {
+          setError(`Failed to export ${resource} data. Please try again.`);
+          return;
+        }
+
+        const batch = res.data ?? [];
+        allRows.push(...batch);
+        totalPages = Math.max(1, res.meta?.totalPages ?? 1);
+        // Stop if API returns a short page without meta
+        if (!res.meta?.totalPages && batch.length < pageSize) break;
+        page += 1;
+        // Safety: cap at 200 pages (20k rows) to avoid runaway loops
+        if (page > 200) break;
+      }
+
+      if (allRows.length === 0) {
         setError(`No ${resource} data available to export.`);
         return;
       }
 
       // Convert to CSV
-      const csv = convertToCSV(res.data);
+      const csv = convertToCSV(allRows);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

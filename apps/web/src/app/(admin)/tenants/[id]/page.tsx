@@ -25,6 +25,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -32,7 +33,35 @@ import { TenantActivityTimeline } from '@/components/ui/TenantActivityTimeline';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { OccupancyBedPicker } from '@/components/ui/OccupancyBedPicker';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+
+interface UnpaidInvoiceRow {
+  _id: string;
+  invoiceNumber: string;
+  month: string;
+  totalAmount: number;
+  remaining?: number;
+  status: string;
+}
+
+interface CheckoutDues {
+  totalDue: number;
+  unpaidInvoices: UnpaidInvoiceRow[];
+  electricityDues: number;
+  depositHeld: number;
+  pendingPayments: number;
+  checkedOut: boolean;
+}
+
+interface RoomOption {
+  _id: string;
+  roomNumber: string;
+  sharingType: number;
+  monthlyRent: number;
+  floor?: { label: string; floorNumber?: number };
+}
 
 interface TenantDetail {
   _id: string;
@@ -81,23 +110,14 @@ export default function TenantDetailPage() {
   const [error, setError] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [duesLoading, setDuesLoading] = useState(false);
-  const [duesData, setDuesData] = useState<{
-    totalDue: number;
-    unpaidInvoices: Array<{
-      _id: string;
-      invoiceNumber: string;
-      month: string;
-      totalAmount: number;
-      status: string;
-    }>;
-    electricityDues: number;
-    depositHeld: number;
-    pendingPayments: number;
-    checkedOut: boolean;
-  } | null>(null);
+  const [duesData, setDuesData] = useState<CheckoutDues | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
   const [reinstating, setReinstating] = useState(false);
+  const [showReinstatePlacement, setShowReinstatePlacement] = useState(false);
+  const [reinstateRoomId, setReinstateRoomId] = useState('');
+  const [reinstateBedId, setReinstateBedId] = useState('');
+  const [reinstateError, setReinstateError] = useState('');
   const [relatedError, setRelatedError] = useState('');
   const [guardians, setGuardians] = useState<
     Array<{ _id: string; name: string; phone?: string; relation?: string; isActive?: boolean }>
@@ -173,34 +193,56 @@ export default function TenantDetailPage() {
     }
   };
 
+  const checkoutBlocked = Boolean(
+    duesData &&
+      (duesData.totalDue > 0 ||
+        duesData.pendingPayments > 0 ||
+        duesData.unpaidInvoices.some(
+          (inv) => (inv.remaining ?? inv.totalAmount) > 0.001,
+        )),
+  );
+
   const handleConfirmCheckout = async () => {
-    if (!tenant) return;
+    if (!tenant || checkoutBlocked) return;
     setCheckingOut(true);
     setCheckoutError('');
     try {
       await api.post(`tenants/${tenant._id}/checkout`, { json: {} }).json();
       setShowCheckoutModal(false);
       window.location.reload();
-    } catch {
-      setCheckoutError(
-        'Failed to checkout tenant. Unpaid invoices or unresolved payments may be blocking checkout.',
-      );
+    } catch (err) {
+      setCheckoutError((await parseApiError(err)).message);
     } finally {
       setCheckingOut(false);
     }
   };
 
-  const handleReinstate = async () => {
+  const handleReinstate = async (body: { roomId?: string; bedId?: string } = {}) => {
     if (!tenant) return;
     setReinstating(true);
+    setReinstateError('');
     setError('');
     try {
-      await api.post(`tenants/${tenant._id}/reinstate`, { json: {} }).json();
+      const payload =
+        body.roomId && body.bedId
+          ? { roomId: body.roomId, bedId: body.bedId }
+          : {};
+      await api.post(`tenants/${tenant._id}/reinstate`, { json: payload }).json();
       window.location.reload();
-    } catch {
-      setError(
-        'Failed to reinstate. Original bed may be occupied — reassign room/bed on edit first.',
-      );
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      if (parsed.code === 'BED_OCCUPIED') {
+        setShowReinstatePlacement(true);
+        setReinstateError(
+          'Original bed is occupied. Choose a free room and bed, then reinstate again.',
+        );
+        if (!reinstateRoomId && tenant.room?._id) {
+          setReinstateRoomId(tenant.room._id);
+        }
+      } else {
+        setReinstateError(parsed.message);
+        setError(parsed.message);
+      }
     } finally {
       setReinstating(false);
     }
@@ -393,11 +435,87 @@ export default function TenantDetailPage() {
                 </Button>
               )}
               {!tenant.isActive && (
-                <Button variant="primary" loading={reinstating} onClick={() => void handleReinstate()}>
+                <Button
+                  variant="primary"
+                  loading={reinstating && !showReinstatePlacement}
+                  onClick={() => void handleReinstate()}
+                >
                   <RotateCcw className="h-4 w-4" /> Reinstate
                 </Button>
               )}
             </div>
+            {!tenant.isActive && (showReinstatePlacement || reinstateError) && (
+              <div className="mt-4 space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
+                {reinstateError && (
+                  <p className="text-[13px] font-semibold text-[color:var(--color-danger-700)]">
+                    {reinstateError}
+                  </p>
+                )}
+                {showReinstatePlacement && (
+                  <>
+                    <p className="text-sm font-bold text-[color:var(--color-text-primary)]">
+                      Place on a different bed
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <ResourceSelect
+                        label="Room"
+                        endpoint="rooms?isActive=true"
+                        value={reinstateRoomId}
+                        onChange={(val) => {
+                          setReinstateRoomId(val);
+                          setReinstateBedId('');
+                        }}
+                        placeholder="Select room..."
+                        valueKey="_id"
+                        labelKey={(item) => {
+                          const r = item as unknown as RoomOption;
+                          return `Room ${r.roomNumber} - ${r.floor?.label ?? '?'}`;
+                        }}
+                        sublabelFn={(item) => {
+                          const r = item as unknown as RoomOption;
+                          return `Rs ${r.monthlyRent}/mo · ${r.sharingType} sharing`;
+                        }}
+                        dataPath="data"
+                      />
+                      <OccupancyBedPicker
+                        roomId={reinstateRoomId || null}
+                        value={reinstateBedId}
+                        onChange={setReinstateBedId}
+                        label="Bed"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={reinstating}
+                        disabled={!reinstateRoomId || !reinstateBedId}
+                        onClick={() =>
+                          void handleReinstate({
+                            roomId: reinstateRoomId,
+                            bedId: reinstateBedId,
+                          })
+                        }
+                      >
+                        <RotateCcw className="h-4 w-4" /> Reinstate to selected bed
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={reinstating}
+                        onClick={() => {
+                          setShowReinstatePlacement(false);
+                          setReinstateError('');
+                          setReinstateBedId('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </DetailCard>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -563,7 +681,7 @@ export default function TenantDetailPage() {
                       <div className="mt-2 grid grid-cols-2 gap-2 text-[12px] font-semibold text-[color:var(--color-text-muted)]">
                         <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
                         <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
-                        <div>Pending Payments: {duesData.pendingPayments}</div>
+                        <div>Unresolved Payments: {duesData.pendingPayments}</div>
                       </div>
                     </div>
                     {duesData.unpaidInvoices.length > 0 && (
@@ -585,15 +703,30 @@ export default function TenantDetailPage() {
                                   {inv.month}
                                 </span>
                               </div>
-                              <span className="font-bold text-[color:var(--color-text-primary)]">
-                                {formatCurrency(inv.totalAmount)}
-                              </span>
+                              <div className="text-right">
+                                <span className="font-bold text-[color:var(--color-text-primary)]">
+                                  {formatCurrency(
+                                    inv.remaining != null ? inv.remaining : inv.totalAmount,
+                                  )}
+                                </span>
+                                {inv.remaining != null && inv.remaining !== inv.totalAmount && (
+                                  <p className="text-[10px] font-semibold text-[color:var(--color-text-muted)]">
+                                    of {formatCurrency(inv.totalAmount)}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
-                    {duesData.totalDue === 0 && duesData.unpaidInvoices.length === 0 && (
+                    {checkoutBlocked ? (
+                      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-[13px] font-semibold text-[color:var(--color-danger-700)]">
+                        {duesData.totalDue > 0 || duesData.unpaidInvoices.length > 0
+                          ? 'Clear all unpaid invoice balances before checkout.'
+                          : 'Resolve pending or overdue payments before checkout.'}
+                      </div>
+                    ) : (
                       <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-[13px] font-semibold text-[color:var(--color-success-700)]">
                         No pending dues. Safe to checkout.
                       </div>
@@ -614,9 +747,9 @@ export default function TenantDetailPage() {
                   </Button>
                   <Button
                     variant="danger"
-                    onClick={handleConfirmCheckout}
+                    onClick={() => void handleConfirmCheckout()}
                     loading={checkingOut}
-                    disabled={duesLoading}
+                    disabled={duesLoading || !duesData || checkoutBlocked}
                   >
                     <LogOut className="h-4 w-4" /> Confirm Checkout
                   </Button>

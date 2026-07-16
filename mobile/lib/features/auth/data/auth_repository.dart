@@ -99,4 +99,28 @@ class AuthRepository {
       ),
     );
   }
+
+  /// Authenticated password change. Server revokes all sessions on success.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _api.putJson(
+      'auth/password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+      parse: (_) => null,
+    );
+  }
+
+  /// Request a password-reset email. Always succeeds for security (no enumeration).
+  Future<void> forgotPassword({required String email}) async {
+    await _api.postJson(
+      'auth/forgot-password',
+      body: {'email': email.trim().toLowerCase()},
+      parse: (_) => null,
+    );
+  }
 }

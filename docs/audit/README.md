@@ -1,24 +1,20 @@
 # Tenet PG Management -- Live Audit Report
 
-**Generated:** 2026-07-12 (code-verified re-audit + full multi-agent remediation pass)  
-**Last verified:** 2026-07-12 (independent source re-verification; gates re-run)  
+**Generated:** 2026-07-12 (initial multi-agent remediation)  
+**Last verified:** 2026-07-16 (full FE audit + structural gap pipeline)  
 **Repo:** `tenet_pg_management`  
-**Methodology:** Five parallel agent teams executed Batches A-E. All P0s fixed, 11 SaaS components built, Flutter portal MVP shipped, authz hardened, test suite established. **Code is truth.**
+**Methodology:** Parallel domain agents inspected every admin module (list / detail / new / edit), field matrices vs models and Zod routes, lifecycles, Flutter screen inventory. Open/closed gaps are maintained in feature MDs; LIVE Open P1 is **auto-generated**. **Code is truth.**
 
-### 2026-07-12 verification pass (independent re-check)
+### 2026-07-16 full re-audit
 
-Every P0 integrity claim was re-verified directly against source (not trusted from prior notes):
-
-- **Transfer atomicity, `isActive` removal, temp password, visitor state machine + ownership, nested-GET ownership, `/auth/me` tenantId self-heal, seed backfill** -- all confirmed present and correct in `tenants.ts` / `visitors.ts` / `auth.ts` / `seed.ts`.
-- **All 25 route modules are mounted** in `apps/api/src/index.ts` (integration-complete).
-- **Zero hardcoded gray/slate** under `apps/web/src/app/(admin)`.
-
-Gates re-run this pass: `typecheck` 3/3 green, `lint` 3/3 green, backend `test` **48/48 green**, `flutter analyze` **0 issues**, `apps/web` production build succeeds.
-
-Two things were **not** as previously reported and were fixed / filed this pass:
-
-1. Backend tests were **red (46/48)**, not green. Both failures were *test* bugs (not product bugs): Path 4 called the `floorNumber: 99` seed helper twice in one test (unique-index collision), and Path 3 deleted a tenant but asserted the bed was freed without replicating the route's bed-free cascade. Both fixed -> **48/48**.
-2. **NEW P0-D1 deployment gap:** `render.yaml` deploys `pg-web` as a static site from `apps/web/out`, but the web app is a standard **server** Next build (no `output: 'export'`; `[id]` routes are `ƒ` server-rendered). `apps/web/out` is never produced. See "Deployment" below.
+- **23** admin modules under `apps/web/src/app/(admin)/` inventoried.
+- **22** feature audit files under `docs/audit/features/` with **Last verified: 2026-07-16**.
+- **4** interconnection docs updated.
+- **Authoritative backlog:** [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) (Open P1 between `AUTO:OPEN-P1` markers).
+- **Open P0 happy-path:** 0.
+- **Open P1 (generated table):** **0** -- ELEC-P1-1 closed (date-windowed distribute share). Residual work is P2 polish.
+- **Pipeline:** `scripts/audit/{normalize-gap-sections,build-live-gap-tables,lint-gap-sections,reconcile-open-gaps}.py` -- lint TOTAL FAIL 0.
+- Prior README grades listing fixed items as open are **superseded**. Prefer LIVE_GAP + feature MDs.
 
 ---
 
@@ -26,18 +22,31 @@ Two things were **not** as previously reported and were fixed / filed this pass:
 
 | Layer | Health | Notes |
 |-------|--------|-------|
-| **Admin CRUD** | Strong | Every module has list / detail / new / edit under `(admin)/` |
-| **API surface** | Strong | CRUD + special actions present; integrity/authz holes closed |
-| **Open P0s** | **ALL FIXED** | Transfer atomic, isActive removed, tempPassword returned, visitor filter fixed, Flutter tenantId resolved |
-| **SaaS components** | **ALL BUILT** | 11 reusable components under `components/ui/` |
-| **Flutter portal** | **MVP SHIPPED** | Profile, invoice detail, leaves, attendance, notifications, meal categories, theme tokens |
-| **Authz** | Hardened | Visitors ownership + state machine; tenants nested GET protected |
-| **Tests** | 48/48 pass | beds.test.ts self-collision (Path 4) + Path 3 assertion fixed 2026-07-12 verify pass |
-| **Design system** | Strong | **`saas`** default; Radix Select; SearchableSelect; tokens dominate |
+| **Admin CRUD** | Strong | Every module has list / detail / new / edit where applicable |
+| **API surface** | Strong | CRUD + special actions; residual unused endpoints are P2 |
+| **Open P0s** | **All closed** | Transfer, isActive, temp password, visitor filter, settings sanitize, etc. |
+| **Open P1s** | **None material** | Generated Open P1 empty; remaining work is P2 polish in feature MDs |
+| **Domain placement** | **Correct** | Room amenities `!isPerFloor`; floor ServiceStatus seeded on create; API `isValidFloorServiceType` enforces isPerFloor |
+| **Flutter portal** | **MVP shipped** | Screens present; residual polish (e.g. password UX) in feature MDs |
+| **Design system** | Strong | `saas` default; Form/DataTable stack; tokens dominate |
 
-**Product split:** Next.js = admin only. Resident portals = one Flutter app. See [docs/AGENT_CONTEXT.md](../AGENT_CONTEXT.md).
+**Product split:** Next.js = admin only. Resident portals = one Flutter app (`mobile/`). See [docs/AGENT_CONTEXT.md](../AGENT_CONTEXT.md).
 
-**Bottom line:** All P0s fixed, SaaS component backlog delivered, Flutter portal MVP shipped, authz hardened, test infrastructure established with self-contained CI. Remaining work is P1/P2 polish.
+**Bottom line:** Core admin CRUD and closed P0/P1 integrity paths are solid. Domain placement for rooms/floors/services is correct in code. Remaining work is P2 polish in feature files -- not a greenfield rebuild.
+
+---
+
+## Domain placement (rooms / floors / services)
+
+| Data | Belongs on | Live status |
+|------|------------|-------------|
+| Rent, beds, sharing, room number, room amenities (`!isPerFloor`) | **Room** | FE new/edit filter `!isPerFloor` -- correct |
+| Floor number, label, amenity **counts** | **Floor** | Floor forms; counts only for isPerFloor |
+| Operational status of isPerFloor amenities | **ServiceStatus** (floor-scoped) | Floor create **seeds** via `seedFloorServiceStatuses`; FloorServiceGrid |
+| Amenity catalog + `isPerFloor` | **Settings** | AmenityTypesTab |
+| API rejects room-only keys as floor services | Services POST/PUT | **PASS** -- `isValidFloorServiceType` requires `isPerFloor === true` |
+
+Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./features/floors.md), [features/services.md](./features/services.md), [features/settings.md](./features/settings.md).
 
 ---
 
@@ -45,62 +54,49 @@ Two things were **not** as previously reported and were fixed / filed this pass:
 
 | Old claim | Live status |
 |-----------|-------------|
-| Missing GET assets/notices/notifications; PUT attendance/complaints/enquiries; POST menus | **Fixed** |
-| Guardian route order / PUT user sync | **Fixed** |
-| Select native OS / ResourceSelect native | **Fixed** (Radix + SearchableSelect) |
-| Feature flags only laundry | **Fixed** -- attendance, meals, visitors, guardians, notices, laundry |
-| Complaints severity, services edit path, enquiries enums, laundry maintenance, assets phantoms | **Fixed** (Batch A) |
-| Tenant portal "missing Next routes" | **N/A** -- Flutter by design |
-| Meals PUT rejects mealType | **Fixed** |
-| Visitors admin create 403 /my shadow | **Fixed** |
-| Tenant detail missing hubs / reinstate | **Fixed** -- panels + reinstate present |
-| Tenant create phone/date | **Fixed** on FE |
+| Missing CRUD routes / PUT holes | **Fixed** |
+| Transfer non-atomic / free isActive / temp password lost | **Fixed** |
+| Visitor filter invalid enums; PUT free status | **Fixed** -- lifecycle endpoints only |
+| Floor create no ServiceStatus seed (FL-1) | **Fixed** -- `seedFloorServiceStatuses` |
+| Services API accepts room-only keys (SV-1) | **Fixed** -- isPerFloor enforcement |
+| Notice portal floor/room targeting (N1/N2) | **Fixed** -- resolveNoticeAudience |
+| Notification F1/F2/F3 history + tenants-only all | **Fixed** |
+| Audit sparse A1 (notices/visitors/notifications writers) | **Fixed** for those surfaces |
+| Dashboard badges readBy / SSE never emits | **Fixed** -- unreadBy + broadcastBadgesUpdate |
+| Settings empty phone/email 400; youtube social | **Fixed** |
+| Flutter "missing" profile/leaves/attendance/notifications | **Screens exist** |
 
 ---
 
-## All P0s fixed
+## Module health matrix (admin) -- 2026-07-16
 
-All 5 open P0s from the audit were fixed in this pass:
+| Module | Grade | Headline residual |
+|--------|:-----:|-------------------|
+| Tenants | **A** | P2 polish (bed picker reuse, docs) |
+| Rooms | **A-** | Photos; P2 polish |
+| Floors | **A-** | P2 (totalRooms create UX, seed keys) |
+| Services | **A-** | P2 (lastUpdatedBy populate, labels) |
+| Settings | **A-** | P2 types / amenity migration |
+| Payments | **A-** | Unused special APIs P2 |
+| Invoices | **A-** | P2 polish |
+| Electricity | **A-** | ELEC-P1-1 share window **FIXED**; residual P2 (upload, list locks) |
+| Complaints | **A** | photos URL attach live; ownership closed; status path clears resolvedAt |
+| Assets | **A** | P2 service-due surface |
+| Enquiries | **A** | Convert closed; P2 polish |
+| Visitors | **A-** | Lifecycle solid; P2 polish |
+| Guardians | **A** | P2 phantoms / TempCredentialsDialog |
+| Attendance | **A-** | Flag default-off |
+| Leaves | **A** | Flag-gated with attendance |
+| Laundry | **A-** | Types package lag P2 |
+| Meals | **A** | mealType unique edge residual |
+| Menus | **A** | Always-on vs meals flag product split |
+| Notices | **A-** | Portal targeting closed; P2 polish |
+| Notifications | **A-** | F1-F3 closed; F5+ P2 |
+| Dashboard | **A** | badges + SSE fixed |
+| Export | **B** | Client multipage CSV |
+| Audit Logs | **B+** | Writers expanded; residual coverage |
 
-| ID | Fix |
-|----|-----|
-| P0-T1 | Transfer atomic -- validate before free; wrapped in `session.withTransaction`; 409 on conflict |
-| P0-T2 | `isActive` removed from PUT schema + edit page |
-| P0-T3 | `temporaryPassword` returned on create; `TempCredentialsDialog` on FE |
-| P0-V1 | Visitor filter uses valid enums; `StatusFilterSelect` component built |
-| P0-F1 | Seed backfills `User.tenantId`; `/auth/me` self-heals; Flutter resolve-tenant helper |
-
-Full backlog: [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md).
-
----
-
-## Module health matrix (admin)
-
-| Module | List | Detail | New | Edit | Special | Grade |
-|--------|:----:|:------:|:---:|:----:|:-------:|:-----:|
-| Tenants | OK | Hub OK | Creds P0 | Transfer/isActive P0 | Checkout/reinstate OK | **B** |
-| Rooms | OK | OK | OK | OK | available unused | **A-** |
-| Floors | OK | OK | OK | OK | -- | **A-** |
-| Payments | No mCR | Verify OK | Offline OK | OK | summary unused | **B** |
-| Invoices | OK | PDF OK | Generate OK | OK | Bulk OK | **A-** |
-| Electricity | OK | OK | OK | OK | Finalize/distribute | **A** |
-| Complaints | Kanban OK | OK | OK | OK | Status drag | **A** |
-| Services | OK | OK | OK | OK | summary unused | **A-** |
-| Assets | OK | OK | OK | OK | low-stock unused | **A-** |
-| Notices | OK | OK | OK | OK | flag | **A-** |
-| Notifications | Custom | OK | Dual compose | OK | -- | **B-** |
-| Enquiries | OK | OK | OK | OK | status | **A-** |
-| Visitors | Filter FAIL | Lifecycle OK | OK | OK | arrive/depart | **B-** |
-| Guardians | OK | OK | Temp pwd OK | OK | flag | **A-** |
-| Attendance | OK | OK | Manual OK | OK | today unused | **A-** |
-| Leaves | OK | Approve OK | OK | Actions | flag | **A-** |
-| Laundry | OK | OK | OK | OK | flag | **A-** |
-| Meals | OK | OK | OK | OK | summary unused | **A-** |
-| Menus | OK | OK | OK | OK | no week planner | **A-** |
-| Settings | Tabs | -- | -- | OK | flags | **B** |
-| Audit Logs | OK | No detail | N/A | N/A | -- | **A-** |
-| Dashboard | Rich | -- | -- | -- | -- | **A** |
-| Export | Client CSV | -- | -- | -- | No server API | **B-** |
+Full open/closed IDs: [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md).
 
 ---
 
@@ -111,112 +107,36 @@ Full backlog: [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md).
 | Marketing landing | public | public | public |
 | Login web | OK | **Rejected** | **Rejected** |
 | Admin shell | OK | none | none |
-| Flutter portal | none | **Scaffolded** | **Scaffolded** |
-| Invoices / UTR | CRUD | list + UTR | -- |
+| Flutter portal | none | **MVP** | **Present** |
+| Invoices / UTR | CRUD | list + detail + UTR | -- |
 | Complaints | CRUD | list + create | -- |
 | Meals / menu / laundry | CRUD | basic | -- |
 | Visitors | CRUD + lifecycle | list/register/status | -- |
-| Ward / attendance | CRUD | -- | thin list |
-| Profile / leaves / notifs | admin only | **missing** | thin |
+| Ward / attendance | CRUD | check-in | ward + list + notices |
+| Profile / leaves / notifs | admin | **Present** | thin |
 
 ---
 
-## Flutter portal depth (not "missing product")
+## Flutter portal depth
 
-Scaffold exists under `mobile/`. Gaps are **depth**, not existence:
-
-**Present:** auth, home, invoices list, payments+UTR, visitors, complaints, meals, laundry, notices, guardian ward+attendance.
-
-**Missing for MVP:** profile/KYC, invoice detail/PDF, UPI QR, leaves, tenant attendance check-in, notifications inbox, category UX on meals, reliable tenantId, design tokens.
-
-See feature files + LIVE_GAP_INVENTORY Flutter matrix.
+Scaffold under `mobile/` is **not** a missing product. Major depth items (QR, PDF, home navigation, complaint detail, FeatureDisabledWidget, tenantId heal) closed in current tree -- see [features/FLUTTER_PORTAL.md](./features/FLUTTER_PORTAL.md). Residual polish remains in feature MDs.
 
 ---
 
-## Design system (SaaS priority)
-
-| Rule | Status |
-|------|--------|
-| Default preset `saas` | **YES** ThemeProvider / layout |
-| CSS variables on admin pages | **YES** (zero gray/slate hardcodes under `(admin)/`) |
-| FormPage / FormCard / FormSection / FormActions | **Standard** on CRUD forms |
-| DataTable + TableActions + mobileCardRenderer | **All modules** (payments/notifications now have parity) |
-| StatusBadge | **Standard** |
-| Select | **Radix themed** |
-| ResourceSelect | **SearchableSelect** |
-| Shared components built | 11 components -- all delivered in Batch B |
-
-Detail: [01-design-system-and-components.md](./01-design-system-and-components.md).
-
----
-
-## Batches completed (2026-07-12 remediation)
-
-| Batch | Focus | Status |
-|-------|-------|--------|
-| **A** | P0 integrity (transfer atomic, isActive removed, temp password, visitor filter, Flutter tenantId) | **DONE** |
-| **B** | 11 SaaS components built (TempCredentialsDialog, OccupancyBedPicker, TenantStatusControl, VisitorLifecycleActions, StatusFilterSelect, FeedbackSummaryStrip, StarRating, CategoryChipSelect, WeekMenuPlanner, LowStockBanner, TodayAttendanceBoard) | **DONE** |
-| **C** | Admin polish (Payments mCR, Notifications DataTable, Meals summary+stars, Menus planner, LowStockBanner, TodayBoard) | **DONE** |
-| **D** | Flutter MVP (Profile, Invoice detail, category chips, Leaves, Attendance, Notifications, flag-friendly states, theme tokens) | **DONE** |
-| **E** | Authz (visitor ownership+state machine, tenant nested GETs) + Vitest (transfer, lifecycle, upsert, flags) | **DONE** |
-
----
-
-## Definition of Done (every feature) -- all satisfied as of 2026-07-12
-
-- [x] List: PageHeader + DataTable + TableActions + mobileCardRenderer + StatusBadge
-- [x] New/Edit: FormPage + FormCard + FormSection + FormActions; payload matches Zod
-- [x] Detail: real model fields; lifecycle CTAs wired
-- [x] Phones `normalizeInPhone`; dates ISO when required
-- [x] Feature flags: API requireFeature + nav
-- [x] SaaS theme tokens only (no gray-* / native selects)
-- [x] Portal work only in `mobile/`
-- [x] typecheck + lint; Flutter `flutter analyze`  
-
----
-
-## Documentation map
+## Documentation map for agents
 
 | File | Role |
 |------|------|
-| [README.md](./README.md) | This executive report |
-| [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) | Ranked master backlog |
-| [AGENT_PLAYBOOK.md](./AGENT_PLAYBOOK.md) | Remediation order + DoD |
-| [00-phase0-inventory.md](./00-phase0-inventory.md) | Structure inventory |
-| [01-design-system-and-components.md](./01-design-system-and-components.md) | Design rules + component backlog |
-| [02-api-frontend-contract.md](./02-api-frontend-contract.md) | Contract notes |
-| [features/](./features/) | Per-module depth (tenants, visitors, meals, menus refreshed) |
-| [features/FLUTTER_PORTAL.md](./features/FLUTTER_PORTAL.md) | Flutter portal MVP matrix |
-| [interconnections/](./interconnections/) | Lifecycle / flags / finance / occupancy |
-| [../AGENT_CONTEXT.md](../AGENT_CONTEXT.md) | Permanent agent context |
-| [../PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) | Multi-client connectivity |
+| [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) | **Authoritative** open/closed backlog (Open P1 AUTO-generated) |
+| [features/*.md](./features/) | Per-module field/form/lifecycle (edit these; never put FIXED in Open gaps) |
+| [interconnections/*.md](./interconnections/) | Cross-module flows |
+| [AGENT_PLAYBOOK.md](./AGENT_PLAYBOOK.md) | Fix queues + audit MD pipeline |
+| `scripts/audit/*.py` | normalize / build LIVE_GAP / lint / reconcile |
 
----
+### Keep gaps honest
 
-## Agent pass log (2026-07-12 remediation)
-
-| Agent | Batch | Focus | Result |
-|-------|-------|-------|--------|
-| tenants-api | A+B+E | tenants.ts P0s + SaaS components + authz/tests | 3 P0s fixed; 3 components built; authz hardened; 12 tests added |
-| visitors-admin | A+B | Visitors filter + StatusFilterSelect + VisitorLifecycleActions | P0-V1 fixed; 2 components built |
-| flutter-portal | A+D | Flutter tenantId + portal MVP | P0-F1 fixed; 6 new Flutter screens; theme tokens |
-| meals-menus | B+C | Meals/menus components + polish | 4 components built; summary/stars/categories wired; menus polished |
-| admin-polish | C | Payments/notifications/assets/attendance | mCR, DataTable, LowStockBanner, TodayBoard; export doc updated |
-
-**Validation (2026-07-12 verify pass):** `bun run typecheck` (3/3 packages green), `bun run lint` (3/3 green), `flutter analyze` (**0 issues**), backend `test` **48/48 pass**, `apps/web` production build succeeds. One open deployment blocker: **P0-D1** (static-export mismatch, see below).
-
----
-
-## Deployment (P0-D1) -- static export mismatch
-
-`render.yaml` publishes the admin web (`pg-web`) as `type: static` with `staticPublishPath: apps/web/out` and a SPA rewrite (`/* -> /index.html`). But:
-
-- `apps/web/next.config.ts` does **not** set `output: 'export'`; `build` is plain `next build`, which emits `.next/` and **never `apps/web/out/`** (verified: `out/` absent after a clean build).
-- The admin app is a **server** Next build -- `[id]` and `[id]/edit` routes are `ƒ` (server-rendered on demand) and have **no `generateStaticParams`**.
-
-Impact: the Render static deploy for the admin panel will publish an empty/missing directory (build "succeeds" but `staticPublishPath` has nothing to serve). This is the documented "Broken Static Export Paths" anti-pattern in `deployment-verification.md`.
-
-Two coherent fixes (decision required -- has cost implications, not auto-applied):
-
-- **Option B (recommended, low risk):** deploy `pg-web` as a Render **web service** (`type: web`, `startCommand: cd apps/web && bun run start`), dropping `staticPublishPath` + SPA rewrite. Matches the actual `.next` output with zero code change. Costs a running service.
-- **Option A (keep static):** add `output: 'export'` (+ `images.unoptimized`) to `next.config.ts` and `generateStaticParams` to every dynamic route, verify `out/` is produced, and confirm client-side deep links resolve via the SPA rewrite. Higher risk; touches every `[id]` route.
+1. Edit feature MD Open gaps / Closed only.
+2. `python3 scripts/audit/normalize-gap-sections.py`
+3. `python3 scripts/audit/build-live-gap-tables.py`
+4. `python3 scripts/audit/lint-gap-sections.py` -- must print TOTAL FAIL: 0
+5. `python3 scripts/audit/reconcile-open-gaps.py` -- must PASS

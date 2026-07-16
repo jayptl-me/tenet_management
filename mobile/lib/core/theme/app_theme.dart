@@ -9,6 +9,12 @@ class AppTheme {
   static const Color surface = Color(0xFFF8FAFC);
   static const Color card = Color(0xFFFFFFFF);
   static const Color danger = Color(0xFFDC2626);
+  static const Color dangerSoft = Color(0xFFFEF2F2);
+  static const Color dangerText = Color(0xFF991B1B);
+  static const Color success = Color(0xFF065F46);
+  static const Color successSoft = Color(0xFFECFDF5);
+  static const Color muted = Color(0xFF64748B);
+  static const Color mutedSoft = Color(0xFF94A3B8);
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(

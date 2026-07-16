@@ -20,17 +20,26 @@ import {
   Copy,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'sonner';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+import {
+  floorLabel,
+  roomLabel,
+  roomSublabel,
+  tenantLabel,
+  tenantSublabel,
+} from '@/lib/resource-select-presets';
 import { useRouter } from 'next/navigation';
 import type { INotification, INotificationType } from '@pg/types';
 
@@ -84,6 +93,8 @@ export default function NotificationsPage() {
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [targetError, setTargetError] = useState('');
+  const [pickerValue, setPickerValue] = useState('');
 
   // History state
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -117,8 +128,39 @@ export default function NotificationsPage() {
     }
   }, [activeTab, fetchHistory]);
 
+  const addTargetId = (id: string) => {
+    if (!id) return;
+    setForm((prev) =>
+      prev.targetIds.includes(id) ? prev : { ...prev, targetIds: [...prev.targetIds, id] },
+    );
+    setPickerValue('');
+    setTargetError('');
+  };
+
+  const removeTargetId = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      targetIds: prev.targetIds.filter((t) => t !== id),
+    }));
+  };
+
   const handleSend = async () => {
-    if (!form.title.trim() || !form.body.trim()) return;
+    if (!form.title.trim() || !form.body.trim()) {
+      toast.error('Title and message are required');
+      return;
+    }
+    if (form.targetType !== 'all' && form.targetIds.length === 0) {
+      setTargetError(
+        form.targetType === 'floor'
+          ? 'Select at least one floor'
+          : form.targetType === 'room'
+            ? 'Select at least one room'
+            : 'Select at least one tenant',
+      );
+      toast.error('Select at least one target for this audience');
+      return;
+    }
+    setTargetError('');
     setSending(true);
     setSendSuccess(false);
     try {
@@ -129,9 +171,12 @@ export default function NotificationsPage() {
         .json<{ success: boolean }>();
       setSendSuccess(true);
       setForm(emptyForm);
+      setPickerValue('');
+      toast.success('Notification sent');
       setTimeout(() => setSendSuccess(false), 3000);
-    } catch {
-      // Error handling via toast would be ideal; for now, silently handle
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      toast.error(parsed.message);
     } finally {
       setSending(false);
     }
@@ -267,7 +312,11 @@ export default function NotificationsPage() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setForm({ ...form, targetType: key, targetIds: [] })}
+                    onClick={() => {
+                      setForm({ ...form, targetType: key, targetIds: [] });
+                      setPickerValue('');
+                      setTargetError('');
+                    }}
                     className={`flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all duration-[var(--transition-duration)] active:scale-[var(--active-press-scale)] ${
                       form.targetType === key
                         ? 'bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-button)]'
@@ -281,29 +330,71 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            {/* Target IDs (for non-"all" targets) */}
+            {/* Target pickers (required when audience is not all) */}
             {form.targetType !== 'all' && (
-              <Input
-                label={
-                  form.targetType === 'floor'
-                    ? 'Floor IDs'
-                    : form.targetType === 'room'
-                      ? 'Room IDs'
-                      : 'User IDs'
-                }
-                hint="comma-separated"
-                value={form.targetIds.join(', ')}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    targetIds: e.target.value
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                }
-                placeholder="e.g. floor-1, floor-2"
-              />
+              <div className="space-y-2">
+                {form.targetType === 'floor' && (
+                  <ResourceSelect
+                    label="Add floor"
+                    endpoint="floors"
+                    value={pickerValue}
+                    onChange={addTargetId}
+                    placeholder="Select a floor to include..."
+                    labelKey={floorLabel}
+                    error={targetError}
+                    helperText="Required: pick one or more floors. Recipients are tenants on those floors."
+                  />
+                )}
+                {form.targetType === 'room' && (
+                  <ResourceSelect
+                    label="Add room"
+                    endpoint="rooms?isActive=true"
+                    value={pickerValue}
+                    onChange={addTargetId}
+                    placeholder="Select a room to include..."
+                    labelKey={roomLabel}
+                    sublabelFn={roomSublabel}
+                    error={targetError}
+                    helperText="Required: pick one or more rooms. Recipients are tenants in those rooms."
+                  />
+                )}
+                {form.targetType === 'individual' && (
+                  <ResourceSelect
+                    label="Add tenant"
+                    endpoint="tenants?isActive=true"
+                    value={pickerValue}
+                    onChange={addTargetId}
+                    placeholder="Select a tenant to notify..."
+                    valueKey="userId"
+                    labelKey={(item) =>
+                      tenantLabel(item as Parameters<typeof tenantLabel>[0])
+                    }
+                    sublabelFn={(item) =>
+                      tenantSublabel(item as Parameters<typeof tenantSublabel>[0])
+                    }
+                    error={targetError}
+                    helperText="Required: pick one or more tenants (uses their user account IDs)."
+                  />
+                )}
+                {form.targetIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {form.targetIds.map((id) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => removeTargetId(id)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
+                        title="Remove"
+                      >
+                        <span className="max-w-[12rem] truncate font-[family:var(--font-mono)]">
+                          {id}
+                        </span>
+                        <span aria-hidden="true">x</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Type */}
@@ -405,13 +496,25 @@ export default function NotificationsPage() {
 
             {/* Send Button */}
             <div className="flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] pt-5">
-              <Button variant="outline" type="button" onClick={() => setForm(emptyForm)}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setPickerValue('');
+                  setTargetError('');
+                }}
+              >
                 Clear
               </Button>
               <Button
                 type="button"
                 loading={sending}
-                disabled={!form.title.trim() || !form.body.trim()}
+                disabled={
+                  !form.title.trim() ||
+                  !form.body.trim() ||
+                  (form.targetType !== 'all' && form.targetIds.length === 0)
+                }
                 onClick={handleSend}
               >
                 <Send className="h-4 w-4" />

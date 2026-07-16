@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import mongoose, { Schema } from 'mongoose';
@@ -30,6 +30,7 @@ import { isServiceAvailable } from '../lib/serviceAvailability.js';
 import { env } from '../lib/env.js';
 import { logger } from '../lib/logger.js';
 import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
+import { getInvoiceBalance } from '../services/payment-status.service.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateArrFn = (
@@ -37,8 +38,8 @@ type CreateArrFn = (
   opts?: Record<string, unknown>,
 ) => Promise<unknown[]>;
 
-const userCreate = User.create as unknown as CreateArrFn;
-const tenantCreate = Tenant.create as unknown as CreateArrFn;
+const userCreate = User.create.bind(User) as unknown as CreateArrFn;
+const tenantCreate = Tenant.create.bind(Tenant) as unknown as CreateArrFn;
 
 // ── Zod Schemas ──────────────────────────────────────────
 
@@ -91,6 +92,27 @@ const updateTenantSchema = z.strictObject({
 // ── Router ───────────────────────────────────────────────
 
 const router = new Hono();
+
+/** Admin any tenant; tenant only own profile; all other roles 403. */
+async function assertAdminOrTenantOwner(c: Context, tenantId: string) {
+  const user = c.get('user');
+  if (user?.role === 'admin') return null;
+  if (user?.role !== 'tenant') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+      403,
+    );
+  }
+  const tenant = await Tenant.findById(tenantId).select('userId').lean();
+  if (!tenant) return notFound(c, 'Tenant');
+  if (String(tenant.userId) !== user.sub) {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+      403,
+    );
+  }
+  return null;
+}
 
 // ── POST / — create tenant with full transaction (admin only)
 router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), async (c) => {
@@ -191,16 +213,46 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
 
       await User.findByIdAndUpdate(u._id, { tenantId: t._id }, { session });
 
-      result = createdTenant;
+      result = { tenantId: String(t._id), userId: String(u._id) };
     });
 
-    const responseData = result as Record<string, unknown>;
-    return c.json({ success: true, data: { ...responseData, temporaryPassword } }, 201);
+    // Re-fetch lean document AFTER the session ends so JSON response has no
+    // circular Mongo session refs (c.json on a session-bound doc throws 500).
+    const ids = result as { tenantId: string; userId: string };
+    const populated = await Tenant.findById(ids.tenantId)
+      .populate('user')
+      .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
+      .lean();
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          ...(populated as unknown as Record<string, unknown>),
+          temporaryPassword,
+        },
+      },
+      201,
+    );
   } catch (err: unknown) {
     if (err instanceof AppError) {
       return c.json(
         { success: false, error: { code: err.code, message: err.message } },
         err.status as 400 | 404,
+      );
+    }
+    // P1-T1: concurrent double-book of active bed
+    const mongoCode = (err as { code?: number }).code;
+    if (mongoCode === 11000) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'BED_OCCUPIED',
+            message: 'This bed is already occupied by an active tenant.',
+          },
+        },
+        409,
       );
     }
     throw err;
@@ -309,27 +361,14 @@ router.get('/:id', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
+
   const tenant = await Tenant.findById(id)
     .populate('user')
     .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
     .lean();
   if (!tenant) return notFound(c, 'Tenant');
-
-  const user = c.get('user');
-  if (user?.role === 'tenant') {
-    const doc = tenant as unknown as { userId?: { _id?: string } | string | null };
-    const tenantUserId =
-      doc.userId && typeof doc.userId === 'object' && doc.userId !== null
-        ? (doc.userId as { _id: string })._id.toString()
-        : String(doc.userId ?? '');
-
-    if (tenantUserId !== user.sub) {
-      return c.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-        403,
-      );
-    }
-  }
 
   return c.json({ success: true, data: tenant });
 });
@@ -349,6 +388,22 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
   const oldBedId = tenant.bedId;
   const changingRoom = body.roomId && body.roomId !== String(tenant.roomId);
   const changingBed = body.bedId && body.bedId !== tenant.bedId;
+
+  // Inactive tenants must not occupy beds via transfer. Use reinstate (and optional
+  // reassignment) instead of PUT room/bed mutations.
+  if ((changingRoom || changingBed) && !tenant.isActive) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'TENANT_INACTIVE',
+          message:
+            'Cannot change room or bed for a checked-out tenant. Reinstate them first (or reinstate to a free bed).',
+        },
+      },
+      409,
+    );
+  }
 
   // ── Validate target bed BEFORE freeing old (P0-T1 fix) ──
   let targetRoom: unknown = null;
@@ -511,6 +566,19 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
         err.status as 400 | 404 | 409,
       );
     }
+    const mongoCode = (err as { code?: number }).code;
+    if (mongoCode === 11000) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'BED_OCCUPIED',
+            message: 'Target bed is already occupied by an active tenant.',
+          },
+        },
+        409,
+      );
+    }
     throw err;
   } finally {
     session.endSession();
@@ -522,20 +590,28 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  // Check for unpaid invoices before allowing checkout
-  const unpaidCount = await Invoice.countDocuments(
+  // Block when any open invoice still has remaining balance (not just gross status)
+  const openInvoices = await Invoice.find(
     safeFilter({
       tenantId: id,
       status: { $in: ['sent', 'partial', 'overdue'] },
     }),
-  );
-  if (unpaidCount > 0) {
+  )
+    .select('_id totalAmount')
+    .lean();
+
+  let unpaidWithBalance = 0;
+  for (const inv of openInvoices) {
+    const remaining = await getInvoiceBalance(String(inv._id), inv.totalAmount || 0);
+    if (remaining > 0.001) unpaidWithBalance += 1;
+  }
+  if (unpaidWithBalance > 0) {
     return c.json(
       {
         success: false,
         error: {
           code: 'UNPAID_INVOICES',
-          message: `Tenant has ${unpaidCount} unpaid invoice(s). Please clear all dues before checkout.`,
+          message: `Tenant has ${unpaidWithBalance} unpaid invoice(s). Please clear all dues before checkout.`,
         },
       },
       409,
@@ -587,6 +663,22 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (User as any).findByIdAndUpdate(String(tenant.userId), { isActive: false }, { session });
+
+      // Deactivate guardian portal users so they cannot access after move-out
+      const guardians = await Guardian.find(safeFilter({ tenantId: id }))
+        .session(session)
+        .lean();
+      for (const g of guardians) {
+        const gUserId = (g as { userId?: unknown }).userId;
+        if (gUserId) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (User as any).findByIdAndUpdate(
+            String(gUserId),
+            { isActive: false },
+            { session },
+          );
+        }
+      }
     });
 
     const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
@@ -604,11 +696,23 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   }
 });
 
+const reinstateSchema = z.strictObject({
+  roomId: z.string().min(1).optional(),
+  bedId: z.enum(['A', 'B', 'C', 'D']).optional(),
+});
+
 // ── POST /:id/reinstate — reinstate a checked-out tenant (admin only)
-router.post('/:id/reinstate', authGuard, adminOnly, async (c) => {
+// Optional body { roomId, bedId } places on an alternate free bed when original is taken.
+router.post(
+  '/:id/reinstate',
+  authGuard,
+  adminOnly,
+  zValidator('json', reinstateSchema),
+  async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
+  const body = c.req.valid('json');
   const session = await mongoose.startSession();
 
   try {
@@ -617,19 +721,39 @@ router.post('/:id/reinstate', authGuard, adminOnly, async (c) => {
       if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
       if (tenant.isActive) throw new AppError('Tenant is already active', 400, 'ALREADY_ACTIVE');
 
-      const room = await Room.findById(tenant.roomId).session(session);
-      if (!room) throw new AppError('Original room not found', 404, 'ROOM_NOT_FOUND');
-      if (!room.isActive)
-        throw new AppError('Original room is no longer active', 400, 'ROOM_INACTIVE');
+      const targetRoomId = body.roomId ? String(body.roomId) : String(tenant.roomId);
+      const targetBedId = body.bedId ?? tenant.bedId;
 
-      const bed = room.beds.find((b) => b.bedId === tenant.bedId);
-      if (!bed) throw new AppError('Original bed not found in room', 404, 'BED_NOT_FOUND');
-      if (bed.isOccupied) {
+      const room = await Room.findById(targetRoomId).session(session);
+      if (!room) throw new AppError('Room not found', 404, 'ROOM_NOT_FOUND');
+      if (!room.isActive) throw new AppError('Room is no longer active', 400, 'ROOM_INACTIVE');
+
+      const bed = room.beds.find((b) => b.bedId === targetBedId);
+      if (!bed) throw new AppError(`Bed ${targetBedId} not found in room`, 404, 'BED_NOT_FOUND');
+      // Allow reclaim if the bed is free OR still marked occupied by this same tenant
+      const occupiedBySelf =
+        bed.isOccupied && String(bed.tenantId ?? '') === String(tenant._id);
+      if (bed.isOccupied && !occupiedBySelf) {
         throw new AppError(
-          `Bed ${tenant.bedId} is now occupied by another tenant. Change bed assignment first.`,
+          `Bed ${targetBedId} is occupied by another tenant. Choose a free bed when reinstating.`,
           409,
           'BED_OCCUPIED',
         );
+      }
+
+      // If relocating from a different room/bed that still shows this tenant, free it
+      const originalRoomId = String(tenant.roomId);
+      if (originalRoomId !== targetRoomId || tenant.bedId !== targetBedId) {
+        const oldRoom = await Room.findById(tenant.roomId).session(session);
+        if (oldRoom) {
+          const oldBed = oldRoom.beds.find((b) => b.bedId === tenant.bedId);
+          if (oldBed && String(oldBed.tenantId ?? '') === String(tenant._id)) {
+            oldBed.isOccupied = false;
+            oldBed.tenantId = null;
+            oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
+            await oldRoom.save({ session });
+          }
+        }
       }
 
       bed.isOccupied = true;
@@ -637,11 +761,24 @@ router.post('/:id/reinstate', authGuard, adminOnly, async (c) => {
       room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
       await room.save({ session });
 
+      tenant.roomId = room._id as unknown as Schema.Types.ObjectId;
+      tenant.bedId = targetBedId;
       tenant.isActive = true;
       tenant.moveOutDate = null;
       await tenant.save({ session });
 
       await User.findByIdAndUpdate(tenant.userId, { isActive: true }, { session });
+
+      // Re-enable guardian portal users linked to this tenant
+      const guardians = await Guardian.find(safeFilter({ tenantId: id }))
+        .session(session)
+        .lean();
+      for (const g of guardians) {
+        const gUserId = (g as { userId?: unknown }).userId;
+        if (gUserId) {
+          await User.findByIdAndUpdate(String(gUserId), { isActive: true }, { session });
+        }
+      }
     });
 
     const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
@@ -777,15 +914,8 @@ router.get('/:id/payments', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const user = c.get('user');
-  if (user?.role === 'tenant') {
-    const tenant = await Tenant.findById(id).select('userId').lean();
-    if (!tenant) return notFound(c, 'Tenant');
-    const tenantUserId = String(tenant.userId);
-    if (tenantUserId !== user.sub) {
-      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
-    }
-  }
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
 
   const payments = await Payment.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: payments });
@@ -796,15 +926,8 @@ router.get('/:id/complaints', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const user = c.get('user');
-  if (user?.role === 'tenant') {
-    const tenant = await Tenant.findById(id).select('userId').lean();
-    if (!tenant) return notFound(c, 'Tenant');
-    const tenantUserId = String(tenant.userId);
-    if (tenantUserId !== user.sub) {
-      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
-    }
-  }
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
 
   const complaints = await Complaint.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: complaints });
@@ -846,10 +969,39 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
       );
       deletedCounts.visitors = visitorResult.deletedCount;
 
+      // P1-T2 / P1-G1: collect guardian user accounts before deleting guardian docs
+      const linkedGuardians = await Guardian.find(safeFilter({ tenantId: tenantIdStr }))
+        .select('userId')
+        .session(session)
+        .lean();
+      const guardianUserIds = linkedGuardians
+        .map((g) => g.userId)
+        .filter((id): id is NonNullable<typeof id> => Boolean(id));
+
       const guardianResult = await Guardian.deleteMany(
         safeFilter({ tenantId: tenantIdStr }),
       ).session(session);
       deletedCounts.guardians = guardianResult.deletedCount;
+
+      // Deactivate linked guardian User accounts (clear unique email/phone for re-add)
+      if (guardianUserIds.length > 0) {
+        const stamp = Date.now();
+        let guardianUsersDeactivated = 0;
+        for (let i = 0; i < guardianUserIds.length; i++) {
+          const gUid = guardianUserIds[i];
+          const res = await User.findByIdAndUpdate(
+            gUid,
+            {
+              isActive: false,
+              email: `deleted-guardian:${stamp}:${i}:${String(gUid)}`,
+              phone: `deleted-g:${stamp}${i}${String(gUid).slice(-6)}`,
+            },
+            { session },
+          );
+          if (res) guardianUsersDeactivated += 1;
+        }
+        deletedCounts.guardianUsers = guardianUsersDeactivated;
+      }
 
       const laundryResult = await LaundrySlot.deleteMany(
         safeFilter({ tenantId: tenantIdStr }),
@@ -924,15 +1076,8 @@ router.get('/:id/invoices', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const user = c.get('user');
-  if (user?.role === 'tenant') {
-    const tenant = await Tenant.findById(id).select('userId').lean();
-    if (!tenant) return notFound(c, 'Tenant');
-    const tenantUserId = String(tenant.userId);
-    if (tenantUserId !== user.sub) {
-      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
-    }
-  }
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
 
   const invoices = await Invoice.find(safeFilter({ tenantId: id })).lean();
   return c.json({ success: true, data: invoices });
@@ -958,50 +1103,69 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
     });
   }
 
-  // Find unpaid/partial/overdue invoices
+  // Find unpaid/partial/overdue invoices (include electricity for breakdown)
   const unpaidInvoices = await Invoice.find(
     safeFilter({ tenantId: id, status: { $in: ['sent', 'partial', 'overdue'] } }),
   )
-    .select('invoiceNumber month totalAmount status')
+    .select('invoiceNumber month totalAmount status electricityAmount lineItems')
     .lean();
 
-  const invoiceTotal = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+  // Remaining balance per invoice (after paid payments), not gross totals
+  const invoiceRows = await Promise.all(
+    unpaidInvoices.map(async (inv) => {
+      const invId = String(inv._id);
+      const totalAmount = inv.totalAmount || 0;
+      const remaining = await getInvoiceBalance(invId, totalAmount);
+      const invDoc = inv as unknown as {
+        electricityAmount?: number;
+        lineItems?: Array<{ description: string; amount: number }>;
+      };
+      const lineElec = (invDoc.lineItems || [])
+        .filter((li) => /electricity/i.test(li.description))
+        .reduce((s, li) => s + (li.amount || 0), 0);
+      const electricityAmount = invDoc.electricityAmount ?? lineElec;
+      // Pro-rate electricity portion of remaining balance
+      const electricityRemaining =
+        totalAmount > 0
+          ? Math.round((remaining * (electricityAmount / totalAmount)) * 100) / 100
+          : 0;
+      return {
+        _id: inv._id,
+        invoiceNumber: inv.invoiceNumber,
+        month: inv.month,
+        totalAmount,
+        remaining,
+        electricityAmount,
+        electricityRemaining,
+        status: inv.status,
+      };
+    }),
+  );
 
-  // Find pending/overdue payments
+  // Only open invoices that still have balance matter for checkout
+  const openWithBalance = invoiceRows.filter((r) => r.remaining > 0.001);
+  const totalDue = openWithBalance.reduce((sum, r) => sum + r.remaining, 0);
+  const electricityDues = openWithBalance.reduce((sum, r) => sum + r.electricityRemaining, 0);
+
   const pendingPayments = await Payment.find(
     safeFilter({ tenantId: id, status: { $in: ['pending', 'pending_verification', 'overdue'] } }),
   )
     .select('amount type status month')
     .lean();
 
-  const paymentDue = pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  // Electricity dues from invoices that have electricity charges
-  const electricityInvoices = unpaidInvoices.filter((inv) => inv.status !== 'paid');
-  const electricityDues = electricityInvoices.reduce((sum, inv) => {
-    // Check line items for electricity charges
-    const invDoc = inv as unknown as { lineItems?: Array<{ description: string; amount: number }> };
-    const lines = invDoc.lineItems || [];
-    return (
-      sum +
-      lines.filter((li) => /electricity/i.test(li.description)).reduce((s, li) => s + li.amount, 0)
-    );
-  }, 0);
-
-  const totalDue = Math.max(invoiceTotal, paymentDue);
-
   return c.json({
     success: true,
     data: {
-      totalDue,
-      unpaidInvoices: unpaidInvoices.map((inv) => ({
+      totalDue: Math.round(totalDue * 100) / 100,
+      unpaidInvoices: openWithBalance.map((inv) => ({
         _id: inv._id,
         invoiceNumber: inv.invoiceNumber,
         month: inv.month,
         totalAmount: inv.totalAmount,
+        remaining: inv.remaining,
         status: inv.status,
       })),
-      electricityDues,
+      electricityDues: Math.round(electricityDues * 100) / 100,
       depositHeld: tenant.depositPaid || 0,
       pendingPayments: pendingPayments.length,
       checkedOut: false,
@@ -1014,15 +1178,8 @@ router.get('/:id/activity', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const user = c.get('user');
-  if (user?.role === 'tenant') {
-    const tenant = await Tenant.findById(id).select('userId').lean();
-    if (!tenant) return notFound(c, 'Tenant');
-    const tenantUserId = String(tenant.userId);
-    if (tenantUserId !== user.sub) {
-      return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
-    }
-  }
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
 
   const events: Array<Record<string, unknown>> = [];
 

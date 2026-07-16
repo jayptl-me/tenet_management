@@ -252,8 +252,8 @@ export default function RoomsPage() {
 
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Room"
-        message={`Are you sure you want to delete "${deleteTarget?.roomNumber}"? This action cannot be undone.`}
+        title="Deactivate Room"
+        message={`Deactivate room "${deleteTarget?.roomNumber}"? It will be marked inactive and hidden from new assignments. Active tenants must be moved first.`}
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

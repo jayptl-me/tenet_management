@@ -15,14 +15,16 @@ import { FormActions } from '@/components/ui/FormActions';
 import { FormGrid } from '@/components/ui/FormSection';
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(120),
   category: z.enum(['furniture', 'appliance', 'electronics', 'cleaning', 'other']),
-  location: z.string().min(1, 'Location is required'),
-  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  lowStockThreshold: z.coerce.number().min(0, 'Must be >= 0'),
+  location: z.string().min(1, 'Location is required').max(160),
+  quantity: z.coerce.number().int().min(0, 'Quantity cannot be negative'),
+  lowStockThreshold: z.coerce.number().int().min(0, 'Must be >= 0'),
   status: z.enum(['available', 'in_use', 'under_maintenance', 'damaged', 'retired']),
   purchasedDate: z.string().optional(),
-  notes: z.string().optional(),
+  lastServicedDate: z.string().optional(),
+  nextServiceDate: z.string().optional(),
+  notes: z.string().max(500).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -70,6 +72,14 @@ export default function NewAssetPage() {
       };
       if (data.purchasedDate) {
         payload.purchasedDate = new Date(`${data.purchasedDate}T00:00:00.000Z`).toISOString();
+      }
+      if (data.lastServicedDate) {
+        payload.lastServicedDate = new Date(
+          `${data.lastServicedDate}T00:00:00.000Z`,
+        ).toISOString();
+      }
+      if (data.nextServiceDate) {
+        payload.nextServiceDate = new Date(`${data.nextServiceDate}T00:00:00.000Z`).toISOString();
       }
       await api.post('assets', { json: payload }).json<{ success: boolean }>();
       router.push('/assets');
@@ -137,12 +147,26 @@ export default function NewAssetPage() {
               {...register('status')}
             />
           </FormGrid>
-          <Input
-            label="Purchase Date"
-            type="date"
-            error={errors.purchasedDate?.message}
-            {...register('purchasedDate')}
-          />
+          <FormGrid cols={3}>
+            <Input
+              label="Purchase date"
+              type="date"
+              error={errors.purchasedDate?.message}
+              {...register('purchasedDate')}
+            />
+            <Input
+              label="Last serviced"
+              type="date"
+              error={errors.lastServicedDate?.message}
+              {...register('lastServicedDate')}
+            />
+            <Input
+              label="Next service"
+              type="date"
+              error={errors.nextServiceDate?.message}
+              {...register('nextServiceDate')}
+            />
+          </FormGrid>
           <Textarea
             label="Notes"
             rows={3}

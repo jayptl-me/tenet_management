@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Home,
@@ -248,7 +249,16 @@ export default function RoomDetailPage() {
                             {bed.bedId}
                           </td>
                           <td className="py-3 font-semibold text-[color:var(--color-text-primary)]">
-                            {bed.tenantName ?? 'N/A'}
+                            {bed.tenantId ? (
+                              <Link
+                                href={`/tenants/${bed.tenantId}`}
+                                className="text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                              >
+                                {bed.tenantName ?? 'View tenant'}
+                              </Link>
+                            ) : (
+                              (bed.tenantName ?? 'N/A')
+                            )}
                           </td>
                           <td className="py-3 text-right">
                             <StatusBadge variant="success" label="Occupied" />
@@ -287,11 +297,19 @@ export default function RoomDetailPage() {
                         {bed.isOccupied ? 'Occupied' : 'Available'}
                       </span>
                     </div>
-                    {bed.isOccupied && (
-                      <p className="truncate text-xs font-semibold text-[color:var(--color-text-secondary)]">
-                        {bed.tenantName ?? 'Occupied'}
-                      </p>
-                    )}
+                    {bed.isOccupied &&
+                      (bed.tenantId ? (
+                        <Link
+                          href={`/tenants/${bed.tenantId}`}
+                          className="block truncate text-xs font-semibold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        >
+                          {bed.tenantName ?? 'View tenant'}
+                        </Link>
+                      ) : (
+                        <p className="truncate text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                          {bed.tenantName ?? 'Occupied'}
+                        </p>
+                      ))}
                   </div>
                 ))}
               </div>

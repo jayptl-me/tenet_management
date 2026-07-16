@@ -8,6 +8,8 @@ export interface INotificationDocument extends Document {
   body: string;
   type: string;
   data: Map<string, string>;
+  /** Permanent recipient set so portal history survives mark-read (F1). */
+  recipientUserIds: Schema.Types.ObjectId[];
   unreadBy: Schema.Types.ObjectId[];
   sentAt: Date;
   createdAt: Date;
@@ -56,6 +58,11 @@ const notificationSchema = new Schema<INotificationDocument>(
       of: String,
       default: {},
     },
+    recipientUserIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
     unreadBy: {
       type: [Schema.Types.ObjectId],
       ref: 'User',
@@ -85,6 +92,7 @@ notificationSchema.index({ createdAt: -1 });
 notificationSchema.index({ type: 1 });
 notificationSchema.index({ targetType: 1 });
 notificationSchema.index({ unreadBy: 1 });
+notificationSchema.index({ recipientUserIds: 1 });
 
 export const Notification: Model<INotificationDocument> = model<INotificationDocument>(
   'Notification',

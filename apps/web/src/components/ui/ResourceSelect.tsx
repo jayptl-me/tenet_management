@@ -35,7 +35,7 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
   value,
   onChange,
   error,
-  helperText: _helperText,
+  helperText,
   placeholder = 'Select...',
   className,
   valueKey = '_id',
@@ -44,7 +44,6 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
   dataPath = 'data',
   disabled = false,
 }: ResourceSelectProps<T>) {
-  void _helperText;
   return (
     <div className={clsx(className)}>
       <SearchableSelect<T>
@@ -53,6 +52,7 @@ export function ResourceSelect<T extends Record<string, unknown> = Record<string
         value={value ?? ''}
         onChange={(v) => onChange?.(v)}
         error={error}
+        helperText={helperText}
         placeholder={placeholder}
         valueKey={valueKey}
         labelKey={labelKey}

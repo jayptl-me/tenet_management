@@ -14,8 +14,10 @@ interface NotificationDetail {
   body: string;
   type: string;
   targetType: string;
-  status: string;
+  /** Not always on model — derive from sentAt when missing */
+  status?: string;
   createdAt: string;
+  sentAt?: string;
   scheduledFor?: string;
   metadata?: Record<string, unknown>;
 }
@@ -76,6 +78,10 @@ export default function NotificationDetailPage() {
   const formatType = (type: string) =>
     type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+  const displayStatus =
+    notification?.status ||
+    (notification?.sentAt ? 'sent' : 'recorded');
+
   return (
     <FormPage
       title={notification?.title ?? 'Notification Details'}
@@ -86,8 +92,8 @@ export default function NotificationDetailPage() {
       badge={
         notification ? (
           <StatusBadge
-            variant={statusToVariant(notification.status)}
-            label={notification.status.replace(/_/g, ' ')}
+            variant={statusToVariant(displayStatus)}
+            label={displayStatus.replace(/_/g, ' ')}
           />
         ) : undefined
       }
@@ -119,8 +125,8 @@ export default function NotificationDetailPage() {
                 label="Status"
                 value={
                   <StatusBadge
-                    variant={statusToVariant(notification.status)}
-                    label={notification.status.replace(/_/g, ' ')}
+                    variant={statusToVariant(displayStatus)}
+                    label={displayStatus.replace(/_/g, ' ')}
                   />
                 }
               />

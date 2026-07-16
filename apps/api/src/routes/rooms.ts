@@ -47,22 +47,43 @@ const updateRoomSchema = z.strictObject({
 
 const BED_IDS = ['A', 'B', 'C', 'D'] as const;
 
+type BedSnap = { bedId: string; isOccupied: boolean; tenantId: unknown };
+
+/** Recount active rooms for one or more floors (findByIdAndUpdate skips post-save). */
+async function recomputeFloorTotalRooms(...floorIds: Array<string | unknown | null | undefined>) {
+  const seen = new Set<string>();
+  for (const raw of floorIds) {
+    if (raw == null) continue;
+    const id = String(raw);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    try {
+      const count = await Room.countDocuments(
+        { floorId: id, isActive: true } as Record<string, unknown>,
+      );
+      await Floor.findByIdAndUpdate(id, { totalRooms: count });
+    } catch {
+      // Non-fatal accounting
+    }
+  }
+}
+type BedRemap = { tenantId: string; fromBedId: string; toBedId: string };
+
 /**
- * Rebuild the beds array when sharingType changes.
- * Preserves occupied beds (with their tenantId), fills remaining
- * slots with empty beds, and truncates excess if downsizing.
- *
- * Downsize safety: if occupied beds exceed the new sharing type,
- * the update is rejected with an actionable error message.
+ * Rebuild beds when sharingType changes.
+ * Packs occupied tenants into slots A..N (preserving occupancy), fills free slots,
+ * and returns remaps when a tenant must move (e.g. only bed C occupied on 3→2).
+ * Throws BEDS_OCCUPIED_ON_DOWNSIZE if occupied count exceeds new sharing type.
  */
 function rebuildBedsForSharingType(
-  existingBeds: Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }>,
+  existingBeds: BedSnap[],
   newSharingType: number,
-): Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }> {
-  const occupied = existingBeds.filter((b) => b.isOccupied);
+): { beds: BedSnap[]; remaps: BedRemap[] } {
+  const occupied = existingBeds
+    .filter((b) => b.isOccupied)
+    .sort((a, b) => a.bedId.localeCompare(b.bedId));
   const slots = BED_IDS.slice(0, newSharingType);
 
-  // If downsizing would orphan occupied beds, throw — caller must handle
   if (occupied.length > newSharingType) {
     throw Object.assign(
       new Error(
@@ -72,26 +93,27 @@ function rebuildBedsForSharingType(
     );
   }
 
-  const beds: Array<{ bedId: string; isOccupied: boolean; tenantId: unknown }> = [];
-  for (const bedId of slots) {
-    const existing = occupied.find((b) => b.bedId === bedId);
-    if (existing) {
-      beds.push({ ...existing });
+  // Pack occupied tenants into the first N letter slots so none are truncated.
+  const remaps: BedRemap[] = [];
+  const beds: BedSnap[] = [];
+  for (let i = 0; i < slots.length; i++) {
+    const slotId = slots[i]!;
+    const occ = occupied[i];
+    if (occ) {
+      if (String(occ.bedId) !== slotId && occ.tenantId) {
+        remaps.push({
+          tenantId: String(occ.tenantId),
+          fromBedId: String(occ.bedId),
+          toBedId: slotId,
+        });
+      }
+      beds.push({ bedId: slotId, isOccupied: true, tenantId: occ.tenantId });
     } else {
-      beds.push({ bedId, isOccupied: false, tenantId: null });
+      beds.push({ bedId: slotId, isOccupied: false, tenantId: null });
     }
   }
 
-  // Preserve any occupied beds that don't fit the standard A/B/C/D pattern
-  // (should never happen, but guard against data corruption)
-  for (const b of occupied) {
-    if (!beds.some((nb) => nb.bedId === b.bedId)) {
-      beds.push({ ...b });
-    }
-  }
-
-  // Final truncation to exact sharing type count
-  return beds.slice(0, newSharingType);
+  return { beds, remaps };
 }
 
 // ── Router ───────────────────────────────────────────────
@@ -255,7 +277,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
 
     if (oldSharingType !== newSharingType) {
       try {
-        const rebuiltBeds = rebuildBedsForSharingType(
+        const { beds: rebuiltBeds, remaps } = rebuildBedsForSharingType(
           existingRoom.beds.map((b) => ({
             bedId: b.bedId,
             isOccupied: b.isOccupied,
@@ -282,6 +304,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
         if (body.isActive !== undefined) updateData.isActive = body.isActive;
         if (body.roomAmenities !== undefined) updateData.roomAmenities = body.roomAmenities;
 
+        const previousFloorId = existingRoom.floorId;
         const updated = await Room.findOneAndUpdate(
           { _id: id, sharingType: oldSharingType },
           updateData,
@@ -294,6 +317,16 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
             'CONCURRENT_MODIFICATION',
           );
         }
+
+        // Keep Tenant.bedId in sync when packing moved occupants (e.g. C→A).
+        if (remaps.length > 0) {
+          await Promise.all(
+            remaps.map((r) => Tenant.findByIdAndUpdate(r.tenantId, { bedId: r.toBedId }).exec()),
+          );
+        }
+
+        await recomputeFloorTotalRooms(previousFloorId, updated.floorId);
+
         await updated.populate('floor');
 
         return c.json({ success: true, data: updated });
@@ -312,6 +345,9 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
   }
 
   // No sharingType change — standard partial update
+  const before = await Room.findById(id).lean();
+  if (!before) return notFound(c, 'Room');
+
   const room = await Room.findByIdAndUpdate(id, body, {
     returnDocument: 'after',
     runValidators: true,
@@ -320,6 +356,14 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
     .lean();
 
   if (!room) return notFound(c, 'Room');
+
+  // findByIdAndUpdate skips post-save; recount floors when floor or active flag moves.
+  if (body.floorId !== undefined || body.isActive !== undefined) {
+    await recomputeFloorTotalRooms(
+      (before as { floorId?: unknown }).floorId,
+      (room as { floorId?: unknown }).floorId,
+    );
+  }
 
   return c.json({ success: true, data: room });
 });
@@ -352,15 +396,7 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
   if (!room) return notFound(c, 'Room');
 
   // Soft-delete skips document middleware; recompute Floor.totalRooms explicitly
-  try {
-    const floorId = (room as { floorId?: unknown }).floorId;
-    if (floorId) {
-      const count = await Room.countDocuments({ floorId, isActive: true });
-      await Floor.findByIdAndUpdate(floorId, { totalRooms: count });
-    }
-  } catch {
-    // Non-fatal — room is already soft-deleted
-  }
+  await recomputeFloorTotalRooms((room as { floorId?: unknown }).floorId);
 
   return c.json({ success: true, data: room });
 });

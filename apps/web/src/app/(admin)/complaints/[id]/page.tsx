@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, AlertCircle, User, FileText } from 'lucide-react';
+import { Save, AlertCircle, User, FileText, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -35,7 +35,7 @@ interface ComplaintDetail {
   status: string;
   category: string;
   adminNotes?: string;
-  resolution?: string;
+  photos?: string[];
   resolvedAt?: string;
   createdAt: string;
   updatedAt?: string;
@@ -83,6 +83,7 @@ function formatDateTime(d: string | null | undefined): string {
 
 export default function ComplaintDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [complaint, setComplaint] = useState<ComplaintDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -170,6 +171,18 @@ export default function ComplaintDetailPage() {
           <StatusBadge variant={statusVariant} label={complaint.status.replace(/_/g, ' ')} />
         ) : undefined
       }
+      actions={
+        complaint ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/complaints/${complaint._id}/edit`)}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Button>
+        ) : undefined
+      }
     >
       {complaint && (
         <div className="space-y-6">
@@ -178,7 +191,7 @@ export default function ComplaintDetailPage() {
               <DetailList>
                 <DetailRow
                   label="Category"
-                  value={<span className="capitalize">{complaint.category}</span>}
+                  value={<span className="capitalize">{complaint.category.replace(/_/g, ' ')}</span>}
                 />
                 <DetailRow
                   label="Severity"
@@ -193,6 +206,9 @@ export default function ComplaintDetailPage() {
                     />
                   }
                 />
+                {complaint.resolvedAt && (
+                  <DetailRow label="Resolved at" value={formatDateTime(complaint.resolvedAt)} />
+                )}
               </DetailList>
 
               <div className="mt-4 border-t border-[color:var(--border-color)] pt-4">
@@ -204,21 +220,38 @@ export default function ComplaintDetailPage() {
                 </p>
               </div>
 
-              {complaint.resolution && (
-                <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] p-4">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-success-700)]">
-                    Resolution
+              {complaint.photos && complaint.photos.length > 0 ? (
+                <div className="mt-4 border-t border-[color:var(--border-color)] pt-4">
+                  <p className="mb-2 text-xs font-medium text-[color:var(--color-text-muted)]">
+                    Photos
                   </p>
-                  <p className="whitespace-pre-wrap text-sm font-semibold text-[color:var(--color-success-800)]">
-                    {complaint.resolution}
-                  </p>
-                  {complaint.resolvedAt && (
-                    <p className="mt-2 text-xs font-semibold text-[color:var(--color-success-600)]">
-                      Resolved on: {formatDate(complaint.resolvedAt)}
-                    </p>
-                  )}
+                  <div className="flex flex-wrap gap-3">
+                    {complaint.photos.map((url) => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block h-24 w-24 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--border-color)]"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Complaint evidence" className="h-full w-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              )}
+              ) : null}
+
+              {complaint.adminNotes ? (
+                <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                    Admin notes
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-text-secondary)]">
+                    {complaint.adminNotes}
+                  </p>
+                </div>
+              ) : null}
             </DetailCard>
 
             <DetailCard title="Reported By" icon={<User />}>

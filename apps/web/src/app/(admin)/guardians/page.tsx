@@ -206,8 +206,8 @@ export default function GuardiansPage() {
       />
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Guardian"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Deactivate Guardian"
+        message={`Deactivate guardian "${deleteTarget?.name}"? They will be marked inactive and lose portal access. You can reinstate them later if needed.`}
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

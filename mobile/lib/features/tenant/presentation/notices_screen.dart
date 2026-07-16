@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -14,6 +15,7 @@ class TenantNoticesScreen extends ConsumerStatefulWidget {
 class _TenantNoticesScreenState extends ConsumerState<TenantNoticesScreen> {
   bool _loading = true;
   String? _error;
+  bool _featureDisabled = false;
   List<Map<String, dynamic>> _rows = [];
 
   @override
@@ -26,12 +28,20 @@ class _TenantNoticesScreenState extends ConsumerState<TenantNoticesScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _featureDisabled = false;
     });
     try {
       final rows = await ref.read(tenantRepositoryProvider).notices();
       if (!mounted) return;
       setState(() {
         _rows = rows;
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _featureDisabled = e.isFeatureDisabled;
+        _error = e.message;
         _loading = false;
       });
     } catch (e) {
@@ -51,21 +61,33 @@ class _TenantNoticesScreenState extends ConsumerState<TenantNoticesScreen> {
         onRefresh: _load,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (_error != null) ErrorBanner(message: _error!),
-                  if (_rows.isEmpty)
-                    const EmptyState(message: 'No notices')
-                  else
-                    ..._rows.map(
-                      (n) => ListCard(
-                        title: n['title']?.toString() ?? 'Notice',
-                        subtitle: n['content']?.toString() ?? n['body']?.toString(),
+            : _featureDisabled
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 80),
+                      FeatureDisabledWidget(
+                        message:
+                            'Notice board is not enabled. Contact your PG manager.',
                       ),
-                    ),
-                ],
-              ),
+                    ],
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_rows.isEmpty)
+                        const EmptyState(message: 'No notices')
+                      else
+                        ..._rows.map(
+                          (n) => ListCard(
+                            title: n['title']?.toString() ?? 'Notice',
+                            subtitle: n['content']?.toString() ??
+                                n['body']?.toString(),
+                          ),
+                        ),
+                    ],
+                  ),
       ),
     );
   }

@@ -29,8 +29,7 @@ interface EnquiryDetail {
   message?: string;
   status: string;
   source: string;
-  followUpDate?: string;
-  referralDetails?: string;
+  preferredSharing?: string;
   notes?: string;
   createdAt: string;
   updatedAt?: string;
@@ -210,8 +209,15 @@ export default function EnquiryDetailPage() {
                     />
                   }
                 />
-                {enquiry.followUpDate && (
-                  <DetailRow label="Follow-up Date" value={formatDate(enquiry.followUpDate)} />
+                {enquiry.preferredSharing && (
+                  <DetailRow
+                    label="Preferred sharing"
+                    value={
+                      enquiry.preferredSharing === 'single'
+                        ? 'Single'
+                        : `${enquiry.preferredSharing} sharing`
+                    }
+                  />
                 )}
               </DetailList>
 
@@ -231,10 +237,17 @@ export default function EnquiryDetailPage() {
               <DetailList>
                 <DetailRow
                   label="Source"
-                  value={<span className="capitalize">{enquiry.source}</span>}
+                  value={<span className="capitalize">{enquiry.source.replace(/_/g, ' ')}</span>}
                 />
-                {enquiry.referralDetails && (
-                  <DetailRow label="Referral" value={enquiry.referralDetails} />
+                {enquiry.preferredSharing && (
+                  <DetailRow
+                    label="Sharing"
+                    value={
+                      enquiry.preferredSharing === 'single'
+                        ? 'Single'
+                        : `${enquiry.preferredSharing}-share`
+                    }
+                  />
                 )}
               </DetailList>
               {enquiry.notes && (

@@ -5,6 +5,7 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, parsePagination, conflict } from '../lib/routeUtils.js';
 import { DailyMenu } from '../models/dailyMenu.js';
+import { todayInTZ } from '../lib/dates.js';
 
 const menus = new Hono();
 
@@ -25,7 +26,7 @@ const menuDaySchema = z.strictObject({
 });
 
 function withMenuFlags<T extends { date?: string }>(menu: T) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTZ();
   const date = menu.date ?? '';
   return {
     ...menu,
@@ -36,7 +37,7 @@ function withMenuFlags<T extends { date?: string }>(menu: T) {
 
 // ── GET /menus/today ────────────────────────────────────
 menus.get('/today', authGuard, async (c) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTZ();
   const menu = await DailyMenu.findOne({ date: today }).lean();
   if (!menu) return notFound(c, "Today's menu");
   return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
@@ -56,9 +57,9 @@ menus.get('/', authGuard, async (c) => {
     if (toDate) dateFilter.$lte = toDate;
     filter.date = dateFilter;
   }
-  // isActive is derived from date vs today (no schema field)
+  // isActive is derived from date vs today (no schema field). Use PG timezone.
   if (isActive !== undefined && isActive !== '') {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayInTZ();
     const existing = (filter.date as Record<string, string> | undefined) ?? {};
     if (isActive === 'true') {
       filter.date = { ...existing, $gte: existing.$gte && existing.$gte > today ? existing.$gte : today };
@@ -105,7 +106,7 @@ menus.get('/', authGuard, async (c) => {
 // ── POST /menus ─────────────────────────────────────────
 menus.post('/', authGuard, adminOnly, zValidator('json', menuDaySchema), async (c) => {
   const body = c.req.valid('json');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTZ();
 
   if (body.date < today) {
     return c.json(
@@ -151,7 +152,7 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
 
   // Reject edits to past dates
   const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(id) ? id : body.date;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTZ();
   if (targetDate && targetDate < today) {
     return c.json(
       {
@@ -162,22 +163,34 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
     );
   }
 
-  // If param looks like a date (YYYY-MM-DD), upsert by date; otherwise find by ObjectId
-  if (/^\d{4}-\d{2}-\d{2}$/.test(id)) {
-    const menu = await DailyMenu.findOneAndUpdate(
-      { date: id },
-      { ...body, date: id },
-      { upsert: true, returnDocument: 'after', runValidators: true },
-    ).lean();
-    return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
-  }
+  try {
+    // If param looks like a date (YYYY-MM-DD), upsert by date; otherwise find by ObjectId
+    if (/^\d{4}-\d{2}-\d{2}$/.test(id)) {
+      const menu = await DailyMenu.findOneAndUpdate(
+        { date: id },
+        { ...body, date: id },
+        { upsert: true, returnDocument: 'after', runValidators: true },
+      ).lean();
+      return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
+    }
 
-  const menu = await DailyMenu.findByIdAndUpdate(id, body, {
-    returnDocument: 'after',
-    runValidators: true,
-  }).lean();
-  if (!menu) return notFound(c, 'Daily menu');
-  return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
+    const menu = await DailyMenu.findByIdAndUpdate(id, body, {
+      returnDocument: 'after',
+      runValidators: true,
+    }).lean();
+    if (!menu) return notFound(c, 'Daily menu');
+    return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
+  } catch (err: unknown) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'code' in err &&
+      (err as { code: number }).code === 11000
+    ) {
+      return conflict(c, 'A menu for this date already exists', 'DUPLICATE_MENU');
+    }
+    throw err;
+  }
 });
 
 // ── DELETE /menus/:id ───────────────────────────────────

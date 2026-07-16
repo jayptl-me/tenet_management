@@ -24,6 +24,8 @@ export interface IRoom {
   photos: string[];
   beds: IBed[];
   occupancyCount: number;
+  /** Non-per-floor amenity statuses (isPerFloor=false defs). */
+  roomAmenities?: RoomAmenityStatus[];
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +37,7 @@ export interface IRoomCreate {
   monthlyRent: number;
   description?: string;
   photos?: string[];
+  roomAmenities?: RoomAmenityStatus[];
 }
 
 export interface IRoomWithOccupants {

@@ -6,6 +6,7 @@ import { Tenant } from '../models/tenant.js';
 import { Room } from '../models/room.js';
 import { publishToNtfy, buildClickUrl } from '../lib/ntfy.js';
 import { broadcast } from '../lib/eventBus.js';
+import { broadcastBadgesUpdate } from '../lib/broadcast-badges.js';
 import { logger } from '../lib/logger.js';
 import type { INotificationType, SSEMessage, INotificationCreate } from '@pg/types';
 
@@ -20,8 +21,21 @@ interface CreateNotificationOptions extends INotificationCreate {
   senderId?: string;
 }
 
+export type ListNotificationOptions = {
+  type?: INotificationType;
+  /** When true, only items still in unreadBy for the requesting user. */
+  unreadOnly?: boolean;
+  /**
+   * Non-admin: default is full history for recipients (F1).
+   * `status=unread` is equivalent to unreadOnly=true.
+   * `status=all` forces history even if unreadOnly was set.
+   */
+  status?: 'all' | 'unread';
+};
+
 /**
  * Resolve target user IDs based on targetType and targetIds.
+ * F3: targetType `all` is residents only (active users with role tenant).
  */
 async function resolveTargetUsers(
   targetType: string,
@@ -29,7 +43,8 @@ async function resolveTargetUsers(
 ): Promise<IUserDocument[]> {
   switch (targetType) {
     case 'all': {
-      return UserModel.find({ isActive: true }).select('_id ntfyTopic').exec();
+      // Product intent: broadcast announcements to residents, not admins/guardians.
+      return UserModel.find({ isActive: true, role: 'tenant' }).select('_id ntfyTopic').exec();
     }
     case 'individual': {
       return UserModel.find({ _id: { $in: targetIds }, isActive: true })
@@ -72,7 +87,7 @@ export async function createNotification(
   const { targetType, targetIds = [], title, body, type, data = {}, sendPush = true } = options;
 
   const targetUsers = await resolveTargetUsers(targetType, targetIds);
-  const unreadBy = targetUsers.map((u) => u._id);
+  const recipientIds = targetUsers.map((u) => u._id);
 
   const doc = await NotifModel.create({
     targetType,
@@ -81,12 +96,14 @@ export async function createNotification(
     body,
     type,
     data: new Map(Object.entries(data)),
-    unreadBy,
+    // F1: permanent recipient set for history after mark-read
+    recipientUserIds: recipientIds,
+    unreadBy: recipientIds,
     sentAt: new Date(),
   });
 
   logger.info(
-    { notificationId: doc._id, targetType, targetCount: unreadBy.length },
+    { notificationId: doc._id, targetType, targetCount: recipientIds.length },
     'Notification created',
   );
 
@@ -125,7 +142,8 @@ export async function createNotification(
       body,
       type,
       data,
-      unreadBy: unreadBy.map(String),
+      recipientUserIds: recipientIds.map(String),
+      unreadBy: recipientIds.map(String),
       sentAt: doc.sentAt.toISOString(),
       createdAt: doc.createdAt.toISOString(),
     },
@@ -133,6 +151,8 @@ export async function createNotification(
   };
 
   broadcast(sseMessage);
+  // D2: refresh admin sidebar badges after notification mutations
+  void broadcastBadgesUpdate();
   return doc;
 }
 
@@ -157,6 +177,9 @@ export async function markAsRead(
     { _id: notificationId, unreadBy: objectId },
     { $pull: { unreadBy: objectId } },
   );
+  if (result.modifiedCount > 0) {
+    void broadcastBadgesUpdate();
+  }
   return { modifiedCount: result.modifiedCount };
 }
 
@@ -169,6 +192,9 @@ export async function markAllAsRead(userId: string): Promise<{ modifiedCount: nu
     { unreadBy: objectId },
     { $pull: { unreadBy: objectId } },
   );
+  if (result.modifiedCount > 0) {
+    void broadcastBadgesUpdate();
+  }
   return { modifiedCount: result.modifiedCount };
 }
 
@@ -179,30 +205,77 @@ export async function deleteNotification(
   notificationId: string,
 ): Promise<{ deletedCount: number }> {
   const result = await NotifModel.deleteOne({ _id: notificationId });
+  if (result.deletedCount > 0) {
+    void broadcastBadgesUpdate();
+  }
   return { deletedCount: result.deletedCount };
+}
+
+function serializeNotification(
+  doc: INotificationDocument,
+  viewerUserId?: string,
+): Record<string, unknown> {
+  const plain =
+    typeof (doc as any).toJSON === 'function'
+      ? (doc as any).toJSON()
+      : typeof (doc as any).toObject === 'function'
+        ? (doc as any).toObject()
+        : { ...(doc as any) };
+
+  const unreadBy = Array.isArray(plain.unreadBy)
+    ? plain.unreadBy.map((id: unknown) => String(id))
+    : [];
+  const recipientUserIds = Array.isArray(plain.recipientUserIds)
+    ? plain.recipientUserIds.map((id: unknown) => String(id))
+    : [];
+
+  const result: Record<string, unknown> = {
+    ...plain,
+    id: String(plain.id ?? plain._id ?? ''),
+    unreadBy,
+    recipientUserIds,
+  };
+
+  // F2: derive isRead for the requesting user from unreadBy membership
+  if (viewerUserId) {
+    result.isRead = !unreadBy.includes(viewerUserId);
+  }
+
+  return result;
 }
 
 /**
  * List notifications for a user with pagination.
+ * Admin: full broadcast history (optional type / unreadOnly filters).
+ * Non-admin (F1): history via recipientUserIds (fallback unreadBy for legacy docs);
+ *   use unreadOnly=true or status=unread for inbox-only.
  */
 export async function listNotifications(
   userId: string,
   role: string,
   page: number,
   limit: number,
-  options?: { type?: INotificationType; unreadOnly?: boolean },
-): Promise<{ notifications: INotificationDocument[]; total: number }> {
+  options?: ListNotificationOptions,
+): Promise<{ notifications: Record<string, unknown>[]; total: number }> {
   const objectId = new mongoose.Types.ObjectId(userId);
   const filter: Record<string, any> = {};
 
+  const wantUnreadOnly =
+    options?.status === 'unread' || (options?.unreadOnly === true && options?.status !== 'all');
+
   if (role !== 'admin') {
+    if (wantUnreadOnly) {
+      filter.unreadBy = objectId;
+    } else {
+      // History: user was a recipient (new docs) OR still/ever in unreadBy (legacy)
+      filter.$or = [{ recipientUserIds: objectId }, { unreadBy: objectId }];
+    }
+  } else if (wantUnreadOnly) {
     filter.unreadBy = objectId;
   }
+
   if (options?.type) {
     filter.type = options.type;
-  }
-  if (options?.unreadOnly) {
-    filter.unreadBy = objectId;
   }
 
   const total = await NotifModel.countDocuments(filter);
@@ -212,5 +285,9 @@ export async function listNotifications(
     .limit(limit)
     .exec();
 
-  return { notifications: results, total };
+  const notifications = results.map((doc: INotificationDocument) =>
+    serializeNotification(doc, userId),
+  );
+
+  return { notifications, total };
 }

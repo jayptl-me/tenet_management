@@ -23,9 +23,8 @@ function buildSchema(perFloorAmenities: { key: string; label: string; maxPerFloo
       .max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
   }
   return z.object({
-    label: z.string().min(1, 'Label is required'),
+    label: z.string().min(1, 'Label is required').max(50, 'Label cannot exceed 50 characters'),
     floorNumber: z.coerce.number().int().min(0, 'Floor number must be >= 0'),
-    totalRooms: z.coerce.number().int().positive('Total rooms must be positive'),
     ...amenityFields,
   });
 }
@@ -39,6 +38,8 @@ export default function EditFloorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [perFloorAmenities, setPerFloorAmenities] = useState<PerFloorAmenity[]>([]);
+  // totalRooms is server-managed (Room post-save hook); display only, never PUT.
+  const [totalRooms, setTotalRooms] = useState(0);
 
   const schema = buildSchema(perFloorAmenities);
 
@@ -65,10 +66,11 @@ export default function EditFloorPage() {
         setPerFloorAmenities(defs);
 
         const floor = floorRes.data;
+        setTotalRooms((floor.totalRooms as number) ?? 0);
+
         const defaults: Record<string, number | string> = {
           label: (floor.label as string) ?? '',
           floorNumber: (floor.floorNumber as number) ?? 0,
-          totalRooms: (floor.totalRooms as number) ?? 0,
         };
 
         // Pre-fill amenity counts from floor data
@@ -98,10 +100,10 @@ export default function EditFloorPage() {
         count: Number(data[a.key]) || 0,
       }));
 
+      // Do not send totalRooms -- API strips it; count is auto-synced from rooms.
       const payload = {
         label: data.label,
         floorNumber: Number(data.floorNumber),
-        totalRooms: Number(data.totalRooms),
         amenityCounts,
       };
 
@@ -147,8 +149,9 @@ export default function EditFloorPage() {
             <Input
               label="Total rooms"
               type="number"
-              error={(errors as Record<string, { message?: string }>).totalRooms?.message}
-              {...register('totalRooms')}
+              value={totalRooms}
+              readOnly
+              helperText="Auto-synced from rooms on this floor"
             />
           </FormGrid>
         </FormSection>

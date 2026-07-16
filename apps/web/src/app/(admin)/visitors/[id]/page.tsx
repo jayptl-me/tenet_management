@@ -74,14 +74,10 @@ export default function VisitorDetailPage() {
     if (!visitor) return;
     setActionError('');
     try {
-      const res =
-        action === 'cancel'
-          ? await api
-              .put(`visitors/${visitor._id}`, { json: { status: 'cancelled' } })
-              .json<{ success: boolean; data: VisitorDetail }>()
-          : await api
-              .post(`visitors/${visitor._id}/${action}`, { json: {} })
-              .json<{ success: boolean; data: VisitorDetail }>();
+      // All FSM transitions use POST /visitors/:id/{arrive|depart|cancel|approve}
+      const res = await api
+        .post(`visitors/${visitor._id}/${action}`, { json: {} })
+        .json<{ success: boolean; data: VisitorDetail }>();
       setVisitor(res.data);
     } catch {
       setActionError(`Failed to ${action} visitor`);

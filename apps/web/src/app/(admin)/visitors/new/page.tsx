@@ -17,12 +17,12 @@ import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
-  visitorName: z.string().min(1, 'Visitor name is required'),
+  visitorName: z.string().min(2, 'Visitor name must be at least 2 characters').max(100),
   visitorPhone: z
     .string()
     .min(10, 'Phone is required')
     .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
-  purpose: z.string().min(1, 'Purpose is required'),
+  purpose: z.string().min(1, 'Purpose is required').max(200),
   expectedArrival: z.string().min(1, 'Expected arrival is required'),
 });
 
@@ -47,9 +47,11 @@ export default function NewVisitorPage() {
       await api
         .post('visitors', {
           json: {
-            ...data,
+            tenantId: data.tenantId,
             visitorName: data.visitorName.trim(),
             visitorPhone: normalizeInPhone(data.visitorPhone),
+            purpose: data.purpose.trim(),
+            expectedArrival: new Date(data.expectedArrival).toISOString(),
           },
         })
         .json<{ success: boolean }>();

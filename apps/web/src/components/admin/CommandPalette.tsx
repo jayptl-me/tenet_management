@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalOverlay, modalContent } from '@/lib/animations';
+import { useAppConfigPublic } from '@/hooks/useAppConfig';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -46,7 +47,19 @@ interface CommandAction {
   keywords?: string[];
   icon: LucideIcon;
   action?: () => void;
+  /** AppConfig feature flag key; hidden when flag is false (same as Sidebar). */
+  featureFlag?: string;
 }
+
+// Matches Sidebar FEATURE_DEFAULTS
+const FEATURE_DEFAULTS: Record<string, boolean> = {
+  attendanceEnabled: false,
+  laundryEnabled: true,
+  messFeedbackEnabled: true,
+  visitorManagementEnabled: true,
+  guardianPortalEnabled: true,
+  noticeBoardEnabled: true,
+};
 
 // ── Command Data ───────────────────────────────────────
 
@@ -120,6 +133,7 @@ function buildCommands(
       href: '/laundry',
       keywords: ['wash', 'slots'],
       icon: Shirt,
+      featureFlag: 'laundryEnabled',
     },
     {
       id: 'meals',
@@ -128,6 +142,7 @@ function buildCommands(
       href: '/meals',
       keywords: ['food', 'feedback'],
       icon: Utensils,
+      featureFlag: 'messFeedbackEnabled',
     },
     {
       id: 'menus',
@@ -176,6 +191,7 @@ function buildCommands(
       href: '/notices',
       keywords: ['announcements', 'posts'],
       icon: Megaphone,
+      featureFlag: 'noticeBoardEnabled',
     },
     {
       id: 'notifications',
@@ -192,6 +208,7 @@ function buildCommands(
       href: '/visitors',
       keywords: ['guests', 'entries'],
       icon: DoorOpen,
+      featureFlag: 'visitorManagementEnabled',
     },
     {
       id: 'guardians',
@@ -200,6 +217,7 @@ function buildCommands(
       href: '/guardians',
       keywords: ['parents', 'contacts'],
       icon: ShieldCheck,
+      featureFlag: 'guardianPortalEnabled',
     },
     {
       id: 'leaves',
@@ -208,6 +226,7 @@ function buildCommands(
       href: '/leaves',
       keywords: ['vacation', 'absence'],
       icon: CalendarClock,
+      featureFlag: 'attendanceEnabled',
     },
     {
       id: 'attendance',
@@ -216,6 +235,7 @@ function buildCommands(
       href: '/attendance',
       keywords: ['present', 'roll'],
       icon: CalendarCheck,
+      featureFlag: 'attendanceEnabled',
     },
     {
       id: 'export',
@@ -280,15 +300,34 @@ export function CommandPalette({
   onLogout,
 }: CommandPaletteProps) {
   const router = useRouter();
+  const { data: appConfig } = useAppConfigPublic();
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const commands = useMemo(
-    () => buildCommands(onToggleTheme, onLogout, isDark),
-    [onToggleTheme, onLogout, isDark],
-  );
+  // Same feature flag resolution as Sidebar
+  const features = useMemo(() => {
+    const flags = appConfig?.features;
+    return {
+      attendanceEnabled: flags?.attendanceEnabled ?? FEATURE_DEFAULTS.attendanceEnabled,
+      laundryEnabled: flags?.laundryEnabled ?? FEATURE_DEFAULTS.laundryEnabled,
+      messFeedbackEnabled: flags?.messFeedbackEnabled ?? FEATURE_DEFAULTS.messFeedbackEnabled,
+      visitorManagementEnabled:
+        flags?.visitorManagementEnabled ?? FEATURE_DEFAULTS.visitorManagementEnabled,
+      guardianPortalEnabled: flags?.guardianPortalEnabled ?? FEATURE_DEFAULTS.guardianPortalEnabled,
+      noticeBoardEnabled: flags?.noticeBoardEnabled ?? FEATURE_DEFAULTS.noticeBoardEnabled,
+    };
+  }, [appConfig]);
+
+  const commands = useMemo(() => {
+    const all = buildCommands(onToggleTheme, onLogout, isDark);
+    return all.filter((cmd) => {
+      if (!cmd.featureFlag) return true;
+      const flagKey = cmd.featureFlag as keyof typeof features;
+      return features[flagKey] !== false;
+    });
+  }, [onToggleTheme, onLogout, isDark, features]);
 
   // Filter results — fuzzy-ish
   const results = useMemo(() => {

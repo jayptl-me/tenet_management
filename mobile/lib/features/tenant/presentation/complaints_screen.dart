@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
@@ -39,15 +41,19 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
   }
 
   Future<void> _bootstrap() async {
-    final user = ref.read(authProvider).user;
+    final tenantId = await ref.read(authProvider.notifier).ensureTenantId();
     final repo = ref.read(tenantRepositoryProvider);
-    if (user?.tenantId != null) {
-      final profile = await repo.tenantProfile(user!.tenantId!);
-      final room = profile?['room'];
-      if (room is Map && room['_id'] != null) {
-        _roomId = room['_id'].toString();
-      } else if (profile?['roomId'] != null) {
-        _roomId = profile!['roomId'].toString();
+    if (tenantId != null && tenantId.isNotEmpty) {
+      try {
+        final profile = await repo.tenantProfile(tenantId);
+        final room = profile?['room'];
+        if (room is Map && room['_id'] != null) {
+          _roomId = room['_id'].toString();
+        } else if (profile?['roomId'] != null) {
+          _roomId = profile!['roomId'].toString();
+        }
+      } catch (_) {
+        // room resolution is best-effort; create still validates roomId
       }
     }
     await _load();
@@ -121,7 +127,7 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
               const SizedBox(height: 12),
             ],
             if (_success != null) ...[
-              Text(_success!, style: const TextStyle(color: Color(0xFF065F46), fontWeight: FontWeight.w700)),
+              Text(_success!, style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
             ],
             Card(
@@ -194,11 +200,18 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
               const EmptyState(message: 'No complaints yet')
             else
               ..._rows.map(
-                (c) => ListCard(
-                  title: c['title']?.toString() ?? 'Complaint',
-                  subtitle: (c['category']?.toString() ?? '').replaceAll('_', ' '),
-                  trailing: StatusChip(label: c['status']?.toString() ?? '—'),
-                ),
+                (c) {
+                  final id = c['_id']?.toString() ?? c['id']?.toString() ?? '';
+                  return ListCard(
+                    title: c['title']?.toString() ?? 'Complaint',
+                    subtitle:
+                        (c['category']?.toString() ?? '').replaceAll('_', ' '),
+                    trailing: StatusChip(label: c['status']?.toString() ?? '--'),
+                    onTap: id.isEmpty
+                        ? null
+                        : () => context.go('/tenant/complaints/$id'),
+                  );
+                },
               ),
           ],
         ),

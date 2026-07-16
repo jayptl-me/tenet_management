@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/network/open_bytes.dart';
+import '../../../core/network/open_bytes_web.dart'
+    if (dart.library.io) '../../../core/network/open_bytes_web_stub.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -19,6 +24,7 @@ class _TenantInvoiceDetailScreenState
   Map<String, dynamic>? _invoice;
   bool _loading = true;
   String? _error;
+  bool _pdfLoading = false;
 
   @override
   void initState() {
@@ -39,6 +45,9 @@ class _TenantInvoiceDetailScreenState
       setState(() {
         _invoice = data;
         _loading = false;
+        if (data == null) {
+          _error = 'Invoice not found.';
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -49,10 +58,57 @@ class _TenantInvoiceDetailScreenState
     }
   }
 
+  Future<void> _openPdf() async {
+    setState(() => _pdfLoading = true);
+    try {
+      final bytes = await ref
+          .read(tenantRepositoryProvider)
+          .invoicePdfBytes(widget.invoiceId);
+      final number =
+          _invoice?['invoiceNumber']?.toString() ?? widget.invoiceId;
+      final fileName = 'invoice-$number.pdf';
+      if (kIsWeb) {
+        openBytesOnWeb(bytes: bytes, fileName: fileName);
+      } else {
+        final path = await openOrSaveBytes(bytes: bytes, fileName: fileName);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF saved: $path')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _pdfLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Invoice')),
+      appBar: AppBar(
+        title: const Text('Invoice'),
+        actions: [
+          IconButton(
+            tooltip: 'Download PDF',
+            onPressed: _loading || _pdfLoading ? null : _openPdf,
+            icon: _pdfLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
@@ -64,12 +120,44 @@ class _TenantInvoiceDetailScreenState
                     ErrorBanner(message: _error!),
                     const SizedBox(height: 12),
                   ],
-                  if (_invoice != null)
+                  if (_invoice != null) ...[
                     _buildContent(context, _invoice!),
+                    if (_needsPayment(_invoice!)) ...[
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => context.go(
+                          '/tenant/payments?invoiceId=${Uri.encodeComponent(widget.invoiceId)}',
+                        ),
+                        icon: const Icon(Icons.payments_outlined),
+                        label: const Text('Pay / Submit UTR'),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    FilledButton.tonalIcon(
+                      onPressed: _pdfLoading ? null : _openPdf,
+                      icon: _pdfLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.download_outlined),
+                      label: Text(
+                        _pdfLoading ? 'Preparing PDF...' : 'Download PDF',
+                      ),
+                    ),
+                  ],
                 ],
               ),
       ),
     );
+  }
+
+  bool _needsPayment(Map<String, dynamic> inv) {
+    final balance = (inv['balance'] as num?) ?? 0;
+    final status = (inv['status']?.toString() ?? '').toLowerCase();
+    if (status == 'paid' || status == 'cancelled') return false;
+    return balance > 0 || status == 'unpaid' || status == 'partial' || status == 'overdue';
   }
 
   Widget _buildContent(BuildContext context, Map<String, dynamic> inv) {

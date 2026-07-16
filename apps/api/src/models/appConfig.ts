@@ -21,6 +21,7 @@ export interface IAppConfigDocument extends Document {
     facebook?: string;
     instagram?: string;
     whatsapp?: string;
+    youtube?: string;
   };
   googleMapsEmbedUrl?: string;
   amenities: string[];
@@ -263,6 +264,7 @@ const appConfigSchema = new Schema<IAppConfigDocument>(
       facebook: { type: String },
       instagram: { type: String },
       whatsapp: { type: String },
+      youtube: { type: String },
     },
     googleMapsEmbedUrl: { type: String },
     amenities: {

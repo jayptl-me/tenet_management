@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, FileText, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -75,9 +76,12 @@ export default function InvoicesPage() {
     try {
       await api.delete(`invoices/${deleteTarget._id}`).json();
       setDeleteTarget(null);
+      toast.success('Invoice deleted');
       fetchInvoices();
-    } catch {
-      setError('Failed to delete invoice');
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setError(parsed.message || 'Failed to delete invoice');
+      toast.error(parsed.message || 'Failed to delete invoice');
     } finally {
       setDeleting(false);
     }
@@ -148,7 +152,8 @@ export default function InvoicesPage() {
         <TableActions
           onView={() => router.push(`/invoices/${row._id}`)}
           onEdit={() => router.push(`/invoices/${row._id}/edit`)}
-          onDelete={() => setDeleteTarget(row)}
+          showDelete={row.status !== 'paid'}
+          onDelete={row.status !== 'paid' ? () => setDeleteTarget(row) : undefined}
         />
       ),
       className: 'w-[130px]',
@@ -259,7 +264,8 @@ export default function InvoicesPage() {
               <TableActions
                 onView={() => router.push(`/invoices/${row._id}`)}
                 onEdit={() => router.push(`/invoices/${row._id}/edit`)}
-                onDelete={() => setDeleteTarget(row)}
+                showDelete={row.status !== 'paid'}
+                onDelete={row.status !== 'paid' ? () => setDeleteTarget(row) : undefined}
               />
             </div>
           </div>

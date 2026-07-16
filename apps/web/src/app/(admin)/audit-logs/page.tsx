@@ -49,6 +49,8 @@ export default function AuditLogsPage() {
   const [perPage, setPerPage] = useState(25);
   const [actionFilter, setActionFilter] = useState('');
   const [resourceFilter, setResourceFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
 
   const fetchLogs = useCallback(async () => {
@@ -60,6 +62,8 @@ export default function AuditLogsPage() {
       params.set('limit', String(perPage));
       if (actionFilter) params.set('action', actionFilter);
       if (resourceFilter) params.set('resource', resourceFilter);
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
 
       const res = await api.get(`audit-logs?${params.toString()}`).json<{
         success: boolean;
@@ -73,7 +77,7 @@ export default function AuditLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, actionFilter, resourceFilter]);
+  }, [page, perPage, actionFilter, resourceFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchLogs();
@@ -162,7 +166,7 @@ export default function AuditLogsPage() {
 
       <ErrorBanner message={error} />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Select
           options={[
             { value: '', label: 'All Actions' },
@@ -174,8 +178,10 @@ export default function AuditLogsPage() {
             { value: 'payment_verify', label: 'Payment Verified' },
             { value: 'complaint_status_change', label: 'Complaint Status' },
             { value: 'tenant_checkout', label: 'Checkout' },
+            { value: 'tenant_transfer', label: 'Transfer' },
             { value: 'settings_change', label: 'Settings' },
             { value: 'notification_send', label: 'Notification' },
+            { value: 'visitor_approve', label: 'Visitor Approved' },
             { value: 'export', label: 'Export' },
           ]}
           value={actionFilter}
@@ -207,6 +213,26 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
           className="max-w-[200px]"
+        />
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => {
+            setFromDate(e.target.value);
+            setPage(1);
+          }}
+          aria-label="From date"
+          className="max-w-[160px] rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] outline-none focus:border-[color:var(--color-brand-500)]"
+        />
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => {
+            setToDate(e.target.value);
+            setPage(1);
+          }}
+          aria-label="To date"
+          className="max-w-[160px] rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] outline-none focus:border-[color:var(--color-brand-500)]"
         />
       </div>
 

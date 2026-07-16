@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   CreditCard,
@@ -13,7 +14,12 @@ import {
   XCircle,
   MessageCircle,
   History,
+  Hash,
+  Download,
+  X,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -40,6 +46,32 @@ interface PaymentDetail {
   invoiceId?: string;
   invoiceNumber?: string;
   screenshotUrl?: string;
+  utrNumber?: string;
+}
+
+interface ReceiptData {
+  _id: string;
+  amount: number;
+  method?: string;
+  type?: string;
+  status?: string;
+  notes?: string;
+  paidAt?: string;
+  createdAt?: string;
+  utrNumber?: string;
+  invoiceId?:
+    | string
+    | {
+        _id?: string;
+        invoiceNumber?: string;
+        month?: string;
+        totalAmount?: number;
+      };
+  tenantId?: {
+    _id?: string;
+    userId?: { name?: string; phone?: string; email?: string };
+    roomId?: { roomNumber?: string };
+  };
 }
 
 function formatCurrency(amount: number | null | undefined): string {
@@ -91,6 +123,20 @@ function formatStatusLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function receiptInvoiceNumber(receipt: ReceiptData): string {
+  if (!receipt.invoiceId) return 'N/A';
+  if (typeof receipt.invoiceId === 'string') return receipt.invoiceId;
+  return receipt.invoiceId.invoiceNumber ?? receipt.invoiceId._id ?? 'N/A';
+}
+
+function receiptTenantName(receipt: ReceiptData): string {
+  return receipt.tenantId?.userId?.name ?? 'N/A';
+}
+
+function receiptRoomNumber(receipt: ReceiptData): string {
+  return receipt.tenantId?.roomId?.roomNumber ?? 'N/A';
+}
+
 export default function PaymentDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -99,6 +145,10 @@ export default function PaymentDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receiptError, setReceiptError] = useState('');
+  const [receiptLoading, setReceiptLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -118,6 +168,28 @@ export default function PaymentDetailPage() {
       });
   }, [id]);
 
+  const loadReceipt = async () => {
+    if (!payment) return;
+    setReceiptLoading(true);
+    setReceiptError('');
+    try {
+      const res = await api.get(`payments/${payment._id}/receipt`).json<{
+        success: boolean;
+        data: ReceiptData;
+      }>();
+      setReceipt(res.data);
+      setReceiptOpen(true);
+    } catch {
+      setReceiptError('Failed to load receipt');
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const printReceipt = () => {
+    window.print();
+  };
+
   if (!isLoading && (error || !payment)) {
     return (
       <FormPage
@@ -132,6 +204,12 @@ export default function PaymentDetailPage() {
 
   const formattedDate = payment?.paidAt || payment?.createdAt;
   const statusVariant = payment ? statusToVariant(payment.status) : 'neutral';
+  const canShowReceipt =
+    payment &&
+    (payment.status === 'paid' ||
+      payment.status === 'approved' ||
+      payment.status === 'completed' ||
+      payment.status === 'pending_verification');
 
   return (
     <FormPage
@@ -213,6 +291,17 @@ export default function PaymentDetailPage() {
                     />
                   }
                 />
+                {payment.utrNumber && (
+                  <DetailRow
+                    label="UTR Number"
+                    value={
+                      <span className="inline-flex items-center gap-1.5 font-mono text-sm font-bold tracking-wide text-[color:var(--color-text-primary)]">
+                        <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {payment.utrNumber}
+                      </span>
+                    }
+                  />
+                )}
                 <DetailRow
                   label="Transaction Date"
                   value={
@@ -254,12 +343,33 @@ export default function PaymentDetailPage() {
             <DetailCard title="Invoice Reference" icon={<Receipt />}>
               <DetailList>
                 {payment.invoiceNumber && (
-                  <DetailRow label="Invoice Number" value={payment.invoiceNumber} />
+                  <DetailRow
+                    label="Invoice Number"
+                    value={
+                      payment.invoiceId ? (
+                        <Link
+                          href={`/invoices/${payment.invoiceId}`}
+                          className="font-semibold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        >
+                          {payment.invoiceNumber}
+                        </Link>
+                      ) : (
+                        payment.invoiceNumber
+                      )
+                    }
+                  />
                 )}
                 {payment.invoiceId && (
                   <DetailRow
                     label="Invoice ID"
-                    value={<span className="break-all font-mono text-xs">{payment.invoiceId}</span>}
+                    value={
+                      <Link
+                        href={`/invoices/${payment.invoiceId}`}
+                        className="break-all font-mono text-xs text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      >
+                        {payment.invoiceId}
+                      </Link>
+                    }
                   />
                 )}
               </DetailList>
@@ -354,6 +464,17 @@ export default function PaymentDetailPage() {
                   </Button>
                 </>
               )}
+              {canShowReceipt && (
+                <Button
+                  variant="outline"
+                  loading={receiptLoading}
+                  disabled={receiptLoading}
+                  onClick={() => void loadReceipt()}
+                >
+                  <Receipt className="h-4 w-4" />
+                  View receipt
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => {
@@ -368,6 +489,11 @@ export default function PaymentDetailPage() {
                 Share via WhatsApp
               </Button>
             </div>
+            {receiptError && (
+              <p className="mt-3 text-sm font-semibold text-[color:var(--color-danger-600)]">
+                {receiptError}
+              </p>
+            )}
           </DetailCard>
 
           <DetailCard title="Recent Activity" icon={<History />}>
@@ -408,6 +534,124 @@ export default function PaymentDetailPage() {
           </p>
         </div>
       )}
+
+      <AnimatePresence>
+        {receiptOpen && receipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center print:static print:block">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 backdrop-blur-sm print:hidden"
+              onClick={() => setReceiptOpen(false)}
+            />
+            <motion.div
+              variants={modalContent}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="relative z-10 mx-4 w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)] print:max-w-none print:border-0 print:shadow-none"
+            >
+              <div className="mb-4 flex items-start justify-between gap-4 print:hidden">
+                <div>
+                  <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+                    Payment Receipt
+                  </h3>
+                  <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+                    Reference {receipt._id}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReceiptOpen(false)}
+                  className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)]"
+                  aria-label="Close receipt"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-[color:var(--border-color)] pb-2">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Amount</span>
+                  <span className="font-bold text-[color:var(--color-text-primary)]">
+                    {formatCurrency(receipt.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Status</span>
+                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                    {formatStatusLabel(receipt.status ?? 'N/A')}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Method</span>
+                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                    {receipt.method ? formatMethod(receipt.method) : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Type</span>
+                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                    {receipt.type ? formatType(receipt.type) : 'N/A'}
+                  </span>
+                </div>
+                {receipt.utrNumber && (
+                  <div className="flex justify-between gap-4">
+                    <span className="font-semibold text-[color:var(--color-text-muted)]">UTR</span>
+                    <span className="font-mono font-bold text-[color:var(--color-text-primary)]">
+                      {receipt.utrNumber}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Tenant</span>
+                  <span className="text-[color:var(--color-text-primary)]">
+                    {receiptTenantName(receipt)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Room</span>
+                  <span className="text-[color:var(--color-text-primary)]">
+                    {receiptRoomNumber(receipt)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Invoice</span>
+                  <span className="text-[color:var(--color-text-primary)]">
+                    {receiptInvoiceNumber(receipt)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">Paid at</span>
+                  <span className="text-[color:var(--color-text-primary)]">
+                    {formatDateTime(receipt.paidAt ?? receipt.createdAt)}
+                  </span>
+                </div>
+                {receipt.notes && (
+                  <div className="border-t border-[color:var(--border-color)] pt-2">
+                    <p className="font-semibold text-[color:var(--color-text-muted)]">Notes</p>
+                    <p className="mt-1 whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+                      {receipt.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-2 print:hidden">
+                <Button variant="outline" onClick={() => setReceiptOpen(false)}>
+                  Close
+                </Button>
+                <Button variant="primary" onClick={printReceipt}>
+                  <Download className="h-4 w-4" />
+                  Print / Download
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </FormPage>
   );
 }

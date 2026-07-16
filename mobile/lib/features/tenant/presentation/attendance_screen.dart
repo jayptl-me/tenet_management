@@ -29,8 +29,6 @@ class _TenantAttendanceScreenState
     Future.microtask(_load);
   }
 
-  String get _tenantId => ref.read(authProvider).user?.tenantId ?? '';
-
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -48,7 +46,7 @@ class _TenantAttendanceScreenState
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _featureDisabled = e.statusCode == 403;
+        _featureDisabled = e.isFeatureDisabled;
         _error = e.message;
         _loading = false;
       });
@@ -80,16 +78,41 @@ class _TenantAttendanceScreenState
     }
   }
 
+  Future<String?> _resolveTenantId() async {
+    final id = await ref.read(authProvider.notifier).ensureTenantId();
+    if (id == null || id.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tenant profile not linked. Contact admin.'),
+          ),
+        );
+      }
+      return null;
+    }
+    return id;
+  }
+
   Future<void> _doCheckIn() async {
-    if (_tenantId.isEmpty) return;
+    final tenantId = await _resolveTenantId();
+    if (tenantId == null) return;
     setState(() => _actionLoading = true);
     try {
-      await ref.read(tenantRepositoryProvider).checkIn(_tenantId);
+      await ref.read(tenantRepositoryProvider).checkIn(tenantId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Checked in successfully')),
       );
       _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.isFeatureDisabled) {
+        setState(() => _featureDisabled = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,15 +125,25 @@ class _TenantAttendanceScreenState
   }
 
   Future<void> _doCheckOut() async {
-    if (_tenantId.isEmpty) return;
+    final tenantId = await _resolveTenantId();
+    if (tenantId == null) return;
     setState(() => _actionLoading = true);
     try {
-      await ref.read(tenantRepositoryProvider).checkOut(_tenantId);
+      await ref.read(tenantRepositoryProvider).checkOut(tenantId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Checked out successfully')),
       );
       _load();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.isFeatureDisabled) {
+        setState(() => _featureDisabled = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

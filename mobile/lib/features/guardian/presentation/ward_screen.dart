@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import '../data/guardian_repository.dart';
@@ -19,6 +21,7 @@ class GuardianWardScreen extends ConsumerStatefulWidget {
 class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
   bool _loading = true;
   String? _error;
+  bool _featureDisabled = false;
   Map<String, dynamic>? _ward;
 
   @override
@@ -31,12 +34,21 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _featureDisabled = false;
     });
     try {
       final ward = await ref.read(guardianRepositoryProvider).ward();
       if (!mounted) return;
       setState(() {
         _ward = ward;
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _featureDisabled = e.isFeatureDisabled;
+        _ward = e.statusCode == 404 ? null : _ward;
+        _error = e.isFeatureDisabled || e.statusCode == 404 ? null : e.message;
         _loading = false;
       });
     } catch (e) {
@@ -62,60 +74,93 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              'Signed in as ${user?.name ?? 'guardian'}',
-              style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            if (_error != null) ErrorBanner(message: _error!),
-            if (_loading)
-              const Center(child: CircularProgressIndicator())
-            else if (_ward == null)
-              const EmptyState(message: 'No ward linked to this account')
-            else ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Tenant', style: TextStyle(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 8),
-                      _row('Name', tenantUser?['name']?.toString() ?? 'N/A'),
-                      _row('Phone', tenantUser?['phone']?.toString() ?? 'N/A'),
-                      _row(
-                        'Room / bed',
-                        '${room?['roomNumber'] ?? 'N/A'} / ${tenant?['bedId'] ?? '—'}',
-                      ),
-                      const SizedBox(height: 8),
-                      StatusChip(
-                        label: (tenant?['isActive'] == true) ? 'active' : 'inactive',
-                      ),
-                    ],
+        child: _featureDisabled && !_loading
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 80),
+                  FeatureDisabledWidget(
+                    message:
+                        'Guardian portal is not enabled. Contact the PG manager.',
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Your link', style: TextStyle(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 8),
-                      _row('Relation', _ward?['relation']?.toString() ?? '—'),
-                      _row('Guardian phone', _ward?['phone']?.toString() ?? user?.phone ?? '—'),
-                    ],
+                ],
+              )
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Text(
+                    'Signed in as ${user?.name ?? 'guardian'}',
+                    style: const TextStyle(
+                      color: AppTheme.muted,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  if (_error != null) ErrorBanner(message: _error!),
+                  if (_loading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_ward == null)
+                    const EmptyState(message: 'No ward linked to this account')
+                  else ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Tenant',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 8),
+                            _row('Name', tenantUser?['name']?.toString() ?? 'N/A'),
+                            _row(
+                              'Phone',
+                              tenantUser?['phone']?.toString() ?? 'N/A',
+                            ),
+                            _row(
+                              'Room / bed',
+                              '${room?['roomNumber'] ?? 'N/A'} / ${tenant?['bedId'] ?? '--'}',
+                            ),
+                            const SizedBox(height: 8),
+                            StatusChip(
+                              label: (tenant?['isActive'] == true)
+                                  ? 'active'
+                                  : 'inactive',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Your link',
+                              style: TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 8),
+                            _row(
+                              'Relation',
+                              _ward?['relation']?.toString() ?? '--',
+                            ),
+                            _row(
+                              'Guardian phone',
+                              _ward?['phone']?.toString() ??
+                                  user?.phone ??
+                                  '--',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -126,7 +171,13 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.muted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           Flexible(
             child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
           ),

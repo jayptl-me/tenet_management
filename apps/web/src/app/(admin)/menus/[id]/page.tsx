@@ -30,7 +30,7 @@ interface MenuDetail {
 
 function formatDate(dateStr: string): string {
   try {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', {
       weekday: 'long',
       day: '2-digit',
       month: 'long',
@@ -39,6 +39,21 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function localTodayYmd(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getMenuStatusInfo(date: string): { label: string; variant: ReturnType<typeof statusToVariant> } {
+  const today = localTodayYmd();
+  if (date < today) return { label: 'Past', variant: statusToVariant('past') };
+  if (date === today) return { label: 'Active', variant: statusToVariant('active') };
+  return { label: 'Scheduled', variant: 'info' };
 }
 
 export default function MenuDetailPage() {
@@ -75,8 +90,8 @@ export default function MenuDetailPage() {
   }
 
   const dateDisplay = menu ? formatDate(menu.date) : '';
-  const statusVariant = menu?.isActive ? statusToVariant('active') : statusToVariant('draft');
-  const statusLabel = menu?.isActive ? 'Active' : 'Draft';
+  const statusInfo = menu ? getMenuStatusInfo(menu.date) : null;
+  const isPast = menu ? menu.date < localTodayYmd() : false;
 
   return (
     <FormPage
@@ -85,9 +100,13 @@ export default function MenuDetailPage() {
       backHref="/menus"
       isLoading={isLoading}
       maxWidth="4xl"
-      badge={menu ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined}
+      badge={
+        statusInfo ? (
+          <StatusBadge variant={statusInfo.variant} label={statusInfo.label} />
+        ) : undefined
+      }
       actions={
-        menu ? (
+        menu && !isPast ? (
           <Button
             variant="outline"
             size="sm"

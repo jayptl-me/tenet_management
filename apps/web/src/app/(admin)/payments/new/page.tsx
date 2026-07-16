@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,7 +22,7 @@ const schema = z.object({
   amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
   method: z.enum(['cash', 'bank_transfer', 'other']),
   paidAt: z.string().min(1, 'Paid at is required'),
-  notes: z.string().optional(),
+  notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -55,12 +55,20 @@ function nowLocalDatetime(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function NewPaymentPage() {
+function NewPaymentForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillTenantId = searchParams.get('tenantId') ?? '';
+  const prefillInvoiceId = searchParams.get('invoiceId') ?? '';
+
   const [submitError, setSubmitError] = useState('');
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<number | null>(null);
+
+  // Skip clearing invoiceId on the first tenant-driven load when deep-linking with prefs.
+  const skipInvoiceClearOnce = useRef(Boolean(prefillTenantId));
+  const invoicePrefillApplied = useRef(false);
 
   const {
     register,
@@ -71,7 +79,7 @@ export default function NewPaymentPage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      tenantId: '',
+      tenantId: prefillTenantId,
       invoiceId: '',
       amount: 0,
       method: 'cash',
@@ -105,10 +113,27 @@ export default function NewPaymentPage() {
   }, []);
 
   useEffect(() => {
-    setValue('invoiceId', '');
+    if (skipInvoiceClearOnce.current) {
+      skipInvoiceClearOnce.current = false;
+    } else {
+      setValue('invoiceId', '');
+    }
     setSelectedBalance(null);
     void loadInvoices(tenantId);
   }, [tenantId, loadInvoices, setValue]);
+
+  // Apply optional invoiceId prefill once payable invoices are loaded.
+  useEffect(() => {
+    if (invoicePrefillApplied.current || !prefillInvoiceId || invoicesLoading) return;
+    if (!tenantId || (prefillTenantId && tenantId !== prefillTenantId)) return;
+    if (invoices.some((inv) => inv._id === prefillInvoiceId)) {
+      setValue('invoiceId', prefillInvoiceId);
+      invoicePrefillApplied.current = true;
+    } else if (tenantId) {
+      // Loaded and invoice not payable / missing — do not retry forever.
+      invoicePrefillApplied.current = true;
+    }
+  }, [invoices, invoicesLoading, prefillInvoiceId, prefillTenantId, tenantId, setValue]);
 
   useEffect(() => {
     if (!invoiceId) {
@@ -253,5 +278,19 @@ export default function NewPaymentPage() {
         </div>
       </FormCard>
     </FormPage>
+  );
+}
+
+export default function NewPaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
+      <NewPaymentForm />
+    </Suspense>
   );
 }

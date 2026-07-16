@@ -14,13 +14,17 @@ import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormGrid } from '@/components/ui/FormSection';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
+import { parseApiError } from '@/lib/errorParser';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   slotDate: z.string().min(1, 'Date is required'),
   slotTime: z.string().min(1, 'Time is required'),
-  items: z.coerce.number().min(1, 'At least 1 item').optional(),
-  notes: z.string().optional(),
+  items: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? 1 : v),
+    z.coerce.number().int().min(1, 'At least 1 item'),
+  ),
+  notes: z.string().max(300, 'Notes cannot exceed 300 characters').optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -45,8 +49,13 @@ export default function NewLaundrySlotPage() {
         .post('laundry-slots', { json: data })
         .json<{ success: boolean; data: { _id: string } }>();
       router.push('/laundry');
-    } catch {
-      setSubmitError('Failed to create laundry slot. Please try again.');
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setSubmitError(
+        parsed.code === 'DUPLICATE_SLOT'
+          ? parsed.message
+          : parsed.message || 'Failed to create laundry slot. Please try again.',
+      );
     }
   };
 

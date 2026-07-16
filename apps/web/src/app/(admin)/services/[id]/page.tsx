@@ -22,15 +22,14 @@ interface ServiceDetail {
   updatedAt: string;
 }
 
-const serviceLabels: Record<string, string> = {
-  wifi: 'WiFi',
-  electricity: 'Electricity',
-  water_supply: 'Water Supply',
-  washing_machine_1: 'Washing Machine 1',
-  washing_machine_2: 'Washing Machine 2',
-  fridge: 'Fridge',
-  geyser: 'Geyser',
-};
+interface AmenityDefinition {
+  key: string;
+  label: string;
+}
+
+function formatServiceTypeFallback(serviceType: string): string {
+  return serviceType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
@@ -53,8 +52,21 @@ export default function ServiceDetailPage() {
   const id = params.id as string;
 
   const [service, setService] = useState<ServiceDetail | null>(null);
+  const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    api
+      .get('app-config')
+      .json<{ success: boolean; data: { amenityDefinitions?: AmenityDefinition[] } }>()
+      .then((res) => {
+        setDefinitions(res.data?.amenityDefinitions ?? []);
+      })
+      .catch(() => {
+        // Fall back to formatted serviceType keys
+      });
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -81,9 +93,12 @@ export default function ServiceDetailPage() {
   }
 
   const statusVariant = service ? statusToVariant(service.status) : 'neutral';
-  const label = service
-    ? (serviceLabels[service.serviceType] ?? service.serviceType)
-    : 'Service Details';
+  const getLabel = (serviceType: string): string => {
+    const def = definitions.find((d) => d.key === serviceType);
+    if (def?.label) return def.label;
+    return formatServiceTypeFallback(serviceType);
+  };
+  const label = service ? getLabel(service.serviceType) : 'Service Details';
   const floorLabel = service?.floor?.label ?? 'N/A';
   const openCount = service?.openComplaintCount ?? 0;
 
