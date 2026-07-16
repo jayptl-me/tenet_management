@@ -27,6 +27,11 @@ class GuardianShell extends ConsumerWidget {
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Attendance',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.campaign_outlined),
+            selectedIcon: Icon(Icons.campaign),
+            label: 'Notices',
+          ),
         ],
       ),
       drawer: Drawer(
@@ -42,6 +47,31 @@ class GuardianShell extends ConsumerWidget {
                   ),
                 ),
               ),
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: const Text('Ward'),
+                onTap: () {
+                  Navigator.pop(context);
+                  navigationShell.goBranch(0);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: const Text('Attendance'),
+                onTap: () {
+                  Navigator.pop(context);
+                  navigationShell.goBranch(1);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.campaign_outlined),
+                title: const Text('Notices'),
+                onTap: () {
+                  Navigator.pop(context);
+                  navigationShell.goBranch(2);
+                },
+              ),
+              const Spacer(),
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Sign out'),

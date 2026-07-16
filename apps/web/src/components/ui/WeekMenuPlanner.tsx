@@ -26,7 +26,8 @@ interface MenuDay {
 interface WeekMenuPlannerProps {
   /** ISO week start (Monday, YYYY-MM-DD). Defaults to current week. */
   weekStart?: string;
-  onDayClick?: (date: string) => void;
+  /** Called when user taps View/Create for a day. Passes existing menu when present. */
+  onDayClick?: (date: string, menu: MenuDay | null) => void;
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -36,19 +37,27 @@ const MEAL_SLOTS = [
   { key: 'dinner' as const, icon: Moon },
 ];
 
+/** Local calendar YYYY-MM-DD (never use toISOString — UTC shifts IST dates). */
+function toLocalYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getMondayOfWeek(ref?: Date): string {
   const d = ref ? new Date(ref) : new Date();
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
+  return toLocalYmd(d);
 }
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return toLocalYmd(d);
 }
 
 function formatDayLabel(dateStr: string): string {
@@ -126,7 +135,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
     }
   };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = toLocalYmd(new Date());
 
   return (
     <div className={clsx(surfaceCardClass, 'p-5')}>
@@ -229,7 +238,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                   onDayClick && (
                     <button
                       type="button"
-                      onClick={() => onDayClick(date)}
+                      onClick={() => onDayClick(date, menu ?? null)}
                       className="text-[11px] font-semibold text-[color:var(--color-brand-600)] hover:underline"
                     >
                       {menu ? 'View' : 'Create'}

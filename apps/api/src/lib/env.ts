@@ -44,6 +44,11 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  /**
+   * IANA timezone for resident-facing business dates (attendance day,
+   * today's menu, check-in window). Defaults to India Standard Time.
+   */
+  PG_TIMEZONE: z.string().min(1).default('Asia/Kolkata'),
   NTFY_BASE_URL: z.string().url().default('https://ntfy.sh'),
   NTFY_SELF_HOSTED: z
     .enum(['true', 'false'])

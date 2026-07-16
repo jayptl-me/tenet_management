@@ -51,6 +51,18 @@ const CODE_MESSAGES: Record<string, string> = {
   DUPLICATE_FLOOR: 'A floor with this number already exists.',
   DUPLICATE_ROOM: 'A room with this number already exists.',
   BED_OCCUPIED: 'This bed is already occupied by another tenant.',
+  BEDS_OCCUPIED_ON_DOWNSIZE:
+    'Cannot reduce sharing type while beds are occupied. Move or check out tenants first, then try again.',
+  UNPAID_INVOICES:
+    'Checkout is blocked by unpaid invoices. Settle or cancel outstanding invoices first.',
+  UNRESOLVED_PAYMENTS:
+    'Checkout is blocked by payments pending verification or marked overdue. Resolve them first.',
+  ACTIVE_TENANTS:
+    'This room still has active tenants. Move or check out all occupants before deactivating.',
+  FLOOR_HAS_ROOMS:
+    'This floor still has rooms assigned. Remove or reassign rooms before deleting the floor.',
+  LEAVE_NOT_PENDING:
+    'Only pending leave applications can be deleted. Approved or rejected leaves stay on record.',
   ALREADY_CHECKED_OUT: 'This tenant has already been checked out.',
   TENANT_NOT_FOUND: 'The tenant could not be found.',
   ROOM_NOT_FOUND: 'The room could not be found. It may have been deleted.',

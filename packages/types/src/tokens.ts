@@ -71,7 +71,7 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
   converted: 'success',
   closed: 'neutral',
 
-  // ── Leave Status ──
+  // ── Leave Status (pending/cancelled share payment map keys above) ──
   approved: 'success',
   rejected: 'danger',
 
@@ -100,6 +100,15 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
   // ── Electricity Bill Status ──
   finalized: 'info',
   distributed: 'success',
+
+  // ── Meal feedback status ──
+  submitted: 'warning',
+  acknowledged: 'info',
+  actioned: 'success',
+
+  // ── Menu calendar ──
+  past: 'neutral',
+  scheduled: 'info',
 };
 
 export const DEFAULT_BRAND_TOKENS: IBrandTokens = {

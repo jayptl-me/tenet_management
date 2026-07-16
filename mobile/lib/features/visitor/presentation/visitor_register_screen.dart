@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'visitor_home_screen.dart';
@@ -44,15 +45,10 @@ class _VisitorRegisterScreenState extends ConsumerState<VisitorRegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    var tenantId = ref.read(authProvider).user?.tenantId;
+    final tenantId = await ref.read(authProvider.notifier).ensureTenantId();
     if (tenantId == null || tenantId.isEmpty) {
-      // Try refreshing user data from /auth/me (self-heal for legacy users)
-      await ref.read(authProvider.notifier).refreshUser();
-      tenantId = ref.read(authProvider).user?.tenantId;
-      if (tenantId == null || tenantId.isEmpty) {
-        setState(() => _error = 'Tenant profile not linked. Contact admin.');
-        return;
-      }
+      setState(() => _error = 'Tenant profile not linked. Contact admin.');
+      return;
     }
     setState(() {
       _submitting = true;
@@ -76,6 +72,12 @@ class _VisitorRegisterScreenState extends ConsumerState<VisitorRegisterScreen> {
       } else {
         context.go('/visitor');
       }
+    } on ApiException catch (e) {
+      setState(() {
+        _error = e.isFeatureDisabled
+            ? 'Visitor management is not enabled. Contact your PG manager.'
+            : e.message;
+      });
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {

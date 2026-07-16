@@ -1,7 +1,12 @@
-# Visitors -- Gap Analysis (code-verified 2026-07-12)
+# Visitors -- Feature Audit
 
-**Priority:** P0 list filter + Flutter tenantId; otherwise B- admin  
-**Theme:** SaaS StatusBadge + FormPage; need shared lifecycle action bar
+**Last verified:** 2026-07-16  
+**Auditor:** code-verified source pass  
+**Grade:** A-
+
+> Admin list filters, lifecycle actions, ownership, and arrive/depart state machine are solid. Admin PUT no longer free-sets status (arrive/depart/approve/cancel only). Flutter register still needs `User.tenantId` (self-heal present). No open P0.
+
+---
 
 ## Source map
 
@@ -9,131 +14,178 @@
 |-------|------|
 | Model | `apps/api/src/models/visitor.ts` |
 | Routes | `apps/api/src/routes/visitors.ts` |
-| Types | `packages/types/src/visitor.ts` (may lag dual name fields) |
-| Admin FE | `apps/web/src/app/(admin)/visitors/**` |
+| Types | `packages/types/src/visitor.ts` |
+| Admin list | `apps/web/src/app/(admin)/visitors/page.tsx` |
+| Admin new | `apps/web/src/app/(admin)/visitors/new/page.tsx` |
+| Admin detail | `apps/web/src/app/(admin)/visitors/[id]/page.tsx` |
+| Admin edit | `apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx` |
+| Shared UI | `VisitorLifecycleActions`, `StatusFilterSelect` |
 | Flutter desk | `mobile/lib/features/visitor/**` |
 | Tenant tab | `mobile/lib/features/tenant/presentation/visitors_tab_screen.dart` |
+| Feature flag | `visitorManagementEnabled` on entire router |
 
-## Model truth
-
-| Field | Notes |
-|-------|--------|
-| tenantId | required |
-| visitorName / visitorPhone | phone +91; toJSON aliases to name/phone |
-| purpose / expectedArrival | required |
-| actualArrival / actualDeparture | set by arrive/depart |
-| status | **`expected \| arrived \| departed \| cancelled`** only -- **no `pending`** |
-| approvedBy | optional User |
-
-Feature flag: `visitorManagementEnabled` on **all** visitor routes.
+---
 
 ## API surface
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| POST | `/` | admin **or** tenant | Tenant forces own tenantId; status always `expected` |
-| GET | `/` | admin | status filter, pagination, mapVisitor |
-| GET | `/my` | tenant | **before** `/:id` -- OK |
-| GET | `/:id` | any JWT | **no ownership** |
-| POST | `/:id/approve` | admin | sets expected + approvedBy (re-open cancelled) |
-| POST | `/:id/arrive` | any JWT | **weak authz** |
-| POST | `/:id/depart` | any JWT | **weak authz** |
-| PUT | `/:id` | admin | name/phone/purpose/expectedArrival/status |
-| DELETE | `/:id` | admin | hard delete |
+| POST | `/visitors` | admin or tenant | Tenant forces own tenantId; status always `expected` |
+| GET | `/visitors` | admin | `status` filter, pagination, `mapVisitor` |
+| GET | `/visitors/my` | tenant | Static path **before** `/:id` |
+| GET | `/visitors/:id` | admin or owning tenant | Ownership enforced |
+| POST | `/visitors/:id/approve` | admin | Only from `cancelled` -> `expected` + `approvedBy` |
+| POST | `/visitors/:id/arrive` | admin or owner | Only from `expected` -> `arrived` + `actualArrival` |
+| POST | `/visitors/:id/depart` | admin or owner | Only from `arrived` -> `departed` + `actualDeparture` |
+| PUT | `/visitors/:id` | admin | name/phone/purpose/expectedArrival only -- **status omitted** (use arrive/depart/approve/cancel) |
+| DELETE | `/visitors/:id` | admin | Hard delete |
 
-`mapVisitor` keeps both visitorName and name for lean docs.
+`mapVisitor` exposes both `visitorName`/`visitorPhone` and aliases `name`/`phone` for lean + toJSON compatibility.
 
-## Admin FE matrix
+Model status enum: **`expected | arrived | departed | cancelled` only** (no `pending`).
 
-| Page | Verdict | Notes |
-|------|---------|-------|
-| List | **PARTIAL / FAIL filter** | Full DataTable stack; filter includes **pending**, omits expected/cancelled |
-| Detail | **PASS** lifecycle | Arrive / Depart / Re-approve wired; no Edit CTA |
-| New | **PASS** | FormPage, ResourceSelect tenant, normalizeInPhone |
-| Edit | **PASS** field map | visitorName ?? name; **missing expectedArrival** field |
+---
 
-### Status filter fix (P0-V1)
+## FE page matrix
 
-Replace filter options with:
+| Page | Stack | Verdict |
+|------|-------|---------|
+| List | PageHeader, DataTable, TableActions, mobileCardRenderer, StatusBadge, **StatusFilterSelect** with expected/arrived/departed/cancelled | **PASS** |
+| Detail | FormPage, DetailCard, **VisitorLifecycleActions** (arrive/depart/cancel/re-approve) | **PASS** lifecycle; **no Edit CTA** |
+| New | FormPage, ResourceSelect tenant, normalizeInPhone, datetime-local expectedArrival | **PASS** |
+| Edit | FormPage, visitorName/phone, **expectedArrival**; status **display-only** (not in PUT) | **PASS** fields; lifecycle on detail |
+| Cancel | POST `/:id/cancel` expected->cancelled | **PASS** FE uses POST not PUT |
 
-```ts
-[
-  { value: 'expected', label: 'Expected' },
-  { value: 'arrived', label: 'Arrived' },
-  { value: 'departed', label: 'Departed' },
-  { value: 'cancelled', label: 'Cancelled' },
-]
+---
+
+## Field coverage
+
+| Model field | List | Detail | New | Edit | Notes |
+|-------------|:----:|:------:|:---:|:----:|-------|
+| tenantId / tenant | Y name | Y name + room | ResourceSelect | not editable | Ownership fixed at create |
+| visitorName (alias name) | Y | Y | Y | Y | mapVisitor dual |
+| visitorPhone (alias phone) | Y | Y | normalize | normalize | +91 |
+| purpose | Y | Y | Y | Y | |
+| expectedArrival | -- | Y | datetime-local | datetime-local | **Present on edit** |
+| actualArrival | Y check-in | Y | n/a | n/a | Set by arrive action |
+| actualDeparture | Y check-out | Y | n/a | n/a | Set by depart action |
+| status | Y badge | Y + actions | always expected | read-only display | FE omits status; API PUT omits free status (P1-V1 closed) |
+| approvedBy | -- | -- | n/a | n/a | Set by approve; not displayed |
+| createdAt / updatedAt | -- | -- | n/a | n/a | timestamps |
+
+---
+
+## Lifecycle
+
+```
+Admin/Tenant POST create -> status=expected
+  -> POST arrive      -> arrived + actualArrival   (expected only)
+  -> POST depart      -> departed + actualDeparture (arrived only)
+  -> Cancel via lifecycle (not free PUT status jump)
+  -> POST approve     -> expected + approvedBy (cancelled only)
 ```
 
-Use `statusToVariant(row.status)` -- do not remap to pending/active/completed unless STATUS_COLOR_MAP needs aliases.
+There is **no** register -> pending -> approve gate. Approve re-opens cancelled visitors only.
+
+| Step | Status |
+|------|--------|
+| Create admin / tenant | **PASS** |
+| List filter enums | **PASS** |
+| Arrive / depart guards | **PASS** on action endpoints |
+| Ownership on GET/arrive/depart | **PASS** |
+| PUT free status | **PASS** -- status intentionally omitted from PUT; use arrive/depart/approve/cancel |
+| Detail lifecycle bar | **PASS** (`VisitorLifecycleActions`) |
+| Edit expectedArrival | **PASS** |
+| Feature flag | **PASS** API + admin nav |
+
+---
+
+## Design / stack
+
+- StatusBadge via `STATUS_COLOR_MAP` keys `expected`, `arrived`, `departed`, `cancelled`.
+- ResourceSelect for tenant on create (no free-text Mongo ID).
+- Tokens / FormPage SaaS stack.
+- Detail cancel uses PUT `{ status: 'cancelled' }` rather than a dedicated cancel endpoint.
+
+---
 
 ## Flutter matrix
 
 | Surface | Verdict | Notes |
 |---------|---------|-------|
-| Routes /visitor/* | PASS | tenant-only guard |
+| Routes /visitor/* | PASS | Tenant-auth desk |
 | My list | PASS | GET visitors/my |
-| Register | PARTIAL **P0-F1** | Requires `user.tenantId` even though API resolves tenant from JWT |
-| Status arrive/depart | PASS | |
-| Feature flag UX | FAIL | 403 generic |
-| Design | PARTIAL | Colors.black54 hardcodes |
+| Register | PASS with caveat | Requires `user.tenantId`; self-heal via `refreshUser` then fail message |
+| Arrive / depart | PASS | Repository posts |
+| Feature flag UX | PASS | FeatureDisabledWidget on visitor home |
+| Design | PARTIAL | Uses theme + some AppTheme.muted |
 
-### Critical: tenantId
+API create Zod still requires `tenantId` in body even for tenants (server overwrites for tenant role). Flutter must supply a real id for validation.
 
-- Seed/legacy users may lack `User.tenantId`.
-- Fix: seed backfill + `/auth/me` enrich + Flutter `resolveTenantId()` that allows empty body for tenant role if API overrides.
+---
 
-## Lifecycle reality
-
-```
-Admin/Tenant POST create  -> status=expected
-  -> POST arrive         -> arrived + actualArrival
-  -> POST depart         -> departed + actualDeparture
-POST approve             -> re-open cancelled to expected (not a pre-arrival gate)
-```
-
-There is **no** register -> pending -> approve chain unless product adds `pending`.
-
-## Gaps
+## Open gaps
 
 ### P0
 
-- [ ] List filter enum alignment (pending -> expected/cancelled)
-- [ ] Flutter tenantId resolution for register
+_None verified open._
 
 ### P1
 
-- [ ] assertVisitorAccess on GET/arrive/depart
-- [ ] Transition guards (expected->arrived->departed; cancelled->expected via approve only)
-- [ ] Edit expectedArrival field
-- [ ] Detail Edit + Cancel one-click
-- [ ] HTTP route tests
+| ID | Gap | Proof |
+|----|-----|-------|
 
 ### P2
 
-- [ ] VisitorLifecycleActions shared component
-- [ ] Audit log on lifecycle actions
-- [ ] Align @pg/types dual names
-- [ ] FormSection on new form consistency
+| ID | Gap | Proof |
+|----|-----|-------|
+| P2-V1 | Detail page has no Edit CTA (edit only via list actions). | `visitors/[id]/page.tsx` |
+| P2-V2 | `approvedBy` never shown on admin detail. | detail page fields |
+| P2-V3 | No audit log on arrive/depart/approve/cancel. | routes vs tenants transfer audit |
+| P2-V4 | `@pg/types` `IVisitorRegister` omits admin `tenantId`; dual name fields lag mapVisitor. | `packages/types/src/visitor.ts` |
+| P2-V5 | New form uses bare FormGrid without FormSection (consistency). | `visitors/new/page.tsx` |
+| P2-V6 | Create Zod always requires `tenantId` even for tenant JWT (FE must invent id). | `createVisitorSchema` |
 
-## Custom SaaS components
+---
 
-| Component | Purpose |
-|-----------|---------|
-| **VisitorLifecycleActions** | Detail (+ optional list) buttons from status |
-| **StatusFilterSelect** | Enum-driven filters (prevents pending drift) |
-| CancelConfirmButton | PUT cancelled without full edit |
+## Closed / do-not-refile
 
-## Acceptance
+| P1-V2 Flutter FEATURE_DISABLED UX | **FIXED** -- FeatureDisabledWidget on visitor home |
 
-- [ ] Admin registers visitor for any tenant
-- [ ] Tenant registers for self (with or without User.tenantId after fix)
-- [ ] List filter expected/arrived/departed/cancelled works
-- [ ] Edit loads names from lean mapVisitor
-- [ ] Arrive then depart happy path admin + Flutter
-- [ ] Illegal transitions 400; non-owner tenant 403
-- [ ] visitorManagementEnabled false -> 403 FEATURE_DISABLED + nav hidden
+| Old claim | Live status |
+|-----------|-------------|
+| List filter includes `pending`, omits expected/cancelled (P0-V1) | **FIXED** -- StatusFilterSelect enums match model |
+| GET/arrive/depart no ownership (P1) | **FIXED** -- admin or owning tenant |
+| No transition guards on arrive/depart | **FIXED** -- 409 INVALID_TRANSITION |
+| Edit missing expectedArrival | **FIXED** |
+| VisitorLifecycleActions missing | **FIXED** -- shared component on detail |
+| Admin create 403 / /my shadowed | **FIXED** (prior) |
+| Flutter tenantId hard fail without heal | **FIXED** -- refreshUser + seed/me backfill path |
+| Admin PUT free-sets status (P1-V1) | **FIXED** -- `status intentionally omitted` in PUT handler |
+
+---
+
+## Acceptance checklist
+
+- [x] Admin registers visitor for any tenant
+- [x] Tenant registers for self (when User.tenantId present or healed)
+- [x] List filter expected/arrived/departed/cancelled works
+- [x] Edit loads names from mapVisitor dual fields
+- [x] Arrive then depart happy path (action endpoints)
+- [x] Illegal action transitions 409; non-owner tenant 403
+- [x] visitorManagementEnabled false -> 403 + admin nav hidden
+- [x] PUT status cannot bypass lifecycle timestamps (status omitted from PUT)
+- [x] Flutter feature-disabled UX dedicated (FeatureDisabledWidget)
+- [ ] Detail Edit CTA + optional approvedBy display
+
+---
 
 ## Remediation log
 
-- 2026-07-12: Re-audit. Obsolete: admin create 403, /my shadow, lean name load empty, phone not normalized.
+- 2026-07-12: Re-audit closed admin create 403, /my shadow, filter pending, ownership holes (then open).
+- **2026-07-16:** Source re-verify. Filter, ownership, arrive/depart machine, expectedArrival edit, VisitorLifecycleActions all **confirmed present**. **P1-V1 CLOSED** -- PUT omits free status. Grade **A-** residual P2 polish only.
+
+
+## Cancel FSM (2026-07-16)
+- API: `POST /visitors/:id/cancel` (expected only)
+- FE detail: all lifecycle actions POST including cancel

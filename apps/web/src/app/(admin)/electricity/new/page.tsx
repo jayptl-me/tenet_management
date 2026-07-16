@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Calculator, Zap } from 'lucide-react';
+import { Plus, Trash2, Calculator, Zap, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -18,6 +18,9 @@ import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { roomLabel } from '@/lib/resource-select-presets';
 import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
+
+/** Block submit only when room sum vs bill total diverges by a clearly erroneous amount. */
+const RECONCILE_BLOCK_THRESHOLD = 10000;
 
 // ── Schema ──────────────────────────────────────────────
 
@@ -32,6 +35,11 @@ const formSchema = z
   .object({
     month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
     totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    billImageUrl: z
+      .string()
+      .optional()
+      .or(z.literal(''))
+      .refine((v) => !v || /^https?:\/\//i.test(v), 'Must be a valid http(s) URL'),
     notes: z.string().optional(),
     roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
   })
@@ -69,6 +77,7 @@ export default function NewElectricityPage() {
     defaultValues: {
       month: currentMonth(),
       totalBillAmount: 0,
+      billImageUrl: '',
       notes: '',
       roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
     },
@@ -76,18 +85,32 @@ export default function NewElectricityPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'roomEntries' });
   const entries = useWatch({ control, name: 'roomEntries' });
+  const totalBillAmount = useWatch({ control, name: 'totalBillAmount' });
 
-  const computeAutoTotal = (entries: FormData['roomEntries']) => {
-    return entries.reduce((sum, e) => {
+  const computeAutoTotal = (roomEntries: FormData['roomEntries']) => {
+    return roomEntries.reduce((sum, e) => {
       const units = Math.max(0, (e.currentReading || 0) - (e.previousReading || 0));
       return sum + units * (e.ratePerUnit || 0);
     }, 0);
   };
 
-  const autoTotal = computeAutoTotal(entries);
+  const autoTotal = computeAutoTotal(entries ?? []);
+  const billTotal = Number(totalBillAmount) || 0;
+  const reconcileDiff = Math.abs(billTotal - autoTotal);
+  const showReconcileWarning = reconcileDiff > 0.5;
+  const blockReconcile = reconcileDiff > RECONCILE_BLOCK_THRESHOLD;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
+
+    const roomSum = computeAutoTotal(data.roomEntries);
+    const diff = Math.abs(data.totalBillAmount - roomSum);
+    if (diff > RECONCILE_BLOCK_THRESHOLD) {
+      setSubmitError(
+        `Room amounts (₹${roomSum.toLocaleString('en-IN')}) and total bill (₹${data.totalBillAmount.toLocaleString('en-IN')}) differ by ₹${diff.toLocaleString('en-IN')}. Fix the readings or total before saving.`,
+      );
+      return;
+    }
 
     try {
       await api
@@ -95,6 +118,7 @@ export default function NewElectricityPage() {
           json: {
             month: data.month,
             totalBillAmount: data.totalBillAmount,
+            billImageUrl: data.billImageUrl?.trim() || undefined,
             notes: data.notes || undefined,
             roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
@@ -153,6 +177,13 @@ export default function NewElectricityPage() {
                 step="0.01"
                 error={err.totalBillAmount?.message}
                 {...register('totalBillAmount')}
+              />
+              <Input
+                label="Bill image URL (optional)"
+                type="url"
+                placeholder="https://..."
+                error={err.billImageUrl?.message}
+                {...register('billImageUrl')}
               />
             </FormGrid>
           </FormSection>
@@ -289,6 +320,37 @@ export default function NewElectricityPage() {
                 <span className="font-mono text-xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
+              </div>
+            )}
+
+            {showReconcileWarning && (
+              <div
+                className={clsx(
+                  'mt-4 flex items-start gap-3 rounded-[var(--radius-lg)] border p-4',
+                  blockReconcile
+                    ? 'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]'
+                    : 'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
+                )}
+                role="status"
+              >
+                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+                <div className="min-w-0 text-sm">
+                  <p className="font-bold">
+                    {blockReconcile
+                      ? 'Bill total and room amounts are far apart'
+                      : 'Bill total and room amounts do not match'}
+                  </p>
+                  <p className="mt-0.5 font-medium opacity-90">
+                    Total bill: ₹{billTotal.toLocaleString('en-IN')} · Room sum: ₹
+                    {autoTotal.toLocaleString('en-IN')} · Difference: ₹
+                    {reconcileDiff.toLocaleString('en-IN', {
+                      maximumFractionDigits: 2,
+                    })}
+                    {blockReconcile
+                      ? '. Correct values before saving.'
+                      : '. You can still save; common-area or fixed charges may explain a small gap.'}
+                  </p>
+                </div>
               </div>
             )}
           </FormSection>

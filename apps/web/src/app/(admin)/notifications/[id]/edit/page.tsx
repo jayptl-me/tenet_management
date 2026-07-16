@@ -2,36 +2,67 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Bell, Send } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
+import {
+  floorLabel,
+  roomLabel,
+  roomSublabel,
+  tenantLabel,
+  tenantSublabel,
+} from '@/lib/resource-select-presets';
 
-const schema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  body: z.string().min(1, 'Body is required'),
-  type: z.enum([
-    'announcement',
-    'emergency',
-    'payment_reminder',
-    'payment_verified',
-    'complaint_update',
-    'service_update',
-    'electricity_bill',
-    'welcome',
-    'meal_feedback',
-  ]),
-  targetType: z.enum(['all', 'floor', 'room', 'individual']),
-  targetIds: z.string().optional(),
-});
+function parseTargetIds(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const schema = z
+  .object({
+    title: z.string().min(1, 'Title is required'),
+    body: z.string().min(1, 'Body is required'),
+    type: z.enum([
+      'announcement',
+      'emergency',
+      'payment_reminder',
+      'payment_verified',
+      'complaint_update',
+      'service_update',
+      'electricity_bill',
+      'welcome',
+      'meal_feedback',
+    ]),
+    targetType: z.enum(['all', 'floor', 'room', 'individual']),
+    targetIds: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.targetType !== 'all' && parseTargetIds(data.targetIds).length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetIds'],
+        message:
+          data.targetType === 'floor'
+            ? 'Select at least one floor'
+            : data.targetType === 'room'
+              ? 'Select at least one room'
+              : 'Select at least one tenant',
+      });
+    }
+  });
 
 type FormData = z.infer<typeof schema>;
 
@@ -60,19 +91,23 @@ export default function EditNotificationPage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
+  const [pickerValue, setPickerValue] = useState('');
 
   const {
     register,
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   const currentType = useWatch({ control, name: 'type' });
-  const currentTarget = useWatch({ control, name: 'targetType' });
+  const currentTarget = useWatch({ control, name: 'targetType' }) ?? 'all';
+  const targetIdsRaw = useWatch({ control, name: 'targetIds' }) ?? '';
+  const selectedIds = parseTargetIds(targetIdsRaw);
 
   useEffect(() => {
     if (!id) return;
@@ -90,28 +125,39 @@ export default function EditNotificationPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load notification');
+      .catch(async (err) => {
+        const parsed = await parseApiError(err);
+        setSubmitError(parsed.message || 'Failed to load notification');
         setIsLoading(false);
       });
   }, [id, reset]);
+
+  const addTargetId = (idToAdd: string) => {
+    if (!idToAdd) return;
+    const next = selectedIds.includes(idToAdd) ? selectedIds : [...selectedIds, idToAdd];
+    setValue('targetIds', next.join(', '), { shouldValidate: true });
+    setPickerValue('');
+  };
+
+  const removeTargetId = (idToRemove: string) => {
+    setValue('targetIds', selectedIds.filter((t) => t !== idToRemove).join(', '), {
+      shouldValidate: true,
+    });
+  };
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     const payload = {
       ...data,
-      targetIds: data.targetIds
-        ? data.targetIds
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
+      targetIds:
+        data.targetType === 'all' ? [] : parseTargetIds(data.targetIds),
     };
     try {
       await api.put(`notifications/${id}`, { json: payload }).json();
       router.push('/notifications');
-    } catch {
-      setSubmitError('Failed to update notification');
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setSubmitError(parsed.message || 'Failed to update notification');
     }
   };
 
@@ -172,22 +218,87 @@ export default function EditNotificationPage() {
               label="Target audience"
               options={targetTypeOptions}
               error={err.targetType?.message}
-              {...register('targetType')}
+              {...register('targetType', {
+                onChange: () => {
+                  setValue('targetIds', '', { shouldValidate: true });
+                  setPickerValue('');
+                },
+              })}
             />
             {currentTarget !== 'all' && (
-              <Input
-                label="Target IDs"
-                placeholder="Comma-separated IDs (room, floor, or tenant)"
-                hint={
-                  currentTarget === 'floor'
-                    ? 'e.g. floor1, floor2'
-                    : currentTarget === 'room'
-                      ? 'e.g. room1, room2'
-                      : 'e.g. tenant1, tenant2'
-                }
-                error={err.targetIds?.message}
-                {...register('targetIds')}
-              />
+              <FormFullWidth>
+                <div className="space-y-2">
+                  <Controller
+                    name="targetIds"
+                    control={control}
+                    render={() => (
+                      <>
+                        {currentTarget === 'floor' && (
+                          <ResourceSelect
+                            label="Add floor"
+                            endpoint="floors"
+                            value={pickerValue}
+                            onChange={addTargetId}
+                            placeholder="Select a floor..."
+                            labelKey={floorLabel}
+                            error={err.targetIds?.message}
+                            helperText="Required: pick one or more floors."
+                          />
+                        )}
+                        {currentTarget === 'room' && (
+                          <ResourceSelect
+                            label="Add room"
+                            endpoint="rooms?isActive=true"
+                            value={pickerValue}
+                            onChange={addTargetId}
+                            placeholder="Select a room..."
+                            labelKey={roomLabel}
+                            sublabelFn={roomSublabel}
+                            error={err.targetIds?.message}
+                            helperText="Required: pick one or more rooms."
+                          />
+                        )}
+                        {currentTarget === 'individual' && (
+                          <ResourceSelect
+                            label="Add tenant"
+                            endpoint="tenants?isActive=true"
+                            value={pickerValue}
+                            onChange={addTargetId}
+                            placeholder="Select a tenant..."
+                            valueKey="userId"
+                            labelKey={(item) =>
+                              tenantLabel(item as Parameters<typeof tenantLabel>[0])
+                            }
+                            sublabelFn={(item) =>
+                              tenantSublabel(item as Parameters<typeof tenantSublabel>[0])
+                            }
+                            error={err.targetIds?.message}
+                            helperText="Required: pick one or more tenants (user IDs)."
+                          />
+                        )}
+                      </>
+                    )}
+                  />
+                  {selectedIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedIds.map((tid) => (
+                        <button
+                          key={tid}
+                          type="button"
+                          onClick={() => removeTargetId(tid)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
+                          title="Remove"
+                        >
+                          <span className="max-w-[12rem] truncate font-[family:var(--font-mono)]">
+                            {tid}
+                          </span>
+                          <span aria-hidden="true">x</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </FormFullWidth>
             )}
           </FormGrid>
 

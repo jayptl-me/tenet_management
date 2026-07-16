@@ -2,14 +2,80 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { LeaveApplication } from '../models/leaveApplication.js';
+import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Tenant } from '../models/tenant.js';
+import { User } from '../models/user.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
+import { requireFeature } from '../middleware/featureFlags.js';
+
+/** Inclusive YYYY-MM-DD range as calendar strings (no timezone shift). */
+function eachDateInclusive(fromDate: string, toDate: string): string[] {
+  const dates: string[] = [];
+  const start = new Date(`${fromDate}T00:00:00.000Z`);
+  const end = new Date(`${toDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return dates;
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+/**
+ * Mark attendance as on_leave for each day of an approved leave.
+ * Skips days already present with a check-in (tenant was on-site).
+ * Updates absent / not_returned / bare present-without-checkIn; upserts missing rows.
+ */
+async function markAttendanceOnLeave(
+  tenantId: string,
+  fromDate: string,
+  toDate: string,
+  adminId: string,
+): Promise<void> {
+  for (const date of eachDateInclusive(fromDate, toDate)) {
+    const existing = await AttendanceRecord.findOne(safeFilter({ tenantId, date })).lean();
+    const row = existing as { status?: string; checkIn?: unknown } | null;
+    // Do not overwrite a real on-site present record
+    if (row?.status === 'present' && row.checkIn) {
+      continue;
+    }
+
+    try {
+      // Cast update: Mongoose 9 strict typing rejects string ObjectId fields on $set
+      await (AttendanceRecord.findOneAndUpdate as (
+        filter: Record<string, unknown>,
+        update: Record<string, unknown>,
+        options: Record<string, unknown>,
+      ) => Promise<unknown>)(
+        safeFilter({ tenantId, date }),
+        {
+          $set: {
+            status: 'on_leave',
+            method: 'manual',
+            notes: 'Leave approved',
+            recordedBy: adminId,
+          },
+          $setOnInsert: {
+            tenantId,
+            date,
+            checkIn: null,
+            checkOut: null,
+          },
+        },
+        { upsert: true, runValidators: true },
+      );
+    } catch (err: unknown) {
+      // Concurrent write on unique tenantId+date — leave as-is
+      if ((err as { code?: number }).code === 11000) continue;
+      throw err;
+    }
+  }
+}
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
-const leaveCreate = LeaveApplication.create as unknown as CreateOneFn;
+const leaveCreate = LeaveApplication.create.bind(LeaveApplication) as unknown as CreateOneFn;
 
 // ── Zod Schemas ──────────────────────────────────────────
 
@@ -54,8 +120,10 @@ function mapLeave(doc: Record<string, unknown>) {
 }
 
 // ── Router ───────────────────────────────────────────────
+// FLAG-leaves: nav couples Leaves to attendanceEnabled; gate API the same way.
 
 const leaves = new Hono();
+leaves.use('*', requireFeature('attendanceEnabled'));
 
 // ── POST /leaves — create leave application ─────────────
 leaves.post('/', authGuard, zValidator('json', createLeaveSchema), async (c) => {
@@ -122,10 +190,53 @@ leaves.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit } = parsePagination(c);
   const status = c.req.query('status');
   const tenantId = c.req.query('tenantId');
+  const search = c.req.query('search')?.trim();
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
   if (tenantId) filter.tenantId = tenantId;
+
+  // Resolve search by tenant name (same pattern as meals feedback / tenants)
+  if (search) {
+    const users = await User.find(safeFilter({ name: { $regex: search, $options: 'i' } }))
+      .select('_id')
+      .lean();
+    const userIds = users.map((u) => u._id);
+
+    if (userIds.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      });
+    }
+
+    const tenants = await Tenant.find(safeFilter({ userId: { $in: userIds } }))
+      .select('_id')
+      .lean();
+    const tenantIds = tenants.map((t) => String(t._id));
+
+    if (tenantIds.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      });
+    }
+
+    if (tenantId) {
+      if (!tenantIds.includes(tenantId)) {
+        return c.json({
+          success: true,
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        });
+      }
+      filter.tenantId = tenantId;
+    } else {
+      filter.tenantId = { $in: tenantIds };
+    }
+  }
 
   const skip = (page - 1) * limit;
 
@@ -214,14 +325,73 @@ leaves.get('/:id', authGuard, async (c) => {
   return c.json({ success: true, data: mapLeave(leave as unknown as Record<string, unknown>) });
 });
 
-// ── DELETE /leaves/:id — admin deletes pending leave ────
+// ── POST /leaves/:id/cancel — tenant owner or admin withdraws pending leave
+leaves.post('/:id/cancel', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid leave ID');
+
+  const authUser = c.get('user');
+  const leave = await LeaveApplication.findById(id);
+  if (!leave) return notFound(c, 'Leave application');
+  if (leave.status !== 'pending') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'LEAVE_NOT_PENDING',
+          message: `Only pending leaves can be cancelled (current: ${leave.status}).`,
+        },
+      },
+      400,
+    );
+  }
+
+  if (authUser.role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
+    if (!tenant || String((tenant as { _id: unknown })._id) !== String(leave.tenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only cancel your own leave applications.' },
+        },
+        403,
+      );
+    }
+  } else if (authUser.role !== 'admin') {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Not allowed to cancel leaves.' } },
+      403,
+    );
+  }
+
+  leave.status = 'cancelled';
+  await leave.save();
+
+  const updated = await LeaveApplication.findById(id)
+    .populate({
+      path: 'tenantId',
+      populate: { path: 'userId', select: 'name email phone' },
+    })
+    .populate({
+      path: 'tenantId',
+      populate: { path: 'roomId', select: 'roomNumber' },
+    })
+    .lean();
+
+  return c.json({
+    success: true,
+    data: mapLeave(updated as unknown as Record<string, unknown>),
+  });
+});
+
+// ── DELETE /leaves/:id — admin hard-deletes pending leave ────
 leaves.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid leave ID');
 
   const leave = await LeaveApplication.findById(id);
   if (!leave) return notFound(c, 'Leave application');
-  if (leave.status !== 'pending') {
+  if (leave.status !== 'pending' && leave.status !== 'cancelled') {
     return badRequest(c, `Leave is already ${leave.status}`, 'LEAVE_NOT_PENDING');
   }
 
@@ -247,6 +417,14 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
   (leave as unknown as Record<string, unknown>).approvedBy = authUser.sub;
   leave.approvedAt = new Date();
   await leave.save();
+
+  // Side-effect: mark each leave day as on_leave on the attendance board
+  await markAttendanceOnLeave(
+    String(leave.tenantId),
+    leave.fromDate,
+    leave.toDate,
+    authUser.sub,
+  );
 
   const updated = await LeaveApplication.findById(id)
     .populate({

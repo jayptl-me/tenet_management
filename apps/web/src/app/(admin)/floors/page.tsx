@@ -59,6 +59,9 @@ export default function FloorsPage() {
     fetchFloors();
   }, [fetchFloors]);
 
+  // API returns the full list; slice for DataTable pagination controls.
+  const pagedFloors = floors.slice((page - 1) * perPage, page * perPage);
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -142,7 +145,7 @@ export default function FloorsPage() {
 
       <DataTable
         columns={columns}
-        data={floors}
+        data={pagedFloors}
         keyExtractor={(row: FloorRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/floors/${row._id}`)}

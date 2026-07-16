@@ -19,22 +19,18 @@ const schema = z.object({
   floorId: z.string().min(1, 'Floor is required'),
   serviceType: z.string().min(1, 'Service type is required'),
   status: z.enum(['operational', 'degraded', 'down']),
-  note: z.string().optional(),
+  note: z.string().max(500, 'Note cannot exceed 500 characters').optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
-const serviceTypeOptions = [
+const FALLBACK_SERVICE_TYPES = [
   { value: 'wifi', label: 'WiFi' },
   { value: 'water_supply', label: 'Water supply' },
-  { value: 'power', label: 'Power' },
-  { value: 'ac', label: 'Air conditioning' },
-  { value: 'laundry', label: 'Laundry' },
-  { value: 'cleaning', label: 'Cleaning' },
-  { value: 'security', label: 'Security' },
-  { value: 'elevator', label: 'Elevator' },
-  { value: 'parking', label: 'Parking' },
-  { value: 'other', label: 'Other' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'geyser', label: 'Geyser' },
+  { value: 'washing_machine', label: 'Washing machine' },
+  { value: 'fridge', label: 'Fridge' },
 ];
 
 const serviceStatusOptions = [
@@ -57,6 +53,7 @@ export default function EditServicePage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
+  const [serviceTypeOptions, setServiceTypeOptions] = useState(FALLBACK_SERVICE_TYPES);
 
   const {
     register,
@@ -70,16 +67,35 @@ export default function EditServicePage() {
 
   useEffect(() => {
     if (!id) return;
-    api
-      .get(`services/${id}`)
-      .json<{ success: boolean; data: ServiceLoadShape }>()
-      .then((res) => {
-        const d = res.data;
+    type AmenityDef = { key: string; label: string; isPerFloor?: boolean };
+    Promise.all([
+      api.get(`services/${id}`).json<{ success: boolean; data: ServiceLoadShape }>(),
+      api
+        .get('app-config')
+        .json<{ success: boolean; data: { amenityDefinitions?: AmenityDef[] } }>()
+        .catch((): { success: boolean; data: { amenityDefinitions?: AmenityDef[] } } => ({
+          success: false,
+          data: { amenityDefinitions: [] },
+        })),
+    ])
+      .then(([svcRes, cfgRes]) => {
+        const d = svcRes.data;
         const rawFloor = d.floorId ?? d.floor;
         const floorId =
           typeof rawFloor === 'object' && rawFloor
             ? String(rawFloor._id ?? '')
             : String(rawFloor ?? '');
+        const defs = (cfgRes.data.amenityDefinitions ?? []).filter(
+          (a: AmenityDef) => a.isPerFloor !== false,
+        );
+        if (defs.length > 0) {
+          const opts = defs.map((a: AmenityDef) => ({ value: a.key, label: a.label }));
+          // Keep current type visible even if removed from defs
+          if (d.serviceType && !opts.some((o: { value: string }) => o.value === d.serviceType)) {
+            opts.unshift({ value: d.serviceType, label: d.serviceType });
+          }
+          setServiceTypeOptions(opts);
+        }
         reset({
           floorId,
           serviceType: d.serviceType ?? '',

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { User, Home, Star, FileText, Tag, UtensilsCrossed } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { User, Home, Star, FileText, Tag, UtensilsCrossed, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -41,6 +42,7 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export default function MealFeedbackDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [feedback, setFeedback] = useState<MealFeedbackDetail | null>(null);
@@ -87,6 +89,18 @@ export default function MealFeedbackDetailPage() {
             variant={statusToVariant(feedback.status)}
             label={feedback.status.replace(/_/g, ' ')}
           />
+        ) : undefined
+      }
+      actions={
+        feedback ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/meals/${feedback._id}/edit`)}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Button>
         ) : undefined
       }
     >

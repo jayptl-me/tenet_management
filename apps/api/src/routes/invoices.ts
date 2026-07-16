@@ -153,12 +153,19 @@ invoices.get('/:id', authGuard, async (c) => {
     }
   }
 
-  // Compute paidAmount and balance from payments
+  // All non-cancelled payment rows for history (pending UTR, partial residual, paid).
   const payments = (await Payment.find(
-    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id), status: 'paid' }),
-  ).lean()) as unknown as Array<Record<string, unknown>>;
+    safeFilter({
+      invoiceId: new mongoose.Types.ObjectId(id),
+      status: { $ne: 'cancelled' },
+    }),
+  )
+    .sort({ createdAt: 1 })
+    .lean()) as unknown as Array<Record<string, unknown>>;
 
-  const paidAmount = payments.reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
+  const paidAmount = payments
+    .filter((p) => p.status === 'paid')
+    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
   const totalAmount = (invoice.totalAmount as number) ?? 0;
   const balance = totalAmount - paidAmount;
 

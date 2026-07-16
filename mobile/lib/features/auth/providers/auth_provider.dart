@@ -136,6 +136,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Return linked tenantId, refreshing /auth/me once if missing (legacy JWT).
+  Future<String?> ensureTenantId() async {
+    final current = state.user?.tenantId;
+    if (current != null && current.isNotEmpty) return current;
+    await refreshUser();
+    final healed = state.user?.tenantId;
+    if (healed != null && healed.isNotEmpty) return healed;
+    return null;
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = const AuthState(isLoading: false);

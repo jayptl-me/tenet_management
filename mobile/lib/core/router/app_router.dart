@@ -8,6 +8,8 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/guardian/presentation/guardian_shell.dart';
 import '../../features/guardian/presentation/ward_attendance_screen.dart';
 import '../../features/guardian/presentation/ward_screen.dart';
+import '../../features/guardian/presentation/guardian_notices_screen.dart';
+import '../../features/tenant/presentation/complaint_detail_screen.dart';
 import '../../features/tenant/presentation/complaints_screen.dart';
 import '../../features/tenant/presentation/home_screen.dart';
 import '../../features/tenant/presentation/invoice_detail_screen.dart';
@@ -114,7 +116,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/tenant/payments',
-                builder: (_, __) => const TenantPaymentsScreen(),
+                builder: (_, state) {
+                  final invoiceId = state.uri.queryParameters['invoiceId'];
+                  return TenantPaymentsScreen(invoiceId: invoiceId);
+                },
               ),
             ],
           ),
@@ -141,6 +146,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/complaints',
         builder: (_, __) => const TenantComplaintsScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/complaints/:id',
+        builder: (_, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return TenantComplaintDetailScreen(complaintId: id);
+        },
       ),
       GoRoute(
         path: '/tenant/meals',
@@ -197,6 +209,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/guardian/attendance',
                 builder: (_, __) => const GuardianAttendanceScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/guardian/notices',
+                builder: (_, __) => const GuardianNoticesScreen(),
               ),
             ],
           ),

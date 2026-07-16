@@ -39,7 +39,8 @@ const leaveApplicationSchema = new Schema<ILeaveApplicationDocument>(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      // cancelled: tenant/admin withdraw of a pending leave (additive; historical docs ok)
+      enum: ['pending', 'approved', 'rejected', 'cancelled'],
       default: 'pending',
     },
     approvedBy: {

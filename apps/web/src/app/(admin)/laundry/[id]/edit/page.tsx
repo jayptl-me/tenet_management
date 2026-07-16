@@ -19,9 +19,12 @@ import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 const schema = z.object({
   slotDate: z.string().min(1, 'Date is required'),
   slotTime: z.string().min(1, 'Time is required'),
-  items: z.coerce.number().min(0, 'Must be >= 0').optional(),
+  items: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined || v === 0 ? 1 : v),
+    z.coerce.number().int().min(1, 'At least 1 item'),
+  ),
   status: z.enum(['booked', 'confirmed', 'completed', 'cancelled']),
-  notes: z.string().optional(),
+  notes: z.string().max(300, 'Notes cannot exceed 300 characters').optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -77,7 +80,7 @@ export default function EditLaundrySlotPage() {
         reset({
           slotDate: d.slotDate ? String(d.slotDate).slice(0, 10) : '',
           slotTime: d.slotTime ?? '',
-          items: d.items ?? 0,
+          items: d.items && d.items > 0 ? d.items : 1,
           status: (d.status as FormData['status']) ?? 'booked',
           notes: d.notes ?? '',
         });
@@ -163,7 +166,7 @@ export default function EditLaundrySlotPage() {
               <Input
                 label="Item count"
                 type="number"
-                min={0}
+                min={1}
                 error={err.items?.message}
                 leftIcon={<Shirt className="h-4 w-4" />}
                 {...register('items')}

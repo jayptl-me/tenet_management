@@ -110,6 +110,7 @@ export default function EditAssetPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
+      // Always send date keys as strings. Empty string clears the date (API optionalDateString -> null).
       const payload: Record<string, unknown> = {
         name: data.name,
         category: data.category,
@@ -117,13 +118,15 @@ export default function EditAssetPage() {
         quantity: data.quantity,
         lowStockThreshold: data.lowStockThreshold,
         status: data.status,
-        purchasedDate: data.purchasedDate ? new Date(data.purchasedDate).toISOString() : undefined,
+        purchasedDate: data.purchasedDate
+          ? new Date(data.purchasedDate).toISOString()
+          : '',
         lastServicedDate: data.lastServicedDate
           ? new Date(data.lastServicedDate).toISOString()
-          : undefined,
+          : '',
         nextServiceDate: data.nextServiceDate
           ? new Date(data.nextServiceDate).toISOString()
-          : undefined,
+          : '',
         notes: data.notes || undefined,
       };
 

@@ -13,23 +13,31 @@ import {
 } from '../services/notification.service.js';
 import { Notification } from '../models/notification.js';
 import { parsePagination, parseId, notFound, badRequest } from '../lib/routeUtils.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const notifRoutes = new Hono();
 
 notifRoutes.use('*', authGuard);
 
 // ── GET /api/v1/notifications ────────────────────────────
-// List notifications for the authenticated user
+// List notifications for the authenticated user.
+// Non-admin default = history (recipientUserIds). Use unreadOnly=true or status=unread for inbox.
 notifRoutes.get('/', async (c) => {
   const user = c.get('user');
   const { page, limit } = parsePagination(c);
   const type = c.req.query('type') as string | undefined;
   const unreadOnly = c.req.query('unreadOnly') === 'true';
+  const statusParam = c.req.query('status');
+  const status =
+    statusParam === 'unread' || statusParam === 'all'
+      ? (statusParam as 'unread' | 'all')
+      : undefined;
 
   const result = await listNotifications(user.sub, user.role, page, limit, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: type as any,
     unreadOnly,
+    status,
   });
 
   return c.json({
@@ -84,6 +92,26 @@ notifRoutes.post('/', adminOnly, zValidator('json', createSchema), async (c) => 
   const notification = await createNotification({
     ...body,
     senderId: user.sub,
+  });
+
+  const notificationId = String(
+    (notification as { id?: string; _id?: unknown }).id ??
+      (notification as { _id?: unknown })._id ??
+      '',
+  );
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'notification_send',
+    resource: 'notification',
+    resourceId: notificationId,
+    details: {
+      targetType: body.targetType,
+      type: body.type,
+      title: body.title,
+      targetIds: body.targetIds,
+      sendPush: body.sendPush,
+    },
   });
 
   return c.json(

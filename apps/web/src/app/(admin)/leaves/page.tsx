@@ -14,6 +14,7 @@ import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useRouter } from 'next/navigation';
+import { parseApiError } from '@/lib/errorParser';
 
 interface LeaveRow {
   _id: string;
@@ -45,7 +46,7 @@ export default function LeavesPage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
-      if (search) params.set('search', search);
+      if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await api.get(`leaves?${params.toString()}`).json<{
@@ -73,8 +74,8 @@ export default function LeavesPage() {
       await api.delete(`leaves/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchLeaves();
-    } catch {
-      setError('Failed to delete leave application');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
@@ -125,9 +126,9 @@ export default function LeavesPage() {
         <TableActions
           onView={() => router.push(`/leaves/${row._id}`)}
           onEdit={() => router.push(`/leaves/${row._id}/edit`)}
-          onDelete={() => setDeleteTarget(row)}
           showEdit
-          showDelete
+          showDelete={row.status === 'pending'}
+          onDelete={row.status === 'pending' ? () => setDeleteTarget(row) : undefined}
         />
       ),
       className: 'w-[130px]',
@@ -147,7 +148,7 @@ export default function LeavesPage() {
         }
       />
       <ErrorBanner message={error} />
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
         <Input
           placeholder="Search by tenant name..."
           value={search}
@@ -228,7 +229,8 @@ export default function LeavesPage() {
               <TableActions
                 onView={() => router.push(`/leaves/${row._id}`)}
                 onEdit={() => router.push(`/leaves/${row._id}/edit`)}
-                onDelete={() => setDeleteTarget(row)}
+                showDelete={row.status === 'pending'}
+                onDelete={row.status === 'pending' ? () => setDeleteTarget(row) : undefined}
               />
             </div>
           </div>

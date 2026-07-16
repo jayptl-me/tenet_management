@@ -3,7 +3,7 @@ export type AttendanceStatus = 'present' | 'absent' | 'on_leave' | 'not_returned
 
 export type AttendanceMethod = 'manual' | 'qr' | 'app';
 
-export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface IAttendanceRecord {
   id: string;
