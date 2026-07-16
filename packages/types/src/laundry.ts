@@ -1,24 +1,41 @@
 // ── Laundry ────────────────────────────────────────────
-export type TimeSlot =
-  '06-08' | '08-10' | '10-12' | '12-14' | '14-16' | '16-18' | '18-20' | '20-22';
+// Mirrors apps/api LaundrySlot model (tenant booking slots).
+// Prior fiction (floor/machine grid status) removed -- code is truth.
 
-export type MachineNumber = 1 | 2;
-
-export type LaundrySlotStatus = 'available' | 'booked' | 'maintenance';
+export type LaundrySlotStatus = 'booked' | 'confirmed' | 'completed' | 'cancelled';
 
 export interface ILaundrySlot {
   id: string;
-  floorId: string;
-  machineNumber: MachineNumber;
-  date: string;
-  timeSlot: TimeSlot;
-  tenantId: string | null;
-  bookingId: string | null;
+  tenantId: string;
+  /** YYYY-MM-DD */
+  slotDate: string;
+  slotTime: string;
+  items?: number;
   status: LaundrySlotStatus;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  /** Populated on list/detail */
+  tenant?: {
+    id?: string;
+    user?: { name?: string; email?: string; phone?: string };
+    room?: { roomNumber?: string };
+  };
 }
 
-export interface ILaundryBooking {
-  date: string;
-  timeSlot: TimeSlot;
-  machineNumber: MachineNumber;
+export interface ILaundrySlotCreate {
+  tenantId: string;
+  slotDate: string;
+  slotTime: string;
+  items?: number;
+  notes?: string;
+  status?: LaundrySlotStatus;
+}
+
+export interface ILaundrySlotUpdate {
+  slotDate?: string;
+  slotTime?: string;
+  items?: number;
+  notes?: string;
+  status?: LaundrySlotStatus;
 }

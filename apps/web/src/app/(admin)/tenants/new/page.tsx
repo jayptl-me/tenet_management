@@ -6,6 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Shield, UserPlus, UserRound, Mail, Phone, CalendarDays, Banknote } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
@@ -28,14 +29,17 @@ const RELATION_OPTIONS = [
 ];
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email'),
   phone: z.string().min(10, 'Phone is required').refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   roomId: z.string().min(1, 'Room is required'),
   bedId: z.string().min(1, 'Bed is required'),
   moveInDate: z.string().min(1, 'Move-in date is required'),
   depositPaid: z.coerce.number().min(0, 'Must be >= 0'),
-  monthlyRent: z.coerce.number().min(1, 'Monthly rent is required'),
+  monthlyRent: z.coerce
+    .number()
+    .min(1000, 'Monthly rent must be at least Rs 1000')
+    .max(50000, 'Monthly rent cannot exceed Rs 50000'),
   emergencyName: z.string().optional(),
   emergencyPhone: z.string().optional().or(z.literal('')).refine((v) => !v || isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   emergencyRelation: z.string().optional(),
@@ -62,6 +66,9 @@ function TenantForm() {
   const prefilledName = searchParams.get('name') || '';
   const prefilledPhone = searchParams.get('phone') || '';
   const prefilledEmail = searchParams.get('email') || '';
+  const enquiryId = searchParams.get('enquiryId') || '';
+
+  const afterCreateHref = enquiryId ? `/enquiries/${enquiryId}` : '/tenants';
 
   const {
     register,
@@ -86,6 +93,20 @@ function TenantForm() {
     } catch { setSelectedRoom(null); }
   };
 
+  const markEnquiryConverted = async () => {
+    if (!enquiryId) return;
+    try {
+      await api
+        .put(`enquiries/${enquiryId}/status`, { json: { status: 'converted' } })
+        .json<{ success: boolean }>();
+    } catch (err) {
+      console.error('Failed to mark enquiry as converted', err);
+      toast.warning(
+        'Tenant created, but the enquiry could not be marked as converted. Update it manually.',
+      );
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
@@ -102,10 +123,11 @@ function TenantForm() {
         emergencyContact: hasEmergency ? { name: data.emergencyName!.trim(), phone: normalizeInPhone(data.emergencyPhone), relation: data.emergencyRelation!.trim() } : undefined,
       };
       const res = await api.post('tenants', { json: payload }).json<{ success: boolean; data?: { temporaryPassword?: string } }>();
+      await markEnquiryConverted();
       if (res.data?.temporaryPassword) {
         setTempPassword(res.data.temporaryPassword);
       } else {
-        router.push('/tenants');
+        router.push(afterCreateHref);
       }
     } catch {
       setSubmitError('Failed to create tenant. Check phone (+91...), move-in date, rent, and bed availability.');
@@ -156,7 +178,7 @@ function TenantForm() {
           </FormGrid>
         </FormSection>
       </FormCard>
-      <TempCredentialsDialog open={!!tempPassword} temporaryPassword={tempPassword} onClose={() => { setTempPassword(null); router.push('/tenants'); }} entityLabel="Tenant" />
+      <TempCredentialsDialog open={!!tempPassword} temporaryPassword={tempPassword} onClose={() => { setTempPassword(null); router.push(afterCreateHref); }} entityLabel="Tenant" />
     </FormPage>
   );
 }

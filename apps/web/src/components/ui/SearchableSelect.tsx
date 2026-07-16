@@ -9,6 +9,7 @@ import {
   fieldControlBorderError,
   fieldControlBorderOk,
   fieldErrorClass,
+  fieldHelperClass,
   fieldLabelClass,
 } from '@/lib/field-styles';
 
@@ -25,6 +26,7 @@ interface SearchableSelectProps<T extends Record<string, unknown> = Record<strin
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  helperText?: string;
   placeholder?: string;
   className?: string;
   valueKey?: string;
@@ -54,6 +56,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
   value,
   onChange,
   error,
+  helperText,
   placeholder = 'Select...',
   className,
   valueKey = '_id',
@@ -94,14 +97,22 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
 
         const mapped: SearchableOption[] = items.map((item) => {
           const record = item as T;
-          const val = String(record[valueKey] ?? '');
+          const rawVal = record[valueKey];
+          let val = '';
+          if (typeof rawVal === 'string' || typeof rawVal === 'number') {
+            val = String(rawVal);
+          } else if (rawVal && typeof rawVal === 'object') {
+            const obj = rawVal as Record<string, unknown>;
+            if (obj._id != null) val = String(obj._id);
+            else if (obj.id != null) val = String(obj.id);
+          }
           const lbl =
             typeof labelKey === 'function'
               ? labelKey(record)
               : String(record[labelKey] ?? record.name ?? record.roomNumber ?? val);
           const sub = sublabelFn ? sublabelFn(record) : undefined;
           return { value: val, label: lbl, sublabel: sub };
-        });
+        }).filter((opt) => opt.value !== '');
 
         setOptions(mapped);
         setIsLoading(false);
@@ -273,6 +284,11 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
       {error && (
         <p id={`${selectId}-error`} className={fieldErrorClass} role="alert">
           {error}
+        </p>
+      )}
+      {helperText && !error && (
+        <p id={`${selectId}-helper`} className={fieldHelperClass}>
+          {helperText}
         </p>
       )}
     </div>

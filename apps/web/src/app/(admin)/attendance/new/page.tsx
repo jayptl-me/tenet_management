@@ -21,7 +21,8 @@ const schema = z.object({
   status: z.enum(['present', 'absent', 'on_leave', 'not_returned']),
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),
-  method: z.enum(['manual', 'qr', 'app']),
+  // QR flow not implemented for admin manual entry yet — keep app + manual only
+  method: z.enum(['manual', 'app']),
   notes: z.string().optional(),
 });
 
@@ -36,7 +37,6 @@ const STATUS_OPTIONS = [
 
 const METHOD_OPTIONS = [
   { value: 'manual', label: 'Manual' },
-  { value: 'qr', label: 'QR Code' },
   { value: 'app', label: 'Mobile App' },
 ];
 

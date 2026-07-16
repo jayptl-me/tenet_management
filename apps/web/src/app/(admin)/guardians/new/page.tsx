@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'Name is required').max(100),
   phone: z
     .string()
     .min(10, 'Phone is required')
@@ -36,8 +36,10 @@ const RELATION_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-export default function NewGuardianPage() {
+function NewGuardianForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillTenantId = searchParams.get('tenantId') ?? '';
   const [submitError, setSubmitError] = useState('');
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
@@ -48,6 +50,9 @@ export default function NewGuardianPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      tenantId: prefillTenantId,
+    },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -162,5 +167,19 @@ export default function NewGuardianPage() {
         </div>
       </FormCard>
     </FormPage>
+  );
+}
+
+export default function NewGuardianPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
+      <NewGuardianForm />
+    </Suspense>
   );
 }

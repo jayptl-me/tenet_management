@@ -144,13 +144,14 @@ async function seedSampleData(adminId: string): Promise<void> {
   logger.info({ count: rooms.length }, 'Rooms seeded');
 
   // ── Service Status ──────────────────────────────────
+  // Keys must match DEFAULT_AMENITY_DEFINITIONS isPerFloor=true keys in appConfig.ts
   const serviceTypes = [
     'wifi',
-    'washing_machine_1',
-    'washing_machine_2',
-    'fridge',
-    'water_supply',
     'electricity',
+    'water_supply',
+    'geyser',
+    'washing_machine',
+    'fridge',
   ];
   const ssDocs: any[] = [];
   for (const floor of floors) {

@@ -12,6 +12,10 @@ import { generateUpiQr, generateTransactionRef, getPgUpiConfig } from '../lib/up
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { logger } from '../lib/logger.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import {
+  updateInvoicePaymentStatus,
+  getInvoiceBalance,
+} from '../services/payment-status.service.js';
 
 /** Default due date: 5th of the invoice billing month. */
 function dueDateForMonth(month: string): Date {
@@ -34,77 +38,46 @@ type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
 type CountFn = (filter: Record<string, unknown>) => Promise<number>;
 type AggregateFn = (pipeline: unknown[]) => Promise<unknown[]>;
 
-const paymentFind = Payment.find as unknown as FindFn;
+const paymentFind = Payment.find.bind(Payment) as unknown as FindFn;
 const paymentFindOne = Payment.findOne.bind(Payment) as unknown as FindOneFn;
-const paymentCreate = Payment.create as unknown as CreateFn;
-const paymentAggregate = Payment.aggregate as unknown as AggregateFn;
+const paymentCreate = Payment.create.bind(Payment) as unknown as CreateFn;
+const paymentAggregate = Payment.aggregate.bind(Payment) as unknown as AggregateFn;
 const paymentCountDocs = Payment.countDocuments.bind(Payment) as unknown as CountFn;
 const invoiceFindOne = Invoice.findOne.bind(Invoice) as unknown as FindOneFn;
 const tenantFindOne = Tenant.findOne.bind(Tenant) as unknown as FindOneFn;
 
 const payments = new Hono();
 
-// ── Helper: Update invoice status based on payments ─────
-async function updateInvoicePaymentStatus(invoiceId: string): Promise<void> {
-  const paymentsRaw = await paymentFind(
-    safeFilter({
-      invoiceId: new mongoose.Types.ObjectId(invoiceId),
-      status: { $ne: 'cancelled' },
-    }),
-  );
+/**
+ * Payment month summary (collected / expected / pending).
+ * Exported so tests drive the same `paymentAggregate` binding as GET /payments/summary.
+ */
+export async function getPaymentsMonthSummary(currentMonth: string): Promise<{
+  month: string;
+  collected: number;
+  expected: number;
+  pending: number;
+}> {
+  const [paidAgg, expectedAgg] = await Promise.all([
+    paymentAggregate([
+      { $match: { status: 'paid', month: currentMonth } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+    paymentAggregate([
+      { $match: { month: currentMonth, status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]),
+  ]);
 
-  const invoiceRaw = await invoiceFindOne(
-    safeFilter({ _id: new mongoose.Types.ObjectId(invoiceId) }),
-  );
-  if (!invoiceRaw) return;
+  const collected = ((paidAgg as Array<Record<string, unknown>>)[0]?.total as number) ?? 0;
+  const expected = ((expectedAgg as Array<Record<string, unknown>>)[0]?.total as number) ?? 0;
 
-  const invoice = invoiceRaw as Record<string, unknown>;
-  const invoiceTotal = (invoice.totalAmount as number) ?? 0;
-
-  const allActive = paymentsRaw as unknown as Array<Record<string, unknown>>;
-  const totalPaid = allActive
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
-
-  // Cancel any excess pending / pending_verification rows beyond the first,
-  // and cancel any pending row whose amount exceeds the remaining balance.
-  const openPayments = allActive.filter(
-    (p) => p.status === 'pending' || p.status === 'pending_verification',
-  );
-  let keepFirst = true;
-  const remainingBalance = Math.max(0, invoiceTotal - totalPaid);
-
-  for (const open of openPayments) {
-    const openId = open._id as string;
-    if (keepFirst && (open.amount as number) <= remainingBalance + 0.001) {
-      keepFirst = false;
-      continue;
-    }
-    // Cancel duplicate or excess pending rows
-    await Payment.findByIdAndUpdate(openId, { status: 'cancelled' });
-    logger.info(
-      { paymentId: openId, invoiceId, reason: keepFirst ? 'amount exceeds balance' : 'duplicate pending row' },
-      'Cancelled excess pending payment row',
-    );
-  }
-
-  // Determine invoice status — never regress from partial/paid
-  const currentStatus = (invoice.status as string) ?? 'sent';
-  let newStatus: string;
-
-  if (totalPaid >= invoiceTotal && invoiceTotal > 0) {
-    newStatus = 'paid';
-  } else if (totalPaid > 0) {
-    newStatus = 'partial';
-  } else if (currentStatus === 'paid' || currentStatus === 'partial') {
-    // Preserve partial/paid if zero-paid should be impossible
-    // (e.g. all payments just got cancelled). Keep the stronger status.
-    newStatus = currentStatus;
-  } else {
-    newStatus = currentStatus === 'overdue' ? 'overdue' : 'sent';
-  }
-
-  await Invoice.findByIdAndUpdate(invoiceId, { status: newStatus });
+  return {
+    month: currentMonth,
+    collected,
+    expected,
+    pending: expected - collected,
+  };
 }
 
 // ── Schemas ─────────────────────────────────────────────
@@ -206,24 +179,8 @@ payments.get('/summary', authGuard, adminOnly, async (c) => {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const currentMonth = `${year}-${month}`;
 
-  const [paidAgg, expectedAgg] = await Promise.all([
-    paymentAggregate([
-      { $match: { status: 'paid', month: currentMonth } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-    paymentAggregate([
-      { $match: { month: currentMonth, status: { $ne: 'cancelled' } } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
-    ]),
-  ]);
-
-  const collected = ((paidAgg as Array<Record<string, unknown>>)[0]?.total as number) ?? 0;
-  const expected = ((expectedAgg as Array<Record<string, unknown>>)[0]?.total as number) ?? 0;
-
-  return c.json({
-    success: true,
-    data: { month: currentMonth, collected, expected, pending: expected - collected },
-  });
+  const data = await getPaymentsMonthSummary(currentMonth);
+  return c.json({ success: true, data });
 });
 
 // ── GET /payments/my ────────────────────────────────────
@@ -413,6 +370,32 @@ payments.get('/qr-code', authGuard, async (c) => {
   if (!invoiceRaw) return notFound(c, 'Invoice');
 
   const invoice = invoiceRaw as Record<string, unknown>;
+  const user = c.get('user');
+
+  // Tenants may only request QR for their own invoices.
+  if (user.role === 'tenant') {
+    const tenantRaw = await tenantFindOne(safeFilter({ userId: user.sub }));
+    if (!tenantRaw) return notFound(c, 'Tenant profile');
+    if (String((tenantRaw as Record<string, unknown>)._id) !== String(invoice.tenantId)) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+  }
+
+  if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+    return badRequest(c, 'Invoice is not payable', 'INVOICE_NOT_PAYABLE');
+  }
+
+  const balance = await getInvoiceBalance(
+    String(invoice._id),
+    invoice.totalAmount as number | undefined,
+  );
+  if (balance <= 0) {
+    return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
+  }
+
   const tenantRaw = await Tenant.findById(invoice.tenantId).populate('user').lean();
   if (!tenantRaw) return notFound(c, 'Tenant');
 
@@ -427,7 +410,7 @@ payments.get('/qr-code', authGuard, async (c) => {
   const { qrDataUrl, upiDeepLink } = await generateUpiQr({
     upiId: upiConfig.upiId,
     payeeName: upiConfig.upiPayeeName,
-    amount: invoice.totalAmount as number,
+    amount: balance,
     transactionNote: note,
     transactionRef: txnRef,
   });
@@ -436,7 +419,7 @@ payments.get('/qr-code', authGuard, async (c) => {
     tenantName: (userInfo.name as string) ?? 'Tenant',
     roomNumber: (roomInfo.roomNumber as string) ?? 'Unknown',
     month: invoice.month as string,
-    totalAmount: invoice.totalAmount as number,
+    totalAmount: balance,
     invoiceNumber: invoice.invoiceNumber as string,
     upiId: upiConfig.upiId,
   });
@@ -448,7 +431,8 @@ payments.get('/qr-code', authGuard, async (c) => {
     data: {
       qrDataUrl,
       upiDeepLink,
-      amount: invoice.totalAmount,
+      amount: balance,
+      invoiceTotal: invoice.totalAmount,
       upiId: upiConfig.upiId,
       payeeName: upiConfig.upiPayeeName,
       invoiceNumber: invoice.invoiceNumber,
@@ -460,7 +444,12 @@ payments.get('/qr-code', authGuard, async (c) => {
 });
 
 // ── POST /payments/submit-utr ───────────────────────────
-payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), async (c) => {
+payments.post(
+  '/submit-utr',
+  authGuard,
+  tenantOnly,
+  zValidator('json', utrSubmitSchema),
+  async (c) => {
   const body = c.req.valid('json');
   const userId = c.get('user').sub;
 
@@ -470,6 +459,29 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
   if (!invoiceRaw) return notFound(c, 'Invoice');
 
   const invoice = invoiceRaw as Record<string, unknown>;
+
+  const tenantRaw = await tenantFindOne(safeFilter({ userId }));
+  if (!tenantRaw) return notFound(c, 'Tenant profile');
+  const tenant = tenantRaw as Record<string, unknown>;
+
+  if (String(invoice.tenantId) !== String(tenant._id)) {
+    return c.json(
+      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+      403,
+    );
+  }
+
+  if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+    return badRequest(c, 'Invoice is not payable', 'INVOICE_NOT_PAYABLE');
+  }
+
+  const balance = await getInvoiceBalance(
+    String(invoice._id),
+    invoice.totalAmount as number | undefined,
+  );
+  if (balance <= 0) {
+    return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
+  }
 
   const existingUtr = await paymentFindOne(safeFilter({ utrNumber: body.utrNumber }));
   if (existingUtr) {
@@ -482,31 +494,27 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
     );
   }
 
-  // Find all existing payments for this invoice (not cancelled).
-  // Prefer updating an existing open row; create only if none exist.
-  const existingPayments = (await Payment.find(
+  // Only open (pending / pending_verification) rows may receive a UTR.
+  // Never mutate a paid row (would reopen a settled payment).
+  const openRow = (await Payment.findOne(
     safeFilter({
       invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-      status: { $ne: 'cancelled' },
+      status: { $in: ['pending', 'pending_verification'] },
     }),
   )
     .sort({ createdAt: 1 })
-    .lean()) as unknown as Array<Record<string, unknown>>;
+    .lean()) as unknown as Record<string, unknown> | null;
 
-  if (existingPayments.length === 0) {
-    const tenantRaw = await tenantFindOne(safeFilter({ userId }));
-    if (!tenantRaw) return notFound(c, 'Tenant profile');
-
-    const tenant = tenantRaw as Record<string, unknown>;
+  if (!openRow) {
     const newPayment = await paymentCreate({
       tenantId: tenant._id,
       invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-      amount: invoice.totalAmount,
+      amount: balance,
       type: 'rent',
       method: 'upi',
       status: 'pending_verification',
       month: invoice.month,
-      dueDate: invoice.dueDate,
+      dueDate: resolveInvoiceDueDate(invoice as unknown as Record<string, unknown>),
       utrNumber: body.utrNumber,
       screenshotUrl: body.screenshotUrl ?? null,
     });
@@ -519,25 +527,20 @@ payments.post('/submit-utr', authGuard, zValidator('json', utrSubmitSchema), asy
     return c.json({ success: true, data: newPayment }, 201);
   }
 
-  // Pick the first open (pending / pending_verification) row if available;
-  // otherwise fall back to the first row.
-  const openRow = existingPayments.find(
-    (p) => p.status === 'pending' || p.status === 'pending_verification',
-  );
-  const targetPayment = openRow ?? existingPayments[0]!;
-
   const updated = await (Payment.findByIdAndUpdate(
-    targetPayment._id,
+    openRow._id,
     {
       utrNumber: body.utrNumber,
-      screenshotUrl: body.screenshotUrl ?? targetPayment.screenshotUrl ?? null,
+      screenshotUrl: body.screenshotUrl ?? openRow.screenshotUrl ?? null,
       status: 'pending_verification',
+      // Align open obligation to remaining balance when submitting UTR.
+      amount: balance,
     },
     { returnDocument: 'after' },
   ).lean() as unknown);
 
   logger.info(
-    { paymentId: targetPayment._id, utr: body.utrNumber },
+    { paymentId: openRow._id, utr: body.utrNumber },
     'UTR submitted (existing payment updated)',
   );
 
@@ -557,7 +560,7 @@ payments.post(
     const body = c.req.valid('json');
     const adminId = c.get('user').sub;
 
-    const updateData: Record<string, unknown> = {
+    const setData: Record<string, unknown> = {
       verifiedBy: new mongoose.Types.ObjectId(adminId),
     };
 
@@ -568,21 +571,26 @@ payments.post(
       > | null;
       if (existing) {
         const existingNotes = (existing.notes as string) ?? '';
-        updateData.notes = existingNotes
+        setData.notes = existingNotes
           ? `${existingNotes} | Admin: ${body.notes}`
           : `Admin: ${body.notes}`;
       }
     }
 
+    let updateDoc: Record<string, unknown>;
     if (body.status === 'paid') {
-      updateData.status = 'paid';
-      updateData.paidAt = new Date();
+      setData.status = 'paid';
+      setData.paidAt = new Date();
+      updateDoc = { $set: setData };
     } else if (body.status === 'rejected') {
-      updateData.status = 'pending';
-      updateData.utrNumber = undefined;
+      setData.status = 'pending';
+      // Must $unset: plain undefined is stripped by Mongoose and leaves the old UTR.
+      updateDoc = { $set: setData, $unset: { utrNumber: 1, screenshotUrl: 1 } };
+    } else {
+      updateDoc = { $set: setData };
     }
 
-    const paymentRaw = await (Payment.findByIdAndUpdate(paymentId, updateData, {
+    const paymentRaw = await (Payment.findByIdAndUpdate(paymentId, updateDoc, {
       returnDocument: 'after',
     }).lean() as unknown);
     if (!paymentRaw) return notFound(c, 'Payment');
@@ -724,12 +732,37 @@ payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchem
   const body = c.req.valid('json');
   if (Object.keys(body).length === 0) return badRequest(c, 'No fields to update');
 
+  const existing = (await Payment.findById(id).lean()) as unknown as Record<
+    string,
+    unknown
+  > | null;
+  if (!existing) return notFound(c, 'Payment');
+
+  // Paid rows are immutable via generic PUT. Use verify/void flows instead.
+  if (existing.status === 'paid') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'PAYMENT_LOCKED',
+          message: 'Paid payments cannot be edited. Use a dedicated void/adjust flow if needed.',
+        },
+      },
+      422,
+    );
+  }
+
   const updateData: Record<string, unknown> = {};
   if (body.amount !== undefined) updateData.amount = body.amount;
   if (body.method !== undefined) updateData.method = body.method;
   if (body.type !== undefined) updateData.type = body.type;
   if (body.status !== undefined) updateData.status = body.status;
   if (body.notes !== undefined) updateData.notes = body.notes;
+
+  // Setting status to paid via PUT must stamp paidAt (prefer dedicated verify).
+  if (body.status === 'paid' && !existing.paidAt) {
+    updateData.paidAt = new Date();
+  }
 
   const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
     returnDocument: 'after',
@@ -757,7 +790,7 @@ payments.post(
     const body = c.req.valid('json');
     const adminId = c.get('user').sub;
 
-    const updateData: Record<string, unknown> = {
+    const setData: Record<string, unknown> = {
       verifiedBy: new mongoose.Types.ObjectId(adminId),
     };
 
@@ -768,21 +801,24 @@ payments.post(
       > | null;
       if (existing) {
         const existingNotes = (existing.notes as string) ?? '';
-        updateData.notes = existingNotes
+        setData.notes = existingNotes
           ? `${existingNotes} | Admin: ${body.notes}`
           : `Admin: ${body.notes}`;
       }
     }
 
+    let updateDoc: Record<string, unknown>;
     if (body.approved) {
-      updateData.status = 'paid';
-      updateData.paidAt = new Date();
+      setData.status = 'paid';
+      setData.paidAt = new Date();
+      updateDoc = { $set: setData };
     } else {
-      updateData.status = 'pending';
-      updateData.utrNumber = undefined;
+      setData.status = 'pending';
+      // Must $unset: plain undefined is stripped by Mongoose and leaves the old UTR.
+      updateDoc = { $set: setData, $unset: { utrNumber: 1, screenshotUrl: 1 } };
     }
 
-    const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
+    const paymentRaw = await (Payment.findByIdAndUpdate(id, updateDoc, {
       returnDocument: 'after',
     }).lean() as unknown);
     if (!paymentRaw) return notFound(c, 'Payment');

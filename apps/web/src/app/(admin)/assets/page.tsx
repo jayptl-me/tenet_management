@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Wrench } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +40,7 @@ export default function AssetsPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AssetRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [lowStockIds, setLowStockIds] = useState<Set<string> | null>(null);
 
   const fetchAssets = useCallback(async () => {
     setIsLoading(true);
@@ -68,15 +70,38 @@ export default function AssetsPage() {
     fetchAssets();
   }, [fetchAssets]);
 
+  const handleFilterLowStock = useCallback(async () => {
+    if (lowStockIds) {
+      setLowStockIds(null);
+      return;
+    }
+    try {
+      const res = await api.get('assets/low-stock').json<{
+        success: boolean;
+        data: { _id: string }[];
+      }>();
+      setLowStockIds(new Set((res.data ?? []).map((item) => item._id)));
+    } catch {
+      toast.error('Failed to load low-stock assets');
+    }
+  }, [lowStockIds]);
+
+  const displayedAssets = useMemo(() => {
+    if (!lowStockIds) return assets;
+    return assets.filter((a) => lowStockIds.has(a._id));
+  }, [assets, lowStockIds]);
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await api.delete(`assets/${deleteTarget._id}`).json();
       setDeleteTarget(null);
+      toast.success('Asset retired');
       fetchAssets();
     } catch {
-      setError('Failed to delete asset');
+      setError('Failed to retire asset');
+      toast.error('Failed to retire asset');
     } finally {
       setDeleting(false);
     }
@@ -136,7 +161,17 @@ export default function AssetsPage() {
         }
       />
       <ErrorBanner message={error} />
-      <LowStockBanner />
+      <LowStockBanner onFilterLowStock={handleFilterLowStock} />
+      {lowStockIds && (
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
+          <span className="font-semibold text-[color:var(--color-text-secondary)]">
+            Showing low-stock assets only ({displayedAssets.length} on this page)
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setLowStockIds(null)}>
+            Clear filter
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by name..."
@@ -166,14 +201,14 @@ export default function AssetsPage() {
       </div>
       <DataTable
         columns={columns}
-        data={assets}
+        data={displayedAssets}
         keyExtractor={(row: AssetRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/assets/${row._id}`)}
         pagination={{
           page,
           perPage,
-          total,
+          total: lowStockIds ? displayedAssets.length : total,
           onPageChange: setPage,
           onPerPageChange: (pp) => {
             setPerPage(pp);
@@ -183,9 +218,17 @@ export default function AssetsPage() {
         emptyState={
           <EmptyState
             icon={<Wrench className="h-12 w-12" />}
-            title="No assets yet"
-            description="Add your first asset to start tracking equipment"
-            action={{ label: 'Add Asset', onClick: () => router.push('/assets/new') }}
+            title={lowStockIds ? 'No low-stock assets on this page' : 'No assets yet'}
+            description={
+              lowStockIds
+                ? 'Try another page or clear the low-stock filter'
+                : 'Add your first asset to start tracking equipment'
+            }
+            action={
+              lowStockIds
+                ? { label: 'Clear filter', onClick: () => setLowStockIds(null) }
+                : { label: 'Add Asset', onClick: () => router.push('/assets/new') }
+            }
           />
         }
         mobileCardRenderer={(row) => (
@@ -216,8 +259,8 @@ export default function AssetsPage() {
       />
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Asset"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Retire asset"
+        message={`Retire "${deleteTarget?.name}"? The asset will be marked as retired (not permanently deleted).`}
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

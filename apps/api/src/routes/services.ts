@@ -4,11 +4,12 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { notFound, badRequest, parseId, safeFilter } from '../lib/routeUtils.js';
+import { notFound, badRequest, conflict, parseId, safeFilter } from '../lib/routeUtils.js';
 import { ServiceStatus } from '../models/serviceStatus.js';
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
 import { AppConfig } from '../models/appConfig.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 // ── Helper: derive complaint categories from AppConfig amenity definitions ──
 async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
@@ -23,11 +24,12 @@ async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
   return map;
 }
 
-// ── Helper: validate serviceType against AppConfig definitions ──
-async function isValidServiceType(serviceType: string): Promise<boolean> {
+// ── Helper: validate serviceType is an isPerFloor amenity definition ──
+// Room-only amenities (isPerFloor=false) must not become floor ServiceStatus rows.
+async function isValidFloorServiceType(serviceType: string): Promise<boolean> {
   const config = await AppConfig.findOne().select('amenityDefinitions').lean();
   const definitions = config?.amenityDefinitions ?? [];
-  return definitions.some((d) => d.key === serviceType);
+  return definitions.some((d) => d.key === serviceType && d.isPerFloor === true);
 }
 
 // ── Helper: attach complaint counts per service per floor (dynamic) ──
@@ -106,6 +108,14 @@ services.get('/', authGuard, async (c) => {
     filter.floorId = parsed;
   }
 
+  const statusQ = c.req.query('status');
+  if (statusQ) {
+    if (!['operational', 'degraded', 'down'].includes(statusQ)) {
+      return badRequest(c, 'Invalid status. Must be operational, degraded, or down.');
+    }
+    filter.status = statusQ;
+  }
+
   const page = Math.max(1, Number(c.req.query('page')) || 1);
   const limit = Math.min(100, Math.max(1, Number(c.req.query('limit')) || 50));
   const skip = (page - 1) * limit;
@@ -116,6 +126,7 @@ services.get('/', authGuard, async (c) => {
       .skip(skip)
       .limit(limit)
       .populate('floor')
+      .populate('lastUpdatedBy', 'name email')
       .lean(),
     ServiceStatus.countDocuments(safeFilter(filter)),
   ]);
@@ -135,7 +146,10 @@ services.get('/floor/:floorId/with-complaints', authGuard, async (c) => {
   const floorId = parseId(c.req.param('floorId'));
   if (!floorId) return badRequest(c, 'Invalid floor ID');
 
-  const services_list = await ServiceStatus.find(safeFilter({ floorId })).populate('floor').lean();
+  const services_list = await ServiceStatus.find(safeFilter({ floorId }))
+    .populate('floor')
+    .populate('lastUpdatedBy', 'name email')
+    .lean();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enriched = await enrichWithComplaintCounts(services_list as any[]);
@@ -168,11 +182,11 @@ services.post(
     const body = c.req.valid('json');
     const user = c.get('user');
 
-    const validType = await isValidServiceType(body.serviceType);
+    const validType = await isValidFloorServiceType(body.serviceType);
     if (!validType) {
       return badRequest(
         c,
-        'Invalid service type. Must match an AppConfig amenity definition key.',
+        'Invalid service type. Must match an isPerFloor AppConfig amenity definition key.',
         'INVALID_SERVICE_TYPE',
       );
     }
@@ -196,16 +210,16 @@ services.post(
         lastUpdatedAt: new Date(),
       } as Record<string, unknown>);
       const createdId = String((service as { _id?: unknown })._id ?? '');
-      const populated = await ServiceStatus.findById(createdId).populate('floor').lean();
+      const populated = await ServiceStatus.findById(createdId)
+        .populate('floor')
+        .populate('lastUpdatedBy', 'name email')
+        .lean();
       return c.json({ success: true, data: populated }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create service status';
       if (message.includes('duplicate') || (err as { code?: number })?.code === 11000) {
-        return badRequest(
-          c,
-          'Service status already exists for this floor and type',
-          'DUPLICATE_SERVICE',
-        );
+        // conflict() throws AppError for globalErrorHandler (do not nest badRequest in catch)
+        return conflict(c, 'Service status already exists for this floor and type');
       }
       return badRequest(c, message);
     }
@@ -233,6 +247,7 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
     }
   }
 
+  const previousStatus = service.status;
   service.status = body.status;
   service.lastUpdatedBy = user.sub as unknown as typeof service.lastUpdatedBy;
   service.lastUpdatedAt = new Date();
@@ -241,7 +256,26 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   }
   await service.save();
 
-  return c.json({ success: true, data: service });
+  if (previousStatus !== body.status) {
+    await writeAuditLog({
+      userId: user.sub,
+      action: 'update',
+      resource: 'service',
+      resourceId: id,
+      details: {
+        previousStatus,
+        status: body.status,
+        serviceType: service.serviceType,
+        floorId: String(service.floorId ?? ''),
+      },
+    });
+  }
+
+  const populated = await ServiceStatus.findById(id)
+    .populate('floor')
+    .populate('lastUpdatedBy', 'name email')
+    .lean();
+  return c.json({ success: true, data: populated });
 });
 
 // ── GET /services/:id — single service status with complaint count ──
@@ -249,7 +283,10 @@ services.get('/:id', authGuard, async (c) => {
   const id = c.req.param('id');
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
 
-  const service = await ServiceStatus.findById(id).populate('floor').lean();
+  const service = await ServiceStatus.findById(id)
+    .populate('floor')
+    .populate('lastUpdatedBy', 'name email')
+    .lean();
   if (!service) return notFound(c, 'ServiceStatus');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -277,11 +314,11 @@ services.put(
     const body = c.req.valid('json') as any;
 
     if (body.serviceType) {
-      const validType = await isValidServiceType(body.serviceType);
+      const validType = await isValidFloorServiceType(body.serviceType);
       if (!validType) {
         return badRequest(
           c,
-          'Invalid service type. Must match an AppConfig amenity definition key.',
+          'Invalid service type. Must match an isPerFloor AppConfig amenity definition key.',
           'INVALID_SERVICE_TYPE',
         );
       }
@@ -313,12 +350,32 @@ services.put(
       }
     }
 
+    const previousStatus = service.status;
     if (body.serviceType !== undefined) service.serviceType = body.serviceType;
     if (body.status !== undefined) service.status = body.status;
     if (body.note !== undefined) service.note = body.note;
     await service.save();
 
-    const populated = await ServiceStatus.findById(service._id).populate('floor').lean();
+    if (body.status !== undefined && previousStatus !== body.status) {
+      const user = c.get('user');
+      await writeAuditLog({
+        userId: user.sub,
+        action: 'update',
+        resource: 'service',
+        resourceId: id,
+        details: {
+          previousStatus,
+          status: body.status,
+          serviceType: service.serviceType,
+          source: 'full',
+        },
+      });
+    }
+
+    const populated = await ServiceStatus.findById(service._id)
+      .populate('floor')
+      .populate('lastUpdatedBy', 'name email')
+      .lean();
     return c.json({ success: true, data: populated });
   },
 );

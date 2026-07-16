@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -25,14 +26,22 @@ class _TenantNotificationsScreenState
     Future.microtask(_load);
   }
 
+  String? _notificationId(Map<String, dynamic> n) {
+    final raw = n['id'] ?? n['_id'];
+    final id = raw?.toString() ?? '';
+    return id.isEmpty ? null : id;
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final rows =
-          await ref.read(tenantRepositoryProvider).myNotifications();
+      final userId = ref.read(authProvider).user?.id;
+      final rows = await ref
+          .read(tenantRepositoryProvider)
+          .myNotifications(userId: userId);
       if (!mounted) return;
       setState(() {
         _notifications = rows;
@@ -54,9 +63,19 @@ class _TenantNotificationsScreenState
   }
 
   Future<void> _markRead(String id) async {
+    if (id.isEmpty) return;
     try {
       await ref.read(tenantRepositoryProvider).markNotificationRead(id);
-      _load();
+      // Optimistic: keep history row, mark read locally (F1/F2)
+      if (!mounted) return;
+      setState(() {
+        _notifications = _notifications.map((n) {
+          if (_notificationId(n) == id) {
+            return {...n, 'isRead': true};
+          }
+          return n;
+        }).toList();
+      });
     } catch (_) {
       // best-effort
     }
@@ -66,10 +85,13 @@ class _TenantNotificationsScreenState
     try {
       await ref.read(tenantRepositoryProvider).markAllNotificationsRead();
       if (!mounted) return;
+      setState(() {
+        _notifications =
+            _notifications.map((n) => {...n, 'isRead': true}).toList();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All notifications marked as read')),
       );
-      _load();
     } catch (_) {
       // best-effort
     }
@@ -78,8 +100,7 @@ class _TenantNotificationsScreenState
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasUnread =
-        _notifications.any((n) => n['isRead'] != true);
+    final hasUnread = _notifications.any((n) => n['isRead'] != true);
 
     return Scaffold(
       appBar: AppBar(
@@ -105,16 +126,17 @@ class _TenantNotificationsScreenState
                   ],
                   if (_notifications.isEmpty)
                     const EmptyState(
-                        message: 'No notifications', icon: Icons.notifications_none)
+                        message: 'No notifications',
+                        icon: Icons.notifications_none)
                   else
                     ..._notifications.map((n) {
                       final isRead = n['isRead'] == true;
+                      final id = _notificationId(n) ?? '';
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
-                          onTap: isRead
-                              ? null
-                              : () => _markRead(n['_id']?.toString() ?? ''),
+                          onTap:
+                              isRead || id.isEmpty ? null : () => _markRead(id),
                           title: Row(
                             children: [
                               if (!isRead)
@@ -149,7 +171,7 @@ class _TenantNotificationsScreenState
                                 ),
                               const SizedBox(height: 4),
                               Text(
-                                formatDate(n['createdAt']),
+                                formatDate(n['createdAt'] ?? n['sentAt']),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: cs.onSurfaceVariant,

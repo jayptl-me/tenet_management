@@ -19,8 +19,9 @@ import { clsx } from 'clsx';
 // ── Schema ──────────────────────────────────────────────
 
 const mealItemSchema = z.object({
-  name: z.string().min(1, 'Item name is required'),
-  description: z.string().optional(),
+  name: z.string().min(1, 'Item name is required').max(100),
+  description: z.string().max(300).optional(),
+  category: z.string().max(50).optional(),
 });
 
 const mealCollectionSchema = z.object({
@@ -65,9 +66,9 @@ export default function EditMenuPage() {
     defaultValues: {
       date: '',
       meals: {
-        breakfast: [{ name: '', description: '' }],
-        lunch: [{ name: '', description: '' }],
-        dinner: [{ name: '', description: '' }],
+        breakfast: [{ name: '', description: '', category: '' }],
+        lunch: [{ name: '', description: '', category: '' }],
+        dinner: [{ name: '', description: '', category: '' }],
       },
     },
   });
@@ -151,18 +152,21 @@ export default function EditMenuPage() {
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
           lunch: data.meals.lunch
             .filter((i) => i.name.trim())
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
           dinner: data.meals.dinner
             .filter((i) => i.name.trim())
             .map((i) => ({
               name: i.name.trim(),
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
         },
       };
@@ -222,7 +226,7 @@ export default function EditMenuPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fieldArray.append({ name: '', description: '' })}
+                  onClick={() => fieldArray.append({ name: '', description: '', category: '' })}
                 >
                   <Plus className="h-4 w-4" /> Add item
                 </Button>
@@ -240,7 +244,7 @@ export default function EditMenuPage() {
                     key={field.id}
                     className={clsx(
                       surfaceNestedClass,
-                      'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end',
+                      'grid grid-cols-1 gap-3 p-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end',
                     )}
                   >
                     <div className="flex flex-col gap-1.5">
@@ -257,6 +261,11 @@ export default function EditMenuPage() {
                     <input
                       {...register(`meals.${key}.${itemIdx}.description` as const)}
                       placeholder="Description (optional)"
+                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                    />
+                    <input
+                      {...register(`meals.${key}.${itemIdx}.category` as const)}
+                      placeholder="Category (optional)"
                       className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
                     />
                     <div className="flex justify-end sm:pb-0.5">

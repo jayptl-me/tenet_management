@@ -25,8 +25,8 @@ type CreateArrFn = (
   opts?: Record<string, unknown>,
 ) => Promise<unknown[]>;
 
-const userCreate = User.create as unknown as CreateArrFn;
-const guardianCreate = Guardian.create as unknown as CreateArrFn;
+const userCreate = User.create.bind(User) as unknown as CreateArrFn;
+const guardianCreate = Guardian.create.bind(Guardian) as unknown as CreateArrFn;
 
 // ── Zod Schemas ──────────────────────────────────────────
 

@@ -1,6 +1,9 @@
-# Live Gap Inventory (2026-07-12 re-audit, remediated 2026-07-12)
+# Live Gap Inventory (re-verified 2026-07-16)
 
-Master backlog from **code-verified** multi-agent pass. **All P0s are now FIXED.** This doc records what was completed in the 2026-07-12 remediation pass. Prefer this over older feature notes until those files match this date.
+Master backlog from **code-verified** multi-agent FE + API + Flutter audit. Prefer this file over older batch notes when they disagree with source.
+
+**Last verified:** 2026-07-16 (full audit + **worktree reconcile** + **lifecycle integrity pass**)  
+**Method:** Parallel domain agents re-inspected every admin module (list/detail/new/edit), field/form/lifecycle against models + Zod routes + FE pages; Flutter screen matrix; interconnections. Second pass re-checked every OPEN row against **current tree**. Third pass (Grok) independently re-audited meals/tenants/finance/Flutter/ops and fixed dues residual, UTR unset, TZ check-in, reinstate placement, leave→attendance, Flutter password. **Code is truth.** See [SESSION_2026-07-16_LIFECYCLE_PASS.md](./SESSION_2026-07-16_LIFECYCLE_PASS.md).
 
 **Product split (non-negotiable):**
 
@@ -10,256 +13,284 @@ Master backlog from **code-verified** multi-agent pass. **All P0s are now FIXED.
 | Resident portal | `mobile/` Flutter (Web + iOS + Android) | `tenant`, `guardian`, visitor desk |
 | API | `apps/api` | JWT all roles |
 
-**Theme priority for all admin UI work:** preset **`saas`** (default in `ThemeProvider` / `layout.tsx` `data-theme="saas"`). Use design tokens + shared Form/DataTable stack. No hardcoded gray/slate palettes. No new native OS selects.
+**Theme priority:** preset **`saas`**. Design tokens + Form/DataTable stack.
 
 Severity:
 
-- **P0** = broken primary flow, integrity race, or missing credential path
-- **P1** = incomplete hub / portal MVP / material UX or authz gap
-- **P2** = polish, unused API surfaces, design consistency
+- **P0** = broken primary flow, integrity race that always fails happy path, missing credential path, or form that always 400s
+- **P1** = incomplete hub / material UX / authz gap / domain mis-wiring / integrity under concurrency
+- **P2** = polish, unused API surfaces, free-text IDs, types lag
 
 ---
 
-## Status of all P0s (all fixed as of 2026-07-12)
+## Verification snapshot (2026-07-16)
+
+| Gate | Result |
+|------|--------|
+| Admin modules inventoried | **23** folders under `apps/web/src/app/(admin)/` |
+| Feature MDs rewritten | **22** under `docs/audit/features/` (dashboard+export+audit-logs share one file) |
+| Interconnection MDs | **4** re-verified |
+| Open **P0** (product happy path) | **0** confirmed open |
+| Open **P1** (material) | **1** generated (ELEC-P1-1); zero FIXED markers; from feature MD Open gaps only |
+| Domain placement rooms/floors/services | **Documented** -- mostly correct FE split; P1 seed + API isPerFloor gaps |
+| Worktree note | Uncommitted **product** diffs exist (invoices paid-delete gate, payments prefill, badges unreadBy, enquiry convert, CommandPalette flags, etc.). Audit MDs match **current** tree after reconcile. |
+
+---
+
+## Domain placement (strict) -- rooms / floors / services / amenities
+
+| Concern | Correct home | Live status |
+|---------|--------------|-------------|
+| `roomNumber`, `sharingType`, `monthlyRent`, `beds`, `occupancyCount`, `photos` | **Room** | Correct on room model/forms |
+| `roomAmenities[]` for `isPerFloor=false` defs | **Room** | FE new/edit filter `!isPerFloor` -- **correct** |
+| `floorNumber`, `label`, `totalRooms`, `amenityCounts` | **Floor** | Correct; totalRooms server-synced after rooms exist |
+| Operational health of `isPerFloor=true` amenities | **ServiceStatus** (floor-scoped) | FloorServiceGrid + Services CRUD; **seeded on floor create** (FL-1 closed) |
+| Amenity catalog + `isPerFloor` flag | **Settings** `amenityDefinitions` | AmenityTypesTab + sanitizeSettingsPayload -- **correct** |
+| API rejects room-only keys as floor services | Services POST/PUT | **PASS** -- `isValidFloorServiceType` requires isPerFloor (SV-1 closed) |
+
+**Domain placement (current):** Floor create seeds ServiceStatus for isPerFloor amenities. Services API rejects room-only keys. Labels/status for floor services belong on Services / FloorServiceGrid; room forms use roomAmenities for `!isPerFloor` only.
+
+Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./features/floors.md), [features/services.md](./features/services.md), [features/settings.md](./features/settings.md).
+
+---
+
+## P0 status (all still closed -- do not re-file)
 
 | ID | Claim | Live status |
 |----|-------|-------------|
-| P0-T1 | Tenants transfer non-atomic: frees old bed before validating new | **FIXED** -- validate target free first; wrapped in `session.withTransaction`; 409 on conflict |
-| P0-T2 | Tenants edit `isActive` bypasses checkout / bed free | **FIXED** -- removed from PUT schema + edit page; lifecycle only via checkout/reinstate |
-| P0-T3 | Tenants create temp password discarded | **FIXED** -- returns `temporaryPassword` in create response; `TempCredentialsDialog` on FE |
-| P0-V1 | Visitors list filter uses invalid `pending` | **FIXED** -- options are `expected/arrived/departed/cancelled`; `statusToVariant` used directly |
-| P0-F1 | Flutter `user.tenantId` null blocks visitors/laundry | **FIXED** -- seed backfills tenantId; `/auth/me` self-heals legacy users; Flutter resolve-tenant helper |
-|--------|-------|------------------------|
-### Historical P0s (fixed before this pass, do not re-open)
+| P0-T1 | Transfer non-atomic | **FIXED** -- validate free first; transaction; 409 |
+| P0-T2 | Edit `isActive` bypass | **FIXED** -- removed from PUT + edit UI |
+| P0-T3 | Temp password discarded | **FIXED** -- returned + TempCredentialsDialog |
+| P0-V1 | Visitor filter invalid `pending` | **FIXED** -- expected/arrived/departed/cancelled |
+| P0-F1 | Flutter null `tenantId` | **FIXED** -- seed + `/auth/me` heal (residual: some write paths skip refresh) |
+| P0-D1 | Static `out` vs Next server build | **FIXED** -- `render.yaml` `pg-web` is `type: web` + `next start` |
+| P0-FE-settings | Empty phone/email 400 on Save | **FIXED** -- `sanitizeSettingsPayload` + API preprocess |
+| P0-FE-invoice-edit | Partial status clobber; paid editable | **FIXED** -- omit status for partial; lock paid |
+| P0-FE-services-edit | Hardcoded serviceType keys | **FIXED** -- load amenityDefinitions |
+| P0-tenant-create-500 | Session circular JSON | **FIXED** -- lean re-fetch after transaction |
 
-| Old ID | Claim | Live status |
-|--------|-------|-------------|
-| P0-1 | Complaints admin create DEAD | **FIXED** (re-verify if regressing) |
-| P0-2 | Enquiries field/enum mismatch | **FIXED** |
-| P0-3 | Services edit always 400 | **FIXED** |
-| P0-4 | Laundry maintenance status | **FIXED** |
-| P0-5 | Tenants phone/date create | **FIXED** (normalize + ISO on FE) |
-| P0-6 | Assets phantoms/dates | **FIXED** |
-| P0-7 | Complaints severity vs priority | **FIXED** |
-| P0-8 | Tenant portal missing Next routes | **N/A** -- Flutter `mobile/` is the portal |
-| P0-9 | Guardian portal missing Next routes | **N/A** -- Flutter |
-| P0-10 | Guardian create no credentials | **FIXED** (returns temporaryPassword) |
-| Meals PUT rejects mealType | **FIXED** -- PUT schema allows mealType |
-| Visitors admin POST 403 | **FIXED** -- admin or tenant can create |
-| Visitors GET /my shadowed | **FIXED** -- `/my` before `/:id` |
-| Select native OS chrome | **FIXED** -- Radix Select |
-| ResourceSelect native | **FIXED** -- wraps SearchableSelect |
-| Feature flags only laundry | **FIXED** -- attendance, meals, visitors, guardians, notices, laundry gated |
+**Ops-only P0 note (Flutter):** first-login credentials + `User.tenantId` still depend on seed/create quality; client heal helps after `/auth/me`. Not a missing-screen P0.
 
 ---
 
-## P0 -- All fixed as of 2026-07-12
+## Recently closed on reconcile (2026-07-16 worktree) -- do not re-file
 
-All **5 open P0s** were fixed in this remediation pass by 5 parallel agents:
+<!-- AUTO:RECENTLY-CLOSED:START -->
 
-- **P0-T1** (transfer atomic): `apps/api/src/routes/tenants.ts` -- validate target free before freeing old; wrapped in `session.withTransaction`; returns 409 BED_OCCUPIED on conflict. Vitest `tenant-transfer.test.ts` (4 tests) confirms rollback on failure.
-- **P0-T2** (remove isActive toggle): Removed `isActive` from `updateTenantSchema` + `directFields` in API; removed Status select from `tenants/[id]/edit/page.tsx`. Lifecycle only via checkout/reinstate.
-- **P0-T3** (temp password): Matched guardians pattern in create handler -- generates `temporaryPassword`, passes as `passwordHash` to User.create, returns in 201 response. FE shows `TempCredentialsDialog` on success.
-- **P0-V1** (visitor filter): Replaced invalid `pending` with `expected/arrived/departed/cancelled`. `StatusBadge` uses `statusToVariant(row.status)` directly. `StatusFilterSelect` component built.
-- **P0-F1** (Flutter tenantId): Seed backfills `User.tenantId` on tenant create. `/auth/me` self-heals legacy users by looking up Tenant collection. Flutter `visitor_register_screen.dart` refreshes auth state before hard-failing.
+| Claim | Live proof |
+|-------|------------|
+| Checkout dues gross total / electricity always 0 (FIN-DUES) | **FIXED 2026-07-16** -- residual via getInvoiceBalance + electricityAmount |
+| UTR reject leaves utrNumber (blocks re-submit) | **FIXED** -- `$unset` on both verify paths |
+| submit-utr create uses nullable invoice.dueDate | **FIXED** -- resolveInvoiceDueDate |
+| Attendance check-in window UTC hours | **FIXED** -- currentHourInTZ |
+| Menus isActive filter UTC | **FIXED** -- todayInTZ |
+| Tenant feedback re-submit keeps actioned status | **FIXED** -- status reset to submitted |
+| Reinstate only original bed | **FIXED** -- optional roomId/bedId body + FE picker |
+| Checkout leaves guardian portal active | **FIXED** -- deactivate/reactivate guardian Users |
+| Leave approve no attendance | **FIXED** -- on_leave upsert per day |
+| Flutter no password change/forgot | **FIXED** -- profile + login |
+| Flutter complaint no ensureTenantId | **FIXED** |
+| Invoice detail no pay bridge (admin + Flutter) | **FIXED** -- Record payment CTA + Flutter query preselect |
+| Flutter flag discoverability (nav always 403) | **FIXED 2026-07-16** -- `app_features.dart` + More/shell filter |
+| Notification unread badge missing | **FIXED** -- Home Badge + unread-count API |
+| Tenant leave cancel missing | **FIXED** -- POST leaves/:id/cancel + Flutter CTA + tests |
+| Complaint photos dead contract | **FIXED** -- create/update photos + POST :id/photos + admin/Flutter display |
+| Flutter password change/forgot | **FIXED** -- login + profile (prior lifecycle) |
 
----
+| No GET by id / No PUT | **Fixed** -- both exist; edit is metadata-only |
+| Detail/edit pages dead 404 | **Fixed** -- load via GET `/:id` |
+| Dual compose entry points | **Fixed** -- `/new` redirects to list compose tab |
+| Native OS select for type filter | **Fixed** -- themed `Select` |
+| Sidebar badges use `readBy` (F4 / D1) | **FIXED** -- dashboard badges query `unreadBy` |
+| F1 | **FIXED** |
+| F2 | **FIXED** |
+| F3 | **FIXED** |
+| F4 | **CLOSED** |
+| F6 | **FIXED** |
+| Offline create missing | **Closed** -- full form + balance prefill |
+| Verify CTA missing | **Closed** -- detail approve/reject |
+| mobileCardRenderer missing | **Closed** |
+| Receipt endpoint unused | **Closed** -- detail modal + print |
+| UTR duplicate 409 | **Closed** API-side |
+| List status filter for pending verification | **Closed** |
+| `?tenantId=` prefill ignored (PAY-P1-1) | **Closed** -- `useSearchParams` + defaultValues + invoice load |
+| Soft-delete ConfirmModal irreversible copy (RM-7) | **FIXED** -- title "Deactivate Room"; message marked inactive / hidden from new assignment |
+| isValidServiceType any key (SV-1) | **FIXED** -- isValidFloorServiceType requires isPerFloor |
+| No seed on floor create (SV-2) | **FIXED** -- seedFloorServiceStatuses |
+| Feature flags partial PUT broken | features object optional booleans; findOneAndUpdate upsert |
+| socialLinks.youtube UI-only / not in API | **FIXED** -- model + Zod + sanitizeSettingsPayload + settings FE + unit tests |
+| Transfer non-atomic / free-before-validate (P0-T1) | **FIXED** -- validate then `withTransaction` |
+| isActive free-set on PUT (P0-T2) | **FIXED** -- removed from schema + edit FE |
+| temporaryPassword discarded (P0-T3) | **FIXED** -- returned + TempCredentialsDialog |
+| Nested GET IDOR (P1-T6) | **FIXED** -- `assertAdminOrTenantOwner` |
+| Occupied beds selectable on create | **FIXED** -- OccupancyBedPicker |
+| FE rent min 1 vs API 1000 | **FIXED** -- FE min 1000 |
+| Flutter profile missing | **FIXED** -- `profile_screen.dart` + leaves/attendance/notifs present |
+| Detail missing reinstate / guardians hub | **FIXED** |
+| FE lifecycle errors generic (P1-T3) | **FIXED** -- `parseApiError` on checkout/reinstate (detail page) |
+| P1-V2 Flutter FEATURE_DISABLED UX | **FIXED** -- FeatureDisabledWidget on visitor home |
+| List filter includes `pending`, omits expected/cancelled (P0-V1) | **FIXED** -- StatusFilterSelect enums match model |
+| GET/arrive/depart no ownership (P1) | **FIXED** -- admin or owning tenant |
+| No transition guards on arrive/depart | **FIXED** -- 409 INVALID_TRANSITION |
+| Edit missing expectedArrival | **FIXED** |
+| VisitorLifecycleActions missing | **FIXED** -- shared component on detail |
+| Admin create 403 / /my shadowed | **FIXED** (prior) |
+| Flutter tenantId hard fail without heal | **FIXED** -- refreshUser + seed/me backfill path |
+| Admin PUT free-sets status (P1-V1) | **FIXED** -- `status intentionally omitted` in PUT handler |
 
-## P0 -- OPEN (found 2026-07-12 verify pass)
+<!-- AUTO:RECENTLY-CLOSED:END -->
 
-| ID | Domain | Gap | Fix |
-|----|--------|-----|-----|
-| **P0-D1** | Deploy | `render.yaml` deploys `pg-web` as `type: static` from `apps/web/out`, but `next.config.ts` has no `output: 'export'` and `[id]` routes are `ƒ` server-rendered -> `apps/web/out` is never produced. Static deploy serves nothing. | Decision needed. **Option B (recommended):** deploy web as `type: web` + `bun run start` (matches `.next`, zero code change). **Option A:** add `output: 'export'` + `generateStaticParams` on all dynamic routes. Not auto-applied (cost/topology decision). |
 
-Verified: clean `bun run --cwd apps/web build` produces `.next/` only; `apps/web/out` absent. Matches "Broken Static Export Paths" anti-pattern in `deployment-verification.md`.
 
----
+## Open P1 -- ranked fix queue for later agents
 
-## P1 -- Integrity, hubs, portal MVP
+> **Rule:** No row in this section may contain `FIXED`/`CLOSED`/`DONE`. Generated from feature MD Open gaps.
+> Source of open rows: `scripts/audit/build-live-gap-tables.py`
 
-| ID | Domain | Gap | Agent fix |
-|----|--------|-----|-----------|
-| **P1-T4** | Tenants FE | Occupied beds selectable on create (label only) | `OccupancyBedPicker` -- disable occupied |
-| **P1-T5** | Tenants FE | Rent min 1 on form vs API min 1000 | Align zod |
-| **P1-T6** | Tenants API | Nested GET payments/complaints/invoices/activity **no ownership** (any JWT) | adminOnly or self-or-admin |
-| **P1-T7** | Types | `ITenantCreate` still userId-shaped; real POST creates User inline | Rewrite `@pg/types` tenant create |
-| **P1-V2** | Visitors API | arrive/depart **any authenticated** role; no transition guards | assertVisitorAccess + state machine |
-| **P1-V3** | Visitors FE | Edit omits `expectedArrival`; detail no Edit/Cancel CTA | Form field + lifecycle bar |
-| **P1-V4** | Visitors product | Approve is "re-open cancelled" only; no pending state | Docs + UI labels; or add real pending |
-| **P1-M1** | Meals admin | `GET meals/feedback/summary` **unused** | `FeedbackSummaryStrip` on list |
-| **P1-M2** | Meals/Menus | Meals flag-gated; Menus always in nav | Pair flags or document split |
-| **P1-M3** | Meals PUT | mealType change can unique-index 11000 | Catch 409 or lock mealType |
-| **P1-M4** | Types | `IMealFeedbackSummary` wrong shape; status missing on IMealFeedback | Align packages/types |
-| **P1-P1** | Payments list | No `mobileCardRenderer` | Add mobile cards (SaaS list parity) |
-| **P1-P2** | Payments | receipt/qr-code/summary APIs unused | Wire or drop |
-| **P1-N1** | Notifications | Nonstandard list (not DataTable); dual compose | History DataTable + one compose entry |
-| **P1-E1** | Export | Client CSV only, 4 entities | Server export or expand |
-| **P1-A1** | Assets | low-stock endpoint unused | LowStockBanner on list/dashboard |
-| **P1-F2** | Flutter tenant | No profile/KYC; invoices list-only (no PDF); no leaves; no attendance check-in; no notifications inbox | Portal MVP screens |
-| **P1-F3** | Flutter meals | Categories hardcoded `['taste']`; no feedback history | Category chips + GET feedback/my |
-| **P1-G1** | Guardians | Detail residual phantoms if any remain | Re-verify address/notes removed |
-| **P1-L1** | Laundry | FE items min 0 vs API min 1 edge | Align min |
+<!-- AUTO:OPEN-P1:START -->
 
----
+| ID | Domain | Gap | Paths |
+|----|--------|-----|-------|
+| -- | -- | (no open P1 rows in feature MDs) | -- |
+<!-- AUTO:OPEN-P1:END -->
 
-## P2 -- Polish / unused / design
 
-| ID | Gap |
-|----|-----|
-| P2-1 | Services `/summary` unused |
-| P2-2 | Attendance `/today` unused (no TodayBoard) |
-| P2-3 | Rooms `/available` unused (client filters beds) |
-| P2-4 | Menus "Draft" label for past dates misleading (use Past/Active) |
-| P2-5 | Menus no category field in forms; no WeekMenuPlanner |
-| P2-6 | Meals detail missing Edit CTA; edit stars not interactive |
-| P2-7 | Shared ConfirmModal not used for all modals (tenant checkout ad-hoc) |
-| P2-8 | Audit log no entity deep-link drawer |
-| P2-9 | CommandPalette not fully feature-flag aware for all modules |
-| P2-10 | Flutter hardcoded `Colors.black54` / fixed reds -- not tokenized |
-| P2-11 | SSE `meal_feedback_submitted` typed but never emitted |
-| P2-12 | Zero meals/menus/visitors HTTP route tests |
-| P2-13 | Settings monolith not FormPage-shaped |
-| P2-14 | Forgot-password stub on login (if still stub -- re-verify) |
 
----
+## Residual P2 (non-blocking sample -- not exhaustive)
 
-## Module health matrix (admin) -- 2026-07-12
+| Item | Notes |
+|------|-------|
+| ATT/Leaves page-local name search | **FIXED 2026-07-16** -- server `search` on both list APIs (User name regex -> Tenant IDs) |
+| ELEC-P1-2 API hard reconcile | FE warns at >0.5 and hard-blocks large drift; optional server-side check residual |
+| Room photos | Model/API only; no upload UI |
+| Unused APIs | `rooms/available`, `services/summary`, payments summary/qr/pending-verification dual-verify, invoice payment-status |
+| Free-text Mongo IDs | Notices **FIXED** ResourceSelect; notification compose uses pickers |
+| Types lag | laundry, meals, roomAmenities on IRoom, ITenantCreate temp password |
+| Soft-delete modal copy | **Mostly FIXED** (rooms/guardians/assets Retire/Deactivate); residual polish elsewhere |
+| Seed key drift | ServiceStatus seed keys vs AppConfig defaults |
+| Electricity billImage URL-only | No Cloudinary |
 
-| Module | List | Detail | New | Edit | Special | Grade |
-|--------|:----:|:------:|:---:|:----:|:-------:|:-----:|
-| Tenants | OK | Hub OK | Creds P0 | isActive/transfer P0 | Checkout/reinstate OK | **B** |
-| Rooms | OK | OK | OK | OK | available unused | **A-** |
-| Floors | OK | OK | OK | OK | -- | **A-** |
-| Payments | No mCR | Verify OK | Offline OK | OK | queue/summary unused | **B** |
-| Invoices | OK | PDF OK | Generate OK | OK | Bulk OK | **A-** |
-| Electricity | OK | OK | OK | OK | Finalize/distribute | **A** |
-| Complaints | Kanban OK | OK | OK | OK | Status drag | **A** |
-| Services | OK | OK | OK | OK | summary unused | **A-** |
-| Assets | OK | OK | OK | OK | low-stock unused | **A-** |
-| Notices | OK | OK | OK | OK | flag | **A-** |
-| Notifications | Custom | OK | Dual compose | OK | -- | **B-** |
-| Enquiries | OK | Convert OK | OK | OK | status | **A-** |
-| Visitors | Filter FAIL | Lifecycle OK | OK | OK | approve/arrive/depart | **B-** |
-| Guardians | OK | OK | Temp pwd OK | OK | flag | **A-** |
-| Attendance | OK | OK | Manual OK | OK | today unused | **A-** |
-| Leaves | OK | Approve OK | OK | Actions | flag shared | **A-** |
-| Laundry | OK | OK | OK | OK | flag | **A-** |
-| Meals | OK | OK | OK | OK | summary unused | **A-** |
-| Menus | OK | OK | OK | OK | no week planner | **A-** |
-| Settings | Tabs | -- | -- | OK | flags | **B** |
-| Audit Logs | OK | No detail | N/A | N/A | -- | **A-** |
-| Dashboard | Rich | -- | -- | -- | -- | **A** |
-| Export | Client CSV | -- | -- | -- | No API | **B-** |
-
----
-
-## Flutter portal matrix
-
-| Area | Status | Notes |
-|------|--------|-------|
-| Auth tenant/guardian; reject admin | **PASS** | `app_router.dart` |
-| Home snippets | **PARTIAL** | invoices + complaints only |
-| Invoices list | **PARTIAL** | no detail/PDF |
-| Payments + UTR | **PASS** basic | no QR/UPI display |
-| Visitors list/register/arrive/depart | **PARTIAL** | tenantId gate P0 |
-| Complaints list+create | **PASS** | needs room from profile |
-| Meals menu + feedback | **PARTIAL** | hardcoded category |
-| Laundry book | **PASS** if tenantId | |
-| Notices list | **PARTIAL** | no detail |
-| Profile / KYC / password | **FAIL** | missing |
-| Leaves / attendance check-in | **FAIL** | API exists, no UI |
-| Notifications inbox | **FAIL** | missing |
-| Guardian ward + attendance | **PASS** thin | no finance |
-| Design system | **PARTIAL** | Material defaults, hardcodes |
+**Not residual:** Settings `socialLinks.youtube` -- **FIXED** (model + Zod + `sanitizeSettingsPayload` + settings FE + tests).
 
 ---
 
-## Lifecycle matrices
+## Module health matrix (admin) -- 2026-07-16 (reconciled)
 
-### Tenant
+Grades are **not more optimistic** than open gaps in each feature MD.
 
-| Step | Status |
+| Module | List | Detail | New | Edit | Grade | Open focus |
+|--------|:----:|:------:|:---:|:----:|:-----:|------------|
+| Tenants | OK | Hub OK | Creds OK | Transfer OK | **A** | P1 bed/cascade closed; P2 polish |
+| Rooms | OK | OK | OK amenities | OK amenities | **A-** | photos; polish |
+| Floors | OK | Grid OK | Seed services | OK | **A-** | residual polish |
+| Services | OK | OK | isPerFloor only | PUT /full | **A-** | residual polish |
+| Settings | Tabs OK | -- | -- | Sanitize OK | **A-** | types; amenity migration |
+| Payments | OK + mCR | Verify OK | Prefill OK | OK | **A-** | unused APIs (P2) |
+| Invoices | hide paid del | PDF OK | Generate OK | Paid lock inputs | **A** | -- |
+| Electricity | month filter | Finalize/dist | reconcile warn | lock OK | **A-** | ELEC-P1-1 FIXED; residual P2 |
+| Complaints | Kanban OK | photos | photo URLs | OK | **A** | photos live |
+| Assets | retire UX | OK | OK | date clear | **A** | -- |
+| Enquiries | preferredSharing | convert CTA | OK | OK | **A** | convert marks converted |
+| Visitors | Filters OK | Lifecycle OK | OK | no free status | **A-** | residual P2 polish |
+| Guardians | OK | OK | Temp pwd | OK | **A** | cascade Users FIXED |
+| Attendance | Board OK | OK | OK | OK | **A-** | flag default deferred |
+| Leaves | server search | Approve OK | OK | cancel | **A** | cancelled status + filter |
+| Laundry | OK | OK | items min | OK | **A-** | types aligned; 409 UX |
+| Meals | Summary OK | Edit CTA | OK | OK | **A** | DUPLICATE_FEEDBACK 409 |
+| Menus | Week planner | OK | category | OK | **A** | always-on by design |
+| Notices | OK | OK | ResourceSelect targets | targets OK | **A-** | residual P2 polish |
+| Notifications | Compose OK | OK | Dual fixed | OK | **A-** | F1 history + F2 isRead + F3 tenants-only all |
+| Dashboard | Rich | -- | -- | -- | **A** | badges unreadBy + badges-update emit FIXED |
+| Export | Multipage CSV | -- | -- | -- | **B** | client-only by design |
+| Audit Logs | actions+dates | N/A | N/A | N/A | **A-** | A1 Queue E writers expanded |
+
+---
+
+## Flutter portal matrix (brief)
+
+| Area | Status |
 |------|--------|
-| Create (User+Tenant+bed) | PARTIAL -- works; no credentials returned |
-| View hub | PASS -- guardians, payments, invoices, complaints, activity, docs |
-| Edit contact/rent | PASS |
-| Transfer room/bed | FAIL -- non-atomic |
-| isActive edit toggle | FAIL -- bypasses lifecycle |
-| Checkout | PASS API; PARTIAL FE error codes |
-| Reinstate | PASS |
-| Delete cascade | PASS core; P2 notifications orphans |
-| Portal login after create | FAIL without seed password path |
-
-### Visitor
-
-| Step | Status |
-|------|--------|
-| Admin register | PASS |
-| Tenant register | PARTIAL -- tenantId gate |
-| My list | PASS (`/my` order OK) |
-| Arrive / depart | PASS UI; weak API authz |
-| Real approve workflow | N/A -- create is already `expected` |
-| List filter | FAIL -- pending |
-
-### Meals / Menus
-
-| Step | Status |
-|------|--------|
-| Admin meal CRUD | PASS contracts |
-| Tenant feedback | PASS happy path |
-| Summary KPIs | API only |
-| Menu CRUD | PASS |
-| Week planner | FAIL missing |
-| Flutter history | FAIL missing |
+| Product split | **PASS** -- no resident UI in Next.js |
+| Auth tenant/guardian; reject admin | **PASS** |
+| Screens present (profile, leaves, attendance, notifications, invoice detail, meals categories) | **PASS** (prior "missing MVP screens" claims **stale**) |
+| Depth | **B+** overall -- see [features/FLUTTER_PORTAL.md](./features/FLUTTER_PORTAL.md) |
+| Half-baked residual | P2 polish only; P1-AUTH-PW / flags / leave cancel / unread **FIXED** |
 
 ---
 
-## Custom SaaS components backlog (all built as of 2026-07-12)
+## Lifecycle (code + UI)
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| **TempCredentialsDialog** | `components/ui/TempCredentialsDialog.tsx` | **DONE** |
-| **OccupancyBedPicker** | `components/ui/OccupancyBedPicker.tsx` | **DONE** |
-| **TenantStatusControl** | `components/ui/TenantStatusControl.tsx` | **DONE** |
-| **DuesCheckoutDialog** | not yet built | PENDING |
-| **VisitorLifecycleActions** | `components/ui/VisitorLifecycleActions.tsx` | **DONE** |
-| **StatusFilterSelect** | `components/ui/StatusFilterSelect.tsx` | **DONE** |
-| **FeedbackSummaryStrip** | `components/ui/FeedbackSummaryStrip.tsx` | **DONE** |
-| **StarRating** | `components/ui/StarRating.tsx` | **DONE** |
-| **WeekMenuPlanner** | `components/ui/WeekMenuPlanner.tsx` | **DONE** |
-| **MenuMealItemsEditor** | not yet built | PENDING |
-| **CategoryChipSelect** | `components/ui/CategoryChipSelect.tsx` | **DONE** |
-| **PendingVerificationQueue** | not yet built | PENDING |
-| **LowStockBanner** | `components/ui/LowStockBanner.tsx` | **DONE** |
-| **TodayAttendanceBoard** | `components/ui/TodayAttendanceBoard.tsx` | **DONE** |
-| **NotificationHistoryTable** | Notifications refactored to DataTable | **DONE** (refactored) |
-| **PortalProfileHeader** | `mobile/` profile screen | **DONE** |
+| Flow | Status |
+|------|--------|
+| Tenant create + temp password | **PASS** |
+| Transfer atomic + 409 | **PASS** |
+| Checkout frees bed / reinstate | **PASS** (`parseApiError` on FE) |
+| Invoice generate + offline pay → paid | **PASS** |
+| Invoice list delete paid | **PASS** -- CTA hidden when paid |
+| Payment new from tenant deep-link | **PASS** -- tenantId prefill |
+| Enquiry convert to tenant | **PASS** -- marks converted |
+| Electricity finalize/distribute | **PASS** with share math residual |
+| Visitor expected → arrive → depart | **PASS** (PUT status free-set closed) |
+| Leave approve/reject with body | **PASS** |
+| Floor create → services grid populated | **PASS** -- ServiceStatus seed on floor create |
+| Notice floor/room → tenant feed | **PASS** -- room/floor resolved from tenant doc |
+| Dashboard badges unread count | **PASS** -- uses `unreadBy`; SSE `badges-update` emitted |
 
 ---
 
-## Implementation completed (all 5 batches done, 2026-07-12)
+## Ordered fix queues for later sub-agents
 
-| Batch | Focus | Status |
-|-------|-------|--------|
-| **Batch A** | P0 integrity + credentials (T1/T2/T3/V1/F1) | **ALL DONE** |
-| **Batch B** | SaaS shared components (11 built) | **ALL DONE** |
-| **Batch C** | Admin polish (payments/notifications/meals/menus/assets/attendance) | **ALL DONE** |
-| **Batch D** | Flutter portal MVP (profile/invoices/meals/leaves/attendance/notifications) | **ALL DONE** |
-| **Batch E** | Authz + tests (visitor ownership/transitions, nested GETs, vitest) | **ALL DONE** |
+> Derived from feature MD Open gaps after normalize (2026-07-16). **Open P1 master table is AUTO-generated** -- do not hand-edit FIXED into it.
 
-Remaining P1/P2 work and unticked items above are tracked in the P1/P2 sections. See [AGENT_PLAYBOOK.md](./AGENT_PLAYBOOK.md) for the full playbook (all batches marked DONE with checkboxes).
+### Queue A -- Domain residuals (P2)
 
-## New test files (all pass with mongodb-memory-server replica set)
+1. ST-2/ST-3 amenity isPerFloor flip/delete migration
+2. Seed key polish (SV-6 / FL-6 if still open as P2)
 
-| Test file | Tests | Status |
-|-----------|-------|--------|
-| `tenant-transfer.test.ts` | 4 (transfer atomicity) | **ALL PASS** |
-| `visitor-lifecycle.test.ts` | 5 (state machine) | **ALL PASS** |
-| `meals-upsert.test.ts` | 6 (unique index) | **ALL PASS** |
-| `feature-flags.test.ts` | 4 (403 on disabled) | **ALL PASS** |
+### Queue B -- Integrity -- **DONE**
 
-Total: **48/48 tests pass** (2026-07-12 verify pass fixed two beds.test.ts *test* bugs: Path 4 double-seed unique-index collision + Path 3 missing bed-free cascade).  
-Infrastructure: `mongodb-memory-server` with `MongoMemoryReplSet` for transaction support. No external MongoDB required.
+P1-T1, P1-T2/G1, P1-V1, CMP-authz, N1/N2, SV-1, FL-1 -- closed in source.
+
+### Queue C -- FE P2 polish
+
+1. INV-P2-*, PAY-P2-*, RM-*, FL-2.., form polish
+2. Assets/low-stock/service-due P2
+
+### Queue D -- Flutter residual -- **DONE** (P1)
+
+P1-AUTH-PW, flag prefetch, unread badge, leave cancel closed. Residual F5+ notification polish is P2.
+
+### Queue E -- True open product work
+
+1. ~~ELEC-P1-1~~ **FIXED** earlier
+2. FLAG-menus always-on -- **documented product decision** (not open P1)
+3. Notification F5+ / seed attendance default -- P2 / deferred product
+
+---
+
+
+## Closed / do-not-refile (selection)
+
+| Old claim | Truth |
+|-----------|-------|
+| Soft-delete room leaves Floor.totalRooms stale | **FIXED** -- rooms DELETE recomputes |
+| Room forms show per-floor services as room amenities | **FALSE** -- filter `!isPerFloor` |
+| Settings strips amenityDefinitions | **FIXED** |
+| Settings youtube not in API | **FIXED** -- full stack persists |
+| Only laundry feature-flagged | **FALSE** -- six flags gated on API |
+| CommandPalette ignores flags | **FIXED** -- same map as Sidebar |
+| Invoice list delete always shown for paid | **FIXED** -- gated |
+| Payments `?tenantId=` ignored | **FIXED** -- prefill |
+| Dashboard badges `readBy` | **FIXED** -- `unreadBy` |
+| Enquiry convert dead pipeline | **FIXED** -- enquiryId + converted |
+| Tenant FE lifecycle generic errors only | **FIXED** -- parseApiError |
+| Assets hard-delete copy / date clear | **FIXED** -- Retire modal + empty-string dates |
+| Notices free-text targetIds | **FIXED** -- ResourceSelect |
+| Notification badges F4 readBy | **FIXED** with D1 unreadBy |
+| Flutter missing profile/leaves/attendance/notifications | **FALSE** -- screens exist |
+| Build tenant portal in Next.js | **FORBIDDEN** -- Flutter only |
+| Missing CRUD pages for core modules | **FALSE** -- full admin matrix present |
+| P0 transfer / isActive / temp password / visitor filter | **FIXED** |
 
 ---
 
@@ -267,11 +298,20 @@ Infrastructure: `mongodb-memory-server` with `MongoMemoryReplSet` for transactio
 
 | File | Role |
 |------|------|
-| [README.md](./README.md) | Executive audit report |
-| [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) | This ranked backlog |
-| [AGENT_PLAYBOOK.md](./AGENT_PLAYBOOK.md) | Step-by-step remediation |
-| [01-design-system-and-components.md](./01-design-system-and-components.md) | Tokens + SaaS component rules |
-| [features/*.md](./features/) | Per-module depth (refreshed for tenants/visitors/meals/menus) |
-| [interconnections/](./interconnections/) | Cross-module integrity |
-| [../AGENT_CONTEXT.md](../AGENT_CONTEXT.md) | Permanent product split |
+| [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) | This ranked backlog (authoritative for open gaps) |
+| [README.md](./README.md) | Executive audit summary |
+| [features/*.md](./features/) | Per-module field/form/lifecycle audits (Last verified 2026-07-16) |
+| [interconnections/*.md](./interconnections/) | Cross-module flows |
+| [fe-batch1-audit.md](./fe-batch1-audit.md) etc. | **Superseded** point-in-time notes -- use feature MDs + this file |
+| [../AGENT_CONTEXT.md](../AGENT_CONTEXT.md) | Product split |
 | [../PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) | CORS / auth / clients |
+
+---
+
+## How later fix agents should work
+
+1. Pick a queue item and open the linked **feature MD** (field matrix + acceptance checklist).
+2. Re-read the cited source files before editing (code may have moved).
+3. Fix API then FE (or Flutter) in that order when contracts change.
+4. Mark gap **FIXED** in the feature MD + this inventory with date and proof path.
+5. Do not re-open closed P0s or reconcile-closed P1s without a re-broken source citation.

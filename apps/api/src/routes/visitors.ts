@@ -8,6 +8,7 @@ import { Visitor } from '../models/visitor.js';
 import { Tenant } from '../models/tenant.js';
 import mongoose from 'mongoose';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const visitors = new Hono();
 visitors.use('*', requireFeature('visitorManagementEnabled'));
@@ -24,6 +25,7 @@ const createVisitorSchema = z.strictObject({
   expectedArrival: z.string().min(1, 'Expected arrival is required'),
 });
 
+// P1-V1: status transitions only via /arrive, /depart, /approve, /cancel — not free PUT
 const updateVisitorSchema = z.strictObject({
   visitorName: z.string().min(2).max(100).optional(),
   visitorPhone: z
@@ -32,7 +34,6 @@ const updateVisitorSchema = z.strictObject({
     .optional(),
   purpose: z.string().min(1).max(200).optional(),
   expectedArrival: z.string().optional(),
-  status: z.enum(['expected', 'arrived', 'departed', 'cancelled']).optional(),
 });
 
 /** Normalize lean visitor for FE (name aliases + keep raw fields). */
@@ -162,6 +163,31 @@ visitors.get('/:id', authGuard, async (c) => {
     .lean();
 
   if (!visitor) return notFound(c, 'Visitor');
+
+  // Ownership: admin any; tenant only own visitors
+  const user = c.get('user');
+  const role = user?.role;
+  if (role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    if (!tenant || String(tenant._id) !== String(visitor.tenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only view your own visitors.' },
+        },
+        403,
+      );
+    }
+  } else if (role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can view visitors.' },
+      },
+      403,
+    );
+  }
+
   return c.json({
     success: true,
     data: mapVisitor(visitor as unknown as Record<string, unknown>),
@@ -201,6 +227,15 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
   ).lean();
 
   if (!updated) return notFound(c, 'Visitor');
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'visitor_approve',
+    resource: 'visitor',
+    resourceId: id,
+    details: { previousStatus: 'cancelled', status: 'expected' },
+  });
+
   return c.json({
     success: true,
     data: mapVisitor(updated as unknown as Record<string, unknown>),
@@ -263,6 +298,14 @@ visitors.post('/:id/arrive', authGuard, async (c) => {
     { returnDocument: 'after' },
   ).lean();
 
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'visitor',
+    resourceId: id,
+    details: { transition: 'arrive', previousStatus: 'expected', status: 'arrived' },
+  });
+
   return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
 });
 
@@ -322,6 +365,79 @@ visitors.post('/:id/depart', authGuard, async (c) => {
     { returnDocument: 'after' },
   ).lean();
 
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'visitor',
+    resourceId: id,
+    details: { transition: 'depart', previousStatus: 'arrived', status: 'departed' },
+  });
+
+  return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
+});
+
+// ── POST /visitors/:id/cancel ───────────────────────────
+// FSM: expected -> cancelled (only). Re-open via /approve.
+visitors.post('/:id/cancel', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid visitor ID');
+
+  const user = c.get('user');
+  const role = user?.role;
+
+  const visitor = await Visitor.findById(id).lean();
+  if (!visitor) return notFound(c, 'Visitor');
+
+  if (role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    if (!tenant || String(tenant._id) !== String(visitor.tenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only manage your own visitors.' },
+        },
+        403,
+      );
+    }
+  } else if (role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can manage visitors.' },
+      },
+      403,
+    );
+  }
+
+  if (visitor.status !== 'expected') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: `Cannot cancel a visitor with status '${visitor.status}'. Only expected visitors can be cancelled.`,
+        },
+      },
+      409,
+    );
+  }
+
+  const updated = await Visitor.findByIdAndUpdate(
+    id,
+    { status: 'cancelled' },
+    { returnDocument: 'after' },
+  ).lean();
+
+  if (!updated) return notFound(c, 'Visitor');
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'visitor',
+    resourceId: id,
+    details: { transition: 'cancel', previousStatus: 'expected', status: 'cancelled' },
+  });
+
   return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
 });
 
@@ -338,7 +454,7 @@ visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchem
   if (body.purpose !== undefined) updateData.purpose = body.purpose;
   if (body.expectedArrival !== undefined)
     updateData.expectedArrival = new Date(body.expectedArrival);
-  if (body.status !== undefined) updateData.status = body.status;
+  // status intentionally omitted — use arrive/depart/approve/cancel endpoints
 
   const visitor = await Visitor.findByIdAndUpdate(id, updateData, {
     returnDocument: 'after',

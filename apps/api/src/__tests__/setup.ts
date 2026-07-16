@@ -8,26 +8,44 @@
  */
 import mongoose from 'mongoose';
 import { beforeAll, afterAll, afterEach } from 'vitest';
-import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import { MongoMemoryReplSet, MongoMemoryServer } from 'mongodb-memory-server';
 
-let memoryServer: MongoMemoryReplSet | null = null;
+let memoryReplSet: MongoMemoryReplSet | null = null;
+let memoryServer: MongoMemoryServer | null = null;
 
 beforeAll(async () => {
   let uri = process.env.MONGODB_URI_TEST;
 
   if (!uri) {
-    // Replica set is required for session.withTransaction() support
-    memoryServer = await MongoMemoryReplSet.create({
-      replSet: { count: 1, storageEngine: 'wiredTiger' },
-    });
-    uri = memoryServer.getUri();
+    // MONGO_MEMORY_SIMPLE=1: single-node (faster; no multi-doc transactions).
+    // Default: replica set for session.withTransaction(); fall back to single-node if ReplSet fails.
+    const simple = process.env.MONGO_MEMORY_SIMPLE === '1';
+    if (simple) {
+      memoryServer = await MongoMemoryServer.create({
+        instance: { launchTimeout: 90_000 },
+      });
+      uri = memoryServer.getUri();
+    } else {
+      try {
+        memoryReplSet = await MongoMemoryReplSet.create({
+          replSet: { count: 1, storageEngine: 'wiredTiger' },
+          instanceOpts: [{ launchTimeout: 90_000 }],
+        });
+        uri = memoryReplSet.getUri();
+      } catch {
+        memoryServer = await MongoMemoryServer.create({
+          instance: { launchTimeout: 90_000 },
+        });
+        uri = memoryServer.getUri();
+      }
+    }
   }
 
   await mongoose.connect(uri, {
     maxPoolSize: 5,
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 30_000,
   });
-});
+}, 180_000);
 
 afterEach(async () => {
   const collections = mongoose.connection.collections;
@@ -41,6 +59,10 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.disconnect();
+  if (memoryReplSet) {
+    await memoryReplSet.stop();
+    memoryReplSet = null;
+  }
   if (memoryServer) {
     await memoryServer.stop();
     memoryServer = null;

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
+import { complaintStatusPatch, type ComplaintStatus } from '../lib/complaint-status.js';
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
 import { Tenant } from '../models/tenant.js';
@@ -11,6 +12,11 @@ import { Tenant } from '../models/tenant.js';
 const complaints = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
+const photoUrlSchema = z
+  .string()
+  .url('Photo must be a valid URL')
+  .max(2048, 'Photo URL too long');
+
 const createComplaintSchema = z.strictObject({
   /** Required when an admin files on behalf of a tenant. Ignored for tenant role. */
   tenantId: z.string().min(1).optional(),
@@ -25,6 +31,8 @@ const createComplaintSchema = z.strictObject({
     .min(10, 'Description must be at least 10 characters')
     .max(2000, 'Description cannot exceed 2000 characters'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  /** Optional evidence image URLs (Cloudinary or external HTTPS). Max 5. */
+  photos: z.array(photoUrlSchema).max(5, 'At most 5 photos').optional().default([]),
 });
 
 /** Map lean complaint so FE can use tenant.user / tenant.room consistently. */
@@ -81,6 +89,8 @@ const updateComplaintSchema = z.strictObject({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
   adminNotes: z.string().max(2000).optional(),
+  /** Replace full photo URL list (max 5). */
+  photos: z.array(photoUrlSchema).max(5, 'At most 5 photos').optional(),
 });
 
 // ── GET /complaints/stats ───────────────────────────────
@@ -190,6 +200,7 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
     title: body.title,
     description: body.description,
     priority: body.priority,
+    photos: body.photos ?? [],
   });
 
   return c.json({ success: true, data: complaint }, 201);
@@ -259,6 +270,8 @@ complaints.get('/:id', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid complaint ID');
 
+  const authUser = c.get('user');
+
   const complaint = await Complaint.findById(id)
     .populate([
       { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
@@ -267,6 +280,24 @@ complaints.get('/:id', authGuard, async (c) => {
     ])
     .lean();
   if (!complaint) return notFound(c, 'Complaint');
+
+  // CMP-authz: tenants may only read their own complaints
+  if (authUser.role === 'tenant') {
+    const tenant = await Tenant.findOne({
+      userId: authUser.sub,
+      isActive: true,
+    } as Record<string, unknown>)
+      .select('_id')
+      .lean();
+    const complaintTenantId = String(
+      (complaint as { tenantId?: unknown }).tenantId ??
+        (complaint as { tenant?: { _id?: unknown } }).tenant?._id ??
+        '',
+    );
+    if (!tenant || complaintTenantId !== String(tenant._id)) {
+      return notFound(c, 'Complaint');
+    }
+  }
 
   return c.json({
     success: true,
@@ -287,15 +318,11 @@ complaints.put(
     const body = c.req.valid('json');
 
     const updateData: Record<string, unknown> = {
-      status: body.status,
+      ...complaintStatusPatch(body.status as ComplaintStatus),
     };
 
     if (body.adminNotes !== undefined) {
       updateData.adminNotes = body.adminNotes;
-    }
-
-    if (body.status === 'resolved') {
-      updateData.resolvedAt = new Date();
     }
 
     const complaint = await Complaint.findByIdAndUpdate(id, updateData, {
@@ -304,6 +331,54 @@ complaints.put(
     }).lean();
 
     if (!complaint) return notFound(c, 'Complaint');
+
+    return c.json({ success: true, data: complaint });
+  },
+);
+
+// ── POST /complaints/:id/photos — append photo URLs (tenant owner or admin)
+// Body: { photos: string[] } HTTPS URLs (e.g. after client Cloudinary unsigned upload,
+// or admin paste). Keeps contract honest without requiring multipart when CDN is unset.
+const appendPhotosSchema = z.strictObject({
+  photos: z.array(photoUrlSchema).min(1).max(5),
+});
+
+complaints.post(
+  '/:id/photos',
+  authGuard,
+  zValidator('json', appendPhotosSchema),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid complaint ID');
+
+    const authUser = c.get('user');
+    const body = c.req.valid('json');
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) return notFound(c, 'Complaint');
+
+    if (authUser.role === 'tenant') {
+      const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
+      if (!tenant || String((tenant as { _id: unknown })._id) !== String(complaint.tenantId)) {
+        return c.json(
+          {
+            success: false,
+            error: { code: 'FORBIDDEN', message: 'You can only attach photos to your complaints.' },
+          },
+          403,
+        );
+      }
+    } else if (authUser.role !== 'admin') {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Not allowed.' } },
+        403,
+      );
+    }
+
+    const existing = Array.isArray(complaint.photos) ? complaint.photos : [];
+    const merged = [...existing, ...body.photos].slice(0, 5);
+    complaint.photos = merged;
+    await complaint.save();
 
     return c.json({ success: true, data: complaint });
   },
@@ -322,8 +397,8 @@ complaints.put(
     const body = c.req.valid('json');
     const updateData: Record<string, unknown> = { ...body };
 
-    if (body.status === 'resolved') {
-      updateData.resolvedAt = new Date();
+    if (body.status !== undefined) {
+      Object.assign(updateData, complaintStatusPatch(body.status as ComplaintStatus));
     }
 
     const complaint = await Complaint.findByIdAndUpdate(id, updateData, {

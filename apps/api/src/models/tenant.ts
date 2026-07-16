@@ -96,7 +96,15 @@ tenantSchema.index({ roomId: 1 });
 tenantSchema.index({ bedId: 1 });
 tenantSchema.index({ isActive: 1 });
 tenantSchema.index({ moveInDate: -1 });
-tenantSchema.index({ roomId: 1, bedId: 1, isActive: 1 });
+// P1-T1: at most one active tenant per room+bed (historical inactive rows may share)
+tenantSchema.index(
+  { roomId: 1, bedId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isActive: true },
+    name: 'unique_active_room_bed',
+  },
+);
 
 // ── Virtuals ────────────────────────────────────────────
 tenantSchema.virtual('user', {

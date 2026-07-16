@@ -85,10 +85,19 @@ export type {
 } from './service';
 
 // ── Meal ───────────────────────────────────────────────
-export type { MealType, IMealFeedback, IMealFeedbackCreate, IMealFeedbackSummary } from './meal';
+export type {
+  MealType,
+  MealFeedbackStatus,
+  MealFeedbackCategory,
+  IMealFeedback,
+  IMealFeedbackCreate,
+  IAdminMealFeedbackCreate,
+  IMealFeedbackSummaryRow,
+  IMealFeedbackSummary,
+} from './meal';
 
 // ── Menu ───────────────────────────────────────────────
-export type { IMenuItem, IDailyMenu } from './menu';
+export type { IMenuItem, IDailyMenu, IDailyMenuCreate } from './menu';
 
 // ── Notification ───────────────────────────────────────
 export type { INotificationType, INotification, INotificationCreate } from './notification';
@@ -135,11 +144,10 @@ export type { IVisitor, IVisitorRegister } from './visitor';
 
 // ── Laundry ────────────────────────────────────────────
 export type {
-  TimeSlot,
-  MachineNumber,
   LaundrySlotStatus,
   ILaundrySlot,
-  ILaundryBooking,
+  ILaundrySlotCreate,
+  ILaundrySlotUpdate,
 } from './laundry';
 
 // ── Notice ─────────────────────────────────────────────

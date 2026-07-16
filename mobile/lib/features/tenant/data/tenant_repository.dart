@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
 
 class TenantRepository {
   TenantRepository(this._api);
@@ -53,6 +54,37 @@ class TenantRepository {
     );
   }
 
+  /// UPI QR payload for an invoice (`GET payments/qr-code?invoiceId=`).
+  Future<Map<String, dynamic>?> paymentQrCode(String invoiceId) async {
+    try {
+      final data = await _api.getJson(
+        'payments/qr-code',
+        query: {'invoiceId': invoiceId},
+        parse: (d) => d,
+      );
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Raw PDF bytes for an invoice (`GET invoices/:id/pdf`).
+  Future<List<int>> invoicePdfBytes(String invoiceId) {
+    return _api.getBytes('invoices/$invoiceId/pdf');
+  }
+
+  Future<Map<String, dynamic>?> complaintDetail(String complaintId) async {
+    try {
+      final data =
+          await _api.getJson('complaints/$complaintId', parse: (d) => d);
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> myVisitors() async {
     final data = await _api.getJson('visitors/my', parse: (d) => d);
     return _asMapList(data);
@@ -101,13 +133,15 @@ class TenantRepository {
     );
   }
 
+  /// Today's menu. Returns null when none is published (404). Other errors rethrow.
   Future<Map<String, dynamic>?> todayMenu() async {
     try {
       final data = await _api.getJson('menus/today', parse: (d) => d);
       if (data is Map) return Map<String, dynamic>.from(data);
       return null;
-    } catch (_) {
-      return null;
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
     }
   }
 
@@ -187,6 +221,15 @@ class TenantRepository {
     );
   }
 
+  /// Withdraw a pending leave (`POST leaves/:id/cancel`).
+  Future<void> cancelLeave(String leaveId) async {
+    await _api.postJson(
+      'leaves/$leaveId/cancel',
+      body: {},
+      parse: (_) => null,
+    );
+  }
+
   // ── Attendance ──────────────────────────────────────────
   Future<List<Map<String, dynamic>>> myAttendance() async {
     final data = await _api.getJson('attendance/my', parse: (d) => d);
@@ -214,9 +257,23 @@ class TenantRepository {
   }
 
   // ── Notifications ───────────────────────────────────────
-  Future<List<Map<String, dynamic>>> myNotifications() async {
+  /// Unread count from `GET notifications/unread-count`.
+  Future<int> unreadNotificationCount() async {
+    final data = await _api.getJson('notifications/unread-count', parse: (d) => d);
+    if (data is Map) {
+      final count = data['count'];
+      if (count is int) return count;
+      if (count is num) return count.toInt();
+    }
+    return 0;
+  }
+
+  /// Portal history (includes read). API derives [isRead] from unreadBy.
+  Future<List<Map<String, dynamic>>> myNotifications({String? userId}) async {
     final data = await _api.getJson('notifications', parse: (d) => d);
-    return _asMapList(data);
+    return _asMapList(data)
+        .map((n) => _withNotificationReadState(n, userId))
+        .toList();
   }
 
   Future<void> markNotificationRead(String notificationId) async {
@@ -233,6 +290,28 @@ class TenantRepository {
       body: {},
       parse: (_) => null,
     );
+  }
+
+  /// F2: derive isRead from unreadBy membership when API omits the field.
+  Map<String, dynamic> _withNotificationReadState(
+    Map<String, dynamic> n,
+    String? userId,
+  ) {
+    final out = Map<String, dynamic>.from(n);
+    if (out['isRead'] is bool) return out;
+    if (userId == null || userId.isEmpty) {
+      out['isRead'] = false;
+      return out;
+    }
+    final unreadBy = out['unreadBy'];
+    final unreadIds = <String>[];
+    if (unreadBy is List) {
+      for (final id in unreadBy) {
+        unreadIds.add(id.toString());
+      }
+    }
+    out['isRead'] = !unreadIds.contains(userId);
+    return out;
   }
 
   List<Map<String, dynamic>> _asMapList(dynamic data) {

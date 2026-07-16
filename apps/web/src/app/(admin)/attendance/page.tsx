@@ -27,6 +27,14 @@ interface AttendanceRow {
   createdAt: string;
 }
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'present', label: 'Present' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'on_leave', label: 'On Leave' },
+  { value: 'not_returned', label: 'Not Returned' },
+];
+
 export default function AttendancePage() {
   const router = useRouter();
   const [records, setRecords] = useState<AttendanceRow[]>([]);
@@ -36,6 +44,7 @@ export default function AttendancePage() {
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -47,8 +56,9 @@ export default function AttendancePage() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
-      if (search) params.set('search', search);
+      if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
+      if (dateFilter) params.set('date', dateFilter);
 
       const res = await api.get(`attendance?${params.toString()}`).json<{
         success: boolean;
@@ -62,7 +72,7 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, statusFilter]);
+  }, [page, perPage, search, statusFilter, dateFilter]);
 
   useEffect(() => {
     fetchRecords();
@@ -157,7 +167,7 @@ export default function AttendancePage() {
       />
       <ErrorBanner message={error} />
       <TodayAttendanceBoard />
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Input
           placeholder="Search by tenant name..."
           value={search}
@@ -168,16 +178,20 @@ export default function AttendancePage() {
           className="max-w-xs"
         />
         <Select
-          options={[
-            { value: '', label: 'All Statuses' },
-            { value: 'present', label: 'Present' },
-            { value: 'absent', label: 'Absent' },
-            { value: 'on_leave', label: 'On Leave' },
-            { value: 'late', label: 'Late' },
-          ]}
+          options={STATUS_OPTIONS}
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[200px]"
+        />
+        <Input
+          type="date"
+          label="Date"
+          value={dateFilter}
+          onChange={(e) => {
+            setDateFilter(e.target.value);
             setPage(1);
           }}
           className="max-w-[200px]"

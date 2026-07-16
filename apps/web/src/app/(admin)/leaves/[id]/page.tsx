@@ -93,8 +93,12 @@ export default function LeaveDetailPage() {
     setActionLoading(action);
     setActionError('');
     try {
+      // Reject schema requires a JSON body (adminNotes optional); approve has no body schema
+      // but send {} so Content-Type is consistent across clients.
       const res = await api
-        .put(`leaves/${id}/${action}`)
+        .put(`leaves/${id}/${action}`, {
+          json: action === 'reject' ? { adminNotes: '' } : {},
+        })
         .json<{ success: boolean; data: LeaveDetail }>();
       if (res.success) {
         setLeave(res.data);

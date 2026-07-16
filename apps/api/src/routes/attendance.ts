@@ -3,14 +3,16 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Tenant } from '../models/tenant.js';
+import { User } from '../models/user.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { todayInTZ, currentHourInTZ } from '../lib/dates.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
-const attendanceCreate = AttendanceRecord.create as unknown as CreateOneFn;
+const attendanceCreate = AttendanceRecord.create.bind(AttendanceRecord) as unknown as CreateOneFn;
 
 // ── Zod Schemas ──────────────────────────────────────────
 
@@ -33,9 +35,9 @@ const manualSchema = z.strictObject({
   notes: z.string().max(500).optional(),
 });
 
-// ── Helper: get today's date string in YYYY-MM-DD ───────
+// ── Helper: get today's date string in YYYY-MM-DD (PG timezone) ──
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayInTZ();
 }
 
 // ── Helper: map lean doc to frontend-friendly shape ─────
@@ -98,8 +100,8 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
 
   const date = today();
 
-  // Check-in window: 5 AM to 11 PM server time
-  const currentHour = new Date().getHours();
+  // Check-in window: 5 AM to 11 PM in PG timezone (not server UTC)
+  const currentHour = currentHourInTZ();
   if (currentHour < 5 || currentHour >= 23) {
     return c.json(
       {
@@ -191,21 +193,37 @@ attendance.post('/manual', authGuard, adminOnly, zValidator('json', manualSchema
     return badRequest(c, 'Attendance already recorded for this date', 'ALREADY_RECORDED');
   }
 
-  const record = await attendanceCreate({
-    tenantId: body.tenantId,
-    date: body.date,
-    checkIn: body.checkIn ? new Date(`${body.date}T${body.checkIn}:00`) : null,
-    checkOut: body.checkOut ? new Date(`${body.date}T${body.checkOut}:00`) : null,
-    status: body.status,
-    method: body.method,
-    notes: body.notes ?? '',
-    recordedBy: authUser.sub,
-  });
+  try {
+    const record = await attendanceCreate({
+      tenantId: body.tenantId,
+      date: body.date,
+      checkIn: body.checkIn ? new Date(`${body.date}T${body.checkIn}:00`) : null,
+      checkOut: body.checkOut ? new Date(`${body.date}T${body.checkOut}:00`) : null,
+      status: body.status,
+      method: body.method,
+      notes: body.notes ?? '',
+      recordedBy: authUser.sub,
+    });
 
-  return c.json(
-    { success: true, data: mapRecord(record as unknown as Record<string, unknown>) },
-    201,
-  );
+    return c.json(
+      { success: true, data: mapRecord(record as unknown as Record<string, unknown>) },
+      201,
+    );
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 11000) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'ALREADY_RECORDED',
+            message: 'Attendance already recorded for this date (concurrent request).',
+          },
+        },
+        400,
+      );
+    }
+    throw err;
+  }
 });
 
 // ── GET /attendance — admin paginated list ──────────────
@@ -214,11 +232,55 @@ attendance.get('/', authGuard, adminOnly, async (c) => {
   const status = c.req.query('status');
   const date = c.req.query('date');
   const tenantId = c.req.query('tenantId');
+  const search = c.req.query('search')?.trim();
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
   if (date) filter.date = date;
   if (tenantId) filter.tenantId = tenantId;
+
+  // Resolve search by tenant name (same pattern as meals feedback / tenants)
+  if (search) {
+    const users = await User.find(safeFilter({ name: { $regex: search, $options: 'i' } }))
+      .select('_id')
+      .lean();
+    const userIds = users.map((u) => u._id);
+
+    if (userIds.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      });
+    }
+
+    const tenants = await Tenant.find(safeFilter({ userId: { $in: userIds } }))
+      .select('_id')
+      .lean();
+    const tenantIds = tenants.map((t) => String(t._id));
+
+    if (tenantIds.length === 0) {
+      return c.json({
+        success: true,
+        data: [],
+        meta: { total: 0, page, limit, totalPages: 0 },
+      });
+    }
+
+    if (tenantId) {
+      // Intersect explicit tenantId with name matches
+      if (!tenantIds.includes(tenantId)) {
+        return c.json({
+          success: true,
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        });
+      }
+      filter.tenantId = tenantId;
+    } else {
+      filter.tenantId = { $in: tenantIds };
+    }
+  }
 
   const skip = (page - 1) * limit;
 

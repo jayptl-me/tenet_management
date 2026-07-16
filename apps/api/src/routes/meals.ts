@@ -79,6 +79,7 @@ meals.post(
       mealType: body.mealType,
     };
 
+    // Re-submit resets status so admin re-triages (actioned feedback must reappear).
     const feedback = await MealFeedback.findOneAndUpdate(
       filter as Record<string, unknown>,
       {
@@ -86,6 +87,7 @@ meals.post(
         rating: body.rating,
         categories: body.categories,
         comment: body.comment ?? '',
+        status: 'submitted',
       },
       { upsert: true, returnDocument: 'after', runValidators: true },
     ).lean();
@@ -264,12 +266,29 @@ meals.put(
     const id = c.req.param('id');
     if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
     const body = c.req.valid('json');
-    const feedback = await MealFeedback.findByIdAndUpdate(id, body, {
-      returnDocument: 'after',
-      runValidators: true,
-    }).lean();
-    if (!feedback) return notFound(c, 'Meal feedback');
-    return c.json({ success: true, data: feedback });
+    try {
+      const feedback = await MealFeedback.findByIdAndUpdate(id, body, {
+        returnDocument: 'after',
+        runValidators: true,
+      }).lean();
+      if (!feedback) return notFound(c, 'Meal feedback');
+      return c.json({ success: true, data: feedback });
+    } catch (err: unknown) {
+      // Unique compound tenantId+date+mealType — e.g. changing mealType collides
+      if ((err as { code?: number }).code === 11000) {
+        return c.json(
+          {
+            success: false,
+            error: {
+              code: 'DUPLICATE_FEEDBACK',
+              message: 'A feedback entry already exists for this tenant, date, and meal type.',
+            },
+          },
+          409,
+        );
+      }
+      throw err;
+    }
   },
 );
 

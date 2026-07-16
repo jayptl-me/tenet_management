@@ -24,8 +24,6 @@ import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
-
 interface LineItem {
   description: string;
   amount: number;
@@ -169,14 +167,33 @@ export default function InvoiceDetailPage() {
       badge={invoice ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined}
       actions={
         invoice ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {invoice.balance > 0 &&
+              invoice.status !== 'paid' &&
+              invoice.status !== 'cancelled' &&
+              invoice.tenantId?._id && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/payments/new?tenantId=${invoice.tenantId!._id}&invoiceId=${invoice._id}`,
+                    )
+                  }
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Record payment
+                </Button>
+              )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -353,8 +370,20 @@ export default function InvoiceDetailPage() {
                       </thead>
                       <tbody className="divide-y divide-[color:var(--border-color)]">
                         {invoice.payments.map((p) => (
-                          <tr key={p._id}>
-                            <td className="py-3 font-bold text-[color:var(--color-text-primary)]">
+                          <tr
+                            key={p._id}
+                            className="cursor-pointer transition-colors hover:bg-[color:var(--color-field-bg)]"
+                            onClick={() => router.push(`/payments/${p._id}`)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                router.push(`/payments/${p._id}`);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="link"
+                          >
+                            <td className="py-3 font-bold text-[color:var(--color-brand-700)]">
                               {formatCurrency(p.amount)}
                             </td>
                             <td className="py-3 capitalize text-[color:var(--color-text-secondary)]">
@@ -423,11 +452,46 @@ export default function InvoiceDetailPage() {
 
               <DetailCard title="Actions" icon={<FileDown />}>
                 <div className="flex flex-col gap-3">
+                  {invoice.balance > 0 &&
+                    invoice.status !== 'paid' &&
+                    invoice.status !== 'cancelled' &&
+                    invoice.tenantId?._id && (
+                      <Button
+                        variant="primary"
+                        onClick={() =>
+                          router.push(
+                            `/payments/new?tenantId=${invoice.tenantId!._id}&invoiceId=${invoice._id}`,
+                          )
+                        }
+                      >
+                        <CreditCard className="h-4 w-4" />
+                        Record payment
+                      </Button>
+                    )}
                   <Button
-                    variant="primary"
-                    onClick={() =>
-                      window.open(`${API_BASE_URL}/invoices/${invoice._id}/pdf`, '_blank')
+                    variant={
+                      invoice.balance > 0 &&
+                      invoice.status !== 'paid' &&
+                      invoice.status !== 'cancelled'
+                        ? 'outline'
+                        : 'primary'
                     }
+                    onClick={async () => {
+                      try {
+                        // Must use authenticated ky client — window.open omits JWT → 401
+                        const blob = await api.get(`invoices/${invoice._id}/pdf`).blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        alert('Failed to download PDF. Ensure you are logged in.');
+                      }
+                    }}
                   >
                     <FileDown className="h-4 w-4" />
                     Download PDF
@@ -436,11 +500,12 @@ export default function InvoiceDetailPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
+                        // PDF URL is auth-protected; share invoice summary only (not a naked PDF link)
                         const text = [
                           `Invoice ${invoice.invoiceNumber}`,
                           `Amount: ${formatCurrency(invoice.totalAmount)}`,
                           `Balance: ${formatCurrency(invoice.balance)}`,
-                          `Download: ${API_BASE_URL}/invoices/${invoice._id}/pdf`,
+                          'Please check the resident portal or contact the admin for the PDF copy.',
                         ].join('\n');
                         window.open(
                           generateWhatsAppUrl(tenantPhone, text),

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
@@ -42,6 +43,7 @@ export default function ElectricityPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ElectricityBillRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -54,6 +56,7 @@ export default function ElectricityPage() {
       params.set('page', String(page));
       params.set('limit', String(perPage));
       if (statusFilter) params.set('status', statusFilter);
+      if (monthFilter) params.set('month', monthFilter);
 
       const res = await api.get(`electricity?${params.toString()}`).json<{
         success: boolean;
@@ -67,7 +70,7 @@ export default function ElectricityPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, statusFilter]);
+  }, [page, perPage, statusFilter, monthFilter]);
 
   useEffect(() => {
     fetchBills();
@@ -152,6 +155,16 @@ export default function ElectricityPage() {
       <ErrorBanner message={error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
+        <Input
+          type="month"
+          label="Month"
+          value={monthFilter}
+          onChange={(e) => {
+            setMonthFilter(e.target.value);
+            setPage(1);
+          }}
+          className="max-w-[200px]"
+        />
         <Select
           options={[
             { value: '', label: 'All Statuses' },

@@ -17,16 +17,17 @@ import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   phone: z
     .string()
     .min(10, 'Phone is required')
     .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  message: z.string().optional(),
+  preferredSharing: z.enum(['2', '3', '4', 'single']),
+  message: z.string().max(1000).optional(),
   source: z.enum(['landing_page', 'referral', 'walk_in', 'phone_call', 'other']),
   status: z.enum(['new', 'contacted', 'converted', 'lost']),
-  notes: z.string().optional(),
+  notes: z.string().max(1000).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -37,6 +38,13 @@ const sourceOptions = [
   { value: 'walk_in', label: 'Walk-in' },
   { value: 'phone_call', label: 'Phone call' },
   { value: 'other', label: 'Other' },
+];
+
+const sharingOptions = [
+  { value: '2', label: '2 Sharing' },
+  { value: '3', label: '3 Sharing' },
+  { value: '4', label: '4 Sharing' },
+  { value: 'single', label: 'Single' },
 ];
 
 const statusOptions = [
@@ -69,13 +77,17 @@ export default function EditEnquiryPage() {
     if (!id) return;
     api
       .get(`enquiries/${id}`)
-      .json<{ success: boolean; data: FormData & { _id: string; notes?: string } }>()
+      .json<{
+        success: boolean;
+        data: FormData & { _id: string; notes?: string; preferredSharing?: string };
+      }>()
       .then((res) => {
         const d = res.data;
         reset({
           name: d.name ?? '',
           phone: d.phone ?? '',
           email: d.email ?? '',
+          preferredSharing: (d.preferredSharing as FormData['preferredSharing']) ?? '2',
           message: d.message ?? '',
           source: (d.source as FormData['source']) ?? 'other',
           status: (d.status as FormData['status']) ?? 'new',
@@ -98,6 +110,7 @@ export default function EditEnquiryPage() {
             name: data.name.trim(),
             phone: normalizeInPhone(data.phone),
             email: data.email || undefined,
+            preferredSharing: data.preferredSharing,
             message: data.message,
             source: data.source,
             status: data.status,
@@ -181,6 +194,12 @@ export default function EditEnquiryPage() {
               options={sourceOptions}
               error={err.source?.message}
               {...register('source')}
+            />
+            <Select
+              label="Preferred sharing"
+              options={sharingOptions}
+              error={err.preferredSharing?.message}
+              {...register('preferredSharing')}
             />
           </FormGrid>
         </FormSection>

@@ -166,7 +166,8 @@ export default function PaymentsPage() {
         <TableActions
           onView={() => router.push(`/payments/${row._id}`)}
           onEdit={() => router.push(`/payments/${row._id}/edit`)}
-          onDelete={() => setDeleteTarget(row)}
+          onDelete={row.status === 'paid' ? undefined : () => setDeleteTarget(row)}
+          showDelete={row.status !== 'paid'}
         />
       ),
     },

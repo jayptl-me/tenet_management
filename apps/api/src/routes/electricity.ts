@@ -189,6 +189,18 @@ electricity.post('/:id/finalize', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid bill ID');
 
+  const existing = await ElectricityBill.findById(id).lean();
+  if (!existing) return notFound(c, 'Electricity bill');
+
+  const currentStatus = String((existing as { status?: string }).status ?? 'draft');
+  if (currentStatus !== 'draft') {
+    return badRequest(
+      c,
+      `Cannot finalize a bill with status "${currentStatus}". Only draft bills can be finalized.`,
+      'INVALID_BILL_STATUS',
+    );
+  }
+
   const billRaw = await (ElectricityBill.findByIdAndUpdate(
     id,
     { status: 'finalized' },
@@ -239,16 +251,26 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
         continue;
       }
 
+      // ELEC-P1-1: use same date-windowed room occupants as calculateElectricityShare
+      // (not merely isActive today) so distribute and invoice generate stay aligned.
+      const [year, monthNum] = String(month).split('-').map(Number);
+      const lastDayOfMonth = new Date(year!, monthNum!, 0).getDate();
+      const monthEnd = new Date(`${month}-${String(lastDayOfMonth).padStart(2, '0')}`);
+      const monthStart = new Date(`${month}-01`);
+
       const tenants = await Tenant.find(
         safeFilter({
           roomId: new mongoose.Types.ObjectId(roomId),
           isActive: true,
+          moveInDate: { $lte: monthEnd },
+          $or: [{ moveOutDate: { $gte: monthStart } }, { moveOutDate: null }],
         }),
       ).lean();
 
       if (tenants.length === 0) continue;
 
-      const sharePerTenant = ((entry.amount as number) ?? 0) / tenants.length;
+      const sharePerTenant =
+        Math.round((((entry.amount as number) ?? 0) / tenants.length) * 100) / 100;
       const elecLabel = `Electricity Charges — ${month}`;
 
       for (const tenant of tenants) {
@@ -263,6 +285,24 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
           );
 
           if (existing) {
+            // Never rewrite cancelled invoices; skip paid invoices that already include
+            // electricity (avoid reopening settled money). Still allow adding electricity
+            // only when residual can be expressed as a new pending row on open statuses.
+            if (existing.status === 'cancelled') {
+              continue;
+            }
+
+            const alreadyHasElec =
+              ((existing.electricityAmount as number) ?? 0) > 0 ||
+              (existing.lineItems ?? []).some((li) =>
+                String(li.description).toLowerCase().startsWith('electricity'),
+              );
+
+            if (existing.status === 'paid' && alreadyHasElec) {
+              // Settled and already charged — do not mutate.
+              continue;
+            }
+
             // Update electricity on existing invoice (amounts are source of truth)
             existing.electricityAmount = sharePerTenant;
             const items = (existing.lineItems ?? []).filter(
@@ -297,13 +337,11 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
             if (openPending) {
               openPending.amount = residual;
               await openPending.save();
-            } else if (
-              residual > 0.01 &&
-              existing.status !== 'paid' &&
-              existing.status !== 'cancelled'
-            ) {
+            } else if (residual > 0.01) {
+              // Open residual pending for unpaid/partial, or when paid invoice total grew
+              // after electricity was added (status will flip to partial below).
               type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
-              const paymentCreate = Payment.create as unknown as CreateFn;
+              const paymentCreate = Payment.create.bind(Payment) as unknown as CreateFn;
               await paymentCreate({
                 tenantId: existing.tenantId,
                 invoiceId: existing._id,
@@ -344,7 +382,10 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
     }
   }
 
-  await ElectricityBill.findByIdAndUpdate(id, { status: 'distributed' });
+  // Only mark fully distributed when every tenant path succeeded.
+  if (errors === 0) {
+    await ElectricityBill.findByIdAndUpdate(id, { status: 'distributed' });
+  }
 
   logger.info(
     { billId: id, month, distributed, created, updated, errors },
@@ -354,12 +395,16 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
   return c.json({
     success: true,
     data: {
-      message: `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated, ${errors} errors.`,
+      message:
+        errors > 0
+          ? `Distribution partial. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated, ${errors} errors. Bill left as finalized.`
+          : `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated.`,
       distributed,
       created,
       updated,
       errors,
       month,
+      fullyDistributed: errors === 0,
     },
   });
 });

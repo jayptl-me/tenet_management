@@ -18,13 +18,13 @@ type CreateFn = (doc: Record<string, unknown>) => Promise<IInvoiceDocument>;
 type CreatePaymentFn = (doc: Record<string, unknown>) => Promise<unknown>;
 
 const invoiceFindOne = Invoice.findOne.bind(Invoice) as unknown as FindOneFn;
-const invoiceCreate = Invoice.create as unknown as CreateFn;
-const tenantFind = Tenant.find as unknown as FindLeanFn;
+const invoiceCreate = Invoice.create.bind(Invoice) as unknown as CreateFn;
+const tenantFind = Tenant.find.bind(Tenant) as unknown as FindLeanFn;
 const tenantFindById = Tenant.findById.bind(Tenant) as unknown as FindByIdFn;
 const tenantCountDocs = Tenant.countDocuments.bind(Tenant) as unknown as CountFn;
 const roomFindById = Room.findById.bind(Room) as unknown as FindByIdFn;
 const billFindOne = ElectricityBill.findOne.bind(ElectricityBill) as unknown as FindOneFn;
-const paymentCreate = Payment.create as unknown as CreatePaymentFn;
+const paymentCreate = Payment.create.bind(Payment) as unknown as CreatePaymentFn;
 
 interface GenerateResult {
   generated: number;
