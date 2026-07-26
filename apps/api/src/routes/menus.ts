@@ -10,18 +10,19 @@ import { todayInTZ } from '../lib/dates.js';
 const menus = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
-const menuMealItemSchema = z.strictObject({
+const menuMealItemSchema = z.object({
   name: z.string().min(1, 'Item name is required').max(100).trim(),
   description: z.string().max(300).trim().optional(),
   category: z.string().max(50).trim().optional(),
 });
 
-const menuDaySchema = z.strictObject({
+const menuDaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  meals: z.strictObject({
+  meals: z.object({
     breakfast: z.array(menuMealItemSchema).optional().default([]),
     lunch: z.array(menuMealItemSchema).optional().default([]),
     dinner: z.array(menuMealItemSchema).optional().default([]),
+    snacks: z.array(menuMealItemSchema).optional().default([]),
   }),
 });
 

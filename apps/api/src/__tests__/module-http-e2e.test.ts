@@ -620,7 +620,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
 
     // ── Menus + Meals ────────────────────────────────────
     {
-      const date = '2026-07-20';
+      const date = new Date().toISOString().slice(0, 10);
       const created = await req('POST', '/api/v1/menus', {
         token: adminToken,
         body: {
@@ -894,6 +894,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
 
         const reinstate = await req('POST', `/api/v1/tenants/${tenant2Id}/reinstate`, {
           token: adminToken,
+          body: {},
         });
         log('tenants', 'reinstate', reinstate.status === 200, `status=${reinstate.status}`);
       }

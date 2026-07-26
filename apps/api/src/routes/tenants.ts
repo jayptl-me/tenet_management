@@ -696,10 +696,13 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   }
 });
 
-const reinstateSchema = z.strictObject({
-  roomId: z.string().min(1).optional(),
-  bedId: z.enum(['A', 'B', 'C', 'D']).optional(),
-});
+const reinstateSchema = z
+  .object({
+    roomId: z.string().min(1).optional(),
+    bedId: z.enum(['A', 'B', 'C', 'D']).optional(),
+  })
+  .optional()
+  .default({});
 
 // ── POST /:id/reinstate — reinstate a checked-out tenant (admin only)
 // Optional body { roomId, bedId } places on an alternate free bed when original is taken.
@@ -758,6 +761,7 @@ router.post(
 
       bed.isOccupied = true;
       bed.tenantId = tenant._id as unknown as Schema.Types.ObjectId;
+      room.markModified('beds');
       room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
       await room.save({ session });
 
@@ -767,7 +771,7 @@ router.post(
       tenant.moveOutDate = null;
       await tenant.save({ session });
 
-      await User.findByIdAndUpdate(tenant.userId, { isActive: true }, { session });
+      await User.findByIdAndUpdate(String(tenant.userId), { isActive: true }, { session });
 
       // Re-enable guardian portal users linked to this tenant
       const guardians = await Guardian.find(safeFilter({ tenantId: id }))
@@ -784,6 +788,7 @@ router.post(
     const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
     return c.json({ success: true, data: updatedTenant });
   } catch (err: unknown) {
+    console.error('REINSTATE_ERROR:', err);
     if (err instanceof AppError) {
       return c.json(
         { success: false, error: { code: err.code, message: err.message } },

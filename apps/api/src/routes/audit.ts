@@ -1,10 +1,14 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { AuditLog } from '../models/auditLog.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const audit = new Hono();
+
 
 // ── GET /audit-logs — paginated audit trail (admin only)
 audit.get('/', authGuard, adminOnly, async (c) => {
@@ -50,4 +54,30 @@ audit.get('/actions', authGuard, adminOnly, async (_c) => {
   return _c.json({ success: true, data: actions });
 });
 
+// ── POST /audit-logs/log-export — log client-side export action
+const logExportSchema = z.strictObject({
+  resource: z.string().min(1),
+});
+
+audit.post(
+  '/log-export',
+  authGuard,
+  adminOnly,
+  zValidator('json', logExportSchema),
+  async (c) => {
+    const { resource } = c.req.valid('json');
+    const user = c.get('user');
+
+    await writeAuditLog({
+      userId: user.sub,
+      action: 'export',
+      resource,
+      details: { resource },
+    });
+
+    return c.json({ success: true, message: 'Export logged successfully' });
+  },
+);
+
 export default audit;
+
