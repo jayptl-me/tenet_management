@@ -21,3 +21,4 @@ export { AttendanceRecord } from './attendanceRecord.js';
 export { LeaveApplication } from './leaveApplication.js';
 export { Asset } from './asset.js';
 export { Guardian } from './guardian.js';
+export { WashingMachine } from './washingMachine.js';

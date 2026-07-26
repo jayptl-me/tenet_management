@@ -3,6 +3,7 @@ import { generateMonthlyInvoices, getCurrentMonth } from '../services/invoice.se
 import { Payment } from '../models/payment.js';
 import { Invoice } from '../models/invoice.js';
 import { Tenant } from '../models/tenant.js';
+import { WashingMachine } from '../models/washingMachine.js';
 import { logger } from '../lib/logger.js';
 
 // ── Whether cron jobs are running ───────────────────────
@@ -106,6 +107,32 @@ export function startScheduler(): void {
       // TODO: Phase 5 — send ntfy.sh push to each tenant
     } catch (err) {
       logger.error({ err }, 'Meal feedback prompt job failed');
+    }
+  });
+
+  // ── Every minute: Release expired washing machine timers ─────
+  cron.schedule('* * * * *', async () => {
+    try {
+      const result = await WashingMachine.updateMany(
+        {
+          status: 'in_use',
+          timerEndsAt: { $lte: new Date() },
+        },
+        {
+          $set: {
+            status: 'available',
+            currentUserId: null,
+            claimedAt: null,
+            timerEndsAt: null,
+          },
+        },
+      );
+
+      if (result.modifiedCount > 0) {
+        logger.info({ released: result.modifiedCount }, 'Expired washing machine timers released');
+      }
+    } catch (err) {
+      logger.error({ err }, 'Washing machine timer expiry job failed');
     }
   });
 
