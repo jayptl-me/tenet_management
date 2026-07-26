@@ -15,6 +15,7 @@ import '../../features/tenant/presentation/home_screen.dart';
 import '../../features/tenant/presentation/invoice_detail_screen.dart';
 import '../../features/tenant/presentation/invoices_screen.dart';
 import '../../features/tenant/presentation/laundry_screen.dart';
+import '../../features/tenant/presentation/washing_machines_screen.dart';
 import '../../features/tenant/presentation/attendance_screen.dart';
 import '../../features/tenant/presentation/leaves_screen.dart';
 import '../../features/tenant/presentation/meals_screen.dart';
@@ -161,6 +162,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/laundry',
         builder: (_, __) => const TenantLaundryScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/washing-machines',
+        builder: (_, __) => const TenantWashingMachinesScreen(),
       ),
       GoRoute(
         path: '/tenant/notices',

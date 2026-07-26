@@ -128,7 +128,7 @@ export default function RoomsPage() {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
-          variant={statusToVariant(row.isActive ? 'active' : 'maintenance')}
+          variant={statusToVariant(row.isActive ? 'active' : 'inactive')}
           label={row.isActive ? 'Active' : 'Inactive'}
         />
       ),
@@ -230,7 +230,7 @@ export default function RoomsPage() {
                 Room {row.roomNumber}
               </span>
               <StatusBadge
-                variant={statusToVariant(row.isActive ? 'active' : 'maintenance')}
+                variant={statusToVariant(row.isActive ? 'active' : 'inactive')}
                 label={row.isActive ? 'Active' : 'Inactive'}
               />
             </div>

@@ -118,6 +118,12 @@ const navSections: NavSection[] = [
         featureFlag: 'laundryEnabled',
       },
       {
+        href: '/washing-machines',
+        label: 'Washing Machines',
+        icon: <Shirt className="h-4 w-4" />,
+        featureFlag: 'laundryEnabled',
+      },
+      {
         href: '/meals',
         label: 'Meals',
         icon: <Utensils className="h-4 w-4" />,

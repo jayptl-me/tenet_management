@@ -182,3 +182,13 @@ export type {
   IGuardianCreate,
   IGuardianWardSummary,
 } from './guardian';
+
+// ── Washing Machine ────────────────────────────────────
+export type {
+  WashingMachineStatus,
+  IWashingMachine,
+  IWashingMachineCreate,
+  IWashingMachineUpdate,
+  IWashingMachineClaim,
+  IWashingMachineStatusUpdate,
+} from './washingMachine';

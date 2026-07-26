@@ -34,6 +34,7 @@ import jobRoutes from './routes/jobs.js';
 import notificationRoutes from './routes/notifications.js';
 import sseRoutes from './routes/sse.js';
 import laundryRoutes from './routes/laundry.js';
+import washingMachineRoutes from './routes/washingMachines.js';
 import auditRoutes from './routes/audit.js';
 import { startScheduler } from './jobs/scheduler.js';
 
@@ -104,6 +105,7 @@ api.route('/jobs', jobRoutes);
 api.route('/notifications', notificationRoutes);
 api.route('/sse', sseRoutes);
 api.route('/laundry-slots', laundryRoutes);
+api.route('/washing-machines', washingMachineRoutes);
 api.route('/audit-logs', auditRoutes);
 
 app.onError(globalErrorHandler);

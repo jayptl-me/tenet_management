@@ -69,6 +69,7 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
   new: 'warning',
   contacted: 'info',
   converted: 'success',
+  lost: 'danger',
   closed: 'neutral',
 
   // ── Leave Status (pending/cancelled share payment map keys above) ──
@@ -86,7 +87,7 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
   arrived: 'success',
   departed: 'neutral',
 
-  // ── Asset Status ──
+  // ── Washing Machine / Asset Status ──
   available: 'success',
   in_use: 'info',
   under_maintenance: 'warning',
@@ -95,6 +96,8 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
 
   // ── Laundry Slot Status ──
   booked: 'info',
+  confirmed: 'success',
+  completed: 'neutral',
   maintenance: 'warning',
 
   // ── Electricity Bill Status ──

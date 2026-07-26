@@ -314,6 +314,72 @@ class TenantRepository {
     return out;
   }
 
+  // ── Washing Machines ────────────────────────────────────
+  /// Fetch all machines on a floor with status/user info.
+  Future<Map<String, dynamic>?> floorWashingMachines(String floorId) async {
+    final data = await _api.getJson(
+      'washing-machines/floor/$floorId',
+      parse: (d) => d,
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return null;
+  }
+
+  /// Claim a washing machine (sets timer).
+  Future<void> claimWashingMachine(String machineId, {int? timerDuration}) async {
+    await _api.postJson(
+      'washing-machines/$machineId/claim',
+      body: {
+        if (timerDuration != null) 'timerDuration': timerDuration,
+      },
+      parse: (_) => null,
+    );
+  }
+
+  /// Release a claimed washing machine.
+  Future<void> releaseWashingMachine(String machineId) async {
+    await _api.postJson(
+      'washing-machines/$machineId/release',
+      body: {},
+      parse: (_) => null,
+    );
+  }
+
+  /// Raw auth/me response (for tenantId resolution).
+  Future<Map<String, dynamic>?> myAuthProfile() async {
+    try {
+      final data = await _api.getJson('auth/me', parse: (d) => d);
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Resolve the tenant's floor ID from their profile -> room.
+  /// Accepts tenantId to avoid redundant API calls when already known.
+  Future<String?> myFloorId([String? tenantId]) async {
+    try {
+      final tid = tenantId;
+      if (tid == null || tid.isEmpty) {
+        final me = await myAuthProfile();
+        if (me == null) return null;
+        final t = me['tenantId']?.toString();
+        if (t == null || t.isEmpty) return null;
+        return myFloorId(t);
+      }
+      final profile = await _api.getJson('tenants/$tid', parse: (d) => d);
+      if (profile is! Map) return null;
+      final roomId = profile['roomId']?.toString();
+      if (roomId == null || roomId.isEmpty) return null;
+      final room = await _api.getJson('rooms/$roomId', parse: (d) => d);
+      if (room is! Map) return null;
+      return room['floorId']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
   List<Map<String, dynamic>> _asMapList(dynamic data) {
     if (data is List) {
       return data
