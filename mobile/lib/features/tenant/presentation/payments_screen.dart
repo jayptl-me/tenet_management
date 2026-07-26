@@ -74,7 +74,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     });
     try {
       final repo = ref.read(tenantRepositoryProvider);
-      final results = await Future.wait([
+      final results = await Future.wait<List<Map<String, dynamic>>>([
         repo.myPayments(),
         repo.myInvoices(),
       ]);

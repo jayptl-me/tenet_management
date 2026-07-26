@@ -1,12 +1,12 @@
-import { Schema, model, type Document, type Model } from 'mongoose';
+import { Schema, model, Types, type Document, type Model } from 'mongoose';
 
 export interface IWashingMachineDocument extends Document {
   id: string;
-  floorId: Schema.Types.ObjectId;
+  floorId: Types.ObjectId;
   machineNumber: number;
   label: string;
   status: string; // 'available' | 'in_use' | 'under_maintenance' | 'down'
-  currentUserId: Schema.Types.ObjectId | null; // Tenant who claimed it
+  currentUserId: Types.ObjectId | null; // Tenant who claimed it
   claimedAt: Date | null;
   timerDuration: number; // minutes (default 50)
   timerEndsAt: Date | null;

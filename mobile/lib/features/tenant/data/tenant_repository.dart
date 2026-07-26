@@ -1,5 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../auth/providers/auth_provider.dart';
+
+final tenantRepositoryProvider = Provider<TenantRepository>(
+  (ref) => TenantRepository(ref.watch(apiClientProvider)),
+);
 
 class TenantRepository {
   TenantRepository(this._api);

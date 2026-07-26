@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../data/tenant_repository.dart';
 import '../../shared/widgets/portal_widgets.dart';
 
@@ -303,7 +302,7 @@ class _TenantWashingMachinesScreenState
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: dotColor.withOpacity(0.12),
+                    color: dotColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -335,7 +334,7 @@ class _TenantWashingMachinesScreenState
                     color: bgColor,
                     borderRadius: BorderRadius.circular(20),
                     border:
-                        Border.all(color: dotColor.withOpacity(0.3)),
+                        Border.all(color: dotColor.withValues(alpha: 0.3)),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Container(
@@ -362,7 +361,7 @@ class _TenantWashingMachinesScreenState
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerHighest
-                        .withOpacity(0.4),
+                        .withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(children: [
