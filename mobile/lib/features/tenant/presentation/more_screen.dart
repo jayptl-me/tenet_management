@@ -40,6 +40,13 @@ class TenantMoreScreen extends ConsumerWidget {
               title: const Text('Laundry'),
               onTap: () => context.go('/tenant/laundry'),
             ),
+          if (features.laundryEnabled)
+            ListTile(
+              leading: const Icon(Icons.local_laundry_service_outlined),
+              title: const Text('Washing Machines'),
+              subtitle: const Text('Claim, timer, release'),
+              onTap: () => context.go('/tenant/washing-machines'),
+            ),
           if (features.noticeBoardEnabled)
             ListTile(
               leading: const Icon(Icons.campaign_outlined),
