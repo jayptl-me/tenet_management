@@ -25,6 +25,17 @@ export type {
   IChangePasswordRequest,
 } from './user';
 
+// ── Auth ───────────────────────────────────────────────
+export type {
+  ILoginRequest as IAuthLoginRequest,
+  ILoginResponse,
+  IChangePasswordRequest as IAuthChangePasswordRequest,
+  IForgotPasswordRequest,
+  IResetPasswordRequest,
+  IRefreshTokenRequest,
+} from './auth';
+
+
 // ── Floor ──────────────────────────────────────────────
 export type { AmenityCount, IFloor, IFloorCreate } from './floor';
 
@@ -37,6 +48,7 @@ export type {
   IEmergencyContact,
   ITenant,
   ITenantCreate,
+  ITenantCreateResponse,
   ITenantTransfer,
 } from './tenant';
 

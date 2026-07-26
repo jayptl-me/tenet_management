@@ -106,7 +106,7 @@ washingMachines.get('/', authGuard, async (c) => {
   }
 
   const pagination = parsePagination(c);
-  const { sort, order, skip, limit, page } = pagination;
+  const { skip, limit, page } = pagination;
 
   const [data, total] = await Promise.all([
     (WashingMachine as unknown as { find: (filter: Record<string, unknown>) => ReturnType<typeof WashingMachine.find> }).find(filter)

@@ -15,7 +15,7 @@ visitors.use('*', requireFeature('visitorManagementEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
 const createVisitorSchema = z.strictObject({
-  tenantId: z.string().min(1, 'Tenant is required'),
+  tenantId: z.string().optional(),
   visitorName: z
     .string()
     .min(2, 'Name must be at least 2 characters')
@@ -63,9 +63,13 @@ visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c)
     // Tenants can only register visitors against their own profile
     tenantId = String(tenant._id);
   } else if (role === 'admin') {
+    if (!body.tenantId) {
+      return badRequest(c, 'Tenant ID is required for admin visitor registration');
+    }
     const tenant = await Tenant.findById(body.tenantId).lean();
     if (!tenant) return notFound(c, 'Tenant');
   } else {
+
     return c.json(
       {
         success: false,

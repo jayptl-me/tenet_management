@@ -45,3 +45,7 @@ export interface ITenantTransfer {
   effectiveDate: string;
   reason?: string;
 }
+
+export interface ITenantCreateResponse extends ITenant {
+  temporaryPassword?: string;
+}

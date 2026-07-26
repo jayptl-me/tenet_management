@@ -3,6 +3,8 @@ export interface IVisitor {
   tenantId: string;
   visitorName: string;
   visitorPhone: string;
+  name?: string;
+  phone?: string;
   purpose: string;
   expectedArrival: string;
   actualArrival?: string;
@@ -13,8 +15,12 @@ export interface IVisitor {
 }
 
 export interface IVisitorRegister {
+  tenantId?: string;
   visitorName: string;
   visitorPhone: string;
+  name?: string;
+  phone?: string;
   purpose: string;
   expectedArrival: string;
 }
+

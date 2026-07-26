@@ -18,22 +18,24 @@ class VisitorRepository {
   }
 
   Future<Map<String, dynamic>> createVisitor({
-    required String tenantId,
+    String? tenantId,
     required String visitorName,
     required String visitorPhone,
     required String purpose,
     required String expectedArrival,
   }) async {
+    final body = <String, dynamic>{
+      'visitorName': visitorName,
+      'visitorPhone': visitorPhone,
+      'purpose': purpose,
+      'expectedArrival': expectedArrival,
+    };
+    if (tenantId != null && tenantId.isNotEmpty) {
+      body['tenantId'] = tenantId;
+    }
     final data = await _api.postJson(
       'visitors',
-      body: {
-        // Required by Zod; tenant JWT still forces own tenantId server-side.
-        'tenantId': tenantId,
-        'visitorName': visitorName,
-        'visitorPhone': visitorPhone,
-        'purpose': purpose,
-        'expectedArrival': expectedArrival,
-      },
+      body: body,
       parse: (d) => d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{},
     );
     return data;

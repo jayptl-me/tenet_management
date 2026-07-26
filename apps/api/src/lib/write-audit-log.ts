@@ -21,7 +21,7 @@ export interface WriteAuditLogParams {
   userId: string;
   action: AuditAction;
   resource: string;
-  resourceId: string;
+  resourceId?: string;
   details?: Record<string, unknown>;
   ip?: string;
   userAgent?: string;
@@ -39,7 +39,7 @@ export async function writeAuditLog(params: WriteAuditLogParams): Promise<void> 
       userId: new mongoose.Types.ObjectId(params.userId),
       action: params.action,
       resource: params.resource,
-      resourceId: params.resourceId,
+      resourceId: params.resourceId ?? params.resource,
       details: params.details ?? {},
       ip: params.ip,
       userAgent: params.userAgent,

@@ -111,6 +111,7 @@ export default function ExportPage() {
       URL.revokeObjectURL(url);
 
       setSuccess(resource);
+      api.post('audit-logs/log-export', { json: { resource } }).catch(() => {});
       setTimeout(() => setSuccess(null), 3000);
     } catch {
       setError(`Failed to export ${resource} data. Please try again.`);

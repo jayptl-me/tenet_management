@@ -6,9 +6,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import '../data/tenant_repository.dart';
 
-final tenantRepositoryProvider = Provider(
-  (ref) => TenantRepository(ref.watch(apiClientProvider)),
-);
+export '../data/tenant_repository.dart' show tenantRepositoryProvider;
 
 class TenantHomeScreen extends ConsumerStatefulWidget {
   const TenantHomeScreen({super.key});
