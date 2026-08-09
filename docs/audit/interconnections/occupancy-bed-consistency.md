@@ -24,16 +24,16 @@ Mutation paths:
 
 ## Code paths (source files)
 
-| Concern | Path |
-|---------|------|
-| Room model, beds subdoc, pre-save occupancyCount, generateBeds | `apps/api/src/models/room.ts` |
-| rebuildBedsForSharingType + PUT sharingType + DELETE soft | `apps/api/src/routes/rooms.ts` |
-| Tenant lifecycle bed mutations | `apps/api/src/routes/tenants.ts` |
-| Tenant indexes | `apps/api/src/models/tenant.ts` (`{ roomId, bedId, isActive }` non-unique) |
-| Floor.totalRooms sync | room model post-save / post-delete; soft-delete path in rooms.ts |
-| Unit / integration tests | `apps/api/src/__tests__/beds.test.ts`, `tenant-transfer.test.ts`, `rooms.test.ts`, `module-http-e2e.test.ts` |
-| Admin create/edit bed UI | tenants new OccupancyBedPicker; edit filtered Select; rooms detail |
-| Related | `docs/audit/interconnections/tenant-lifecycle.md`, `docs/audit/features/rooms.md`, `docs/audit/features/tenants.md` |
+| Concern                                                        | Path                                                                                                                |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Room model, beds subdoc, pre-save occupancyCount, generateBeds | `apps/api/src/models/room.ts`                                                                                       |
+| rebuildBedsForSharingType + PUT sharingType + DELETE soft      | `apps/api/src/routes/rooms.ts`                                                                                      |
+| Tenant lifecycle bed mutations                                 | `apps/api/src/routes/tenants.ts`                                                                                    |
+| Tenant indexes                                                 | `apps/api/src/models/tenant.ts` (`{ roomId, bedId, isActive }` non-unique)                                          |
+| Floor.totalRooms sync                                          | room model post-save / post-delete; soft-delete path in rooms.ts                                                    |
+| Unit / integration tests                                       | `apps/api/src/__tests__/beds.test.ts`, `tenant-transfer.test.ts`, `rooms.test.ts`, `module-http-e2e.test.ts`        |
+| Admin create/edit bed UI                                       | tenants new OccupancyBedPicker; edit filtered Select; rooms detail                                                  |
+| Related                                                        | `docs/audit/interconnections/tenant-lifecycle.md`, `docs/audit/features/rooms.md`, `docs/audit/features/tenants.md` |
 
 ### rebuildBedsForSharingType (rooms.ts)
 
@@ -49,16 +49,16 @@ Mutation paths:
 
 ### Mutation matrix
 
-| Path | File | Bed handling | Atomic? |
-|------|------|--------------|---------|
-| Tenant create | tenants.ts POST | set occupied + tenantId; occupancyCount | Session txn; still RMW check-then-set (race under load) |
-| Tenant PUT transfer | tenants.ts | validate free first, free old, claim new | Session **yes** (fixed) |
-| Tenant PUT bed swap | tenants.ts | same room free+claim | Session **yes** |
-| Checkout | tenants.ts | free bed | Session **yes** |
-| Reinstate | tenants.ts | reclaim if free else 409 | Session **yes** |
-| Tenant delete | tenants.ts | free bed | Session cascade **yes** |
-| Room sharingType | rooms.ts | rebuild + remaps | findOneAndUpdate concurrent guard |
-| Room soft-delete | rooms.ts | blocked if active tenants; beds left as historical | Soft; Floor.totalRooms recomputed |
+| Path                | File            | Bed handling                                       | Atomic?                                                 |
+| ------------------- | --------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| Tenant create       | tenants.ts POST | set occupied + tenantId; occupancyCount            | Session txn; still RMW check-then-set (race under load) |
+| Tenant PUT transfer | tenants.ts      | validate free first, free old, claim new           | Session **yes** (fixed)                                 |
+| Tenant PUT bed swap | tenants.ts      | same room free+claim                               | Session **yes**                                         |
+| Checkout            | tenants.ts      | free bed                                           | Session **yes**                                         |
+| Reinstate           | tenants.ts      | reclaim if free else 409                           | Session **yes**                                         |
+| Tenant delete       | tenants.ts      | free bed                                           | Session cascade **yes**                                 |
+| Room sharingType    | rooms.ts        | rebuild + remaps                                   | findOneAndUpdate concurrent guard                       |
+| Room soft-delete    | rooms.ts        | blocked if active tenants; beds left as historical | Soft; Floor.totalRooms recomputed                       |
 
 ## What works
 
@@ -72,12 +72,12 @@ Mutation paths:
 
 ## Gaps / half-baked
 
-| Severity | Gap | Proof |
-|----------|-----|-------|
-| P1 | No partial unique index on active tenant `(roomId, bedId)` — two concurrent POSTs can still double-book under race | `tenant.ts` index non-unique; claim is read-modify-write on Room document |
-| P1 | No shared `claimBed` / `releaseBed` helpers using atomic array filters (`beds.elemMatch` update) | Duplicated RMW logic across tenants.ts paths |
-| P2 | Historical inactive tenants may still point at beds after room soft-delete (beds not cleared) | Soft-delete only sets room.isActive false |
-| P2 | Reinstate / transfer still check-then-set inside session; without unique index, theoretical race across sessions | Mongo default read concern |
+| Severity | Gap                                                                                                                | Proof                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| P1       | No partial unique index on active tenant `(roomId, bedId)` — two concurrent POSTs can still double-book under race | `tenant.ts` index non-unique; claim is read-modify-write on Room document |
+| P1       | No shared `claimBed` / `releaseBed` helpers using atomic array filters (`beds.elemMatch` update)                   | Duplicated RMW logic across tenants.ts paths                              |
+| P2       | Historical inactive tenants may still point at beds after room soft-delete (beds not cleared)                      | Soft-delete only sets room.isActive false                                 |
+| P2       | Reinstate / transfer still check-then-set inside session; without unique index, theoretical race across sessions   | Mongo default read concern                                                |
 
 **Obsolete:** claim that PUT transfer has no session / free-before-validate (fixed). Floor soft-delete without totalRooms recompute (fixed).
 
@@ -95,8 +95,8 @@ Mutation paths:
 
 ## Remediation log
 
-| Date | Change | Status |
-|------|--------|--------|
-| historical | Transfer non-atomic; isActive toggle left orphan occupied beds | Open then |
-| ~2026-07-12+ | Transfer/swap in session; isActive free toggle removed; Floor recompute on soft-delete; rebuildBeds remaps | **Fixed** |
-| 2026-07-16 | Re-verified rooms.ts + tenants.ts + models; residual race uniqueness P1 | Docs synced |
+| Date         | Change                                                                                                     | Status      |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | ----------- |
+| historical   | Transfer non-atomic; isActive toggle left orphan occupied beds                                             | Open then   |
+| ~2026-07-12+ | Transfer/swap in session; isActive free toggle removed; Floor recompute on soft-delete; rebuildBeds remaps | **Fixed**   |
+| 2026-07-16   | Re-verified rooms.ts + tenants.ts + models; residual race uniqueness P1                                    | Docs synced |

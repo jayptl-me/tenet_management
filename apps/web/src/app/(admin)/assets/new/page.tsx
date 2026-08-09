@@ -74,9 +74,7 @@ export default function NewAssetPage() {
         payload.purchasedDate = new Date(`${data.purchasedDate}T00:00:00.000Z`).toISOString();
       }
       if (data.lastServicedDate) {
-        payload.lastServicedDate = new Date(
-          `${data.lastServicedDate}T00:00:00.000Z`,
-        ).toISOString();
+        payload.lastServicedDate = new Date(`${data.lastServicedDate}T00:00:00.000Z`).toISOString();
       }
       if (data.nextServiceDate) {
         payload.nextServiceDate = new Date(`${data.nextServiceDate}T00:00:00.000Z`).toISOString();

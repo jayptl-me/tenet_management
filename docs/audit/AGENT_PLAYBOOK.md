@@ -60,18 +60,18 @@ P1-T1, P1-T2/G1, P1-V1, CMP-authz, N1/N2 all closed in current tree.
 
 ### Do not re-implement (reconcile-closed)
 
-| ID | Status |
-|----|--------|
-| INV-P1-1, PAY-P1-1, ENQ-convert, P1-T3 | **CLOSED** |
-| D1 / D2 badges unreadBy + badges-update | **CLOSED** |
-| FLAG-palette / FLAG-leaves / FLAG-flutter | **CLOSED** |
-| youtube, AST-delete/dates, N3 ResourceSelect | **CLOSED** |
-| FL-1 / SV-1 / SV-2 / N1 / N2 domain | **CLOSED** |
-| P1-V1 / P1-V2 visitors | **CLOSED** |
-| RM-7 / P2-G2 deactivate copy | **CLOSED** |
-| P1-T1 / P1-T2 bed + cascade | **CLOSED** |
-| ELEC-P1-1 distribute vs calculateElectricityShare | **CLOSED** -- date-windowed occupants |
-| P1-PAY-QR / INV-PDF / HOME / CMP-DET / TID-HEAL / FLAG-UX / GUARD-DEPTH | **CLOSED** |
+| ID                                                                      | Status                                |
+| ----------------------------------------------------------------------- | ------------------------------------- |
+| INV-P1-1, PAY-P1-1, ENQ-convert, P1-T3                                  | **CLOSED**                            |
+| D1 / D2 badges unreadBy + badges-update                                 | **CLOSED**                            |
+| FLAG-palette / FLAG-leaves / FLAG-flutter                               | **CLOSED**                            |
+| youtube, AST-delete/dates, N3 ResourceSelect                            | **CLOSED**                            |
+| FL-1 / SV-1 / SV-2 / N1 / N2 domain                                     | **CLOSED**                            |
+| P1-V1 / P1-V2 visitors                                                  | **CLOSED**                            |
+| RM-7 / P2-G2 deactivate copy                                            | **CLOSED**                            |
+| P1-T1 / P1-T2 bed + cascade                                             | **CLOSED**                            |
+| ELEC-P1-1 distribute vs calculateElectricityShare                       | **CLOSED** -- date-windowed occupants |
+| P1-PAY-QR / INV-PDF / HOME / CMP-DET / TID-HEAL / FLAG-UX / GUARD-DEPTH | **CLOSED**                            |
 
 ---
 
@@ -93,15 +93,15 @@ P1-T1, P1-T2/G1, P1-V1, CMP-authz, N1/N2 all closed in current tree.
 
 ## Anti-patterns
 
-| Do not | Do instead |
-|--------|------------|
-| Re-add Next.js tenant/guardian routes | Work in `mobile/` only |
-| Put rent/beds on floor forms | Room model only |
-| Store room-only amenities as ServiceStatus | roomAmenities + isPerFloor=false |
-| Trust old fe-batch*.md open rows blindly | Re-read source + feature MD Last verified date |
-| Mark FIXED without path proof | Cite file and briefly re-verify |
-| Re-open closed IDs (INV/PAY/D1/D2/ENQ/flags/domain/Flutter depth) | Already fixed in current tree |
-| Put FIXED text inside Open P1 table rows | Move to Recently closed only |
+| Do not                                                            | Do instead                                     |
+| ----------------------------------------------------------------- | ---------------------------------------------- |
+| Re-add Next.js tenant/guardian routes                             | Work in `mobile/` only                         |
+| Put rent/beds on floor forms                                      | Room model only                                |
+| Store room-only amenities as ServiceStatus                        | roomAmenities + isPerFloor=false               |
+| Trust old one-off batch/session notes blindly                     | Re-read source + feature MD Last verified date |
+| Mark FIXED without path proof                                     | Cite file and briefly re-verify                |
+| Re-open closed IDs (INV/PAY/D1/D2/ENQ/flags/domain/Flutter depth) | Already fixed in current tree                  |
+| Put FIXED text inside Open P1 table rows                          | Move to Recently closed only                   |
 
 ---
 
@@ -115,10 +115,9 @@ P1-T1, P1-T2/G1, P1-V1, CMP-authz, N1/N2 all closed in current tree.
 
 ## File map
 
-| Path | Role |
-|------|------|
+| Path                                             | Role                       |
+| ------------------------------------------------ | -------------------------- |
 | [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) | Ranked open/closed backlog |
-| [README.md](./README.md) | Executive summary |
-| [features/](./features/) | Per-module audits |
-| [interconnections/](./interconnections/) | Cross-module flows |
-| [fe-batch1-audit.md](./fe-batch1-audit.md) etc. | Superseded historical notes |
+| [README.md](./README.md)                         | Executive summary          |
+| [features/](./features/)                         | Per-module audits          |
+| [interconnections/](./interconnections/)         | Cross-module flows         |

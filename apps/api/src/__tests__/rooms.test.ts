@@ -30,7 +30,12 @@ describe('Room Model', () => {
   });
 
   it('should create a room with 4-sharing type', async () => {
-    const raw = await roomCreate({ ...validRoomData, roomNumber: `T102-${Date.now()}`, sharingType: 4, beds: Room.generateBeds(4) });
+    const raw = await roomCreate({
+      ...validRoomData,
+      roomNumber: `T102-${Date.now()}`,
+      sharingType: 4,
+      beds: Room.generateBeds(4),
+    });
     const room = await Room.findById(raw._id as string);
     expect(room).not.toBeNull();
     expect(room?.beds).toHaveLength(4);
@@ -45,7 +50,9 @@ describe('Room Model', () => {
   });
 
   it('should reject invalid sharing type', async () => {
-    await expect(roomCreate({ ...validRoomData, roomNumber: `T103-${Date.now()}`, sharingType: 5 })).rejects.toThrow();
+    await expect(
+      roomCreate({ ...validRoomData, roomNumber: `T103-${Date.now()}`, sharingType: 5 }),
+    ).rejects.toThrow();
   });
 
   it('should derive occupancyCount on save', async () => {

@@ -10,36 +10,36 @@ Code is truth. Prior audit claimed missing `GET /assets/:id` and unused low-stoc
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/asset.ts` |
-| Routes | `apps/api/src/routes/assets.ts` (mounted `/api/v1/assets`) |
-| Types | `packages/types/src/asset.ts` |
-| Admin list | `apps/web/src/app/(admin)/assets/page.tsx` |
-| Admin detail | `apps/web/src/app/(admin)/assets/[id]/page.tsx` |
-| Admin new | `apps/web/src/app/(admin)/assets/new/page.tsx` |
-| Admin edit | `apps/web/src/app/(admin)/assets/[id]/edit/page.tsx` |
-| Low-stock UI | `apps/web/src/components/ui/LowStockBanner.tsx` |
-| Flutter | **None** (admin inventory only -- correct product split) |
-| HTTP smoke | `apps/api/src/__tests__/module-http-e2e.test.ts` (create/edit/list/detail/delete) |
+| Layer        | Path                                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| Model        | `apps/api/src/models/asset.ts`                                                    |
+| Routes       | `apps/api/src/routes/assets.ts` (mounted `/api/v1/assets`)                        |
+| Types        | `packages/types/src/asset.ts`                                                     |
+| Admin list   | `apps/web/src/app/(admin)/assets/page.tsx`                                        |
+| Admin detail | `apps/web/src/app/(admin)/assets/[id]/page.tsx`                                   |
+| Admin new    | `apps/web/src/app/(admin)/assets/new/page.tsx`                                    |
+| Admin edit   | `apps/web/src/app/(admin)/assets/[id]/edit/page.tsx`                              |
+| Low-stock UI | `apps/web/src/components/ui/LowStockBanner.tsx`                                   |
+| Flutter      | **None** (admin inventory only -- correct product split)                          |
+| HTTP smoke   | `apps/api/src/__tests__/module-http-e2e.test.ts` (create/edit/list/detail/delete) |
 
 ---
 
 ## Model truth
 
-| Field | Constraints | Notes |
-|-------|-------------|-------|
-| `name` | required, trim, max 120 | |
-| `category` | `furniture \| appliance \| electronics \| cleaning \| other` | |
-| `location` | required, trim, max 160 | free text (not room FK) |
-| `quantity` | number, min 0, default 1 | |
-| `lowStockThreshold` | number, min 0, default 0 | 0 disables low-stock match (`threshold > 0` and qty <= threshold) |
-| `status` | `available \| in_use \| under_maintenance \| damaged \| retired`, default available | |
-| `purchasedDate` | Date \| null | |
-| `lastServicedDate` | Date \| null | |
-| `nextServiceDate` | Date \| null | indexed |
-| `notes` | max 500, default `''` | |
-| timestamps | createdAt, updatedAt | |
+| Field               | Constraints                                                                         | Notes                                                             |
+| ------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `name`              | required, trim, max 120                                                             |                                                                   |
+| `category`          | `furniture \| appliance \| electronics \| cleaning \| other`                        |                                                                   |
+| `location`          | required, trim, max 160                                                             | free text (not room FK)                                           |
+| `quantity`          | number, min 0, default 1                                                            |                                                                   |
+| `lowStockThreshold` | number, min 0, default 0                                                            | 0 disables low-stock match (`threshold > 0` and qty <= threshold) |
+| `status`            | `available \| in_use \| under_maintenance \| damaged \| retired`, default available |                                                                   |
+| `purchasedDate`     | Date \| null                                                                        |                                                                   |
+| `lastServicedDate`  | Date \| null                                                                        |                                                                   |
+| `nextServiceDate`   | Date \| null                                                                        | indexed                                                           |
+| `notes`             | max 500, default `''`                                                               |                                                                   |
+| timestamps          | createdAt, updatedAt                                                                |                                                                   |
 
 Indexes: `{ category, status }`, `{ nextServiceDate }`.
 
@@ -49,14 +49,14 @@ Indexes: `{ category, status }`, `{ nextServiceDate }`.
 
 ## API surface
 
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| GET | `/` | admin | Filters: category, status, search (name regex); pagination; sort category+name |
-| GET | `/low-stock` | admin | `lowStockThreshold > 0` AND `$expr qty <= threshold`; **static path before `/:id`** |
-| GET | `/:id` | admin | Detail load |
-| POST | `/` | admin | Full create; optional ISO/YYYY-MM-DD dates via `optionalDateString` |
-| PUT | `/:id` | admin | Partial update; empty date string -> null when key present |
-| DELETE | `/:id` | admin | **Soft retire**: sets `status: 'retired'`; response message "Asset retired" -- **not hard delete** |
+| Method | Path         | Auth  | Notes                                                                                              |
+| ------ | ------------ | ----- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/`          | admin | Filters: category, status, search (name regex); pagination; sort category+name                     |
+| GET    | `/low-stock` | admin | `lowStockThreshold > 0` AND `$expr qty <= threshold`; **static path before `/:id`**                |
+| GET    | `/:id`       | admin | Detail load                                                                                        |
+| POST   | `/`          | admin | Full create; optional ISO/YYYY-MM-DD dates via `optionalDateString`                                |
+| PUT    | `/:id`       | admin | Partial update; empty date string -> null when key present                                         |
+| DELETE | `/:id`       | admin | **Soft retire**: sets `status: 'retired'`; response message "Asset retired" -- **not hard delete** |
 
 Route order: list, low-stock, :id -- correct (low-stock not captured as id).
 
@@ -64,12 +64,12 @@ Route order: list, low-stock, :id -- correct (low-stock not captured as id).
 
 ## FE page matrix (admin)
 
-| Page | Verdict | Calls | UX stack |
-|------|---------|-------|----------|
-| List | **PASS** | GET `assets?page&limit&search&status`; DELETE | PageHeader, DataTable, StatusBadge, TableActions, mobileCard, **LowStockBanner**, ConfirmModal |
-| Detail | **PASS** | GET `assets/:id` | FormPage, DetailCard: identity, inventory, dates/service, notes |
-| New | **PASS** | POST `assets` | FormPage / FormCard / FormGrid; all model fields including service dates |
-| Edit | **PASS** load/save | GET + PUT `assets/:id` | FormSection blocks; hydrates date inputs from ISO slice(0,10) |
+| Page   | Verdict            | Calls                                         | UX stack                                                                                       |
+| ------ | ------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| List   | **PASS**           | GET `assets?page&limit&search&status`; DELETE | PageHeader, DataTable, StatusBadge, TableActions, mobileCard, **LowStockBanner**, ConfirmModal |
+| Detail | **PASS**           | GET `assets/:id`                              | FormPage, DetailCard: identity, inventory, dates/service, notes                                |
+| New    | **PASS**           | POST `assets`                                 | FormPage / FormCard / FormGrid; all model fields including service dates                       |
+| Edit   | **PASS** load/save | GET + PUT `assets/:id`                        | FormSection blocks; hydrates date inputs from ISO slice(0,10)                                  |
 
 ### Low-stock
 
@@ -82,18 +82,18 @@ Route order: list, low-stock, :id -- correct (low-stock not captured as id).
 
 ## Field coverage
 
-| Field | Model | Create API | New FE | Edit FE | Detail FE | List FE |
-|-------|:-----:|:----------:|:------:|:-------:|:---------:|:-------:|
-| name | Y | Y | Y | Y | Y | Y |
-| category | Y | Y | Y | Y | Y | Y |
-| location | Y | Y | Y | Y | Y | Y |
-| quantity | Y | Y | Y | Y | Y | Y |
-| lowStockThreshold | Y | Y | Y | Y | Y | **N** (banner only) |
-| status | Y | Y | Y | Y | Y | Y + filter |
-| purchasedDate | Y | Y | Y | Y | Y | **N** |
-| lastServicedDate | Y | Y | Y | Y | Y | **N** |
-| nextServiceDate | Y | Y | Y | Y | Y | **N** |
-| notes | Y | Y | Y | Y | Y | **N** |
+| Field             | Model | Create API | New FE | Edit FE | Detail FE |       List FE       |
+| ----------------- | :---: | :--------: | :----: | :-----: | :-------: | :-----------------: |
+| name              |   Y   |     Y      |   Y    |    Y    |     Y     |          Y          |
+| category          |   Y   |     Y      |   Y    |    Y    |     Y     |          Y          |
+| location          |   Y   |     Y      |   Y    |    Y    |     Y     |          Y          |
+| quantity          |   Y   |     Y      |   Y    |    Y    |     Y     |          Y          |
+| lowStockThreshold |   Y   |     Y      |   Y    |    Y    |     Y     | **N** (banner only) |
+| status            |   Y   |     Y      |   Y    |    Y    |     Y     |     Y + filter      |
+| purchasedDate     |   Y   |     Y      |   Y    |    Y    |     Y     |        **N**        |
+| lastServicedDate  |   Y   |     Y      |   Y    |    Y    |     Y     |        **N**        |
+| nextServiceDate   |   Y   |     Y      |   Y    |    Y    |     Y     |        **N**        |
+| notes             |   Y   |     Y      |   Y    |    Y    |     Y     |        **N**        |
 
 No FE fields sent that the API rejects (no phantoms).
 
@@ -123,14 +123,14 @@ nextServiceDate: ...,
 
 ## Design
 
-| Rule | Status |
-|------|--------|
-| FormPage / FormCard / FormSection / FormActions | New + edit yes |
-| StatusBadge | List + detail |
-| Themed Select | Category + status |
-| Tokens | Yes |
-| mobileCardRenderer | Yes |
-| LowStockBanner | Present; warning tokens |
+| Rule                                            | Status                  |
+| ----------------------------------------------- | ----------------------- |
+| FormPage / FormCard / FormSection / FormActions | New + edit yes          |
+| StatusBadge                                     | List + detail           |
+| Themed Select                                   | Category + status       |
+| Tokens                                          | Yes                     |
+| mobileCardRenderer                              | Yes                     |
+| LowStockBanner                                  | Present; warning tokens |
 
 ConfirmModal: **"Retire asset"** / "marked as retired (not permanently deleted)" -- matches soft-retire API.
 
@@ -164,14 +164,14 @@ _None open._ AST-delete and AST-dates closed 2026-07-16 (Retire copy; empty-stri
 
 ## Closed (verified 2026-07-16 -- do not re-file)
 
-| Prior claim | Live status |
-|-------------|-------------|
-| Missing `GET /assets/:id` -> detail/edit 404 | **FIXED** -- route present after `/low-stock` |
-| Zod/form field mismatch / phantom fields | **FIXED** -- name, category, location, qty, threshold, status, three dates, notes only |
-| Low-stock API unused | **FIXED** -- `LowStockBanner` on list calls `assets/low-stock` |
-| Service dates missing on forms | **FIXED** -- new + edit + detail |
-| ConfirmModal hard-delete copy (AST-delete) | **FIXED** -- "Retire asset" / not permanently deleted |
-| Blanking dates does not clear (AST-dates) | **FIXED** -- edit sends `''` for empty date keys |
+| Prior claim                                  | Live status                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Missing `GET /assets/:id` -> detail/edit 404 | **FIXED** -- route present after `/low-stock`                                          |
+| Zod/form field mismatch / phantom fields     | **FIXED** -- name, category, location, qty, threshold, status, three dates, notes only |
+| Low-stock API unused                         | **FIXED** -- `LowStockBanner` on list calls `assets/low-stock`                         |
+| Service dates missing on forms               | **FIXED** -- new + edit + detail                                                       |
+| ConfirmModal hard-delete copy (AST-delete)   | **FIXED** -- "Retire asset" / not permanently deleted                                  |
+| Blanking dates does not clear (AST-dates)    | **FIXED** -- edit sends `''` for empty date keys                                       |
 
 ---
 

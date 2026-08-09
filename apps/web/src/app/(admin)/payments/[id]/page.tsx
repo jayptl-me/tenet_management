@@ -232,7 +232,7 @@ export default function PaymentDetailPage() {
                 {formatCurrency(payment.amount)}
               </p>
               {payment.type && (
-                <p className="mt-1 text-sm font-semibold capitalize text-[color:var(--color-text-secondary)]">
+                <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-secondary)] capitalize">
                   {formatType(payment.type)}
                 </p>
               )}
@@ -365,7 +365,7 @@ export default function PaymentDetailPage() {
                     value={
                       <Link
                         href={`/invoices/${payment.invoiceId}`}
-                        className="break-all font-mono text-xs text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="font-mono text-xs break-all text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
                       >
                         {payment.invoiceId}
                       </Link>
@@ -378,7 +378,7 @@ export default function PaymentDetailPage() {
 
           {payment.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                 {payment.notes}
               </p>
             </DetailCard>
@@ -581,19 +581,19 @@ export default function PaymentDetailPage() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="font-semibold text-[color:var(--color-text-muted)]">Status</span>
-                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                  <span className="text-[color:var(--color-text-primary)] capitalize">
                     {formatStatusLabel(receipt.status ?? 'N/A')}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="font-semibold text-[color:var(--color-text-muted)]">Method</span>
-                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                  <span className="text-[color:var(--color-text-primary)] capitalize">
                     {receipt.method ? formatMethod(receipt.method) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="font-semibold text-[color:var(--color-text-muted)]">Type</span>
-                  <span className="capitalize text-[color:var(--color-text-primary)]">
+                  <span className="text-[color:var(--color-text-primary)] capitalize">
                     {receipt.type ? formatType(receipt.type) : 'N/A'}
                   </span>
                 </div>
@@ -618,13 +618,17 @@ export default function PaymentDetailPage() {
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Invoice</span>
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">
+                    Invoice
+                  </span>
                   <span className="text-[color:var(--color-text-primary)]">
                     {receiptInvoiceNumber(receipt)}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Paid at</span>
+                  <span className="font-semibold text-[color:var(--color-text-muted)]">
+                    Paid at
+                  </span>
                   <span className="text-[color:var(--color-text-primary)]">
                     {formatDateTime(receipt.paidAt ?? receipt.createdAt)}
                   </span>

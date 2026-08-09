@@ -212,8 +212,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
       log(
         'floors',
         'edit',
-        updated.status === 200 &&
-          String((updated.json.data as Json)?.label).includes('Renamed'),
+        updated.status === 200 && String((updated.json.data as Json)?.label).includes('Renamed'),
       );
     }
 
@@ -342,19 +341,19 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         token: adminToken,
         body: { bedId: 'B' },
       });
-      log('tenants', 'transfer bed same room', transfer.status === 200, `status=${transfer.status}`);
+      log(
+        'tenants',
+        'transfer bed same room',
+        transfer.status === 200,
+        `status=${transfer.status}`,
+      );
 
       // conflict: transfer to tenant2's bed
       const conflict = await req('PUT', `/api/v1/tenants/${tenantId}`, {
         token: adminToken,
         body: { roomId: room2Id, bedId: 'A' },
       });
-      log(
-        'tenants',
-        'transfer conflict 409',
-        conflict.status === 409,
-        `status=${conflict.status}`,
-      );
+      log('tenants', 'transfer conflict 409', conflict.status === 409, `status=${conflict.status}`);
 
       // ensure occupancy still consistent after conflict
       const r2 = await req('GET', `/api/v1/rooms/${room2Id}`, { token: adminToken });
@@ -375,12 +374,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         body: { tenantId, month },
       });
       const invoiceId = idOf(gen.json.data);
-      log(
-        'invoices',
-        'generate-single',
-        gen.status === 201 && !!invoiceId,
-        `status=${gen.status}`,
-      );
+      log('invoices', 'generate-single', gen.status === 201 && !!invoiceId, `status=${gen.status}`);
       expect(gen.status).toBe(201);
 
       const list = await req('GET', '/api/v1/invoices', { token: adminToken });
@@ -449,7 +443,12 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         },
       });
       const billId = idOf(created.json.data);
-      log('electricity', 'create reading', created.status === 201 && !!billId, `status=${created.status}`);
+      log(
+        'electricity',
+        'create reading',
+        created.status === 201 && !!billId,
+        `status=${created.status}`,
+      );
 
       if (billId) {
         const fin = await req('POST', `/api/v1/electricity/${billId}/finalize`, {
@@ -706,7 +705,12 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         },
       });
       const visitorId = idOf(created.json.data);
-      log('visitors', 'create expected', created.status === 201 && !!visitorId, `status=${created.status}`);
+      log(
+        'visitors',
+        'create expected',
+        created.status === 201 && !!visitorId,
+        `status=${created.status}`,
+      );
       if (visitorId) {
         const arrive = await req('POST', `/api/v1/visitors/${visitorId}/arrive`, {
           token: adminToken,
@@ -818,8 +822,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         log(
           'leaves',
           'detail approved',
-          detail.status === 200 &&
-            String((detail.json.data as Json)?.status) === 'approved',
+          detail.status === 200 && String((detail.json.data as Json)?.status) === 'approved',
           `status=${(detail.json.data as Json)?.status}`,
         );
       }
@@ -837,10 +840,12 @@ describe('Module HTTP e2e matrix (real routes)', () => {
       // some apps use PATCH or nested path
       const putOk =
         put.status === 200 ||
-        (await req('PUT', '/api/v1/app-config/', {
-          token: adminToken,
-          body: { pgName: 'E2E PG Updated' },
-        })).status === 200;
+        (
+          await req('PUT', '/api/v1/app-config/', {
+            token: adminToken,
+            body: { pgName: 'E2E PG Updated' },
+          })
+        ).status === 200;
       log('settings', 'update sticks', putOk || put.status === 200, `status=${put.status}`);
       if (put.status === 200) {
         const again = await req('GET', '/api/v1/app-config', { token: adminToken });

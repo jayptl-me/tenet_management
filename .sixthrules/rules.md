@@ -11,11 +11,11 @@
 
 ## Workspace Layout
 
-| Package           | Location          | Runtime | Framework     | Purpose                      |
-| ----------------- | ----------------- | ------- | ------------- | ---------------------------- |
-| `@pg/api`         | `apps/api/`       | Bun     | Hono 4.x      | REST API + SSE + cron jobs   |
-| `@pg/web`         | `apps/web/`       | Bun/Node| Next.js 16    | Admin panel + public pages   |
-| `@pg/types`       | `packages/types/` | TS      | —             | Shared types + Zod schemas   |
+| Package     | Location          | Runtime  | Framework  | Purpose                    |
+| ----------- | ----------------- | -------- | ---------- | -------------------------- |
+| `@pg/api`   | `apps/api/`       | Bun      | Hono 4.x   | REST API + SSE + cron jobs |
+| `@pg/web`   | `apps/web/`       | Bun/Node | Next.js 16 | Admin panel + public pages |
+| `@pg/types` | `packages/types/` | TS       | —          | Shared types + Zod schemas |
 
 ## Active Skills
 
@@ -32,20 +32,20 @@
 
 ## Available Commands
 
-| Command                     | Description                                  |
-| --------------------------- | -------------------------------------------- |
-| `bun run dev`               | Start API + Web dev servers concurrently     |
-| `bun run build`             | Build all workspaces                          |
-| `bun run lint`              | Lint all workspaces                           |
-| `bun run typecheck`         | TypeScript check across all workspaces        |
-| `bun run test`              | Run API unit tests (Vitest)                   |
-| `bun run test:e2e`          | Run web E2E tests (Playwright)                |
-| `bun run seed`              | Seed database with config defaults            |
-| `bun run seed:sample`       | Seed with config + sample data                |
-| `bun run format`            | Prettier format all                           |
-| `bun run format:check`      | Check formatting                              |
-| `bun run seo`               | Generate SEO files                            |
-| `bun run clean`             | Clean all build directories                   |
+| Command                | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `bun run dev`          | Start API + Web dev servers concurrently |
+| `bun run build`        | Build all workspaces                     |
+| `bun run lint`         | Lint all workspaces                      |
+| `bun run typecheck`    | TypeScript check across all workspaces   |
+| `bun run test`         | Run API unit tests (Vitest)              |
+| `bun run test:e2e`     | Run web E2E tests (Playwright)           |
+| `bun run seed`         | Seed database with config defaults       |
+| `bun run seed:sample`  | Seed with config + sample data           |
+| `bun run format`       | Prettier format all                      |
+| `bun run format:check` | Check formatting                         |
+| `bun run seo`          | Generate SEO files                       |
+| `bun run clean`        | Clean all build directories              |
 
 ## Environment Requirements
 
@@ -65,5 +65,6 @@ These are more sophisticated than the generic templates. Do NOT overwrite them.
 ## MCP Configuration
 
 See `.claude/settings.json` for MCP server config. Connected servers:
+
 - **Context7** — Library documentation (React, Next.js, TypeScript, deps)
 - **Tavily** — Web search

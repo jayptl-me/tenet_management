@@ -172,9 +172,7 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
 
   // Resolve search by tenant name (same pattern as tenants route)
   if (search) {
-    const users = await User.find(
-      safeFilter({ name: { $regex: search, $options: 'i' } }),
-    )
+    const users = await User.find(safeFilter({ name: { $regex: search, $options: 'i' } }))
       .select('_id')
       .lean();
     const userIds = users.map((u) => u._id);

@@ -28,8 +28,7 @@ async function seedFloorServiceStatuses(
 
   if (perFloorKeys.length === 0) return 0;
 
-  const floorOid =
-    typeof floorId === 'string' ? new mongoose.Types.ObjectId(floorId) : floorId;
+  const floorOid = typeof floorId === 'string' ? new mongoose.Types.ObjectId(floorId) : floorId;
   const existing = await ServiceStatus.find(safeFilter({ floorId: floorOid }))
     .select('serviceType')
     .lean();
@@ -38,7 +37,10 @@ async function seedFloorServiceStatuses(
   if (toCreate.length === 0) return 0;
 
   const lastUpdatedBy = new mongoose.Types.ObjectId(updatedByUserId);
-  type CreateMany = (docs: Record<string, unknown>[], opts?: { ordered?: boolean }) => Promise<unknown>;
+  type CreateMany = (
+    docs: Record<string, unknown>[],
+    opts?: { ordered?: boolean },
+  ) => Promise<unknown>;
   const insertMany = ServiceStatus.insertMany.bind(ServiceStatus) as unknown as CreateMany;
   await insertMany(
     toCreate.map((serviceType) => ({
@@ -104,10 +106,7 @@ floors.post('/', authGuard, adminOnly, zValidator('json', createFloorSchema), as
     const floor = await Floor.create(body);
     // FL-1 / SV-2: auto-seed ServiceStatus for isPerFloor amenity definitions
     try {
-      await seedFloorServiceStatuses(
-        (floor as { _id: mongoose.Types.ObjectId })._id,
-        user.sub,
-      );
+      await seedFloorServiceStatuses((floor as { _id: mongoose.Types.ObjectId })._id, user.sub);
     } catch {
       // Non-fatal: floor exists; admin can still add services manually
     }
@@ -170,9 +169,7 @@ floors.delete('/:id', authGuard, adminOnly, async (c) => {
   if (!floor) return notFound(c, 'Floor');
 
   // Cascade ServiceStatus rows for this floor (no rooms remain)
-  await ServiceStatus.deleteMany(
-    safeFilter({ floorId: new mongoose.Types.ObjectId(id) }),
-  );
+  await ServiceStatus.deleteMany(safeFilter({ floorId: new mongoose.Types.ObjectId(id) }));
 
   return c.json({ success: true, data: { message: 'Floor deleted' } });
 });

@@ -76,9 +76,7 @@ function NewGuardianForm() {
         router.push('/guardians');
       }
     } catch {
-      setSubmitError(
-        'Failed to create guardian. Check phone, unique email, and try again.',
-      );
+      setSubmitError('Failed to create guardian. Check phone, unique email, and try again.');
     }
   };
 

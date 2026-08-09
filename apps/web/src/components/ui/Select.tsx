@@ -172,11 +172,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
 
-        <RadixSelect.Root
-          value={radixValue}
-          onValueChange={emitNativeChange}
-          disabled={disabled}
-        >
+        <RadixSelect.Root value={radixValue} onValueChange={emitNativeChange} disabled={disabled}>
           <RadixSelect.Trigger
             id={selectId}
             aria-invalid={error ? true : undefined}
@@ -191,15 +187,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           >
             <span className="relative flex min-w-0 flex-1 items-center gap-2">
               {leftIcon && (
-                <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+                <span className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
                   {leftIcon}
                 </span>
               )}
               <span
-                className={clsx(
-                  'truncate',
-                  !current && 'text-[color:var(--color-text-muted)]',
-                )}
+                className={clsx('truncate', !current && 'text-[color:var(--color-text-muted)]')}
               >
                 {selectedLabel ?? placeholder}
               </span>
@@ -226,8 +219,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     value={opt.value === '' ? EMPTY : opt.value}
                     disabled={opt.disabled}
                     className={clsx(
-                      'relative flex cursor-pointer select-none items-center rounded-[var(--radius-sm)]',
-                      'py-2 pl-8 pr-3 text-sm font-medium',
+                      'relative flex cursor-pointer items-center rounded-[var(--radius-sm)] select-none',
+                      'py-2 pr-3 pl-8 text-sm font-medium',
                       'text-[color:var(--color-text-primary)] outline-none',
                       'data-[highlighted]:bg-[color:var(--color-field-bg-hover)]',
                       'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',

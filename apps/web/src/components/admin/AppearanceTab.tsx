@@ -265,7 +265,7 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
 
           {/* Stat card preview */}
           <div className="max-w-[200px] rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-card)]">
-            <div className="font-display text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+            <div className="font-display text-xs font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
               Total Tenants
             </div>
             <div className="font-display mt-1 text-2xl font-extrabold text-[color:var(--color-surface-900)]">

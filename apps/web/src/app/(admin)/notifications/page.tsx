@@ -200,9 +200,7 @@ export default function NotificationsPage() {
     {
       header: 'Title',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
-          {row.title}
-        </span>
+        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
       ),
     },
     {
@@ -210,7 +208,7 @@ export default function NotificationsPage() {
       accessor: (row) => (
         <span className="inline-flex items-center gap-1.5">
           {typeIconsMap[row.type] ?? <Bell className="h-4 w-4" />}
-          <span className="capitalize text-[color:var(--color-text-secondary)]">
+          <span className="text-[color:var(--color-text-secondary)] capitalize">
             {row.type.replace(/_/g, ' ')}
           </span>
         </span>
@@ -222,9 +220,7 @@ export default function NotificationsPage() {
         <span className="text-[color:var(--color-text-secondary)]">
           {targetLabels[row.targetType as TargetFilter] ?? row.targetType}
           {row.targetIds.length > 0 && (
-            <span className="text-[color:var(--color-text-muted)]">
-              {' '}({row.targetIds.length})
-            </span>
+            <span className="text-[color:var(--color-text-muted)]"> ({row.targetIds.length})</span>
           )}
         </span>
       ),
@@ -276,7 +272,7 @@ export default function NotificationsPage() {
       <div className="mb-6 flex gap-1 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-1 shadow-[var(--shadow-xs)]">
         <button
           onClick={() => setActiveTab('compose')}
-          className={`font-[family:var(--font-display)] flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'compose'
               ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
@@ -287,7 +283,7 @@ export default function NotificationsPage() {
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`font-[family:var(--font-display)] flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'history'
               ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
@@ -366,9 +362,7 @@ export default function NotificationsPage() {
                     onChange={addTargetId}
                     placeholder="Select a tenant to notify..."
                     valueKey="userId"
-                    labelKey={(item) =>
-                      tenantLabel(item as Parameters<typeof tenantLabel>[0])
-                    }
+                    labelKey={(item) => tenantLabel(item as Parameters<typeof tenantLabel>[0])}
                     sublabelFn={(item) =>
                       tenantSublabel(item as Parameters<typeof tenantSublabel>[0])
                     }
@@ -450,7 +444,7 @@ export default function NotificationsPage() {
                 );
                 return (
                   <div className="mt-1 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--color-text-primary)]">
+                    <p className="mb-2 text-xs font-semibold tracking-wider text-[color:var(--color-text-primary)] uppercase">
                       WhatsApp Share Preview
                     </p>
                     <div className="flex items-center gap-2">
@@ -458,7 +452,7 @@ export default function NotificationsPage() {
                         href={whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-[family:var(--font-mono)] flex-1 truncate text-xs text-[color:var(--color-brand-600)] underline"
+                        className="flex-1 truncate text-xs font-[family:var(--font-mono)] text-[color:var(--color-brand-600)] underline"
                       >
                         {whatsappUrl}
                       </a>
@@ -542,7 +536,7 @@ export default function NotificationsPage() {
                 ...typeOptions.map((opt) => ({ value: opt.value, label: opt.label })),
               ]}
             />
-            <span className="font-[family:var(--font-mono)] ml-auto text-xs text-[color:var(--color-text-muted)]">
+            <span className="ml-auto text-xs font-[family:var(--font-mono)] text-[color:var(--color-text-muted)]">
               {total} notification{total !== 1 ? 's' : ''}
             </span>
           </div>

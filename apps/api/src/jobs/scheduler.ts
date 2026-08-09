@@ -76,10 +76,7 @@ export function startScheduler(): void {
       const [paymentResult, invoiceResult] = await Promise.all([
         Payment.updateMany({ status: 'pending', dueDate: { $lt: now } }, { status: 'overdue' }),
         // Never clobber partial: partially paid past-due stays partial for UI filters.
-        Invoice.updateMany(
-          { status: 'sent', dueDate: { $lt: now } },
-          { status: 'overdue' },
-        ),
+        Invoice.updateMany({ status: 'sent', dueDate: { $lt: now } }, { status: 'overdue' }),
       ]);
 
       logger.info(

@@ -317,7 +317,7 @@ export default function NewElectricityPage() {
                   <Zap className="h-4 w-4" />
                   Computed total from readings
                 </span>
-                <span className="font-mono text-xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                <span className="font-mono text-xl font-bold text-[color:var(--color-text-primary)] tabular-nums">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
               </div>

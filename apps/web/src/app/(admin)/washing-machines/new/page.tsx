@@ -59,7 +59,9 @@ export default function NewWashingMachinePage() {
       await api.post('washing-machines', { json: data }).json<{ success: boolean }>();
       router.push('/washing-machines');
     } catch {
-      setSubmitError('Failed to create washing machine. A machine with this number may already exist on this floor.');
+      setSubmitError(
+        'Failed to create washing machine. A machine with this number may already exist on this floor.',
+      );
     }
   };
 

@@ -29,7 +29,11 @@ let counter = 0;
 
 async function seedFloorAndRoom(sharing: 2 | 3 | 4 = 2) {
   counter += 1;
-  const floor = await floorCreate({ floorNumber: 100 + counter, label: `Transfer Floor ${counter}`, totalRooms: 1 });
+  const floor = await floorCreate({
+    floorNumber: 100 + counter,
+    label: `Transfer Floor ${counter}`,
+    totalRooms: 1,
+  });
   const fn = `T${counter}${Date.now().toString().slice(-4)}`;
   const room = await roomCreate({
     roomNumber: fn,
@@ -43,11 +47,7 @@ async function seedFloorAndRoom(sharing: 2 | 3 | 4 = 2) {
   return { room: fullRoom };
 }
 
-async function seedUserAndTenant(
-  roomIdStr: string,
-  bedId: string,
-  overrides: AnyDoc = {},
-) {
+async function seedUserAndTenant(roomIdStr: string, bedId: string, overrides: AnyDoc = {}) {
   const suffix = `${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 6)}`;
   const e = `tx-${suffix}@example.com`;
   const p = `+91999${String(Date.now()).slice(-6)}${counter}`;
@@ -74,11 +74,7 @@ async function seedUserAndTenant(
 }
 
 /** Occupy a bed in a room and persist. */
-async function occupyBed(
-  roomId: string,
-  bedId: string,
-  tenantId: mongoose.Types.ObjectId,
-) {
+async function occupyBed(roomId: string, bedId: string, tenantId: mongoose.Types.ObjectId) {
   const room = await Room.findById(roomId);
   if (!room) return;
   const bed = room.beds.find((b) => b.bedId === bedId);
@@ -191,7 +187,10 @@ describe('Tenant Transfer Atomicity (P0-T1)', () => {
         // P0-T1 fix: validate target bed is free BEFORE freeing old bed
         const targetBed = currentRoom.beds.find((b) => b.bedId === 'B');
         if (!targetBed) throw new AppError('Bed disappeared', 500, 'BED_VANISHED');
-        if (targetBed.isOccupied && String(targetBed.tenantId ?? '') !== String(sessionTenant._id)) {
+        if (
+          targetBed.isOccupied &&
+          String(targetBed.tenantId ?? '') !== String(sessionTenant._id)
+        ) {
           throw new AppError('Bed is already occupied', 409, 'BED_OCCUPIED');
         }
 
@@ -310,7 +309,10 @@ describe('Tenant Transfer Atomicity (P0-T1)', () => {
 
         const targetBed = currentRoom.beds.find((b) => b.bedId === 'C');
         if (!targetBed) throw new AppError('Bed disappeared', 500, 'BED_VANISHED');
-        if (targetBed.isOccupied && String(targetBed.tenantId ?? '') !== String(sessionTenant._id)) {
+        if (
+          targetBed.isOccupied &&
+          String(targetBed.tenantId ?? '') !== String(sessionTenant._id)
+        ) {
           throw new AppError('Bed is already occupied', 409, 'BED_OCCUPIED');
         }
 

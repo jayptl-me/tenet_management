@@ -33,9 +33,7 @@ const updateSlotSchema = z.strictObject({
 function mapLaundrySlot(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenantId;
   const tenant =
-    tenantRaw && typeof tenantRaw === 'object'
-      ? (tenantRaw as Record<string, unknown>)
-      : undefined;
+    tenantRaw && typeof tenantRaw === 'object' ? (tenantRaw as Record<string, unknown>) : undefined;
   const userRaw = tenant?.userId;
   const user =
     userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;

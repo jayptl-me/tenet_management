@@ -25,58 +25,58 @@ AppConfig.features (Mongo single config doc)
 
 ## Code paths (source files)
 
-| Concern | Path |
-|---------|------|
-| Schema defaults | `apps/api/src/models/appConfig.ts` (`features` subdoc) |
-| Middleware + cache | `apps/api/src/middleware/featureFlags.ts` |
-| Config PUT + invalidate | `apps/api/src/routes/appConfig.ts` |
-| Shared types | `packages/types/src/appConfig.ts` `IFeatureFlags` |
-| Seed defaults | `apps/api/src/scripts/seed.ts` |
-| Tests | `apps/api/src/__tests__/feature-flags.test.ts` |
-| Admin settings toggles | `apps/web/src/app/(admin)/settings/page.tsx` |
-| Sidebar nav gating | `apps/web/src/components/admin/Sidebar.tsx` |
-| Quick create gating | `apps/web/src/components/admin/QuickCreate.tsx` |
-| Command palette (flag-gated) | `apps/web/src/components/admin/CommandPalette.tsx` |
-| Flutter | `mobile/lib/**` — no AppConfig features consumer |
+| Concern                      | Path                                                   |
+| ---------------------------- | ------------------------------------------------------ |
+| Schema defaults              | `apps/api/src/models/appConfig.ts` (`features` subdoc) |
+| Middleware + cache           | `apps/api/src/middleware/featureFlags.ts`              |
+| Config PUT + invalidate      | `apps/api/src/routes/appConfig.ts`                     |
+| Shared types                 | `packages/types/src/appConfig.ts` `IFeatureFlags`      |
+| Seed defaults                | `apps/api/src/scripts/seed.ts`                         |
+| Tests                        | `apps/api/src/__tests__/feature-flags.test.ts`         |
+| Admin settings toggles       | `apps/web/src/app/(admin)/settings/page.tsx`           |
+| Sidebar nav gating           | `apps/web/src/components/admin/Sidebar.tsx`            |
+| Quick create gating          | `apps/web/src/components/admin/QuickCreate.tsx`        |
+| Command palette (flag-gated) | `apps/web/src/components/admin/CommandPalette.tsx`     |
+| Flutter                      | `mobile/lib/**` — no AppConfig features consumer       |
 
 ### Flag defaults (model / middleware / Sidebar FEATURE_DEFAULTS)
 
-| Flag | Default | Domain |
-|------|---------|--------|
-| `attendanceEnabled` | **false** | Attendance + Leaves **nav and API** |
-| `laundryEnabled` | true | Laundry API + nav |
-| `messFeedbackEnabled` | true | Meals (feedback) API + Meals nav |
-| `visitorManagementEnabled` | true | Visitors API + nav |
-| `guardianPortalEnabled` | true | Guardians API + nav |
-| `noticeBoardEnabled` | true | Notices API + nav |
-| `emergencyAlertsEnabled` | true | Stored + settings UI only; **no requireFeature consumer, no Sidebar gate** |
+| Flag                       | Default   | Domain                                                                     |
+| -------------------------- | --------- | -------------------------------------------------------------------------- |
+| `attendanceEnabled`        | **false** | Attendance + Leaves **nav and API**                                        |
+| `laundryEnabled`           | true      | Laundry API + nav                                                          |
+| `messFeedbackEnabled`      | true      | Meals (feedback) API + Meals nav                                           |
+| `visitorManagementEnabled` | true      | Visitors API + nav                                                         |
+| `guardianPortalEnabled`    | true      | Guardians API + nav                                                        |
+| `noticeBoardEnabled`       | true      | Notices API + nav                                                          |
+| `emergencyAlertsEnabled`   | true      | Stored + settings UI only; **no requireFeature consumer, no Sidebar gate** |
 
 ### API `requireFeature` wiring (source)
 
-| Flag | Mounted on |
-|------|------------|
-| `laundryEnabled` | `routes/laundry.ts` `use('*', ...)` |
-| `messFeedbackEnabled` | `routes/meals.ts` |
-| `visitorManagementEnabled` | `routes/visitors.ts` |
-| `guardianPortalEnabled` | `routes/guardians.ts` |
-| `noticeBoardEnabled` | `routes/notices.ts` |
-| `attendanceEnabled` | `routes/attendance.ts`, `routes/leaves.ts` |
-| (none) | `routes/menus.ts` — **always on** |
-| (none) | Core tenants/rooms/invoices/payments/etc. |
+| Flag                       | Mounted on                                 |
+| -------------------------- | ------------------------------------------ |
+| `laundryEnabled`           | `routes/laundry.ts` `use('*', ...)`        |
+| `messFeedbackEnabled`      | `routes/meals.ts`                          |
+| `visitorManagementEnabled` | `routes/visitors.ts`                       |
+| `guardianPortalEnabled`    | `routes/guardians.ts`                      |
+| `noticeBoardEnabled`       | `routes/notices.ts`                        |
+| `attendanceEnabled`        | `routes/attendance.ts`, `routes/leaves.ts` |
+| (none)                     | `routes/menus.ts` — **always on**          |
+| (none)                     | Core tenants/rooms/invoices/payments/etc.  |
 
 ### Admin nav vs always-on
 
-| Module | Sidebar | API gate |
-|--------|---------|----------|
-| Laundry | `laundryEnabled` | yes |
-| Meals | `messFeedbackEnabled` | yes |
-| **Menus** | **always visible** | **no gate** |
-| Notices | `noticeBoardEnabled` | yes |
-| Visitors | `visitorManagementEnabled` | yes |
-| Guardians | `guardianPortalEnabled` | yes |
-| Attendance | `attendanceEnabled` | yes |
-| Leaves | `attendanceEnabled` | yes (same flag) |
-| Services, Assets, Complaints, Enquiries, Notifications, Finance, Tenants, Rooms, Floors | always | n/a (core) |
+| Module                                                                                  | Sidebar                    | API gate        |
+| --------------------------------------------------------------------------------------- | -------------------------- | --------------- |
+| Laundry                                                                                 | `laundryEnabled`           | yes             |
+| Meals                                                                                   | `messFeedbackEnabled`      | yes             |
+| **Menus**                                                                               | **always visible**         | **no gate**     |
+| Notices                                                                                 | `noticeBoardEnabled`       | yes             |
+| Visitors                                                                                | `visitorManagementEnabled` | yes             |
+| Guardians                                                                               | `guardianPortalEnabled`    | yes             |
+| Attendance                                                                              | `attendanceEnabled`        | yes             |
+| Leaves                                                                                  | `attendanceEnabled`        | yes (same flag) |
+| Services, Assets, Complaints, Enquiries, Notifications, Finance, Tenants, Rooms, Floors | always                     | n/a (core)      |
 
 ### Flutter
 
@@ -95,12 +95,12 @@ AppConfig.features (Mongo single config doc)
 
 ## Gaps / half-baked
 
-| Severity | Gap | Proof |
-|----------|-----|-------|
-| P2 | **Menus always-on** while Meals require `messFeedbackEnabled` — intentional split or product inconsistency | menus.ts ungated; meals gated |
-| P2 | `emergencyAlertsEnabled` has no route/nav/Flutter enforcement — toggle is dead config | grep: only model/settings/middleware type |
-| P2 | Flutter has no feature flag bootstrap; disabled modules show as errors not empty states | mobile has no AppConfig features parse |
-| P2 | Direct URL to `/laundry` etc. still loads admin page when nav hidden; only API blocks mutations/list | Next admin pages not middleware-gated by flag |
+| Severity | Gap                                                                                                        | Proof                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| P2       | **Menus always-on** while Meals require `messFeedbackEnabled` — intentional split or product inconsistency | menus.ts ungated; meals gated                 |
+| P2       | `emergencyAlertsEnabled` has no route/nav/Flutter enforcement — toggle is dead config                      | grep: only model/settings/middleware type     |
+| P2       | Flutter has no feature flag bootstrap; disabled modules show as errors not empty states                    | mobile has no AppConfig features parse        |
+| P2       | Direct URL to `/laundry` etc. still loads admin page when nav hidden; only API blocks mutations/list       | Next admin pages not middleware-gated by flag |
 
 **Obsolete:** claim that only laundry is gated. Full set of six routers are gated (leaves/menus/emergency excepted as above).
 
@@ -117,10 +117,10 @@ AppConfig.features (Mongo single config doc)
 
 ## Remediation log
 
-| Date | Change | Status |
-|------|--------|--------|
-| historical | Broader requireFeature rollout across laundry/meals/visitors/guardians/notices/attendance | Live |
-| historical | Sidebar featureFlag keys aligned with AppConfig | Live |
-| 2026-07-16 | Re-verified middleware, all gated routes, leaves/menus ungated, Flutter absence, emergencyAlerts dead | Docs synced |
-| 2026-07-16 | Reconcile | CommandPalette **flag-gated** (same FEATURE_DEFAULTS as Sidebar) -- FLAG-palette closed |
-| 2026-07-16 | Queue E | **FLAG-leaves FIXED** -- `leaves.use('*', requireFeature('attendanceEnabled'))` |
+| Date       | Change                                                                                                | Status                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| historical | Broader requireFeature rollout across laundry/meals/visitors/guardians/notices/attendance             | Live                                                                                    |
+| historical | Sidebar featureFlag keys aligned with AppConfig                                                       | Live                                                                                    |
+| 2026-07-16 | Re-verified middleware, all gated routes, leaves/menus ungated, Flutter absence, emergencyAlerts dead | Docs synced                                                                             |
+| 2026-07-16 | Reconcile                                                                                             | CommandPalette **flag-gated** (same FEATURE_DEFAULTS as Sidebar) -- FLAG-palette closed |
+| 2026-07-16 | Queue E                                                                                               | **FLAG-leaves FIXED** -- `leaves.use('*', requireFeature('attendanceEnabled'))`         |

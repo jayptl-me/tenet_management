@@ -40,7 +40,7 @@ export function FormSection({
         <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 space-y-1">
             {title && (
-              <h3 className="font-[family:var(--font-display)] flex items-center gap-2 text-sm font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[15px]">
+              <h3 className="flex items-center gap-2 text-sm font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[15px]">
                 {icon && (
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] [&_svg]:h-3.5 [&_svg]:w-3.5">
                     {icon}

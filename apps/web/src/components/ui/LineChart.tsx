@@ -110,7 +110,7 @@ export function LineChart({
                   className="absolute right-0 text-right"
                   style={{ top: gr.y, transform: 'translateY(-50%)' }}
                 >
-                  <span className="whitespace-nowrap font-mono text-[10px] font-medium tabular-nums text-[color:var(--chart-axis)]">
+                  <span className="font-mono text-[10px] font-medium whitespace-nowrap text-[color:var(--chart-axis)] tabular-nums">
                     {formatVal(gr.value)}
                   </span>
                 </div>
@@ -128,7 +128,7 @@ export function LineChart({
               gridRows.map((gr, i) => (
                 <div
                   key={i}
-                  className="pointer-events-none absolute left-0 right-0 border-t border-[color:var(--chart-grid)]"
+                  className="pointer-events-none absolute right-0 left-0 border-t border-[color:var(--chart-grid)]"
                   style={{
                     top: gr.y,
                     opacity: i === gridCount ? 0.9 : 0.5,
@@ -149,7 +149,7 @@ export function LineChart({
                   onMouseEnter={() => setTooltipIdx(i)}
                   onMouseLeave={() => setTooltipIdx(null)}
                 >
-                  <div className="absolute bottom-0 left-0 right-0 flex flex-row items-end justify-center gap-[2px] px-0.5">
+                  <div className="absolute right-0 bottom-0 left-0 flex flex-row items-end justify-center gap-[2px] px-0.5">
                     {barGroup.map((seg) => (
                       <div
                         key={seg.key}
@@ -217,7 +217,7 @@ export function LineChart({
                 className="absolute right-0 text-right"
                 style={{ top: gr.y, transform: 'translateY(-50%)' }}
               >
-                <span className="font-mono text-[10px] font-medium tabular-nums text-[color:var(--chart-axis)]">
+                <span className="font-mono text-[10px] font-medium text-[color:var(--chart-axis)] tabular-nums">
                   {formatVal(gr.value)}
                 </span>
               </div>
@@ -279,7 +279,7 @@ export function LineChart({
             })}
           </svg>
           {tooltipIdx != null && data[tooltipIdx] && (
-            <div className="absolute left-1/2 top-2 z-10 -translate-x-1/2">
+            <div className="absolute top-2 left-1/2 z-10 -translate-x-1/2">
               <div className={chartTooltipClass}>
                 <p className="text-[11px] font-bold">{labels[tooltipIdx]}</p>
                 {lines.map((line) => (

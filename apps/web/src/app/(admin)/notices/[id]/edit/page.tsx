@@ -97,8 +97,7 @@ export default function EditNoticePage() {
           title: (d.title as string) ?? '',
           content: (d.content as string) ?? '',
           pinned: (d.pinned as boolean) ?? false,
-          targetType:
-            (d.targetType as 'all' | 'floor' | 'room' | 'individual') ?? 'all',
+          targetType: (d.targetType as 'all' | 'floor' | 'room' | 'individual') ?? 'all',
           targetIds: Array.isArray(d.targetIds) ? (d.targetIds as string[]).join(', ') : '',
         });
         setIsLoading(false);
@@ -268,11 +267,7 @@ export default function EditNoticePage() {
           </FormGrid>
         </FormSection>
 
-        <FormSection
-          title="Publishing"
-          description="Pin state on the notices board"
-          divided
-        >
+        <FormSection title="Publishing" description="Pin state on the notices board" divided>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
             <Checkbox label="Pin this notice" {...register('pinned')} />
           </div>

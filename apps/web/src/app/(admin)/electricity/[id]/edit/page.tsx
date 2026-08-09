@@ -225,9 +225,7 @@ export default function EditElectricityPage() {
           <div className="flex items-start gap-3">
             <Lock className="mt-0.5 h-5 w-5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-bold">
-                Bill is locked ({billStatus})
-              </p>
+              <p className="text-sm font-bold">Bill is locked ({billStatus})</p>
               <p className="mt-0.5 text-xs font-semibold opacity-90">
                 {billStatus === 'finalized'
                   ? 'Finalized bills cannot be edited. Create a new draft if needed.'
@@ -430,7 +428,7 @@ export default function EditElectricityPage() {
                   <Zap className="h-4 w-4" />
                   Computed total from readings
                 </span>
-                <span className="font-mono text-xl font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                <span className="font-mono text-xl font-bold text-[color:var(--color-text-primary)] tabular-nums">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
               </div>

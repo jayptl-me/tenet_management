@@ -45,7 +45,7 @@ export default function ServerWakeupOverlay() {
         {/* Shimmer Pulse Indicator */}
         <div className="mt-5 flex items-center justify-center gap-1.5">
           <span className="h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-brand-500)]" />
-          <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[color:var(--color-brand-600)]">
+          <span className="font-mono text-xs font-semibold tracking-wider text-[color:var(--color-brand-600)] uppercase">
             Establishing connection...
           </span>
         </div>

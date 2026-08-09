@@ -32,7 +32,7 @@ export function GlobalLoadingBar() {
           animate={{ opacity: 1, scaleX: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="fixed left-0 right-0 top-0 z-[9999] h-[2px] origin-left bg-[color:var(--color-brand-500)]"
+          className="fixed top-0 right-0 left-0 z-[9999] h-[2px] origin-left bg-[color:var(--color-brand-500)]"
           style={{ transformOrigin: 'left center' }}
         >
           {/* Animated shimmer */}

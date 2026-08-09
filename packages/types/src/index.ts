@@ -35,7 +35,6 @@ export type {
   IRefreshTokenRequest,
 } from './auth';
 
-
 // ── Floor ──────────────────────────────────────────────
 export type { AmenityCount, IFloor, IFloorCreate } from './floor';
 
