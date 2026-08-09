@@ -130,7 +130,7 @@ export default function FloorsPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+          <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
           <Input
             placeholder="Search floors..."
             value={search}

@@ -139,7 +139,7 @@ function LeaveForm() {
             <FormSection title="Leave details" description="Period, reason, and current status">
               <FormGrid cols={2}>
                 <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                  <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                     Period
                   </p>
                   <p className="mt-1 flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
@@ -153,7 +153,7 @@ function LeaveForm() {
                 </div>
 
                 <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                  <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                     Status
                   </p>
                   <span

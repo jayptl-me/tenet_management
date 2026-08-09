@@ -43,36 +43,36 @@ Hard DELETE /tenants/:id
 
 ## Code paths (source files)
 
-| Concern | Path |
-|---------|------|
-| API routes | `apps/api/src/routes/tenants.ts` |
-| Tenant model / indexes | `apps/api/src/models/tenant.ts` |
-| Room beds | `apps/api/src/models/room.ts` |
-| Guardian create | `apps/api/src/routes/guardians.ts` |
-| Admin new | `apps/web/src/app/(admin)/tenants/new/page.tsx` |
-| Admin detail hub | `apps/web/src/app/(admin)/tenants/[id]/page.tsx` |
-| Admin edit / transfer | `apps/web/src/app/(admin)/tenants/[id]/edit/page.tsx` |
-| Admin list | `apps/web/src/app/(admin)/tenants/page.tsx` |
-| Temp password UI | `apps/web/src/components/ui/TempCredentialsDialog.tsx` |
-| Bed picker (create) | OccupancyBedPicker (new page) |
-| Flutter portal | `mobile/lib/features/tenant/**`, auth rejects admin |
-| Related feature audit | `docs/audit/features/tenants.md` |
+| Concern                   | Path                                                       |
+| ------------------------- | ---------------------------------------------------------- |
+| API routes                | `apps/api/src/routes/tenants.ts`                           |
+| Tenant model / indexes    | `apps/api/src/models/tenant.ts`                            |
+| Room beds                 | `apps/api/src/models/room.ts`                              |
+| Guardian create           | `apps/api/src/routes/guardians.ts`                         |
+| Admin new                 | `apps/web/src/app/(admin)/tenants/new/page.tsx`            |
+| Admin detail hub          | `apps/web/src/app/(admin)/tenants/[id]/page.tsx`           |
+| Admin edit / transfer     | `apps/web/src/app/(admin)/tenants/[id]/edit/page.tsx`      |
+| Admin list                | `apps/web/src/app/(admin)/tenants/page.tsx`                |
+| Temp password UI          | `apps/web/src/components/ui/TempCredentialsDialog.tsx`     |
+| Bed picker (create)       | OccupancyBedPicker (new page)                              |
+| Flutter portal            | `mobile/lib/features/tenant/**`, auth rejects admin        |
+| Related feature audit     | `docs/audit/features/tenants.md`                           |
 | Occupancy interconnection | `docs/audit/interconnections/occupancy-bed-consistency.md` |
 
 ### API surface (verified)
 
-| Method | Path | Role | Behavior |
-|--------|------|------|----------|
-| POST | `/tenants` | admin | Txn create + bed occupy; returns `temporaryPassword` |
-| GET | `/tenants` | admin | Filters `isActive`, `roomId`, `floorId`, `search` |
-| GET | `/tenants/:id` | admin or owner | `assertAdminOrTenantOwner` |
-| PUT | `/tenants/:id` | admin | Transfer/swap in session; 409 `BED_OCCUPIED`; **no `isActive` in Zod** |
-| POST | `/tenants/:id/checkout` | admin | Dues guards + free bed + deactivate User |
-| POST | `/tenants/:id/reinstate` | admin | Reclaim bed if free; reactivate User |
-| POST | `/tenants/:id/documents` | admin | KYC upload |
-| GET | `/tenants/:id/{payments,complaints,invoices,activity}` | admin or owner | Ownership gated |
-| GET | `/tenants/:id/dues` | admin | Checkout dues summary |
-| DELETE | `/tenants/:id` | admin | Cascade + free bed + scrub tenant User |
+| Method | Path                                                   | Role           | Behavior                                                               |
+| ------ | ------------------------------------------------------ | -------------- | ---------------------------------------------------------------------- |
+| POST   | `/tenants`                                             | admin          | Txn create + bed occupy; returns `temporaryPassword`                   |
+| GET    | `/tenants`                                             | admin          | Filters `isActive`, `roomId`, `floorId`, `search`                      |
+| GET    | `/tenants/:id`                                         | admin or owner | `assertAdminOrTenantOwner`                                             |
+| PUT    | `/tenants/:id`                                         | admin          | Transfer/swap in session; 409 `BED_OCCUPIED`; **no `isActive` in Zod** |
+| POST   | `/tenants/:id/checkout`                                | admin          | Dues guards + free bed + deactivate User                               |
+| POST   | `/tenants/:id/reinstate`                               | admin          | Reclaim bed if free; reactivate User                                   |
+| POST   | `/tenants/:id/documents`                               | admin          | KYC upload                                                             |
+| GET    | `/tenants/:id/{payments,complaints,invoices,activity}` | admin or owner | Ownership gated                                                        |
+| GET    | `/tenants/:id/dues`                                    | admin          | Checkout dues summary                                                  |
+| DELETE | `/tenants/:id`                                         | admin          | Cascade + free bed + scrub tenant User                                 |
 
 ### Create / update Zod (truth)
 
@@ -103,14 +103,14 @@ In one transaction: Payments, Complaints, Invoices, Visitors, Guardians (docs on
 
 ### FE CTAs (detail hub)
 
-| CTA | When | Call |
-|-----|------|------|
-| Edit | always | navigate `/tenants/:id/edit` (transfer via room/bed fields) |
-| Check Out | `isActive` | dues fetch -> confirm -> `POST .../checkout` |
-| Reinstate | `!isActive` | `POST .../reinstate` |
-| Add guardian | empty guardians list | `/guardians/new?tenantId=` |
-| Documents | always | upload widgets |
-| WhatsApp / Copy Info | contact present | client-side only |
+| CTA                  | When                 | Call                                                        |
+| -------------------- | -------------------- | ----------------------------------------------------------- |
+| Edit                 | always               | navigate `/tenants/:id/edit` (transfer via room/bed fields) |
+| Check Out            | `isActive`           | dues fetch -> confirm -> `POST .../checkout`                |
+| Reinstate            | `!isActive`          | `POST .../reinstate`                                        |
+| Add guardian         | empty guardians list | `/guardians/new?tenantId=`                                  |
+| Documents            | always               | upload widgets                                              |
+| WhatsApp / Copy Info | contact present      | client-side only                                            |
 
 ## What works
 
@@ -125,15 +125,15 @@ In one transaction: Payments, Complaints, Invoices, Visitors, Guardians (docs on
 
 ## Gaps / half-baked
 
-| Severity | Gap | Proof |
-|----------|-----|-------|
-| P1 | No partial unique index on active `(roomId, bedId)`; concurrent create/transfer can race past app checks | `tenant.ts` index `{ roomId, bedId, isActive }` non-unique |
-| P1 | DELETE deletes Guardian docs but does not deactivate/scrub guardian `User` accounts | `tenants.ts` DELETE; guardians created with separate Users |
-| P1 | Checkout/reinstate/transfer FE catch blocks show generic strings; API codes not parsed | detail + edit pages |
-| P2 | Checkout does not deactivate linked guardians (login still possible for ward data until flag/route checks) | checkout handler only touches tenant User |
-| P2 | Edit bed UI not shared OccupancyBedPicker | edit page |
-| P2 | Checkout overlay ad-hoc `bg-black/40` vs shared modal | detail page |
-| P2 | `@pg/types` may lag create response `temporaryPassword` | packages/types tenant |
+| Severity | Gap                                                                                                        | Proof                                                      |
+| -------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| P1       | No partial unique index on active `(roomId, bedId)`; concurrent create/transfer can race past app checks   | `tenant.ts` index `{ roomId, bedId, isActive }` non-unique |
+| P1       | DELETE deletes Guardian docs but does not deactivate/scrub guardian `User` accounts                        | `tenants.ts` DELETE; guardians created with separate Users |
+| P1       | Checkout/reinstate/transfer FE catch blocks show generic strings; API codes not parsed                     | detail + edit pages                                        |
+| P2       | Checkout does not deactivate linked guardians (login still possible for ward data until flag/route checks) | checkout handler only touches tenant User                  |
+| P2       | Edit bed UI not shared OccupancyBedPicker                                                                  | edit page                                                  |
+| P2       | Checkout overlay ad-hoc `bg-black/40` vs shared modal                                                      | detail page                                                |
+| P2       | `@pg/types` may lag create response `temporaryPassword`                                                    | packages/types tenant                                      |
 
 **Obsolete claims (do not refile):** non-atomic transfer, free `isActive` on PUT, temporaryPassword discarded, nested GET IDOR.
 
@@ -151,8 +151,8 @@ In one transaction: Payments, Complaints, Invoices, Visitors, Guardians (docs on
 
 ## Remediation log
 
-| Date | Change | Status |
-|------|--------|--------|
-| pre-2026-07-12 | Transfer free-before-validate; isActive free toggle; temp password dropped | Open historically |
-| ~2026-07-12+ | Transfer session + validate-first; temp password + dialog; isActive removed from PUT; nested ownership | **Fixed in source** |
-| 2026-07-16 | Interconnection audit re-verified against `tenants.ts` + admin pages; P0s closed; residual P1 race + guardian User cascade | Docs synced |
+| Date           | Change                                                                                                                     | Status              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| pre-2026-07-12 | Transfer free-before-validate; isActive free toggle; temp password dropped                                                 | Open historically   |
+| ~2026-07-12+   | Transfer session + validate-first; temp password + dialog; isActive removed from PUT; nested ownership                     | **Fixed in source** |
+| 2026-07-16     | Interconnection audit re-verified against `tenants.ts` + admin pages; P0s closed; residual P1 race + guardian User cascade | Docs synced         |

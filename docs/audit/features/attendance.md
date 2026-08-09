@@ -6,12 +6,12 @@
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/attendanceRecord.ts` |
-| Routes | `apps/api/src/routes/attendance.ts` |
-| Types | `packages/types/src/attendance.ts` |
-| Admin | `apps/web/src/app/(admin)/attendance/**` |
+| Layer   | Path                                                             |
+| ------- | ---------------------------------------------------------------- |
+| Model   | `apps/api/src/models/attendanceRecord.ts`                        |
+| Routes  | `apps/api/src/routes/attendance.ts`                              |
+| Types   | `packages/types/src/attendance.ts`                               |
+| Admin   | `apps/web/src/app/(admin)/attendance/**`                         |
 | Flutter | `mobile/lib/features/tenant/presentation/attendance_screen.dart` |
 
 Feature flag: **`attendanceEnabled`** (default **false** in seed -- intentional ops default).

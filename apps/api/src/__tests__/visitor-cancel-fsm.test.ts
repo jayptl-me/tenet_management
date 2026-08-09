@@ -21,7 +21,9 @@ type Json = Record<string, unknown>;
 // Mongoose 9 create typings are strict; test seeds use loose docs (same pattern as beds.test).
 type AnyDoc = Record<string, unknown>;
 const userCreate = User.create.bind(User) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
-const floorCreate = Floor.create.bind(Floor) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
+const floorCreate = Floor.create.bind(Floor) as unknown as (
+  doc: AnyDoc,
+) => Promise<{ _id: unknown }>;
 const roomCreate = Room.create.bind(Room) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
 const tenantCreate = Tenant.create.bind(Tenant) as unknown as (
   doc: AnyDoc,

@@ -235,7 +235,7 @@ export default function LeaveDetailPage() {
           <DetailCard title="Reason" icon={<FileText />}>
             <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
               {leave.reason || (
-                <span className="italic text-[color:var(--color-text-muted)]">
+                <span className="text-[color:var(--color-text-muted)] italic">
                   No reason provided
                 </span>
               )}

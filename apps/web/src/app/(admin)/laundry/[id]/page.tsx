@@ -181,7 +181,7 @@ export default function LaundryDetailPage() {
 
           {slot.notes && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                 {slot.notes}
               </p>
             </DetailCard>

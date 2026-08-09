@@ -6,7 +6,15 @@ import Link from 'next/link';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Shield, UserRound, Mail, Phone, CalendarDays, Banknote, AlertTriangle } from 'lucide-react';
+import {
+  Shield,
+  UserRound,
+  Mail,
+  Phone,
+  CalendarDays,
+  Banknote,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
@@ -31,7 +39,10 @@ const RELATION_OPTIONS = [
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  phone: z.string().min(10, 'Phone is required').refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
+  phone: z
+    .string()
+    .min(10, 'Phone is required')
+    .refine((v) => isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   email: z.string().email('Invalid email'),
   roomId: z.string().min(1, 'Room is required'),
   bedId: z.string().min(1, 'Bed is required'),
@@ -42,7 +53,11 @@ const schema = z.object({
   depositPaid: z.coerce.number().min(0, 'Deposit cannot be negative'),
   moveInDate: z.string().optional(),
   emergencyName: z.string().optional(),
-  emergencyPhone: z.string().optional().or(z.literal('')).refine((v) => !v || isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
+  emergencyPhone: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine((v) => !v || isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   emergencyRelation: z.string().optional(),
 });
 
@@ -68,13 +83,22 @@ export default function EditTenantPage() {
   const [currentBedId, setCurrentBedId] = useState('');
   const [originalRoomId, setOriginalRoomId] = useState('');
 
-  const { register, handleSubmit, reset, control, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const roomIdWatch = useWatch({ control, name: 'roomId' });
 
   useEffect(() => {
     if (!id) return;
-    api.get(`tenants/${id}`).json<{ success: boolean; data: Record<string, unknown> }>()
+    api
+      .get(`tenants/${id}`)
+      .json<{ success: boolean; data: Record<string, unknown> }>()
       .then((res) => {
         const d = res.data;
         setTenantData(d);
@@ -88,29 +112,42 @@ export default function EditTenantPage() {
         setCurrentBedId(bedId);
         setOriginalRoomId(roomId);
         reset({
-          name: (user.name as string) ?? '', phone: (user.phone as string) ?? '', email: (user.email as string) ?? '',
-          roomId, bedId, monthlyRent: (d.monthlyRent as number) ?? 0, depositPaid: (d.depositPaid as number) ?? 0,
+          name: (user.name as string) ?? '',
+          phone: (user.phone as string) ?? '',
+          email: (user.email as string) ?? '',
+          roomId,
+          bedId,
+          monthlyRent: (d.monthlyRent as number) ?? 0,
+          depositPaid: (d.depositPaid as number) ?? 0,
           moveInDate: (d.moveInDate as string) ? String(d.moveInDate).slice(0, 10) : '',
-          emergencyName: ec.name ?? '', emergencyPhone: (ec.phone as string)?.replace('+91', '') ?? '', emergencyRelation: ec.relation ?? '',
+          emergencyName: ec.name ?? '',
+          emergencyPhone: (ec.phone as string)?.replace('+91', '') ?? '',
+          emergencyRelation: ec.relation ?? '',
         });
         setIsLoading(false);
       })
-      .catch(() => { setSubmitError('Failed to load tenant'); setIsLoading(false); });
+      .catch(() => {
+        setSubmitError('Failed to load tenant');
+        setIsLoading(false);
+      });
   }, [id, reset]);
 
-  const onRoomChange = useCallback(async (roomId: string) => {
-    setValue('roomId', roomId);
-    const originalRoomId =
-      ((tenantData?.room as { _id?: string } | undefined)?._id ?? tenantData?.roomId) as string | undefined;
-    const keepBed = roomId === originalRoomId ? currentBedId : '';
-    if (!keepBed) setValue('bedId', '');
-    try {
-      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
-      if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
-    } catch {
-      /* ignore */
-    }
-  }, [tenantData, currentBedId, setValue]);
+  const onRoomChange = useCallback(
+    async (roomId: string) => {
+      setValue('roomId', roomId);
+      const originalRoomId = ((tenantData?.room as { _id?: string } | undefined)?._id ??
+        tenantData?.roomId) as string | undefined;
+      const keepBed = roomId === originalRoomId ? currentBedId : '';
+      if (!keepBed) setValue('bedId', '');
+      try {
+        const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+        if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
+      } catch {
+        /* ignore */
+      }
+    },
+    [tenantData, currentBedId, setValue],
+  );
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -123,7 +160,9 @@ export default function EditTenantPage() {
       const payload: Record<string, unknown> = {
         monthlyRent: data.monthlyRent,
         depositPaid: data.depositPaid,
-        moveInDate: data.moveInDate ? new Date(`${data.moveInDate}T00:00:00.000Z`).toISOString() : undefined,
+        moveInDate: data.moveInDate
+          ? new Date(`${data.moveInDate}T00:00:00.000Z`).toISOString()
+          : undefined,
         user: { name: data.name, phone: normalizeInPhone(data.phone), email: data.email },
         emergencyContact: hasEmergency
           ? {
@@ -186,16 +225,43 @@ export default function EditTenantPage() {
           </div>
         )}
 
-        <FormSection title="Personal information" description="Primary contact details used across invoices and notices">
+        <FormSection
+          title="Personal information"
+          description="Primary contact details used across invoices and notices"
+        >
           <FormGrid>
-            <Input label="Name" error={err.name?.message} autoComplete="name" leftIcon={<UserRound className="h-4 w-4" />} {...register('name')} />
-            <Input label="Phone" error={err.phone?.message} inputMode="tel" autoComplete="tel" leftIcon={<Phone className="h-4 w-4" />} {...register('phone')} />
-            <Input label="Email" type="email" error={err.email?.message} autoComplete="email" leftIcon={<Mail className="h-4 w-4" />} {...register('email')} />
+            <Input
+              label="Name"
+              error={err.name?.message}
+              autoComplete="name"
+              leftIcon={<UserRound className="h-4 w-4" />}
+              {...register('name')}
+            />
+            <Input
+              label="Phone"
+              error={err.phone?.message}
+              inputMode="tel"
+              autoComplete="tel"
+              leftIcon={<Phone className="h-4 w-4" />}
+              {...register('phone')}
+            />
+            <Input
+              label="Email"
+              type="email"
+              error={err.email?.message}
+              autoComplete="email"
+              leftIcon={<Mail className="h-4 w-4" />}
+              {...register('email')}
+            />
           </FormGrid>
         </FormSection>
 
         {isActive ? (
-          <FormSection title="Room assignment" description="Only free beds (plus this tenant's current bed) appear for the selected room" divided>
+          <FormSection
+            title="Room assignment"
+            description="Only free beds (plus this tenant's current bed) appear for the selected room"
+            divided
+          >
             <FormGrid>
               <Controller
                 name="roomId"
@@ -253,27 +319,110 @@ export default function EditTenantPage() {
           </FormSection>
         )}
 
-        <FormSection title="Financial details" description="Rent and deposit used for invoicing" divided>
+        <FormSection
+          title="Financial details"
+          description="Rent and deposit used for invoicing"
+          divided
+        >
           <FormGrid cols={3}>
-            <Input label="Monthly rent" type="number" step="0.01" inputMode="decimal" error={err.monthlyRent?.message} leftIcon={<Banknote className="h-4 w-4" />} {...register('monthlyRent')} />
-            <Input label="Deposit paid" type="number" step="0.01" inputMode="decimal" error={err.depositPaid?.message} leftIcon={<Banknote className="h-4 w-4" />} {...register('depositPaid')} />
-            <Input label="Move-in date" type="date" error={err.moveInDate?.message} leftIcon={<CalendarDays className="h-4 w-4" />} {...register('moveInDate')} />
+            <Input
+              label="Monthly rent"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              error={err.monthlyRent?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
+              {...register('monthlyRent')}
+            />
+            <Input
+              label="Deposit paid"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              error={err.depositPaid?.message}
+              leftIcon={<Banknote className="h-4 w-4" />}
+              {...register('depositPaid')}
+            />
+            <Input
+              label="Move-in date"
+              type="date"
+              error={err.moveInDate?.message}
+              leftIcon={<CalendarDays className="h-4 w-4" />}
+              {...register('moveInDate')}
+            />
           </FormGrid>
         </FormSection>
-        <FormSection title="Emergency contact" icon={<Shield />} description="Optional guardian or relative for emergencies" divided>
+        <FormSection
+          title="Emergency contact"
+          icon={<Shield />}
+          description="Optional guardian or relative for emergencies"
+          divided
+        >
           <FormGrid cols={3}>
-            <Input label="Name" placeholder="Emergency contact name" error={err.emergencyName?.message} {...register('emergencyName')} />
-            <Input label="Phone (10 digits)" placeholder="9876543210" inputMode="tel" error={err.emergencyPhone?.message} {...register('emergencyPhone')} />
-            <Select label="Relation" options={RELATION_OPTIONS} error={err.emergencyRelation?.message} {...register('emergencyRelation')} />
+            <Input
+              label="Name"
+              placeholder="Emergency contact name"
+              error={err.emergencyName?.message}
+              {...register('emergencyName')}
+            />
+            <Input
+              label="Phone (10 digits)"
+              placeholder="9876543210"
+              inputMode="tel"
+              error={err.emergencyPhone?.message}
+              {...register('emergencyPhone')}
+            />
+            <Select
+              label="Relation"
+              options={RELATION_OPTIONS}
+              error={err.emergencyRelation?.message}
+              {...register('emergencyRelation')}
+            />
           </FormGrid>
         </FormSection>
         {tenantData && (
-          <FormSection title="Documents" description="Aadhaar and photo are stored securely for this tenant" divided>
+          <FormSection
+            title="Documents"
+            description="Aadhaar and photo are stored securely for this tenant"
+            divided
+          >
             <FormGrid>
-              <DocumentUpload tenantId={id} docType="aadhaar" currentUrl={(tenantData.documents as Record<string, string>)?.aadhaarUrl}
-                onUploaded={(url) => setTenantData((prev) => prev ? { ...prev, documents: { ...((prev.documents as Record<string, string>) ?? {}), aadhaarUrl: url } } : prev)} />
-              <DocumentUpload tenantId={id} docType="photo" currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
-                onUploaded={(url) => setTenantData((prev) => prev ? { ...prev, documents: { ...((prev.documents as Record<string, string>) ?? {}), photoUrl: url } } : prev)} />
+              <DocumentUpload
+                tenantId={id}
+                docType="aadhaar"
+                currentUrl={(tenantData.documents as Record<string, string>)?.aadhaarUrl}
+                onUploaded={(url) =>
+                  setTenantData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          documents: {
+                            ...((prev.documents as Record<string, string>) ?? {}),
+                            aadhaarUrl: url,
+                          },
+                        }
+                      : prev,
+                  )
+                }
+              />
+              <DocumentUpload
+                tenantId={id}
+                docType="photo"
+                currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
+                onUploaded={(url) =>
+                  setTenantData((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          documents: {
+                            ...((prev.documents as Record<string, string>) ?? {}),
+                            photoUrl: url,
+                          },
+                        }
+                      : prev,
+                  )
+                }
+              />
             </FormGrid>
           </FormSection>
         )}

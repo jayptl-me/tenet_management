@@ -199,11 +199,11 @@ function SectionHeader({
   return (
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h3 className="font-[family:var(--font-display)] text-base font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[17px]">
+        <h3 className="text-base font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[17px]">
           {title}
         </h3>
         {subtitle && (
-          <p className="mt-0.5 text-[12px] font-medium leading-snug text-[color:var(--color-text-secondary)]">
+          <p className="mt-0.5 text-[12px] leading-snug font-medium text-[color:var(--color-text-secondary)]">
             {subtitle}
           </p>
         )}
@@ -235,7 +235,7 @@ function PanelEmpty({
       <div className="mb-2 text-[color:var(--color-text-muted)]">{icon}</div>
       <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{title}</p>
       {description && (
-        <p className="mt-1 max-w-xs text-[11px] font-medium leading-relaxed text-[color:var(--color-text-muted)]">
+        <p className="mt-1 max-w-xs text-[11px] leading-relaxed font-medium text-[color:var(--color-text-muted)]">
           {description}
         </p>
       )}
@@ -733,7 +733,7 @@ export default function DashboardPage() {
                         <span className="text-[11px] font-semibold text-[color:var(--color-text-secondary)]">
                           {item.label}
                         </span>
-                        <span className="font-mono text-[11px] font-bold tabular-nums text-[color:var(--color-text-primary)]">
+                        <span className="font-mono text-[11px] font-bold text-[color:var(--color-text-primary)] tabular-nums">
                           {item.count}
                         </span>
                       </div>
@@ -850,7 +850,7 @@ export default function DashboardPage() {
                     const pct = (score / 5) * 100;
                     return (
                       <div key={meal} className={clsx(surfaceNestedClass, 'p-3 text-center')}>
-                        <p className="text-[11px] font-semibold capitalize text-[color:var(--color-text-secondary)]">
+                        <p className="text-[11px] font-semibold text-[color:var(--color-text-secondary)] capitalize">
                           {meal}
                         </p>
                         <p

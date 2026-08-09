@@ -2,11 +2,7 @@
 // Per-machine tracking per floor — tenants claim machines with a timer
 // (default 50 min). Admin manages machines, tenants see floor-wide status.
 
-export type WashingMachineStatus =
-  | 'available'
-  | 'in_use'
-  | 'under_maintenance'
-  | 'down';
+export type WashingMachineStatus = 'available' | 'in_use' | 'under_maintenance' | 'down';
 
 export interface IWashingMachine {
   id: string;

@@ -171,11 +171,7 @@ export default function EditMealFeedbackPage() {
                   control={control}
                   render={({ field }) => (
                     <div className="flex items-center gap-2">
-                      <StarRating
-                        value={field.value ?? 0}
-                        onChange={field.onChange}
-                        size="lg"
-                      />
+                      <StarRating value={field.value ?? 0} onChange={field.onChange} size="lg" />
                       <span className="font-display text-sm font-bold text-[color:var(--color-warning-500)]">
                         {field.value ?? 0}/5
                       </span>

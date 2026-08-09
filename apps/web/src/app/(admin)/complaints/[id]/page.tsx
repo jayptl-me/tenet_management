@@ -191,7 +191,9 @@ export default function ComplaintDetailPage() {
               <DetailList>
                 <DetailRow
                   label="Category"
-                  value={<span className="capitalize">{complaint.category.replace(/_/g, ' ')}</span>}
+                  value={
+                    <span className="capitalize">{complaint.category.replace(/_/g, ' ')}</span>
+                  }
                 />
                 <DetailRow
                   label="Severity"
@@ -215,7 +217,7 @@ export default function ComplaintDetailPage() {
                 <p className="mb-2 text-xs font-medium text-[color:var(--color-text-muted)]">
                   Description
                 </p>
-                <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-text-secondary)]">
+                <p className="text-sm font-medium whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                   {complaint.description}
                 </p>
               </div>
@@ -235,7 +237,11 @@ export default function ComplaintDetailPage() {
                         className="block h-24 w-24 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--border-color)]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="Complaint evidence" className="h-full w-full object-cover" />
+                        <img
+                          src={url}
+                          alt="Complaint evidence"
+                          className="h-full w-full object-cover"
+                        />
                       </a>
                     ))}
                   </div>
@@ -244,10 +250,10 @@ export default function ComplaintDetailPage() {
 
               {complaint.adminNotes ? (
                 <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-4">
-                  <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                  <p className="mb-1 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                     Admin notes
                   </p>
-                  <p className="whitespace-pre-wrap text-sm font-medium text-[color:var(--color-text-secondary)]">
+                  <p className="text-sm font-medium whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                     {complaint.adminNotes}
                   </p>
                 </div>

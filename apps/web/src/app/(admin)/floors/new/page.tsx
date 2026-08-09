@@ -24,13 +24,12 @@ function buildSchema(perFloorAmenities: { key: string; label: string; maxPerFloo
       .max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
   }
   return z.object({
-    label: z.string().min(1, 'Floor label is required').max(50, 'Label cannot exceed 50 characters'),
+    label: z
+      .string()
+      .min(1, 'Floor label is required')
+      .max(50, 'Label cannot exceed 50 characters'),
     floorNumber: z.coerce.number().int().min(0, 'Must be >= 0'),
-    totalRooms: z.coerce
-      .number()
-      .int()
-      .min(1, 'Must have at least 1 room')
-      .max(50, 'Max 50 rooms'),
+    totalRooms: z.coerce.number().int().min(1, 'Must have at least 1 room').max(50, 'Max 50 rooms'),
     ...amenityFields,
   });
 }

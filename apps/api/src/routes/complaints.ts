@@ -12,10 +12,7 @@ import { Tenant } from '../models/tenant.js';
 const complaints = new Hono();
 
 // ── Schemas ─────────────────────────────────────────────
-const photoUrlSchema = z
-  .string()
-  .url('Photo must be a valid URL')
-  .max(2048, 'Photo URL too long');
+const photoUrlSchema = z.string().url('Photo must be a valid URL').max(2048, 'Photo URL too long');
 
 const createComplaintSchema = z.strictObject({
   /** Required when an admin files on behalf of a tenant. Ignored for tenant role. */
@@ -39,9 +36,7 @@ const createComplaintSchema = z.strictObject({
 function mapComplaint(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenant;
   const tenant =
-    tenantRaw && typeof tenantRaw === 'object'
-      ? (tenantRaw as Record<string, unknown>)
-      : undefined;
+    tenantRaw && typeof tenantRaw === 'object' ? (tenantRaw as Record<string, unknown>) : undefined;
   const userRaw = tenant?.userId;
   const user =
     userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;
@@ -150,7 +145,11 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
   let tenant: { _id: unknown };
   if (authUser.role === 'admin') {
     if (!body.tenantId) {
-      return badRequest(c, 'Tenant is required when filing a complaint as admin.', 'TENANT_REQUIRED');
+      return badRequest(
+        c,
+        'Tenant is required when filing a complaint as admin.',
+        'TENANT_REQUIRED',
+      );
     }
     const tid = parseId(body.tenantId);
     if (!tid) return badRequest(c, 'Invalid tenant ID');
@@ -343,46 +342,38 @@ const appendPhotosSchema = z.strictObject({
   photos: z.array(photoUrlSchema).min(1).max(5),
 });
 
-complaints.post(
-  '/:id/photos',
-  authGuard,
-  zValidator('json', appendPhotosSchema),
-  async (c) => {
-    const id = parseId(c.req.param('id'));
-    if (!id) return badRequest(c, 'Invalid complaint ID');
+complaints.post('/:id/photos', authGuard, zValidator('json', appendPhotosSchema), async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid complaint ID');
 
-    const authUser = c.get('user');
-    const body = c.req.valid('json');
+  const authUser = c.get('user');
+  const body = c.req.valid('json');
 
-    const complaint = await Complaint.findById(id);
-    if (!complaint) return notFound(c, 'Complaint');
+  const complaint = await Complaint.findById(id);
+  if (!complaint) return notFound(c, 'Complaint');
 
-    if (authUser.role === 'tenant') {
-      const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
-      if (!tenant || String((tenant as { _id: unknown })._id) !== String(complaint.tenantId)) {
-        return c.json(
-          {
-            success: false,
-            error: { code: 'FORBIDDEN', message: 'You can only attach photos to your complaints.' },
-          },
-          403,
-        );
-      }
-    } else if (authUser.role !== 'admin') {
+  if (authUser.role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
+    if (!tenant || String((tenant as { _id: unknown })._id) !== String(complaint.tenantId)) {
       return c.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Not allowed.' } },
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only attach photos to your complaints.' },
+        },
         403,
       );
     }
+  } else if (authUser.role !== 'admin') {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Not allowed.' } }, 403);
+  }
 
-    const existing = Array.isArray(complaint.photos) ? complaint.photos : [];
-    const merged = [...existing, ...body.photos].slice(0, 5);
-    complaint.photos = merged;
-    await complaint.save();
+  const existing = Array.isArray(complaint.photos) ? complaint.photos : [];
+  const merged = [...existing, ...body.photos].slice(0, 5);
+  complaint.photos = merged;
+  await complaint.save();
 
-    return c.json({ success: true, data: complaint });
-  },
-);
+  return c.json({ success: true, data: complaint });
+});
 
 // ── PUT /complaints/:id — full admin edit ────────────────
 complaints.put(

@@ -74,7 +74,7 @@ export function BarChart({
     return (
       <div
         className={clsx(
-          'bg-[color:var(--chart-track)]/50 flex items-center justify-center rounded-[var(--radius-md)]',
+          'flex items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--chart-track)]/50',
           className,
         )}
         style={{ height }}
@@ -450,12 +450,12 @@ export function DonutChart({
         />
       </svg>
       {label && (
-        <span className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+        <span className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
           {label}
         </span>
       )}
       {sublabel && (
-        <span className="font-[family:var(--font-body)] text-xs text-[color:var(--color-text-muted)]">
+        <span className="text-xs font-[family:var(--font-body)] text-[color:var(--color-text-muted)]">
           {sublabel}
         </span>
       )}

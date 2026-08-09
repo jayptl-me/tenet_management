@@ -223,7 +223,7 @@ function saveCollapsed(collapsed: boolean) {
 function BadgePill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white">
+    <span className="ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold text-white">
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -376,7 +376,7 @@ export function Sidebar() {
       <>
         {/* Active indicator bar */}
         {isActive && (
-          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[color:var(--color-brand-500)]" />
         )}
 
         <span
@@ -466,15 +466,15 @@ export function Sidebar() {
 
       {/* Search — hidden when collapsed */}
       {!collapsed && (
-        <div className="px-3 pb-1 pt-3">
+        <div className="px-3 pt-3 pb-1">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
             <input
               type="text"
               placeholder="Search pages..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-[13px] font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-300)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-brand-300)]"
+              className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pr-3 pl-8 text-[13px] font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-300)] focus:ring-1 focus:ring-[color:var(--color-brand-300)] focus:outline-none"
             />
           </div>
         </div>
@@ -486,7 +486,7 @@ export function Sidebar() {
         {!collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
           <div>
             <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+              <span className="text-[11px] font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
                 Pinned
               </span>
               <span className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
@@ -513,7 +513,7 @@ export function Sidebar() {
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={clsx(
-                    'flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold uppercase tracking-widest text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:text-[color:var(--color-text-secondary)]',
+                    'flex w-full items-center justify-between px-2 py-1 text-[11px] font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase transition-colors duration-[var(--transition-duration)] hover:text-[color:var(--color-text-secondary)]',
                   )}
                 >
                   <span>{section.label}</span>
@@ -619,7 +619,7 @@ export function Sidebar() {
             <p className="truncate text-[12px] font-semibold text-[color:var(--color-text-primary)]">
               {user.name}
             </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+            <p className="text-[10px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
               {user.role}
             </p>
           </div>
@@ -632,7 +632,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="hover:translate-[var(--hover-lift)] fixed left-3 top-3 z-50 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)] active:scale-[var(--active-press-scale)] lg:hidden"
+        className="fixed top-3 left-3 z-50 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:translate-[var(--hover-lift)] hover:shadow-[var(--shadow-lg)] active:scale-[var(--active-press-scale)] lg:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Open sidebar"
       >

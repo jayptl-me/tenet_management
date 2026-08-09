@@ -118,15 +118,11 @@ export default function EditAssetPage() {
         quantity: data.quantity,
         lowStockThreshold: data.lowStockThreshold,
         status: data.status,
-        purchasedDate: data.purchasedDate
-          ? new Date(data.purchasedDate).toISOString()
-          : '',
+        purchasedDate: data.purchasedDate ? new Date(data.purchasedDate).toISOString() : '',
         lastServicedDate: data.lastServicedDate
           ? new Date(data.lastServicedDate).toISOString()
           : '',
-        nextServiceDate: data.nextServiceDate
-          ? new Date(data.nextServiceDate).toISOString()
-          : '',
+        nextServiceDate: data.nextServiceDate ? new Date(data.nextServiceDate).toISOString() : '',
         notes: data.notes || undefined,
       };
 

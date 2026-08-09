@@ -477,7 +477,7 @@ export function CommandPalette({
             <div ref={listRef} className="max-h-64 overflow-y-auto p-2">
               {Object.entries(groupedResults).map(([category, items]) => (
                 <div key={category} className="mb-2 last:mb-0">
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--color-text-muted)]">
+                  <div className="px-3 py-1.5 text-[10px] font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
                     {category}
                   </div>
                   {items.map((item) => {

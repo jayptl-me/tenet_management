@@ -62,7 +62,7 @@ export function Timeline({
       style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}
     >
       {/* Vertical line */}
-      <div className="absolute bottom-1 left-[11px] top-1 w-0.5 rounded-full bg-[color:var(--color-surface-200)]" />
+      <div className="absolute top-1 bottom-1 left-[11px] w-0.5 rounded-full bg-[color:var(--color-surface-200)]" />
 
       <div className="space-y-4">
         {events.map((event) => {
@@ -73,7 +73,7 @@ export function Timeline({
               {/* Dot on the timeline */}
               <span
                 className={clsx(
-                  'absolute left-[7px] top-1.5 z-10 h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-[color:var(--color-surface-100)]',
+                  'absolute top-1.5 left-[7px] z-10 h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-[color:var(--color-surface-100)]',
                   dotColor,
                 )}
               />

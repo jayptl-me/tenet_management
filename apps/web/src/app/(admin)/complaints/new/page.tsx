@@ -18,7 +18,10 @@ import { FormGrid } from '@/components/ui/FormSection';
 const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   roomId: z.string().min(1, 'Room is required'),
-  title: z.string().min(5, 'Title must be at least 5 characters').max(200, 'Title cannot exceed 200 characters'),
+  title: z
+    .string()
+    .min(5, 'Title must be at least 5 characters')
+    .max(200, 'Title cannot exceed 200 characters'),
   description: z
     .string()
     .min(10, 'Description must be at least 10 characters')

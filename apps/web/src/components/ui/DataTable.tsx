@@ -96,7 +96,7 @@ export function DataTable<T>({
       {/* Search */}
       {searchable && onSearchChange && (
         <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
           <Input
             placeholder={searchPlaceholder}
             value={searchValue}
@@ -156,7 +156,7 @@ export function DataTable<T>({
                 <th
                   key={i}
                   className={clsx(
-                    'border-b border-b-[color:var(--border-color)] px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]',
+                    'border-b border-b-[color:var(--border-color)] px-4 py-3 text-left text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase',
                     col.className,
                   )}
                 >

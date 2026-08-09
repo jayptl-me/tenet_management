@@ -98,18 +98,12 @@ async function assertAdminOrTenantOwner(c: Context, tenantId: string) {
   const user = c.get('user');
   if (user?.role === 'admin') return null;
   if (user?.role !== 'tenant') {
-    return c.json(
-      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-      403,
-    );
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
   const tenant = await Tenant.findById(tenantId).select('userId').lean();
   if (!tenant) return notFound(c, 'Tenant');
   if (String(tenant.userId) !== user.sub) {
-    return c.json(
-      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-      403,
-    );
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
   return null;
 }
@@ -425,7 +419,10 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
       return c.json(
         {
           success: false,
-          error: { code: 'BED_OCCUPIED', message: 'Target bed is already occupied by another tenant.' },
+          error: {
+            code: 'BED_OCCUPIED',
+            message: 'Target bed is already occupied by another tenant.',
+          },
         },
         409,
       );
@@ -437,7 +434,8 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
   try {
     await session.withTransaction(async () => {
       const sessionTenant = await Tenant.findById(id).session(session);
-      if (!sessionTenant) throw new AppError('Tenant not found after reload', 404, 'TENANT_NOT_FOUND');
+      if (!sessionTenant)
+        throw new AppError('Tenant not found after reload', 404, 'TENANT_NOT_FOUND');
 
       // Update scalar fields
       const typedTenant = sessionTenant as unknown as Record<string, unknown>;
@@ -503,7 +501,10 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
           // Validate target bed is free BEFORE freeing old bed (P0-T1 atomicity fix)
           const targetBed = currentRoom.beds.find((b) => b.bedId === body.bedId);
           if (!targetBed) throw new AppError('Target bed disappeared', 500, 'BED_VANISHED');
-          if (targetBed.isOccupied && String(targetBed.tenantId ?? '') !== String(sessionTenant._id)) {
+          if (
+            targetBed.isOccupied &&
+            String(targetBed.tenantId ?? '') !== String(sessionTenant._id)
+          ) {
             throw new AppError('Bed is already occupied', 409, 'BED_OCCUPIED');
           }
 
@@ -527,7 +528,9 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
         if (body.user.email) userFields.email = body.user.email;
         if (body.user.phone) userFields.phone = body.user.phone;
         if (Object.keys(userFields).length > 0) {
-          await (User as unknown as { findByIdAndUpdate: (...args: unknown[]) => Promise<unknown> }).findByIdAndUpdate(String(sessionTenant.userId), userFields, { session });
+          await (
+            User as unknown as { findByIdAndUpdate: (...args: unknown[]) => Promise<unknown> }
+          ).findByIdAndUpdate(String(sessionTenant.userId), userFields, { session });
         }
       }
 
@@ -662,7 +665,11 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (User as any).findByIdAndUpdate(String(tenant.userId), { isActive: false }, { session });
+      await (User as any).findByIdAndUpdate(
+        String(tenant.userId),
+        { isActive: false },
+        { session },
+      );
 
       // Deactivate guardian portal users so they cannot access after move-out
       const guardians = await Guardian.find(safeFilter({ tenantId: id }))
@@ -672,11 +679,7 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
         const gUserId = (g as { userId?: unknown }).userId;
         if (gUserId) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (User as any).findByIdAndUpdate(
-            String(gUserId),
-            { isActive: false },
-            { session },
-          );
+          await (User as any).findByIdAndUpdate(String(gUserId), { isActive: false }, { session });
         }
       }
     });
@@ -712,94 +715,94 @@ router.post(
   adminOnly,
   zValidator('json', reinstateSchema),
   async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) return badRequest(c, 'Invalid tenant ID');
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid tenant ID');
 
-  const body = c.req.valid('json');
-  const session = await mongoose.startSession();
+    const body = c.req.valid('json');
+    const session = await mongoose.startSession();
 
-  try {
-    await session.withTransaction(async () => {
-      const tenant = await Tenant.findById(id).session(session);
-      if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
-      if (tenant.isActive) throw new AppError('Tenant is already active', 400, 'ALREADY_ACTIVE');
+    try {
+      await session.withTransaction(async () => {
+        const tenant = await Tenant.findById(id).session(session);
+        if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+        if (tenant.isActive) throw new AppError('Tenant is already active', 400, 'ALREADY_ACTIVE');
 
-      const targetRoomId = body.roomId ? String(body.roomId) : String(tenant.roomId);
-      const targetBedId = body.bedId ?? tenant.bedId;
+        const targetRoomId = body.roomId ? String(body.roomId) : String(tenant.roomId);
+        const targetBedId = body.bedId ?? tenant.bedId;
 
-      const room = await Room.findById(targetRoomId).session(session);
-      if (!room) throw new AppError('Room not found', 404, 'ROOM_NOT_FOUND');
-      if (!room.isActive) throw new AppError('Room is no longer active', 400, 'ROOM_INACTIVE');
+        const room = await Room.findById(targetRoomId).session(session);
+        if (!room) throw new AppError('Room not found', 404, 'ROOM_NOT_FOUND');
+        if (!room.isActive) throw new AppError('Room is no longer active', 400, 'ROOM_INACTIVE');
 
-      const bed = room.beds.find((b) => b.bedId === targetBedId);
-      if (!bed) throw new AppError(`Bed ${targetBedId} not found in room`, 404, 'BED_NOT_FOUND');
-      // Allow reclaim if the bed is free OR still marked occupied by this same tenant
-      const occupiedBySelf =
-        bed.isOccupied && String(bed.tenantId ?? '') === String(tenant._id);
-      if (bed.isOccupied && !occupiedBySelf) {
-        throw new AppError(
-          `Bed ${targetBedId} is occupied by another tenant. Choose a free bed when reinstating.`,
-          409,
-          'BED_OCCUPIED',
-        );
-      }
+        const bed = room.beds.find((b) => b.bedId === targetBedId);
+        if (!bed) throw new AppError(`Bed ${targetBedId} not found in room`, 404, 'BED_NOT_FOUND');
+        // Allow reclaim if the bed is free OR still marked occupied by this same tenant
+        const occupiedBySelf = bed.isOccupied && String(bed.tenantId ?? '') === String(tenant._id);
+        if (bed.isOccupied && !occupiedBySelf) {
+          throw new AppError(
+            `Bed ${targetBedId} is occupied by another tenant. Choose a free bed when reinstating.`,
+            409,
+            'BED_OCCUPIED',
+          );
+        }
 
-      // If relocating from a different room/bed that still shows this tenant, free it
-      const originalRoomId = String(tenant.roomId);
-      if (originalRoomId !== targetRoomId || tenant.bedId !== targetBedId) {
-        const oldRoom = await Room.findById(tenant.roomId).session(session);
-        if (oldRoom) {
-          const oldBed = oldRoom.beds.find((b) => b.bedId === tenant.bedId);
-          if (oldBed && String(oldBed.tenantId ?? '') === String(tenant._id)) {
-            oldBed.isOccupied = false;
-            oldBed.tenantId = null;
-            oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
-            await oldRoom.save({ session });
+        // If relocating from a different room/bed that still shows this tenant, free it
+        const originalRoomId = String(tenant.roomId);
+        if (originalRoomId !== targetRoomId || tenant.bedId !== targetBedId) {
+          const oldRoom = await Room.findById(tenant.roomId).session(session);
+          if (oldRoom) {
+            const oldBed = oldRoom.beds.find((b) => b.bedId === tenant.bedId);
+            if (oldBed && String(oldBed.tenantId ?? '') === String(tenant._id)) {
+              oldBed.isOccupied = false;
+              oldBed.tenantId = null;
+              oldRoom.occupancyCount = oldRoom.beds.filter((b) => b.isOccupied).length;
+              await oldRoom.save({ session });
+            }
           }
         }
-      }
 
-      bed.isOccupied = true;
-      bed.tenantId = tenant._id as unknown as Schema.Types.ObjectId;
-      room.markModified('beds');
-      room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
-      await room.save({ session });
+        bed.isOccupied = true;
+        bed.tenantId = tenant._id as unknown as Schema.Types.ObjectId;
+        room.markModified('beds');
+        room.occupancyCount = room.beds.filter((b) => b.isOccupied).length;
+        await room.save({ session });
 
-      tenant.roomId = room._id as unknown as Schema.Types.ObjectId;
-      tenant.bedId = targetBedId;
-      tenant.isActive = true;
-      tenant.moveOutDate = null;
-      await tenant.save({ session });
+        tenant.roomId = room._id as unknown as Schema.Types.ObjectId;
+        tenant.bedId = targetBedId;
+        tenant.isActive = true;
+        tenant.moveOutDate = null;
+        await tenant.save({ session });
 
-      await User.findByIdAndUpdate(String(tenant.userId), { isActive: true }, { session });
+        await User.findByIdAndUpdate(String(tenant.userId), { isActive: true }, { session });
 
-      // Re-enable guardian portal users linked to this tenant
-      const guardians = await Guardian.find(safeFilter({ tenantId: id }))
-        .session(session)
-        .lean();
-      for (const g of guardians) {
-        const gUserId = (g as { userId?: unknown }).userId;
-        if (gUserId) {
-          await User.findByIdAndUpdate(String(gUserId), { isActive: true }, { session });
+        // Re-enable guardian portal users linked to this tenant
+        const guardians = await Guardian.find(safeFilter({ tenantId: id }))
+          .session(session)
+          .lean();
+        for (const g of guardians) {
+          const gUserId = (g as { userId?: unknown }).userId;
+          if (gUserId) {
+            await User.findByIdAndUpdate(String(gUserId), { isActive: true }, { session });
+          }
         }
-      }
-    });
+      });
 
-    const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
-    return c.json({ success: true, data: updatedTenant });
-  } catch (err: unknown) {
-    console.error('REINSTATE_ERROR:', err);
-    if (err instanceof AppError) {
-      return c.json(
-        { success: false, error: { code: err.code, message: err.message } },
-        err.status as 400 | 404 | 409,
-      );
+      const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+      return c.json({ success: true, data: updatedTenant });
+    } catch (err: unknown) {
+      console.error('REINSTATE_ERROR:', err);
+      if (err instanceof AppError) {
+        return c.json(
+          { success: false, error: { code: err.code, message: err.message } },
+          err.status as 400 | 404 | 409,
+        );
+      }
+      throw err;
+    } finally {
+      session.endSession();
     }
-    throw err;
-  } finally {
-    session.endSession();
-  }
-});
+  },
+);
 
 // ── POST /:id/documents — upload KYC documents (Aadhaar, photo)
 router.post('/:id/documents', authGuard, adminOnly, async (c) => {
@@ -1131,9 +1134,7 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
       const electricityAmount = invDoc.electricityAmount ?? lineElec;
       // Pro-rate electricity portion of remaining balance
       const electricityRemaining =
-        totalAmount > 0
-          ? Math.round((remaining * (electricityAmount / totalAmount)) * 100) / 100
-          : 0;
+        totalAmount > 0 ? Math.round(remaining * (electricityAmount / totalAmount) * 100) / 100 : 0;
       return {
         _id: inv._id,
         invoiceNumber: inv.invoiceNumber,

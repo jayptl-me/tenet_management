@@ -204,7 +204,7 @@ export default function ElectricityBillDetailPage() {
                 href={bill.billImageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-semibold text-[color:var(--color-brand-600)] hover:underline break-all"
+                className="text-sm font-semibold break-all text-[color:var(--color-brand-600)] hover:underline"
               >
                 {bill.billImageUrl}
               </a>
@@ -215,13 +215,13 @@ export default function ElectricityBillDetailPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[color:var(--border-color)] text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
-                    <th className="pb-3 pr-4">Room</th>
-                    <th className="pb-3 pr-4">Previous</th>
-                    <th className="pb-3 pr-4">Current</th>
-                    <th className="pb-3 pr-4">Units</th>
-                    <th className="pb-3 pr-4">Rate</th>
-                    <th className="pb-3 pr-4">Amount</th>
+                  <tr className="border-b border-[color:var(--border-color)] text-left text-xs font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                    <th className="pr-4 pb-3">Room</th>
+                    <th className="pr-4 pb-3">Previous</th>
+                    <th className="pr-4 pb-3">Current</th>
+                    <th className="pr-4 pb-3">Units</th>
+                    <th className="pr-4 pb-3">Rate</th>
+                    <th className="pr-4 pb-3">Amount</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -278,7 +278,7 @@ export default function InvoiceDetailPage() {
               <DetailCard title="Breakdown" icon={<IndianRupee />}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand-600)]">
+                    <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-brand-600)] uppercase">
                       Rent
                     </p>
                     <p className="mt-1 text-xl font-bold text-[color:var(--color-brand-900)]">
@@ -286,7 +286,7 @@ export default function InvoiceDetailPage() {
                     </p>
                   </div>
                   <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-warning-600)]">
+                    <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-warning-600)] uppercase">
                       Electricity
                     </p>
                     <p className="mt-1 text-xl font-bold text-[color:var(--color-warning-900)]">
@@ -294,7 +294,7 @@ export default function InvoiceDetailPage() {
                     </p>
                   </div>
                   <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                    <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                       Other
                     </p>
                     <p className="mt-1 text-xl font-bold text-[color:var(--color-text-primary)]">
@@ -310,10 +310,10 @@ export default function InvoiceDetailPage() {
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-[color:var(--border-color)]">
-                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                          <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                             Description
                           </th>
-                          <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                          <th className="pb-3 text-right text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                             Amount
                           </th>
                         </tr>
@@ -332,7 +332,7 @@ export default function InvoiceDetailPage() {
                       </tbody>
                       <tfoot>
                         <tr className="border-t border-[color:var(--border-color)]">
-                          <td className="pt-3 text-right text-base font-bold uppercase text-[color:var(--color-text-primary)]">
+                          <td className="pt-3 text-right text-base font-bold text-[color:var(--color-text-primary)] uppercase">
                             Total
                           </td>
                           <td className="pt-3 text-right text-base font-bold text-[color:var(--color-text-primary)]">
@@ -351,19 +351,19 @@ export default function InvoiceDetailPage() {
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-[color:var(--border-color)]">
-                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                          <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                             Amount
                           </th>
-                          <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                          <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                             Method
                           </th>
-                          <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">
+                          <th className="hidden pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase sm:table-cell">
                             UTR
                           </th>
-                          <th className="hidden pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)] sm:table-cell">
+                          <th className="hidden pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase sm:table-cell">
                             Date
                           </th>
-                          <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                          <th className="pb-3 text-right text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                             Status
                           </th>
                         </tr>
@@ -386,7 +386,7 @@ export default function InvoiceDetailPage() {
                             <td className="py-3 font-bold text-[color:var(--color-brand-700)]">
                               {formatCurrency(p.amount)}
                             </td>
-                            <td className="py-3 capitalize text-[color:var(--color-text-secondary)]">
+                            <td className="py-3 text-[color:var(--color-text-secondary)] capitalize">
                               {p.method.replace('_', ' ')}
                             </td>
                             <td className="hidden py-3 font-mono text-xs text-[color:var(--color-text-secondary)] sm:table-cell">

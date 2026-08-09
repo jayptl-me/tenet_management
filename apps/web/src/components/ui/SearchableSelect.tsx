@@ -95,24 +95,26 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
         const raw = getByPath(res, dataPath);
         const items = Array.isArray(raw) ? raw : [];
 
-        const mapped: SearchableOption[] = items.map((item) => {
-          const record = item as T;
-          const rawVal = record[valueKey];
-          let val = '';
-          if (typeof rawVal === 'string' || typeof rawVal === 'number') {
-            val = String(rawVal);
-          } else if (rawVal && typeof rawVal === 'object') {
-            const obj = rawVal as Record<string, unknown>;
-            if (obj._id != null) val = String(obj._id);
-            else if (obj.id != null) val = String(obj.id);
-          }
-          const lbl =
-            typeof labelKey === 'function'
-              ? labelKey(record)
-              : String(record[labelKey] ?? record.name ?? record.roomNumber ?? val);
-          const sub = sublabelFn ? sublabelFn(record) : undefined;
-          return { value: val, label: lbl, sublabel: sub };
-        }).filter((opt) => opt.value !== '');
+        const mapped: SearchableOption[] = items
+          .map((item) => {
+            const record = item as T;
+            const rawVal = record[valueKey];
+            let val = '';
+            if (typeof rawVal === 'string' || typeof rawVal === 'number') {
+              val = String(rawVal);
+            } else if (rawVal && typeof rawVal === 'object') {
+              const obj = rawVal as Record<string, unknown>;
+              if (obj._id != null) val = String(obj._id);
+              else if (obj.id != null) val = String(obj.id);
+            }
+            const lbl =
+              typeof labelKey === 'function'
+                ? labelKey(record)
+                : String(record[labelKey] ?? record.name ?? record.roomNumber ?? val);
+            const sub = sublabelFn ? sublabelFn(record) : undefined;
+            return { value: val, label: lbl, sublabel: sub };
+          })
+          .filter((opt) => opt.value !== '');
 
         setOptions(mapped);
         setIsLoading(false);
@@ -223,17 +225,17 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
+          <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
             {/* Search */}
             <div className="relative border-b border-[color:var(--border-color)]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
               <input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full border-0 bg-transparent py-2.5 pl-9 pr-3 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none"
+                className="w-full border-0 bg-transparent py-2.5 pr-3 pl-9 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none"
                 aria-label="Search options"
               />
             </div>

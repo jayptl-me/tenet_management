@@ -44,11 +44,7 @@ async function seedFloorAndRoom(sharing: 2 | 3 | 4 = 2) {
   return { floor: fullFloor, room: fullRoom };
 }
 
-async function seedUserAndTenant(
-  roomIdStr: string,
-  bedId: string,
-  overrides: AnyDoc = {},
-) {
+async function seedUserAndTenant(roomIdStr: string, bedId: string, overrides: AnyDoc = {}) {
   const e = `test-${Date.now()}@example.com`;
   const p = `+919999${String(Date.now()).slice(-6)}`;
   const user = await userCreate({
@@ -116,13 +112,18 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const room2 = await Room.findById(room.id);
     if (room2) {
       const bedA = room2.beds.find((b) => b.bedId === 'A');
-      if (bedA) { bedA.isOccupied = false; bedA.tenantId = null; }
+      if (bedA) {
+        bedA.isOccupied = false;
+        bedA.tenantId = null;
+      }
       room2.occupancyCount = room2.beds.filter((b) => b.isOccupied).length;
       await room2.save();
     }
 
     const finalRoom = await Room.findById(room.id).lean();
-    expect((finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied).toBe(false);
+    expect(
+      (finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied,
+    ).toBe(false);
     expect(finalRoom?.occupancyCount).toBe(0);
 
     const finalTenant = await Tenant.findById(tenant.id).lean();
@@ -136,7 +137,10 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const { user, tenant } = await seedUserAndTenant(room.id, 'C');
 
     const bed = room.beds.find((b) => b.bedId === 'C');
-    if (bed) { bed.isOccupied = true; bed.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+    if (bed) {
+      bed.isOccupied = true;
+      bed.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+    }
     room.occupancyCount = 1;
     await room.save();
 
@@ -148,7 +152,10 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const roomAfterDelete = await Room.findById(room.id);
     if (roomAfterDelete) {
       const freed = roomAfterDelete.beds.find((b) => b.bedId === 'C');
-      if (freed) { freed.isOccupied = false; freed.tenantId = null; }
+      if (freed) {
+        freed.isOccupied = false;
+        freed.tenantId = null;
+      }
       roomAfterDelete.occupancyCount = roomAfterDelete.beds.filter((b) => b.isOccupied).length;
       await roomAfterDelete.save();
     }
@@ -172,14 +179,20 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const { tenant } = await seedUserAndTenant(oldRoom.id, 'A');
 
     const oldBed = oldRoom.beds.find((b) => b.bedId === 'A');
-    if (oldBed) { oldBed.isOccupied = true; oldBed.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+    if (oldBed) {
+      oldBed.isOccupied = true;
+      oldBed.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+    }
     oldRoom.occupancyCount = 1;
     await oldRoom.save();
 
     const oldRoomReloaded = await Room.findById(oldRoom.id);
     if (oldRoomReloaded) {
       const ob = oldRoomReloaded.beds.find((b) => b.bedId === 'A');
-      if (ob) { ob.isOccupied = false; ob.tenantId = null; }
+      if (ob) {
+        ob.isOccupied = false;
+        ob.tenantId = null;
+      }
       oldRoomReloaded.occupancyCount = oldRoomReloaded.beds.filter((b) => b.isOccupied).length;
       await oldRoomReloaded.save();
     }
@@ -187,21 +200,32 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const newRoomReloaded = await Room.findById(newRoom.id);
     if (newRoomReloaded) {
       const nb = newRoomReloaded.beds.find((b) => b.bedId === 'B');
-      if (nb) { nb.isOccupied = true; nb.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+      if (nb) {
+        nb.isOccupied = true;
+        nb.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+      }
       newRoomReloaded.markModified('beds');
       newRoomReloaded.occupancyCount = newRoomReloaded.beds.filter((b) => b.isOccupied).length;
       await newRoomReloaded.save();
     }
 
     const t2 = await Tenant.findById(tenant.id);
-    if (t2) { t2.roomId = newRoom._id as unknown as mongoose.Schema.Types.ObjectId; t2.bedId = 'B'; await t2.save(); }
+    if (t2) {
+      t2.roomId = newRoom._id as unknown as mongoose.Schema.Types.ObjectId;
+      t2.bedId = 'B';
+      await t2.save();
+    }
 
     const finalOld = await Room.findById(oldRoom.id).lean();
-    expect((finalOld?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied).toBe(false);
+    expect(
+      (finalOld?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied,
+    ).toBe(false);
     expect(finalOld?.occupancyCount).toBe(0);
 
     const finalNew = await Room.findById(newRoom.id).lean();
-    expect((finalNew?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'B')?.isOccupied).toBe(true);
+    expect(
+      (finalNew?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'B')?.isOccupied,
+    ).toBe(true);
     expect(finalNew?.occupancyCount).toBe(1);
 
     const ft = await Tenant.findById(tenant.id).lean();
@@ -215,22 +239,34 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const { tenant } = await seedUserAndTenant(room.id, 'A');
 
     const bedA = room.beds.find((b) => b.bedId === 'A');
-    if (bedA) { bedA.isOccupied = true; bedA.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+    if (bedA) {
+      bedA.isOccupied = true;
+      bedA.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+    }
     room.occupancyCount = 1;
     await room.save();
 
     const reloaded = await Room.findById(room.id);
     if (reloaded) {
       const oldB = reloaded.beds.find((b) => b.bedId === 'A');
-      if (oldB) { oldB.isOccupied = false; oldB.tenantId = null; }
+      if (oldB) {
+        oldB.isOccupied = false;
+        oldB.tenantId = null;
+      }
       const newB = reloaded.beds.find((b) => b.bedId === 'D');
-      if (newB) { newB.isOccupied = true; newB.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+      if (newB) {
+        newB.isOccupied = true;
+        newB.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+      }
       reloaded.occupancyCount = reloaded.beds.filter((b) => b.isOccupied).length;
       await reloaded.save();
     }
 
     const t2 = await Tenant.findById(tenant.id);
-    if (t2) { t2.bedId = 'D'; await t2.save(); }
+    if (t2) {
+      t2.bedId = 'D';
+      await t2.save();
+    }
 
     const finalRoom = await Room.findById(room.id).lean();
     const fb = finalRoom?.beds as IBedSubdoc[] | undefined;
@@ -247,15 +283,25 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const { tenant } = await seedUserAndTenant(room.id, 'A');
 
     const bedA = room.beds.find((b) => b.bedId === 'A');
-    if (bedA) { bedA.isOccupied = true; bedA.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+    if (bedA) {
+      bedA.isOccupied = true;
+      bedA.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+    }
     room.occupancyCount = 1;
     await room.save();
 
     const BED_IDS = ['A', 'B', 'C', 'D'] as const;
-    const existingBeds = room.beds.map((b) => ({ bedId: b.bedId, isOccupied: b.isOccupied, tenantId: b.tenantId }));
+    const existingBeds = room.beds.map((b) => ({
+      bedId: b.bedId,
+      isOccupied: b.isOccupied,
+      tenantId: b.tenantId,
+    }));
     const occupied = existingBeds.filter((b) => b.isOccupied);
     const slots = BED_IDS.slice(0, 3);
-    const rebuilt = slots.map((id) => occupied.find((b) => b.bedId === id) ?? { bedId: id, isOccupied: false, tenantId: null });
+    const rebuilt = slots.map(
+      (id) =>
+        occupied.find((b) => b.bedId === id) ?? { bedId: id, isOccupied: false, tenantId: null },
+    );
 
     const reloaded = await Room.findById(room.id);
     if (reloaded) {
@@ -267,7 +313,9 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const finalRoom = await Room.findById(room.id).lean();
     expect(finalRoom?.beds).toHaveLength(3);
     expect(finalRoom?.sharingType).toBe(3);
-    expect((finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied).toBe(true);
+    expect(
+      (finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'A')?.isOccupied,
+    ).toBe(true);
     expect(finalRoom?.occupancyCount).toBe(1);
   });
 
@@ -290,12 +338,18 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
 
     const r2 = await Room.findById(room.id);
     if (r2) {
-      const existing = r2.beds.map((b) => ({ bedId: b.bedId, isOccupied: b.isOccupied, tenantId: b.tenantId }));
+      const existing = r2.beds.map((b) => ({
+        bedId: b.bedId,
+        isOccupied: b.isOccupied,
+        tenantId: b.tenantId,
+      }));
       const occCount = existing.filter((b) => b.isOccupied).length;
       expect(occCount).toBeGreaterThan(2);
     }
     expect(() => {
-      throw Object.assign(new Error('Cannot change sharing type: 3 bed(s) occupied'), { code: 'BEDS_OCCUPIED_ON_DOWNSIZE' });
+      throw Object.assign(new Error('Cannot change sharing type: 3 bed(s) occupied'), {
+        code: 'BEDS_OCCUPIED_ON_DOWNSIZE',
+      });
     }).toThrow();
   });
 
@@ -306,7 +360,10 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
 
     // Occupy
     const bedB = room.beds.find((b) => b.bedId === 'B');
-    if (bedB) { bedB.isOccupied = true; bedB.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId; }
+    if (bedB) {
+      bedB.isOccupied = true;
+      bedB.tenantId = tenant._id as unknown as mongoose.Schema.Types.ObjectId;
+    }
     room.occupancyCount = 1;
     await room.save();
 
@@ -318,7 +375,10 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     const r1 = await Room.findById(room.id);
     if (r1) {
       const b = r1.beds.find((bed) => bed.bedId === 'B');
-      if (b) { b.isOccupied = false; b.tenantId = null; }
+      if (b) {
+        b.isOccupied = false;
+        b.tenantId = null;
+      }
       r1.occupancyCount = 0;
       await r1.save();
     }
@@ -337,12 +397,18 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     }
 
     const t2 = await Tenant.findById(tenant.id);
-    if (t2) { t2.isActive = true; t2.moveOutDate = null; await t2.save(); }
+    if (t2) {
+      t2.isActive = true;
+      t2.moveOutDate = null;
+      await t2.save();
+    }
 
     await User.findByIdAndUpdate(user.id, { isActive: true });
 
     const finalRoom = await Room.findById(room.id).lean();
-    expect((finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'B')?.isOccupied).toBe(true);
+    expect(
+      (finalRoom?.beds as IBedSubdoc[] | undefined)?.find((b) => b.bedId === 'B')?.isOccupied,
+    ).toBe(true);
     expect(finalRoom?.occupancyCount).toBe(1);
 
     const finalTenant = await Tenant.findById(tenant.id).lean();
@@ -367,7 +433,8 @@ describe('Bed Consistency -- 7 Critical Paths', () => {
     }
 
     const final = await Room.findById(room.id).lean();
-    const occCount = (final?.beds as IBedSubdoc[] | undefined)?.filter((b) => b.isOccupied).length ?? 0;
+    const occCount =
+      (final?.beds as IBedSubdoc[] | undefined)?.filter((b) => b.isOccupied).length ?? 0;
     expect(final?.occupancyCount).toBe(occCount);
     expect(occCount).toBe(2);
   });

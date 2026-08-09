@@ -145,29 +145,23 @@ enquiries.put(
 );
 
 // ── PUT /enquiries/:id — full admin edit ─────────────────
-enquiries.put(
-  '/:id',
-  authGuard,
-  adminOnly,
-  zValidator('json', updateEnquirySchema),
-  async (c) => {
-    const id = parseId(c.req.param('id'));
-    if (!id) return badRequest(c, 'Invalid enquiry ID');
+enquiries.put('/:id', authGuard, adminOnly, zValidator('json', updateEnquirySchema), async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid enquiry ID');
 
-    const body = c.req.valid('json');
-    const update: Record<string, unknown> = { ...body };
-    if (body.email === '') update.email = undefined;
+  const body = c.req.valid('json');
+  const update: Record<string, unknown> = { ...body };
+  if (body.email === '') update.email = undefined;
 
-    const enquiry = await Enquiry.findByIdAndUpdate(id, update, {
-      returnDocument: 'after',
-      runValidators: true,
-    }).lean();
+  const enquiry = await Enquiry.findByIdAndUpdate(id, update, {
+    returnDocument: 'after',
+    runValidators: true,
+  }).lean();
 
-    if (!enquiry) return notFound(c, 'Enquiry');
+  if (!enquiry) return notFound(c, 'Enquiry');
 
-    return c.json({ success: true, data: enquiry });
-  },
-);
+  return c.json({ success: true, data: enquiry });
+});
 
 // ── DELETE /enquiries/:id ────────────────────────────────
 enquiries.delete('/:id', authGuard, adminOnly, async (c) => {

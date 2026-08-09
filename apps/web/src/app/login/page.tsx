@@ -78,11 +78,7 @@ export default function AdminLoginPage() {
       // Web admin panel is admin-only. Tenant / guardian / visitor use the Flutter app.
       if (user.role !== 'admin') {
         const roleLabel =
-          user.role === 'tenant'
-            ? 'Tenant'
-            : user.role === 'guardian'
-              ? 'Guardian'
-              : user.role;
+          user.role === 'tenant' ? 'Tenant' : user.role === 'guardian' ? 'Guardian' : user.role;
         setError(
           `This login is for administrators only. ${roleLabel} accounts use the Tenet mobile / Flutter web portal.`,
         );
@@ -103,7 +99,7 @@ export default function AdminLoginPage() {
     <div className="relative flex min-h-screen items-center justify-center bg-[color:var(--color-surface-50)] p-4">
       {/* Decorative background blobs — theme-aware */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-[color:var(--color-brand-500)] opacity-[0.04] blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[color:var(--color-brand-500)] opacity-[0.04] blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-[color:var(--color-accent-500)] opacity-[0.04] blur-3xl" />
       </div>
 
@@ -129,7 +125,7 @@ export default function AdminLoginPage() {
 
           {/* Header */}
           <div className="mb-8 text-center">
-            <h1 className="font-[family:var(--font-display)] text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <h1 className="text-2xl font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)]">
               Admin Login
             </h1>
             <p className="mt-1.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
@@ -147,7 +143,7 @@ export default function AdminLoginPage() {
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:var(--color-danger-500)]" />
                 <div>
-                  <p className="text-[13px] font-semibold leading-snug text-[color:var(--color-danger-700)]">
+                  <p className="text-[13px] leading-snug font-semibold text-[color:var(--color-danger-700)]">
                     {error}
                   </p>
                   {error.includes('Flutter') ||
@@ -283,7 +279,7 @@ export default function AdminLoginPage() {
 
             <div className="flex items-center justify-center gap-1.5 text-center">
               <KeyRound className="h-3 w-3 text-[color:var(--color-text-muted)]" />
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+              <p className="text-[10px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                 Administrator access only
               </p>
             </div>

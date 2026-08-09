@@ -124,9 +124,7 @@ export default function EditInvoicePage() {
         rentAmount: data.rentAmount,
         electricityAmount: data.electricityAmount,
         otherCharges: data.otherCharges,
-        dueDate: data.dueDate
-          ? new Date(`${data.dueDate}T00:00:00.000Z`).toISOString()
-          : undefined,
+        dueDate: data.dueDate ? new Date(`${data.dueDate}T00:00:00.000Z`).toISOString() : undefined,
       };
       // Do not send status for partial (payment-driven) — would overwrite to "sent"
       if (invoiceData?.status !== 'partial') {
@@ -254,7 +252,7 @@ export default function EditInvoicePage() {
                 <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
                   Auto-calculated total
                 </span>
-                <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
+                <span className="font-mono text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
               </div>

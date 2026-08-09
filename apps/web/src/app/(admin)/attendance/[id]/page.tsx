@@ -245,7 +245,7 @@ export default function AttendanceDetailPage() {
                 <div className="flex items-center gap-3">
                   {methodIcon}
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                       Method
                     </p>
                     <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
@@ -258,7 +258,7 @@ export default function AttendanceDetailPage() {
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-[color:var(--color-text-muted)]" />
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                       Recorded By
                     </p>
                     <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">

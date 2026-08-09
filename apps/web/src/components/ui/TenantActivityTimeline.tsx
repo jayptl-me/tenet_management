@@ -134,7 +134,7 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
   return (
     <div className="relative">
       {/* Vertical line */}
-      <div className="absolute left-[11px] top-2 h-[calc(100%-16px)] w-px bg-[color:var(--border-color)]" />
+      <div className="absolute top-2 left-[11px] h-[calc(100%-16px)] w-px bg-[color:var(--border-color)]" />
 
       <div className="space-y-0">
         {displayEvents.map((event) => {
@@ -156,7 +156,7 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
               {/* Content */}
               <div className="min-w-0 flex-1 pt-0.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold leading-tight text-[color:var(--color-text-primary)]">
+                  <p className="text-sm leading-tight font-semibold text-[color:var(--color-text-primary)]">
                     {event.title}
                   </p>
                   <span className="flex-shrink-0 text-[10px] text-[color:var(--color-text-muted)]">
@@ -177,7 +177,7 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
                   </p>
                 ) : null}
                 {event.status && (
-                  <span className="mt-0.5 inline-block text-[10px] capitalize text-[color:var(--color-text-muted)]">
+                  <span className="mt-0.5 inline-block text-[10px] text-[color:var(--color-text-muted)] capitalize">
                     {event.status.replace(/_/g, ' ')}
                   </span>
                 )}

@@ -69,7 +69,6 @@ visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c)
     const tenant = await Tenant.findById(body.tenantId).lean();
     if (!tenant) return notFound(c, 'Tenant');
   } else {
-
     return c.json(
       {
         success: false,

@@ -4,7 +4,14 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { notFound, badRequest, conflict, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
+import {
+  notFound,
+  badRequest,
+  conflict,
+  parseId,
+  parsePagination,
+  safeFilter,
+} from '../lib/routeUtils.js';
 import { WashingMachine } from '../models/washingMachine.js';
 import { Floor } from '../models/floor.js';
 import { Tenant } from '../models/tenant.js';
@@ -41,7 +48,8 @@ const claimSchema = z.strictObject({
 /** Map a lean washing machine doc with floor + currentUser populated. */
 function mapMachine(doc: Record<string, unknown>) {
   const floorRaw = doc.floor;
-  const floor = floorRaw && typeof floorRaw === 'object' ? (floorRaw as Record<string, unknown>) : undefined;
+  const floor =
+    floorRaw && typeof floorRaw === 'object' ? (floorRaw as Record<string, unknown>) : undefined;
   const currentUserRaw = doc.currentUser;
   const currentUser =
     currentUserRaw && typeof currentUserRaw === 'object'
@@ -70,7 +78,9 @@ function mapMachine(doc: Record<string, unknown>) {
 
 /** Resolve tenant's floorId from their user sub. Returns null if unresolvable. */
 async function resolveTenantFloorId(userSub: string): Promise<string | null> {
-  const tenant = await Tenant.findOne({ userId: userSub } as Record<string, unknown>).select('roomId').lean();
+  const tenant = await Tenant.findOne({ userId: userSub } as Record<string, unknown>)
+    .select('roomId')
+    .lean();
   if (!tenant) return null;
   const room = await Room.findById(tenant.roomId).select('floorId').lean();
   if (!room) return null;
@@ -109,7 +119,12 @@ washingMachines.get('/', authGuard, async (c) => {
   const { skip, limit, page } = pagination;
 
   const [data, total] = await Promise.all([
-    (WashingMachine as unknown as { find: (filter: Record<string, unknown>) => ReturnType<typeof WashingMachine.find> }).find(filter)
+    (
+      WashingMachine as unknown as {
+        find: (filter: Record<string, unknown>) => ReturnType<typeof WashingMachine.find>;
+      }
+    )
+      .find(filter)
       .sort({ machineNumber: 1 } as Record<string, 1>)
       .skip(skip)
       .limit(limit)
@@ -147,7 +162,10 @@ washingMachines.get('/floor/:floorId', authGuard, async (c) => {
       return c.json(
         {
           success: false,
-          error: { code: 'FORBIDDEN', message: 'You can only view washing machines on your floor.' },
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You can only view washing machines on your floor.',
+          },
         },
         403,
       );
@@ -234,11 +252,18 @@ washingMachines.post('/', authGuard, adminOnly, zValidator('json', createSchema)
       details: { floorId: body.floorId, machineNumber: body.machineNumber },
     });
 
-    return c.json({ success: true, data: mapMachine(created as unknown as Record<string, unknown>) }, 201);
+    return c.json(
+      { success: true, data: mapMachine(created as unknown as Record<string, unknown>) },
+      201,
+    );
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {
-      return conflict(c, 'A machine with this number already exists on this floor', 'DUPLICATE_MACHINE');
+      return conflict(
+        c,
+        'A machine with this number already exists on this floor',
+        'DUPLICATE_MACHINE',
+      );
     }
     throw err;
   }
@@ -255,7 +280,11 @@ washingMachines.put('/:id', authGuard, adminOnly, zValidator('json', updateSchem
   try {
     // When setting a non-in_use status, clear any existing claim
     const updateBody: Record<string, unknown> = { ...body };
-    if (body.status === 'available' || body.status === 'under_maintenance' || body.status === 'down') {
+    if (
+      body.status === 'available' ||
+      body.status === 'under_maintenance' ||
+      body.status === 'down'
+    ) {
       updateBody.currentUserId = null;
       updateBody.claimedAt = null;
       updateBody.timerEndsAt = null;
@@ -284,7 +313,10 @@ washingMachines.put('/:id', authGuard, adminOnly, zValidator('json', updateSchem
       details: { ...body },
     });
 
-    return c.json({ success: true, data: mapMachine(machine as unknown as Record<string, unknown>) });
+    return c.json({
+      success: true,
+      data: mapMachine(machine as unknown as Record<string, unknown>),
+    });
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {
@@ -316,16 +348,24 @@ washingMachines.post('/:id/claim', authGuard, zValidator('json', claimSchema), a
   const tenantId = String((tenant as unknown as Record<string, unknown>)._id ?? '');
 
   // Verify the machine is on the tenant's floor (requires room lookup)
-  const room = await Room.findById((tenant as unknown as Record<string, unknown>).roomId).select('floorId').lean();
+  const room = await Room.findById((tenant as unknown as Record<string, unknown>).roomId)
+    .select('floorId')
+    .lean();
   const targetMachine = await WashingMachine.findById(id).select('floorId timerDuration').lean();
   if (!targetMachine) return notFound(c, 'Washing machine');
-  if (!room || String(room.floorId) !== String((targetMachine as unknown as Record<string, unknown>).floorId)) {
+  if (
+    !room ||
+    String(room.floorId) !== String((targetMachine as unknown as Record<string, unknown>).floorId)
+  ) {
     return badRequest(c, 'This washing machine is not on your floor', 'WRONG_FLOOR');
   }
 
   // WM-2: Atomic claim — findOneAndUpdate with conditional to prevent double-booking
   const now = new Date();
-  const duration = body.timerDuration ?? ((targetMachine as unknown as Record<string, unknown>).timerDuration as number) ?? 50;
+  const duration =
+    body.timerDuration ??
+    ((targetMachine as unknown as Record<string, unknown>).timerDuration as number) ??
+    50;
   const timerEnds = new Date(now.getTime() + duration * 60 * 1000);
 
   // First, check tenant doesn't already have an active claim (separate query for better error message)
@@ -335,7 +375,11 @@ washingMachines.post('/:id/claim', authGuard, zValidator('json', claimSchema), a
     _id: { $ne: new mongoose.Types.ObjectId(id) },
   } as Record<string, unknown>).lean();
   if (existingClaim) {
-    return conflict(c, 'You already have an active washing machine claim. Release it first.', 'ALREADY_CLAIMED');
+    return conflict(
+      c,
+      'You already have an active washing machine claim. Release it first.',
+      'ALREADY_CLAIMED',
+    );
   }
 
   // Atomic: only update if status is still 'available'
@@ -367,7 +411,11 @@ washingMachines.post('/:id/claim', authGuard, zValidator('json', claimSchema), a
     .lean();
 
   if (!machine) {
-    return conflict(c, 'This washing machine is already in use or unavailable', 'MACHINE_NOT_AVAILABLE');
+    return conflict(
+      c,
+      'This washing machine is already in use or unavailable',
+      'MACHINE_NOT_AVAILABLE',
+    );
   }
 
   return c.json({
@@ -418,7 +466,10 @@ washingMachines.post('/:id/release', authGuard, async (c) => {
     })
     .lean();
 
-  return c.json({ success: true, data: mapMachine(populated as unknown as Record<string, unknown>) });
+  return c.json({
+    success: true,
+    data: mapMachine(populated as unknown as Record<string, unknown>),
+  });
 });
 
 // ── DELETE /washing-machines/:id ──────────────────────

@@ -19,7 +19,9 @@ import complaintRoutes from '../routes/complaints.js';
 type Json = Record<string, unknown>;
 type AnyDoc = Record<string, unknown>;
 const userCreate = User.create.bind(User) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
-const floorCreate = Floor.create.bind(Floor) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
+const floorCreate = Floor.create.bind(Floor) as unknown as (
+  doc: AnyDoc,
+) => Promise<{ _id: unknown }>;
 const roomCreate = Room.create.bind(Room) as unknown as (doc: AnyDoc) => Promise<{ _id: unknown }>;
 const tenantCreate = Tenant.create.bind(Tenant) as unknown as (
   doc: AnyDoc,
@@ -157,7 +159,12 @@ describe('Leave cancel + complaint photos (shipped routes)', () => {
       status: 'pending',
     });
 
-    const res = await jsonReq('POST', `/api/v1/leaves/${String(leave._id)}/cancel`, tenantToken, {});
+    const res = await jsonReq(
+      'POST',
+      `/api/v1/leaves/${String(leave._id)}/cancel`,
+      tenantToken,
+      {},
+    );
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     const data = res.body.data as Json;
@@ -176,7 +183,12 @@ describe('Leave cancel + complaint photos (shipped routes)', () => {
       status: 'approved',
     });
 
-    const res = await jsonReq('POST', `/api/v1/leaves/${String(leave._id)}/cancel`, tenantToken, {});
+    const res = await jsonReq(
+      'POST',
+      `/api/v1/leaves/${String(leave._id)}/cancel`,
+      tenantToken,
+      {},
+    );
     expect(res.status).toBe(400);
     expect((res.body.error as Json)?.code).toBe('LEAVE_NOT_PENDING');
   });

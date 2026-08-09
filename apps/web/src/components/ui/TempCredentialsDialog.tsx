@@ -91,12 +91,7 @@ export function TempCredentialsDialog({
                 <code className="flex-1 rounded-[var(--radius-md)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-card-bg)] px-3 py-2.5 font-mono text-base font-bold tracking-wide text-[color:var(--color-text-primary)]">
                   {temporaryPassword}
                 </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  animate={false}
-                >
+                <Button variant="outline" size="sm" onClick={handleCopy} animate={false}>
                   {copied ? (
                     <>
                       <Check className="h-4 w-4" />

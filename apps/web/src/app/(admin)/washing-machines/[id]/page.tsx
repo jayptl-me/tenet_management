@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { WashingMachine, Timer, User, Building2, Hash, Clock, Pencil, RefreshCw } from 'lucide-react';
+import {
+  WashingMachine,
+  Timer,
+  User,
+  Building2,
+  Hash,
+  Clock,
+  Pencil,
+  RefreshCw,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -67,7 +76,9 @@ export default function WashingMachineDetailPage() {
     if (!machine) return;
     try {
       await api.post(`washing-machines/${machine._id}/release`).json();
-      const res = await api.get(`washing-machines/${id}`).json<{ success: boolean; data: WashingMachineDetail }>();
+      const res = await api
+        .get(`washing-machines/${id}`)
+        .json<{ success: boolean; data: WashingMachineDetail }>();
       setMachine(res.data);
     } catch {
       setError('Failed to release machine');
@@ -96,7 +107,8 @@ export default function WashingMachineDetailPage() {
           : 'danger'
     : 'neutral';
 
-  const machineName = machine?.label || (machine ? `Machine ${machine.machineNumber}` : 'Washing Machine');
+  const machineName =
+    machine?.label || (machine ? `Machine ${machine.machineNumber}` : 'Washing Machine');
   const floorDisplay = machine
     ? `${machine.floorLabel ?? 'Floor'}${machine.floorNumber != null ? ` #${machine.floorNumber}` : ''}`
     : '';
@@ -182,7 +194,10 @@ export default function WashingMachineDetailPage() {
                 <DetailRow
                   label="Status"
                   value={
-                    <StatusBadge variant={statusVariant} label={machine.status.replace(/_/g, ' ')} />
+                    <StatusBadge
+                      variant={statusVariant}
+                      label={machine.status.replace(/_/g, ' ')}
+                    />
                   }
                 />
               </DetailList>
@@ -212,7 +227,7 @@ export default function WashingMachineDetailPage() {
 
           {machine.notes && (
             <DetailCard title="Notes" variant="warning">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                 {machine.notes}
               </p>
             </DetailCard>

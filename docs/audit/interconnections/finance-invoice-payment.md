@@ -47,20 +47,20 @@ Checkout coupling (tenant-lifecycle)
 
 ## Code paths (source files)
 
-| Concern | Path |
-|---------|------|
-| Invoice routes | `apps/api/src/routes/invoices.ts` |
-| Invoice model + pre-save total | `apps/api/src/models/invoice.ts` |
-| Invoice generation | `apps/api/src/services/invoice.service.ts` |
-| Payment routes | `apps/api/src/routes/payments.ts` |
-| Invoice status from payments | `apps/api/src/services/payment-status.service.ts` |
-| Electricity routes | `apps/api/src/routes/electricity.ts` |
-| Electricity model | `apps/api/src/models/electricityBill.ts` |
-| Checkout dues / guards | `apps/api/src/routes/tenants.ts` |
-| Tests | `apps/api/src/__tests__/invoice-payment.test.ts`, module-http-e2e finance paths |
-| Admin FE | `apps/web/src/app/(admin)/invoices/**`, `payments/**`, `electricity/**` |
-| Flutter money | `mobile/lib/features/tenant/presentation/invoices_screen.dart`, payments, invoice_detail |
-| Feature audits | `docs/audit/features/invoices.md`, `payments.md`, `electricity.md` |
+| Concern                        | Path                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| Invoice routes                 | `apps/api/src/routes/invoices.ts`                                                        |
+| Invoice model + pre-save total | `apps/api/src/models/invoice.ts`                                                         |
+| Invoice generation             | `apps/api/src/services/invoice.service.ts`                                               |
+| Payment routes                 | `apps/api/src/routes/payments.ts`                                                        |
+| Invoice status from payments   | `apps/api/src/services/payment-status.service.ts`                                        |
+| Electricity routes             | `apps/api/src/routes/electricity.ts`                                                     |
+| Electricity model              | `apps/api/src/models/electricityBill.ts`                                                 |
+| Checkout dues / guards         | `apps/api/src/routes/tenants.ts`                                                         |
+| Tests                          | `apps/api/src/__tests__/invoice-payment.test.ts`, module-http-e2e finance paths          |
+| Admin FE                       | `apps/web/src/app/(admin)/invoices/**`, `payments/**`, `electricity/**`                  |
+| Flutter money                  | `mobile/lib/features/tenant/presentation/invoices_screen.dart`, payments, invoice_detail |
+| Feature audits                 | `docs/audit/features/invoices.md`, `payments.md`, `electricity.md`                       |
 
 ### Invoice routes (verified)
 
@@ -110,13 +110,13 @@ Checkout coupling (tenant-lifecycle)
 
 ## Gaps / half-baked
 
-| Severity | Gap | Proof |
-|----------|-----|-------|
-| P1 | Electricity distribute when creating new invoice via `generateSingleInvoice` does not re-run the "existing invoice" residual payment re-sync path in the same branch shape (relies on generate creating pending = full total including elec) | electricity.ts create branch vs update branch |
-| P1 | `updateInvoicePaymentStatus` when totalPaid==0 leaves status as current paid/partial without always forcing `sent` on payment delete/reversal edge (partial branch keeps paid/partial if no paid rows in some paths) | payment-status.service.ts lines ~70-74 |
-| P2 | FE error surfaces for `DUPLICATE_UTR`, `AMOUNT_EXCEEDS_BALANCE`, `DUPLICATE_INVOICE` vary by page | admin payments/invoices forms |
-| P2 | Checkout dues `totalDue` uses max(invoiceTotal, paymentDue) not net residual after partials per invoice | tenants.ts dues |
-| P2 | Electricity distribute not transactional across all rooms (per-tenant try/catch; partial distribute possible before bill marked distributed) | electricity.ts loop |
+| Severity | Gap                                                                                                                                                                                                                                          | Proof                                         |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| P1       | Electricity distribute when creating new invoice via `generateSingleInvoice` does not re-run the "existing invoice" residual payment re-sync path in the same branch shape (relies on generate creating pending = full total including elec) | electricity.ts create branch vs update branch |
+| P1       | `updateInvoicePaymentStatus` when totalPaid==0 leaves status as current paid/partial without always forcing `sent` on payment delete/reversal edge (partial branch keeps paid/partial if no paid rows in some paths)                         | payment-status.service.ts lines ~70-74        |
+| P2       | FE error surfaces for `DUPLICATE_UTR`, `AMOUNT_EXCEEDS_BALANCE`, `DUPLICATE_INVOICE` vary by page                                                                                                                                            | admin payments/invoices forms                 |
+| P2       | Checkout dues `totalDue` uses max(invoiceTotal, paymentDue) not net residual after partials per invoice                                                                                                                                      | tenants.ts dues                               |
+| P2       | Electricity distribute not transactional across all rooms (per-tenant try/catch; partial distribute possible before bill marked distributed)                                                                                                 | electricity.ts loop                           |
 
 ## Acceptance for fix agents
 
@@ -132,8 +132,8 @@ Checkout coupling (tenant-lifecycle)
 
 ## Remediation log
 
-| Date | Change | Status |
-|------|--------|--------|
-| ongoing | Offline payment + payment-status.service partial support | Live |
-| ongoing | Electricity distribute updates existing invoices + residual pending | Live |
+| Date       | Change                                                                     | Status      |
+| ---------- | -------------------------------------------------------------------------- | ----------- |
+| ongoing    | Offline payment + payment-status.service partial support                   | Live        |
+| ongoing    | Electricity distribute updates existing invoices + residual pending        | Live        |
 | 2026-07-16 | Full route/service re-verify; interconnection MD rewritten to match source | Docs synced |

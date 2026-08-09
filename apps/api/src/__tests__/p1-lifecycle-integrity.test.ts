@@ -34,11 +34,19 @@ const floorCreate = Floor.create.bind(Floor) as unknown as (doc: AnyDoc) => Prom
 const roomCreate = Room.create.bind(Room) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
 const userCreate = User.create.bind(User) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
 const tenantCreate = Tenant.create.bind(Tenant) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
-const guardianCreate = Guardian.create.bind(Guardian) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
-const noticeCreate = NoticePost.create.bind(NoticePost) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
+const guardianCreate = Guardian.create.bind(Guardian) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
+const noticeCreate = NoticePost.create.bind(NoticePost) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
 const visitorCreate = Visitor.create.bind(Visitor) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
-const complaintCreate = Complaint.create.bind(Complaint) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
-const configCreate = AppConfig.create.bind(AppConfig) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
+const complaintCreate = Complaint.create.bind(Complaint) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
+const configCreate = AppConfig.create.bind(AppConfig) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
 
 function buildApp() {
   const app = new Hono();
@@ -333,11 +341,7 @@ describe('P1 lifecycle integrity (shipped routes)', () => {
     expect(afterCancel?.status).toBe('cancelled');
 
     // Re-approve then arrive
-    const approve = await jsonReq(
-      'POST',
-      `/api/v1/visitors/${String(visitor._id)}/approve`,
-      token,
-    );
+    const approve = await jsonReq('POST', `/api/v1/visitors/${String(visitor._id)}/approve`, token);
     expect(approve.status).toBe(200);
     const arrive = await jsonReq('POST', `/api/v1/visitors/${String(visitor._id)}/arrive`, token);
     expect(arrive.status).toBe(200);

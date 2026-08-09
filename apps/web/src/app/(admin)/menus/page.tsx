@@ -190,88 +190,88 @@ export default function MenusPage() {
         />
       ) : (
         <>
-        <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          placeholder="Search by date..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-xs"
-        />
-        <Select
-          options={[
-            { value: '', label: 'All Status' },
-            { value: 'true', label: 'Active & Upcoming' },
-            { value: 'false', label: 'Past' },
-          ]}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[160px]"
-        />
-      </div>
-      <DataTable
-        columns={columns}
-        data={menus}
-        keyExtractor={(row: MenuRow) => row._id}
-        isLoading={isLoading}
-        onRowClick={(row) => router.push(`/menus/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: setPage,
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
-        emptyState={
-          <EmptyState
-            icon={<ClipboardList className="h-12 w-12" />}
-            title="No menus yet"
-            description="Create your first daily menu to get started"
-            action={{ label: 'Create Menu', onClick: () => router.push('/menus/new') }}
-          />
-        }
-        mobileCardRenderer={(row) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-                {new Date(row.date).toLocaleDateString('en-IN', {
-                  weekday: 'long',
-                  day: '2-digit',
-                  month: 'short',
-                })}
-              </span>
-              {(() => {
-                const info = getMenuStatusInfo(row.date);
-                return <StatusBadge variant={info.variant} label={info.label} />;
-              })()}
-            </div>
-            <div className="flex items-center gap-1 pt-1">
-              <TableActions
-                onView={() => router.push(`/menus/${row._id}`)}
-                showEdit={row.date.slice(0, 10) >= localTodayYmd()}
-                onEdit={() => router.push(`/menus/${row._id}/edit`)}
-                onDelete={() => setDeleteTarget(row)}
-              />
-            </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              placeholder="Search by date..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="max-w-xs"
+            />
+            <Select
+              options={[
+                { value: '', label: 'All Status' },
+                { value: 'true', label: 'Active & Upcoming' },
+                { value: 'false', label: 'Past' },
+              ]}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="max-w-[160px]"
+            />
           </div>
-        )}
-      />
-      <ConfirmModal
-        open={!!deleteTarget}
-        title="Delete Menu"
-        message={`Are you sure you want to delete this menu? This action cannot be undone.`}
-        loading={deleting}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+          <DataTable
+            columns={columns}
+            data={menus}
+            keyExtractor={(row: MenuRow) => row._id}
+            isLoading={isLoading}
+            onRowClick={(row) => router.push(`/menus/${row._id}`)}
+            pagination={{
+              page,
+              perPage,
+              total,
+              onPageChange: setPage,
+              onPerPageChange: (pp) => {
+                setPerPage(pp);
+                setPage(1);
+              },
+            }}
+            emptyState={
+              <EmptyState
+                icon={<ClipboardList className="h-12 w-12" />}
+                title="No menus yet"
+                description="Create your first daily menu to get started"
+                action={{ label: 'Create Menu', onClick: () => router.push('/menus/new') }}
+              />
+            }
+            mobileCardRenderer={(row) => (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    {new Date(row.date).toLocaleDateString('en-IN', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: 'short',
+                    })}
+                  </span>
+                  {(() => {
+                    const info = getMenuStatusInfo(row.date);
+                    return <StatusBadge variant={info.variant} label={info.label} />;
+                  })()}
+                </div>
+                <div className="flex items-center gap-1 pt-1">
+                  <TableActions
+                    onView={() => router.push(`/menus/${row._id}`)}
+                    showEdit={row.date.slice(0, 10) >= localTodayYmd()}
+                    onEdit={() => router.push(`/menus/${row._id}/edit`)}
+                    onDelete={() => setDeleteTarget(row)}
+                  />
+                </div>
+              </div>
+            )}
+          />
+          <ConfirmModal
+            open={!!deleteTarget}
+            title="Delete Menu"
+            message={`Are you sure you want to delete this menu? This action cannot be undone.`}
+            loading={deleting}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />
         </>
       )}
     </div>

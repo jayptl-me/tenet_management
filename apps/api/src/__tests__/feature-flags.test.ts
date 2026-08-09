@@ -9,7 +9,9 @@ import { requireFeature, invalidateFeatureFlagCache } from '../middleware/featur
 import { AppConfig } from '../models/appConfig.js';
 
 type AnyDoc = Record<string, unknown>;
-const configCreate = AppConfig.create.bind(AppConfig) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
+const configCreate = AppConfig.create.bind(AppConfig) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
 
 const baseConfig: AnyDoc = {
   pgName: 'Test PG',

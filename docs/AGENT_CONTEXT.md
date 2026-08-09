@@ -10,12 +10,12 @@
 
 ## 1. Product split (do not violate)
 
-| Surface | Codebase | Platforms | Authenticated roles |
-|---------|----------|-----------|---------------------|
-| Admin panel | `apps/web` (Next.js 16 App Router) | Browser only | `admin` only |
-| Resident portal | `mobile/` (Flutter) | **Flutter Web + iOS + Android** (one codebase) | `tenant`, `guardian` |
-| Visitor desk | `mobile/` visitor shell | Same Flutter targets | Tenant-authenticated (not a JWT role) |
-| API | `apps/api` (Bun + Hono) | Server | All roles via JWT |
+| Surface         | Codebase                           | Platforms                                      | Authenticated roles                   |
+| --------------- | ---------------------------------- | ---------------------------------------------- | ------------------------------------- |
+| Admin panel     | `apps/web` (Next.js 16 App Router) | Browser only                                   | `admin` only                          |
+| Resident portal | `mobile/` (Flutter)                | **Flutter Web + iOS + Android** (one codebase) | `tenant`, `guardian`                  |
+| Visitor desk    | `mobile/` visitor shell            | Same Flutter targets                           | Tenant-authenticated (not a JWT role) |
+| API             | `apps/api` (Bun + Hono)            | Server                                         | All roles via JWT                     |
 
 ```
   Next.js apps/web  [admin only]
@@ -45,16 +45,16 @@
 
 ## 2. Where to look first
 
-| Need | Open |
-|------|------|
-| Build commands, conventions | [AGENTS.md](../AGENTS.md) |
-| Connectivity, CORS, auth, API map | [PORTAL_CONNECTIVITY.md](PORTAL_CONNECTIVITY.md) |
-| Live gap backlog | [audit/README.md](audit/README.md), [audit/LIVE_GAP_INVENTORY.md](audit/LIVE_GAP_INVENTORY.md) |
-| File map | [.sixthrules/workflows/codebase-index.md](../.sixthrules/workflows/codebase-index.md) |
-| Package boundaries | [.sixthrules/workflows/monorepo-boundaries.md](../.sixthrules/workflows/monorepo-boundaries.md) |
-| Domain entities | [specs/README.md](specs/README.md) |
-| Flutter setup | [mobile/README.md](../mobile/README.md) |
-| Deploy / env | [deployment-verification](../.sixthrules/workflows/deployment-verification.md), `render.yaml` |
+| Need                              | Open                                                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Build commands, conventions       | [AGENTS.md](../AGENTS.md)                                                                       |
+| Connectivity, CORS, auth, API map | [PORTAL_CONNECTIVITY.md](PORTAL_CONNECTIVITY.md)                                                |
+| Live gap backlog                  | [audit/README.md](audit/README.md), [audit/LIVE_GAP_INVENTORY.md](audit/LIVE_GAP_INVENTORY.md)  |
+| File map                          | [.sixthrules/workflows/codebase-index.md](../.sixthrules/workflows/codebase-index.md)           |
+| Package boundaries                | [.sixthrules/workflows/monorepo-boundaries.md](../.sixthrules/workflows/monorepo-boundaries.md) |
+| Domain entities                   | [specs/README.md](specs/README.md)                                                              |
+| Flutter setup                     | [mobile/README.md](../mobile/README.md)                                                         |
+| Deploy / env                      | [deployment-verification](../.sixthrules/workflows/deployment-verification.md), `render.yaml`   |
 
 ---
 
@@ -94,17 +94,17 @@ flutter build ios --dart-define=API_BASE_URL=https://api.example.com/api/v1
 
 ## 4. Connectivity summary
 
-| Item | Value / location |
-|------|------------------|
-| API prefix | `/api/v1` |
-| Admin base URL env | `NEXT_PUBLIC_API_URL` |
-| Flutter base URL | `API_BASE_URL` dart-define (`mobile/lib/core/config/env.dart`) |
-| CORS allowlist | `apps/api/src/lib/cors-origins.ts` |
-| Admin origin env | `FRONTEND_URL` |
-| Flutter Web origin env (prod) | `PORTAL_URL` |
-| Extra origins | `CORS_EXTRA_ORIGINS` (comma-separated) |
-| Dev CORS | Any `http://localhost:*` / `http://127.0.0.1:*` Origin allowed |
-| Auth | Bearer JWT; `POST /auth/login`, `/auth/refresh`, `GET /auth/me` |
+| Item                          | Value / location                                                |
+| ----------------------------- | --------------------------------------------------------------- |
+| API prefix                    | `/api/v1`                                                       |
+| Admin base URL env            | `NEXT_PUBLIC_API_URL`                                           |
+| Flutter base URL              | `API_BASE_URL` dart-define (`mobile/lib/core/config/env.dart`)  |
+| CORS allowlist                | `apps/api/src/lib/cors-origins.ts`                              |
+| Admin origin env              | `FRONTEND_URL`                                                  |
+| Flutter Web origin env (prod) | `PORTAL_URL`                                                    |
+| Extra origins                 | `CORS_EXTRA_ORIGINS` (comma-separated)                          |
+| Dev CORS                      | Any `http://localhost:*` / `http://127.0.0.1:*` Origin allowed  |
+| Auth                          | Bearer JWT; `POST /auth/login`, `/auth/refresh`, `GET /auth/me` |
 
 Full detail: [PORTAL_CONNECTIVITY.md](PORTAL_CONNECTIVITY.md).
 
@@ -145,12 +145,12 @@ No `(tenant)` or `(guardian)` route groups.
 
 ## 7. Task routing for agents
 
-| User request about... | Work in | Do not touch for UI |
-|-----------------------|---------|---------------------|
-| Admin CRUD, settings, dashboard | `apps/web`, maybe `apps/api` | `mobile/` UI |
-| Tenant/guardian/visitor screens | `mobile/` | `apps/web` App Router |
-| Auth/CORS/API contracts | `apps/api` (+ clients) | -- |
-| Shared TS DTOs | `packages/types` then API + admin web | Flutter uses Dart models/HTTP |
+| User request about...           | Work in                               | Do not touch for UI           |
+| ------------------------------- | ------------------------------------- | ----------------------------- |
+| Admin CRUD, settings, dashboard | `apps/web`, maybe `apps/api`          | `mobile/` UI                  |
+| Tenant/guardian/visitor screens | `mobile/`                             | `apps/web` App Router         |
+| Auth/CORS/API contracts         | `apps/api` (+ clients)                | --                            |
+| Shared TS DTOs                  | `packages/types` then API + admin web | Flutter uses Dart models/HTTP |
 
 After structural file adds/renames: update [codebase-index.md](../.sixthrules/workflows/codebase-index.md).
 
@@ -180,14 +180,14 @@ After structural file adds/renames: update [codebase-index.md](../.sixthrules/wo
 
 ## 9. Anti-patterns
 
-| Mistake | Correct approach |
-|---------|------------------|
-| Building tenant UI in Next.js | Implement in `mobile/` (Web + iOS + Android) |
-| Admin login accepting tenants | Reject; point to Flutter |
-| Hardcoding CORS to only FRONTEND_URL in prod with hosted Flutter web | Set `PORTAL_URL` |
-| Importing Mongoose models into web/Flutter | HTTP + types/repositories only |
-| Trusting old audit P0 "missing portal" without checking `mobile/` | Re-verify; Flutter portal exists |
-| Using emojis in docs or code | ASCII only |
+| Mistake                                                              | Correct approach                             |
+| -------------------------------------------------------------------- | -------------------------------------------- |
+| Building tenant UI in Next.js                                        | Implement in `mobile/` (Web + iOS + Android) |
+| Admin login accepting tenants                                        | Reject; point to Flutter                     |
+| Hardcoding CORS to only FRONTEND_URL in prod with hosted Flutter web | Set `PORTAL_URL`                             |
+| Importing Mongoose models into web/Flutter                           | HTTP + types/repositories only               |
+| Trusting old audit P0 "missing portal" without checking `mobile/`    | Re-verify; Flutter portal exists             |
+| Using emojis in docs or code                                         | ASCII only                                   |
 
 ---
 

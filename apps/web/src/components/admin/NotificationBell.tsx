@@ -141,17 +141,17 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5 text-[color:var(--color-surface-700)]" />
         {unreadCount > 0 && (
-          <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)]">
+          <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
+        <div className="absolute top-full right-0 z-50 mt-2 w-80 rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[color:var(--border-color)] p-3">
-            <h3 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+            <h3 className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
               Notifications
             </h3>
             {unreadCount > 0 && (

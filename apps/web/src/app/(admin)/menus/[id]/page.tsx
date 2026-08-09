@@ -49,7 +49,10 @@ function localTodayYmd(): string {
   return `${y}-${m}-${day}`;
 }
 
-function getMenuStatusInfo(date: string): { label: string; variant: ReturnType<typeof statusToVariant> } {
+function getMenuStatusInfo(date: string): {
+  label: string;
+  variant: ReturnType<typeof statusToVariant>;
+} {
   const today = localTodayYmd();
   if (date < today) return { label: 'Past', variant: statusToVariant('past') };
   if (date === today) return { label: 'Active', variant: statusToVariant('active') };
@@ -136,7 +139,7 @@ export default function MenuDetailPage() {
                   icon={icon}
                 >
                   {items.length === 0 ? (
-                    <p className="text-sm italic text-[color:var(--color-text-muted)]">Not set</p>
+                    <p className="text-sm text-[color:var(--color-text-muted)] italic">Not set</p>
                   ) : (
                     <ul className="space-y-2.5">
                       {items.map((item, i) => (

@@ -10,11 +10,11 @@ Code is truth. Specs and audits can lag; re-verify against source before impleme
 
 ## Product split (non-negotiable)
 
-| Surface | Path | Platforms | Roles |
-|---------|------|-----------|-------|
-| Admin panel | `apps/web` | Browser (Next.js) | `admin` only |
-| Resident portal | `mobile/` | **Flutter Web + iOS + Android** (one app) | `tenant`, `guardian`, visitor desk |
-| API | `apps/api` | Server | JWT for all roles |
+| Surface         | Path       | Platforms                                 | Roles                              |
+| --------------- | ---------- | ----------------------------------------- | ---------------------------------- |
+| Admin panel     | `apps/web` | Browser (Next.js)                         | `admin` only                       |
+| Resident portal | `mobile/`  | **Flutter Web + iOS + Android** (one app) | `tenant`, `guardian`, visitor desk |
+| API             | `apps/api` | Server                                    | JWT for all roles                  |
 
 ```
   [Next.js apps/web]  ADMIN ONLY
@@ -61,29 +61,29 @@ Rules:
 
 ## Architecture map
 
-| Path | Role |
-|------|------|
-| `apps/api/` | Bun + Hono + Mongoose. HTTP contracts. |
-| `apps/web/` | Next.js admin UI only. |
-| `mobile/` | Flutter resident portal (Web + iOS + Android). |
-| `packages/types/` | Shared TS types for API + admin web. |
-| `docs/AGENT_CONTEXT.md` | Full agent context load. |
-| `docs/PORTAL_CONNECTIVITY.md` | Connectivity, CORS, auth, API map. |
-| `docs/audit/` | Gap backlog. |
-| `render.yaml` | Render deploy. |
+| Path                          | Role                                           |
+| ----------------------------- | ---------------------------------------------- |
+| `apps/api/`                   | Bun + Hono + Mongoose. HTTP contracts.         |
+| `apps/web/`                   | Next.js admin UI only.                         |
+| `mobile/`                     | Flutter resident portal (Web + iOS + Android). |
+| `packages/types/`             | Shared TS types for API + admin web.           |
+| `docs/AGENT_CONTEXT.md`       | Full agent context load.                       |
+| `docs/PORTAL_CONNECTIVITY.md` | Connectivity, CORS, auth, API map.             |
+| `docs/audit/`                 | Gap backlog.                                   |
+| `render.yaml`                 | Render deploy.                                 |
 
 ---
 
 ## Backend connectivity (quick)
 
-| Concern | Location |
-|---------|----------|
-| Env | `apps/api/src/lib/env.ts` -- `FRONTEND_URL`, `PORTAL_URL`, `CORS_EXTRA_ORIGINS` |
-| CORS | `apps/api/src/lib/cors-origins.ts`, wired in `apps/api/src/index.ts` |
-| Env template | `apps/api/.env.example` |
-| Flutter API base | `mobile/lib/core/config/env.dart` (`API_BASE_URL`) |
-| Admin API base | `NEXT_PUBLIC_API_URL` in apps/web |
-| Guide | [docs/PORTAL_CONNECTIVITY.md](docs/PORTAL_CONNECTIVITY.md) |
+| Concern          | Location                                                                        |
+| ---------------- | ------------------------------------------------------------------------------- |
+| Env              | `apps/api/src/lib/env.ts` -- `FRONTEND_URL`, `PORTAL_URL`, `CORS_EXTRA_ORIGINS` |
+| CORS             | `apps/api/src/lib/cors-origins.ts`, wired in `apps/api/src/index.ts`            |
+| Env template     | `apps/api/.env.example`                                                         |
+| Flutter API base | `mobile/lib/core/config/env.dart` (`API_BASE_URL`)                              |
+| Admin API base   | `NEXT_PUBLIC_API_URL` in apps/web                                               |
+| Guide            | [docs/PORTAL_CONNECTIVITY.md](docs/PORTAL_CONNECTIVITY.md)                      |
 
 When changing auth, CORS, or portal APIs: update API + env + render.yaml if needed + Flutter data layer + connectivity docs. Smoke health, admin login, Flutter tenant and guardian login (Web and/or iOS).
 
@@ -112,12 +112,12 @@ When changing auth, CORS, or portal APIs: update API + env + render.yaml if need
 
 ## Task routing
 
-| Topic | Primary work area |
-|-------|-------------------|
-| Admin CRUD / settings / dashboard UI | `apps/web` |
-| Tenant / guardian / visitor UI | `mobile/` only |
-| API / CORS / auth | `apps/api` (+ clients) |
-| Shared TS contracts | `packages/types` then API + web |
+| Topic                                | Primary work area               |
+| ------------------------------------ | ------------------------------- |
+| Admin CRUD / settings / dashboard UI | `apps/web`                      |
+| Tenant / guardian / visitor UI       | `mobile/` only                  |
+| API / CORS / auth                    | `apps/api` (+ clients)          |
+| Shared TS contracts                  | `packages/types` then API + web |
 
 ---
 

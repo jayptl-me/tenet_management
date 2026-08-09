@@ -26,7 +26,6 @@ tenet_pg_management/
 
 See [docs/PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) for CORS, auth roles, and API base URLs.
 
-
 ## Auth Flow
 
 ### JWT Token System
@@ -50,10 +49,10 @@ See [docs/PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) for CORS, auth role
 
 ### Clients
 
-| Client | Package | Roles |
-|--------|---------|-------|
-| Admin web | `apps/web` | admin |
-| Flutter portal | `mobile/` | tenant, guardian (+ visitor desk for tenants) |
+| Client         | Package    | Roles                                         |
+| -------------- | ---------- | --------------------------------------------- |
+| Admin web      | `apps/web` | admin                                         |
+| Flutter portal | `mobile/`  | tenant, guardian (+ visitor desk for tenants) |
 
 ### Ky Wrapper (Frontend)
 

@@ -226,7 +226,7 @@ export default function ServiceDetailPage() {
 
           {service.note && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                 {service.note}
               </p>
             </DetailCard>

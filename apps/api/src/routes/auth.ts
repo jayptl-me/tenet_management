@@ -204,11 +204,14 @@ auth.get('/me', authGuard, async (c) => {
   if (user.role === 'tenant' && !publicData.tenantId) {
     try {
       const { Tenant } = await import('../models/tenant.js');
-      const tenantDoc = await (Tenant as unknown as {
-        findOne: (filter: Record<string, unknown>) => {
-          select: (fields: string) => { lean: () => Promise<Record<string, unknown> | null> };
-        };
-      }).findOne({ userId: String(user._id), isActive: true })
+      const tenantDoc = await (
+        Tenant as unknown as {
+          findOne: (filter: Record<string, unknown>) => {
+            select: (fields: string) => { lean: () => Promise<Record<string, unknown> | null> };
+          };
+        }
+      )
+        .findOne({ userId: String(user._id), isActive: true })
         .select('_id')
         .lean();
       if (tenantDoc) {

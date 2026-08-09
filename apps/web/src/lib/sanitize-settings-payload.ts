@@ -72,9 +72,9 @@ export function sanitizeSettingsPayload(config: SettingsFormLike): Record<string
   const addr = config.address;
   const hasAddress = Boolean(
     emptyToUndef(addr?.line1) &&
-      emptyToUndef(addr?.city) &&
-      emptyToUndef(addr?.state) &&
-      emptyToUndef(addr?.pincode),
+    emptyToUndef(addr?.city) &&
+    emptyToUndef(addr?.state) &&
+    emptyToUndef(addr?.pincode),
   );
 
   const payload: Record<string, unknown> = {

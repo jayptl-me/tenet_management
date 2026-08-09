@@ -225,9 +225,7 @@ export default function PaymentsPage() {
         <Button
           variant={statusFilter === 'pending_verification' ? 'primary' : 'outline'}
           onClick={() => {
-            setStatusFilter(
-              statusFilter === 'pending_verification' ? '' : 'pending_verification',
-            );
+            setStatusFilter(statusFilter === 'pending_verification' ? '' : 'pending_verification');
             setPage(1);
           }}
         >

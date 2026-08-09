@@ -5,12 +5,12 @@
 
 ## Package integrity
 
-| Package | Name | Link | Runtime notes |
-|---------|------|------|---------------|
-| root | `pg-management` | workspaces `apps/*`, `packages/*` | Bun >= 1.3.0 |
-| API | `@pg/api` | `@pg/types: workspace:*` | Hono, Mongoose ^9, Zod |
-| Web | `@pg/web` | `@pg/types: workspace:*` | Next 16.2.7, React 19.2.4, Tailwind 4 |
-| Types | `@pg/types` | exports `./src/*.ts` | no React/Hono deps -- OK |
+| Package | Name            | Link                              | Runtime notes                         |
+| ------- | --------------- | --------------------------------- | ------------------------------------- |
+| root    | `pg-management` | workspaces `apps/*`, `packages/*` | Bun >= 1.3.0                          |
+| API     | `@pg/api`       | `@pg/types: workspace:*`          | Hono, Mongoose ^9, Zod                |
+| Web     | `@pg/web`       | `@pg/types: workspace:*`          | Next 16.2.7, React 19.2.4, Tailwind 4 |
+| Types   | `@pg/types`     | exports `./src/*.ts`              | no React/Hono deps -- OK              |
 
 ## Models (23)
 
@@ -69,25 +69,25 @@ web lint: 0
 
 ## Entity FK map (high level)
 
-| Parent | Children / refs |
-|--------|-----------------|
-| Floor | Room.floorId; ServiceStatus.floorId |
-| Room | Tenant.roomId; Room.beds[].tenantId; Asset location free-text |
-| User | Tenant.userId; Guardian.userId; auth |
-| Tenant | Payment, Invoice, Complaint, Visitor, Guardian, LaundrySlot, MealFeedback, Attendance, Leave, Electricity distribute targets |
-| DailyMenu | date unique; MealFeedback.date logical link only (no FK) |
-| Invoice | Payment.invoiceId (verify in payment model) |
+| Parent    | Children / refs                                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Floor     | Room.floorId; ServiceStatus.floorId                                                                                          |
+| Room      | Tenant.roomId; Room.beds[].tenantId; Asset location free-text                                                                |
+| User      | Tenant.userId; Guardian.userId; auth                                                                                         |
+| Tenant    | Payment, Invoice, Complaint, Visitor, Guardian, LaundrySlot, MealFeedback, Attendance, Leave, Electricity distribute targets |
+| DailyMenu | date unique; MealFeedback.date logical link only (no FK)                                                                     |
+| Invoice   | Payment.invoiceId (verify in payment model)                                                                                  |
 
 ## Critical missing API surfaces (inventory)
 
-| Expected by FE | Exists? |
-|----------------|---------|
-| GET assets/:id | NO |
-| GET notices/:id | NO |
-| GET notifications/:id | NO |
-| PUT notifications/:id | NO |
-| POST menus | NO |
-| PUT attendance/:id | NO |
+| Expected by FE            | Exists?               |
+| ------------------------- | --------------------- |
+| GET assets/:id            | NO                    |
+| GET notices/:id           | NO                    |
+| GET notifications/:id     | NO                    |
+| PUT notifications/:id     | NO                    |
+| POST menus                | NO                    |
+| PUT attendance/:id        | NO                    |
 | PUT complaints/:id (full) | NO (only /:id/status) |
-| PUT enquiries/:id (full) | NO (only /:id/status) |
-| POST visitors as admin | NO (tenantOnly) |
+| PUT enquiries/:id (full)  | NO (only /:id/status) |
+| POST visitors as admin    | NO (tenantOnly)       |

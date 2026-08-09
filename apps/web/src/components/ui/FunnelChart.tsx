@@ -116,7 +116,7 @@ export function FunnelChart({
               aria-hidden
             />
             <span className="text-[color:var(--color-text-secondary)]">{stage.label}</span>
-            <span className="font-mono tabular-nums text-[color:var(--color-text-primary)]">
+            <span className="font-mono text-[color:var(--color-text-primary)] tabular-nums">
               {stage.value}
             </span>
           </div>

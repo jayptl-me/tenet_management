@@ -80,10 +80,7 @@ export default function NoticeDetailPage() {
               label={notice.pinned ? 'Pinned' : 'Normal'}
             />
             {notice.targetType && (
-              <StatusBadge
-                variant="info"
-                label={notice.targetType.replace(/_/g, ' ')}
-              />
+              <StatusBadge variant="info" label={notice.targetType.replace(/_/g, ' ')} />
             )}
           </div>
         ) : undefined
@@ -92,7 +89,7 @@ export default function NoticeDetailPage() {
       {notice && (
         <div className="space-y-6">
           <DetailCard title="Notice Content" icon={<Megaphone />}>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
               {notice.content}
             </p>
           </DetailCard>

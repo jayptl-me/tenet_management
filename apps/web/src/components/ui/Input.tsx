@@ -46,7 +46,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative">
           {leftIcon && (
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
               {leftIcon}
             </span>
           )}
@@ -73,7 +73,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
               tabIndex={-1}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -82,7 +82,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
 
           {rightIcon && !isPassword && (
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+            <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
               {rightIcon}
             </span>
           )}

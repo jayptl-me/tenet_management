@@ -145,7 +145,8 @@ export default function EditWashingMachinePage() {
 
         {isInUse && (
           <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] px-4 py-3 text-sm font-medium text-[color:var(--color-warning-700)]">
-            Machine is currently in use. Changing status to available/under_maintenance/down will release the current claim.
+            Machine is currently in use. Changing status to available/under_maintenance/down will
+            release the current claim.
           </div>
         )}
 
@@ -160,10 +161,7 @@ export default function EditWashingMachinePage() {
             />
           }
         >
-          <FormSection
-            title="Machine details"
-            description="Update machine configuration"
-          >
+          <FormSection title="Machine details" description="Update machine configuration">
             <FormGrid>
               <Input
                 label="Label"

@@ -16,11 +16,7 @@ import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
-import {
-  tenantDisplayName,
-  tenantRoomNumber,
-  type PopulatedTenantRef,
-} from '@/lib/api-shapes';
+import { tenantDisplayName, tenantRoomNumber, type PopulatedTenantRef } from '@/lib/api-shapes';
 
 const CATEGORY_OPTIONS = [
   { value: 'wifi', label: 'Wi-Fi' },
@@ -84,7 +80,9 @@ interface ComplaintDetail {
   createdAt: string;
 }
 
-function resolveTenant(data: ComplaintDetail | null): (PopulatedTenantRef & { bedId?: string }) | null {
+function resolveTenant(
+  data: ComplaintDetail | null,
+): (PopulatedTenantRef & { bedId?: string }) | null {
   if (!data) return null;
   const t = data.tenant ?? data.tenantId;
   if (!t || typeof t === 'string') return null;
@@ -283,7 +281,7 @@ export default function EditComplaintPage() {
                     <span
                       key={opt.value}
                       className={clsx(
-                        'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                        'rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase',
                         priorityColors[opt.value],
                       )}
                     >

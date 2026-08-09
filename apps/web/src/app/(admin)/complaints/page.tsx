@@ -87,7 +87,7 @@ function KanbanColumn({
         className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold capitalize text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-sm font-bold text-[color:var(--color-text-primary)] capitalize">
             {meta.label}
           </h3>
           <span className="rounded-full bg-[color:var(--color-text-primary)] px-2 py-0.5 font-mono text-xs font-bold text-[color:var(--color-card-bg)]">
@@ -121,11 +121,7 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
     : undefined;
 
   const priorityVariant =
-    complaint.priority === 'urgent'
-      ? 'danger'
-      : complaint.priority === 'high'
-        ? 'warning'
-        : 'info';
+    complaint.priority === 'urgent' ? 'danger' : complaint.priority === 'high' ? 'warning' : 'info';
 
   return (
     <div

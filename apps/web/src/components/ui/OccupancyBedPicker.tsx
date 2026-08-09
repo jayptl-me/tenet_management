@@ -47,9 +47,7 @@ export function OccupancyBedPicker({
     }
     setLoading(true);
     try {
-      const res = await api
-        .get(`rooms/${roomId}`)
-        .json<{ success: boolean; data: RoomData }>();
+      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>();
       const room = res.data;
       const maxBeds = room.sharingType ?? 4;
       const allBeds = ['A', 'B', 'C', 'D'].slice(0, maxBeds);

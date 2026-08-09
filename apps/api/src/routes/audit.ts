@@ -9,7 +9,6 @@ import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const audit = new Hono();
 
-
 // ── GET /audit-logs — paginated audit trail (admin only)
 audit.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit, skip } = parsePagination(c);
@@ -59,25 +58,18 @@ const logExportSchema = z.strictObject({
   resource: z.string().min(1),
 });
 
-audit.post(
-  '/log-export',
-  authGuard,
-  adminOnly,
-  zValidator('json', logExportSchema),
-  async (c) => {
-    const { resource } = c.req.valid('json');
-    const user = c.get('user');
+audit.post('/log-export', authGuard, adminOnly, zValidator('json', logExportSchema), async (c) => {
+  const { resource } = c.req.valid('json');
+  const user = c.get('user');
 
-    await writeAuditLog({
-      userId: user.sub,
-      action: 'export',
-      resource,
-      details: { resource },
-    });
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'export',
+    resource,
+    details: { resource },
+  });
 
-    return c.json({ success: true, message: 'Export logged successfully' });
-  },
-);
+  return c.json({ success: true, message: 'Export logged successfully' });
+});
 
 export default audit;
-

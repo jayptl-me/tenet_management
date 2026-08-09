@@ -8,7 +8,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { MealFeedback } from '../models/mealFeedback.js';
 
 type AnyDoc = Record<string, unknown>;
-const feedbackCreate = MealFeedback.create.bind(MealFeedback) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
+const feedbackCreate = MealFeedback.create.bind(MealFeedback) as unknown as (
+  doc: AnyDoc,
+) => Promise<AnyDoc>;
 
 describe('MealFeedback Unique Index', () => {
   const baseFeedback: AnyDoc = {

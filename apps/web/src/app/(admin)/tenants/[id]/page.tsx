@@ -126,7 +126,13 @@ export default function TenantDetailPage() {
     Array<{ _id: string; amount: number; status: string; createdAt: string }>
   >([]);
   const [recentInvoices, setRecentInvoices] = useState<
-    Array<{ _id: string; invoiceNumber?: string; month?: string; totalAmount?: number; status?: string }>
+    Array<{
+      _id: string;
+      invoiceNumber?: string;
+      month?: string;
+      totalAmount?: number;
+      status?: string;
+    }>
   >([]);
   const [recentComplaints, setRecentComplaints] = useState<
     Array<{ _id: string; title: string; status: string; priority?: string }>
@@ -195,11 +201,9 @@ export default function TenantDetailPage() {
 
   const checkoutBlocked = Boolean(
     duesData &&
-      (duesData.totalDue > 0 ||
-        duesData.pendingPayments > 0 ||
-        duesData.unpaidInvoices.some(
-          (inv) => (inv.remaining ?? inv.totalAmount) > 0.001,
-        )),
+    (duesData.totalDue > 0 ||
+      duesData.pendingPayments > 0 ||
+      duesData.unpaidInvoices.some((inv) => (inv.remaining ?? inv.totalAmount) > 0.001)),
   );
 
   const handleConfirmCheckout = async () => {
@@ -223,10 +227,7 @@ export default function TenantDetailPage() {
     setReinstateError('');
     setError('');
     try {
-      const payload =
-        body.roomId && body.bedId
-          ? { roomId: body.roomId, bedId: body.bedId }
-          : {};
+      const payload = body.roomId && body.bedId ? { roomId: body.roomId, bedId: body.bedId } : {};
       await api.post(`tenants/${tenant._id}/reinstate`, { json: payload }).json();
       window.location.reload();
     } catch (err) {
@@ -524,7 +525,9 @@ export default function TenantDetailPage() {
                 <p className="text-sm text-[color:var(--color-text-muted)]">{relatedError}</p>
               ) : guardians.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-[color:var(--color-text-muted)]">No guardians linked.</p>
+                  <p className="text-sm text-[color:var(--color-text-muted)]">
+                    No guardians linked.
+                  </p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -546,7 +549,7 @@ export default function TenantDetailPage() {
                         <span className="font-semibold text-[color:var(--color-text-primary)]">
                           {g.name}
                         </span>
-                        <span className="ml-2 text-xs capitalize text-[color:var(--color-text-muted)]">
+                        <span className="ml-2 text-xs text-[color:var(--color-text-muted)] capitalize">
                           {g.relation ?? ''}
                         </span>
                       </span>
@@ -614,9 +617,7 @@ export default function TenantDetailPage() {
                           {inv.month ?? ''}
                         </span>
                       </span>
-                      <span className="font-semibold">
-                        {formatCurrency(inv.totalAmount ?? 0)}
-                      </span>
+                      <span className="font-semibold">{formatCurrency(inv.totalAmount ?? 0)}</span>
                     </button>
                   ))}
                 </div>

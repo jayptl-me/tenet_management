@@ -58,9 +58,10 @@ async function recomputeFloorTotalRooms(...floorIds: Array<string | unknown | nu
     if (!id || seen.has(id)) continue;
     seen.add(id);
     try {
-      const count = await Room.countDocuments(
-        { floorId: id, isActive: true } as Record<string, unknown>,
-      );
+      const count = await Room.countDocuments({ floorId: id, isActive: true } as Record<
+        string,
+        unknown
+      >);
       await Floor.findByIdAndUpdate(id, { totalRooms: count });
     } catch {
       // Non-fatal accounting

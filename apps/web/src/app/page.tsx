@@ -387,7 +387,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-3xl font-bold leading-tight tracking-tight text-white md:text-5xl lg:text-6xl"
+            className="text-3xl leading-tight font-bold tracking-tight text-white md:text-5xl lg:text-6xl"
           >
             {headline}
           </motion.h1>
@@ -451,8 +451,8 @@ export default function LandingPage() {
                 key={i}
                 className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 backdrop-blur-sm"
               >
-                <p className="text-xl font-bold tabular-nums text-white">{s.val}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-brand-200)]">
+                <p className="text-xl font-bold text-white tabular-nums">{s.val}</p>
+                <p className="text-[10px] font-semibold tracking-wider text-[color:var(--color-brand-200)] uppercase">
                   {s.label}
                 </p>
               </div>
@@ -464,7 +464,7 @@ export default function LandingPage() {
       {/* ── Amenities ─────────────────────────────── */}
       <Section id="amenities" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
             Amenities
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything included</h2>
@@ -496,7 +496,7 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-6xl px-4">
           <motion.div variants={fadeInUp} className="mb-12 text-center">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+            <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
               Pricing
             </p>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -534,7 +534,7 @@ export default function LandingPage() {
                   }`}
                 >
                   {isPopular && (
-                    <span className="absolute -top-3 right-6 rounded-full border border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-500)] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-[var(--shadow-sm)]">
+                    <span className="absolute -top-3 right-6 rounded-full border border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-500)] px-3 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase shadow-[var(--shadow-sm)]">
                       Most Popular
                     </span>
                   )}
@@ -587,7 +587,7 @@ export default function LandingPage() {
       {/* ── Gallery ──────────────────────────────── */}
       <Section id="gallery" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
             Gallery
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it for yourself</h2>
@@ -632,7 +632,7 @@ export default function LandingPage() {
                   <div
                     className={`flex h-full w-full items-center justify-center text-white ${item.bg}`}
                   >
-                    <span className="text-lg font-bold uppercase tracking-widest">
+                    <span className="text-lg font-bold tracking-widest uppercase">
                       {item.title.split(' ').pop()}
                     </span>
                   </div>
@@ -659,7 +659,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp}>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+              <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
                 About Us
               </p>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why {pgName}?</h2>
@@ -702,7 +702,7 @@ export default function LandingPage() {
                 ].map((s, i) => (
                   <div key={i} className="rounded-lg border border-white/15 bg-white/10 p-3">
                     <p className="text-2xl font-bold">{s.val}</p>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-brand-200)]">
+                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-brand-200)] uppercase">
                       {s.label}
                     </p>
                   </div>
@@ -716,7 +716,7 @@ export default function LandingPage() {
       {/* ── Testimonials ──────────────────────────── */}
       <Section id="testimonials" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
             Testimonials
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Loved by residents</h2>
@@ -737,7 +737,7 @@ export default function LandingPage() {
                   <Star key={idx} className="h-4 w-4" fill="currentColor" />
                 ))}
               </div>
-              <p className="flex-1 text-[15px] italic leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="flex-1 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)] italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-t-[color:var(--color-surface-200)] pt-4">
@@ -764,7 +764,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp} className="space-y-6">
               <div>
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand-500)]">
+                <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
                   Contact
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight">Get in touch</h2>
@@ -848,7 +848,7 @@ export default function LandingPage() {
                       id="preferredSharing"
                       name="preferredSharing"
                       defaultValue="2"
-                      className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
+                      className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none"
                     >
                       <option value="2">2 Sharing</option>
                       <option value="3">3 Sharing</option>
@@ -870,7 +870,7 @@ export default function LandingPage() {
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Tell us about your requirements..."
-                      className="w-full resize-none rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-500)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
+                      className="w-full resize-none rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-500)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none"
                     />
                   </div>
                   {formError && (

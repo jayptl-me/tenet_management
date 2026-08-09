@@ -142,7 +142,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-          <h3 className="font-[family:var(--font-display)] text-base font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="text-base font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
             Week of {formatDayLabel(monday)}
           </h3>
         </div>
@@ -154,7 +154,10 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       </div>
 
       {error && (
-        <p className="mb-3 text-[12px] font-medium text-[color:var(--color-danger-600)]" role="alert">
+        <p
+          className="mb-3 text-[12px] font-medium text-[color:var(--color-danger-600)]"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -179,10 +182,10 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
             >
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                  <p className="text-[11px] font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
                     {DAY_NAMES[idx]}
                   </p>
-                  <p className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+                  <p className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                     {formatDayLabel(date)}
                   </p>
                 </div>
@@ -210,7 +213,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                       <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[color:var(--color-text-muted)]" />
                       <div className="min-w-0 flex-1">
                         {items.length === 0 ? (
-                          <p className="text-[11px] italic text-[color:var(--color-text-muted)]">
+                          <p className="text-[11px] text-[color:var(--color-text-muted)] italic">
                             Not set
                           </p>
                         ) : (
@@ -259,4 +262,3 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
     </div>
   );
 }
-

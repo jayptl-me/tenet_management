@@ -251,7 +251,7 @@ export default function SettingsPage() {
   if (!config) {
     return (
       <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-6 text-center">
-        <p className="font-[family:var(--font-display)] text-lg font-semibold text-[color:var(--color-danger-800)]">
+        <p className="text-lg font-[family:var(--font-display)] font-semibold text-[color:var(--color-danger-800)]">
           {error || 'Failed to load settings'}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
@@ -264,7 +264,7 @@ export default function SettingsPage() {
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
     <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
       <div>
-        <h3 className="font-[family:var(--font-display)] text-lg font-bold text-[color:var(--color-text-primary)]">
+        <h3 className="text-lg font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
           {title}
         </h3>
         <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">{description}</p>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="font-[family:var(--font-display)] text-2xl font-extrabold text-[color:var(--color-text-primary)]">
+          <h2 className="text-2xl font-[family:var(--font-display)] font-extrabold text-[color:var(--color-text-primary)]">
             Settings
           </h2>
           <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
@@ -307,7 +307,7 @@ export default function SettingsPage() {
           <button
             key={tab.key}
             onClick={() => handleTabChange(tab.key)}
-            className={`font-[family:var(--font-display)] flex-shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition-all ${
+            className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all ${
               activeTab === tab.key
                 ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
                 : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]'
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                 placeholder="contact@pg.com"
               />
 
-              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="pt-2 text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                 Address
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                 placeholder="https://www.google.com/maps/embed?..."
               />
 
-              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="pt-2 text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                 Social Links
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -429,7 +429,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="pt-2 text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                 Branding
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -457,7 +457,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <h4 className="font-[family:var(--font-display)] pt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="pt-2 text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                 Landing Page
               </h4>
               <Input
@@ -591,7 +591,7 @@ export default function SettingsPage() {
                     className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+                      <span className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
                         Testimonial #{i + 1}
                       </span>
                       <button
@@ -614,7 +614,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="font-[family:var(--font-body)] mb-1 block text-sm font-semibold text-[color:var(--color-text-primary)]">
+                      <label className="mb-1 block text-sm font-[family:var(--font-body)] font-semibold text-[color:var(--color-text-primary)]">
                         Rating
                       </label>
                       <div className="flex gap-1">
@@ -718,7 +718,7 @@ export default function SettingsPage() {
           Save All Settings
         </Button>
         {saved && (
-          <span className="font-[family:var(--font-display)] text-sm font-semibold text-[color:var(--color-success-600)]">
+          <span className="text-sm font-[family:var(--font-display)] font-semibold text-[color:var(--color-success-600)]">
             Settings saved
           </span>
         )}

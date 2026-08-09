@@ -190,7 +190,11 @@ export default function EditGuardianPage() {
           </FormGrid>
         </FormSection>
 
-        <FormSection title="Flags" description="Active status (emergency is derived from relation)" divided>
+        <FormSection
+          title="Flags"
+          description="Active status (emergency is derived from relation)"
+          divided
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
             <Checkbox
               label="Emergency contact (father/mother)"

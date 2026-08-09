@@ -58,16 +58,10 @@ const updateGuardianSchema = z.strictObject({
 function mapGuardian(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenantId;
   const tenant =
-    tenantRaw && typeof tenantRaw === 'object'
-      ? (tenantRaw as Record<string, unknown>)
-      : undefined;
+    tenantRaw && typeof tenantRaw === 'object' ? (tenantRaw as Record<string, unknown>) : undefined;
   const tenantUser = tenant?.userId as Record<string, unknown> | undefined;
   const room = tenant?.roomId as Record<string, unknown> | undefined;
-  const tenantIdStr = tenant
-    ? String(tenant._id ?? '')
-    : tenantRaw
-      ? String(tenantRaw)
-      : '';
+  const tenantIdStr = tenant ? String(tenant._id ?? '') : tenantRaw ? String(tenantRaw) : '';
 
   return {
     ...doc,
@@ -382,7 +376,10 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
   // Keep linked User identity + active flag in sync
   const g = guardian as unknown as { userId?: unknown };
   const userId = g.userId;
-  if (userId && (body.name || body.phone || body.email !== undefined || body.isActive !== undefined)) {
+  if (
+    userId &&
+    (body.name || body.phone || body.email !== undefined || body.isActive !== undefined)
+  ) {
     const userUpdate: Record<string, unknown> = {};
     if (body.name) userUpdate.name = body.name;
     if (body.phone) userUpdate.phone = body.phone;

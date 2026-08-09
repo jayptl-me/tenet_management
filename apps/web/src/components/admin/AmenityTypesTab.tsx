@@ -203,7 +203,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-[family:var(--font-display)] text-lg font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="text-lg font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
             Amenity Types
           </h3>
           <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
@@ -224,7 +224,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
       {isEditing && (
         <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+            <h4 className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
               {isAdding ? 'New Amenity' : 'Edit Amenity'}
             </h4>
             <button
@@ -267,7 +267,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Icon picker */}
             <div>
-              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <label className="mb-1.5 block text-sm font-[family:var(--font-body)] font-semibold text-[color:var(--color-text-primary)]">
                 Icon
               </label>
               <div className="relative">
@@ -289,13 +289,13 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   <div className="absolute z-10 mt-1 w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
                     <div className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] p-2">
                       <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+                        <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
                         <input
                           type="text"
                           value={iconSearch}
                           onChange={(e) => setIconSearch(e.target.value)}
                           placeholder="Search icons..."
-                          className="w-full rounded-[var(--radius-sm)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pl-8 pr-3 text-xs focus:border-[color:var(--color-brand-500)] focus:outline-none"
+                          className="w-full rounded-[var(--radius-sm)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pr-3 pl-8 text-xs focus:border-[color:var(--color-brand-500)] focus:outline-none"
                         />
                       </div>
                     </div>
@@ -330,7 +330,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Category */}
             <div>
-              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <label className="mb-1.5 block text-sm font-[family:var(--font-body)] font-semibold text-[color:var(--color-text-primary)]">
                 Category
               </label>
               <div className="flex flex-wrap gap-2">
@@ -339,7 +339,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                     key={cat.value}
                     type="button"
                     onClick={() => updateField('category', cat.value)}
-                    className={`font-[family:var(--font-display)] inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                    className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-[family:var(--font-display)] font-bold transition-all ${
                       formData.category === cat.value
                         ? `${cat.color} border-[length:var(--bw-default)] border-[color:var(--border-color)] shadow-[var(--shadow-button)]`
                         : 'border-[length:var(--bw-default)] border-transparent bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]'
@@ -408,7 +408,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
 
             {/* Complaint categories */}
             <div>
-              <label className="font-[family:var(--font-body)] mb-1.5 block text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <label className="mb-1.5 block text-sm font-[family:var(--font-body)] font-semibold text-[color:var(--color-text-primary)]">
                 Applicable Complaint Categories
               </label>
               <Input
@@ -447,7 +447,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
           <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
             <Wrench className="h-8 w-8" />
           </div>
-          <p className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-muted)]">
+          <p className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-muted)]">
             No amenity types defined
           </p>
           <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
@@ -463,25 +463,25 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
           <table className="w-full">
             <thead>
               <tr className="border-b-[length:var(--bw-default)] border-b-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-left text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Amenity
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-left text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Category
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-center text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Status Label
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-center text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Per Floor
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-center text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Max/Floor
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-left text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Complaint Categories
                 </th>
-                <th className="font-[family:var(--font-display)] px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-[color:var(--color-surface-500)]">
+                <th className="px-4 py-3 text-right text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-surface-500)] uppercase">
                   Actions
                 </th>
               </tr>
@@ -511,7 +511,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`font-[family:var(--font-display)] inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${getCategoryBadge(def.category)}`}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-[family:var(--font-display)] font-bold ${getCategoryBadge(def.category)}`}
                     >
                       {CATEGORY_OPTIONS.find((c) => c.value === def.category)?.label ??
                         def.category}

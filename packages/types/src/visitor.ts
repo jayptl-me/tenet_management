@@ -23,4 +23,3 @@ export interface IVisitorRegister {
   purpose: string;
   expectedArrival: string;
 }
-
