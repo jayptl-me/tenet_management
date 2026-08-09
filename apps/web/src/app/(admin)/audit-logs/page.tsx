@@ -130,7 +130,7 @@ export default function AuditLogsPage() {
     {
       header: 'Role',
       accessor: (row) => (
-        <span className="text-xs font-semibold capitalize text-[color:var(--color-text-secondary)]">
+        <span className="text-xs font-semibold text-[color:var(--color-text-secondary)] capitalize">
           {row.userId?.role ?? '—'}
         </span>
       ),
@@ -138,7 +138,7 @@ export default function AuditLogsPage() {
     {
       header: 'Timestamp',
       accessor: (row) => (
-        <span className="whitespace-nowrap text-xs text-[color:var(--color-text-secondary)]">
+        <span className="text-xs whitespace-nowrap text-[color:var(--color-text-secondary)]">
           {new Date(row.timestamp).toLocaleString('en-IN', {
             day: '2-digit',
             month: 'short',

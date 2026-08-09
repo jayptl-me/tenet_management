@@ -4,10 +4,10 @@
 
 ## Product split (non-negotiable)
 
-| Product | Codebase | Platforms | Who logs in |
-|---------|----------|-----------|-------------|
-| **Admin panel** | `apps/web` (Next.js) | Browser only | `admin` only |
-| **Resident portal** | `mobile/` (Flutter) | **Flutter Web + iOS + Android** (one codebase) | `tenant`, `guardian` (+ visitor desk for tenants) |
+| Product             | Codebase             | Platforms                                      | Who logs in                                       |
+| ------------------- | -------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| **Admin panel**     | `apps/web` (Next.js) | Browser only                                   | `admin` only                                      |
+| **Resident portal** | `mobile/` (Flutter)  | **Flutter Web + iOS + Android** (one codebase) | `tenant`, `guardian` (+ visitor desk for tenants) |
 
 Same Flutter app binary sources ship to:
 
@@ -19,10 +19,10 @@ Same Flutter app binary sources ship to:
 
 ## Clients (technical)
 
-| Client | Path | Roles | Transport |
-|--------|------|-------|-----------|
-| Admin web | `apps/web` | `admin` only | Ky HTTP + SSE to `/api/v1` |
-| Flutter (Web + iOS + Android) | `mobile/` | `tenant`, `guardian` (+ visitor desk) | Dio HTTP to `/api/v1` |
+| Client                        | Path       | Roles                                 | Transport                  |
+| ----------------------------- | ---------- | ------------------------------------- | -------------------------- |
+| Admin web                     | `apps/web` | `admin` only                          | Ky HTTP + SSE to `/api/v1` |
+| Flutter (Web + iOS + Android) | `mobile/`  | `tenant`, `guardian` (+ visitor desk) | Dio HTTP to `/api/v1`      |
 
 CORS applies to **Flutter Web** (browser Origin). **iOS/Android** native apps usually send no Origin; CORS does not block them.
 
@@ -34,11 +34,11 @@ All REST paths are under:
 {API_BASE}/api/v1/...
 ```
 
-| Environment | Typical API base |
-|-------------|------------------|
-| Local API | `http://localhost:8000/api/v1` |
-| Android emulator | `http://10.0.2.2:8000/api/v1` |
-| Production | `https://<api-host>/api/v1` |
+| Environment      | Typical API base               |
+| ---------------- | ------------------------------ |
+| Local API        | `http://localhost:8000/api/v1` |
+| Android emulator | `http://10.0.2.2:8000/api/v1`  |
+| Production       | `https://<api-host>/api/v1`    |
 
 ### Flutter (one app, three targets)
 
@@ -75,11 +75,11 @@ cd mobile && flutter build apk --dart-define=API_BASE_URL=https://api.example.co
 3. `POST /auth/refresh` `{ refreshToken }` -> new token pair
 4. `GET /auth/me` -> public user shape
 
-| Role | Where to log in | Rejected by |
-|------|-----------------|-------------|
-| `admin` | Next.js `apps/web` `/login` only | Flutter login (throws) |
-| `tenant` | Flutter Web **or** iOS/Android app | Admin web login |
-| `guardian` | Flutter Web **or** iOS/Android app | Admin web login |
+| Role       | Where to log in                    | Rejected by            |
+| ---------- | ---------------------------------- | ---------------------- |
+| `admin`    | Next.js `apps/web` `/login` only   | Flutter login (throws) |
+| `tenant`   | Flutter Web **or** iOS/Android app | Admin web login        |
+| `guardian` | Flutter Web **or** iOS/Android app | Admin web login        |
 
 JWT payload includes `sub` (user id) and `role`. Flutter and admin never share layouts.
 
@@ -91,11 +91,11 @@ Implemented in:
 - `apps/api/src/index.ts` (Hono `cors` middleware)
 - Env: `apps/api/src/lib/env.ts`, `apps/api/.env.example`
 
-| Variable | Purpose |
-|----------|---------|
-| `FRONTEND_URL` | Admin Next origin; email reset links |
-| `PORTAL_URL` | Production Flutter web origin |
-| `CORS_EXTRA_ORIGINS` | Comma-separated extra origins |
+| Variable             | Purpose                              |
+| -------------------- | ------------------------------------ |
+| `FRONTEND_URL`       | Admin Next origin; email reset links |
+| `PORTAL_URL`         | Production Flutter web origin        |
+| `CORS_EXTRA_ORIGINS` | Comma-separated extra origins        |
 
 **Development:** any `http://localhost:*` or `http://127.0.0.1:*` Origin is allowed (Flutter web random ports).
 
@@ -107,14 +107,14 @@ Native mobile requests typically omit `Origin`; CORS does not block them.
 
 Portal API routes still respect AppConfig flags (`requireFeature`):
 
-| Flag | Affects |
-|------|---------|
-| `guardianPortalEnabled` | Entire `/guardians` router including `/me/ward` |
-| `visitorManagementEnabled` | `/visitors` |
-| `laundryEnabled` | `/laundry-slots` |
-| `messFeedbackEnabled` | `/meals` |
-| `noticeBoardEnabled` | `/notices` |
-| `attendanceEnabled` | `/attendance` |
+| Flag                       | Affects                                         |
+| -------------------------- | ----------------------------------------------- |
+| `guardianPortalEnabled`    | Entire `/guardians` router including `/me/ward` |
+| `visitorManagementEnabled` | `/visitors`                                     |
+| `laundryEnabled`           | `/laundry-slots`                                |
+| `messFeedbackEnabled`      | `/meals`                                        |
+| `noticeBoardEnabled`       | `/notices`                                      |
+| `attendanceEnabled`        | `/attendance`                                   |
 
 If a Flutter screen 403s with feature-disabled, check admin Settings feature toggles.
 
@@ -122,22 +122,22 @@ If a Flutter screen 403s with feature-disabled, check admin Settings feature tog
 
 ### Tenant (role `tenant`)
 
-| Area | Methods |
-|------|---------|
-| Profile | `GET /tenants/:id` (self) |
-| Invoices | `GET /invoices/my` |
-| Payments | `GET /payments/my`, `POST /payments/submit-utr` |
-| Complaints | `GET /complaints/my`, `POST /complaints` |
-| Visitors | `GET /visitors/my`, `POST /visitors`, `POST /visitors/:id/arrive|depart` |
-| Laundry | `GET/POST /laundry-slots` |
-| Meals | `GET /menus/today`, `POST /meals/feedback` |
-| Notices | `GET /notices` |
+| Area       | Methods                                                          |
+| ---------- | ---------------------------------------------------------------- |
+| Profile    | `GET /tenants/:id` (self)                                        |
+| Invoices   | `GET /invoices/my`                                               |
+| Payments   | `GET /payments/my`, `POST /payments/submit-utr`                  |
+| Complaints | `GET /complaints/my`, `POST /complaints`                         |
+| Visitors   | `GET /visitors/my`, `POST /visitors`, `POST /visitors/:id/arrive | depart` |
+| Laundry    | `GET/POST /laundry-slots`                                        |
+| Meals      | `GET /menus/today`, `POST /meals/feedback`                       |
+| Notices    | `GET /notices`                                                   |
 
 ### Guardian (role `guardian`)
 
-| Area | Methods |
-|------|---------|
-| Ward | `GET /guardians/me/ward` |
+| Area       | Methods                             |
+| ---------- | ----------------------------------- |
+| Ward       | `GET /guardians/me/ward`            |
 | Attendance | `GET /guardians/me/ward/attendance` |
 
 ### Visitor desk
@@ -168,10 +168,10 @@ curl -s -I -X OPTIONS http://localhost:8000/api/v1/auth/login \
 
 ## Related files
 
-| File | Role |
-|------|------|
-| `mobile/README.md` | Flutter setup and routes |
-| `AGENTS.md` | Agent steering + portal boundaries |
-| `docs/specs/01-core-architecture.md` | Architecture overview |
+| File                                           | Role                                |
+| ---------------------------------------------- | ----------------------------------- |
+| `mobile/README.md`                             | Flutter setup and routes            |
+| `AGENTS.md`                                    | Agent steering + portal boundaries  |
+| `docs/specs/01-core-architecture.md`           | Architecture overview               |
 | `.sixthrules/workflows/monorepo-boundaries.md` | Package boundaries including mobile |
-| `.sixthrules/workflows/codebase-index.md` | Path index |
+| `.sixthrules/workflows/codebase-index.md`      | Path index                          |

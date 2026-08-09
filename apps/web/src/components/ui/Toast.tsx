@@ -86,7 +86,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {mounted &&
         createPortal(
           <div
-            className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col-reverse gap-2"
+            className="pointer-events-none fixed right-4 bottom-4 z-[100] flex flex-col-reverse gap-2"
             aria-live="polite"
             aria-label="Notifications"
           >
@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   {ICONS[toast.type]}
                 </span>
                 <p
-                  className={`font-[family:var(--font-body)] flex-1 text-sm font-semibold leading-snug ${TEXT_COLORS[toast.type]}`}
+                  className={`flex-1 text-sm leading-snug font-[family:var(--font-body)] font-semibold ${TEXT_COLORS[toast.type]}`}
                 >
                   {toast.message}
                 </p>

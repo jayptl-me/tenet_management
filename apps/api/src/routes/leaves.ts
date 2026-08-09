@@ -43,11 +43,13 @@ async function markAttendanceOnLeave(
 
     try {
       // Cast update: Mongoose 9 strict typing rejects string ObjectId fields on $set
-      await (AttendanceRecord.findOneAndUpdate as (
-        filter: Record<string, unknown>,
-        update: Record<string, unknown>,
-        options: Record<string, unknown>,
-      ) => Promise<unknown>)(
+      await (
+        AttendanceRecord.findOneAndUpdate as (
+          filter: Record<string, unknown>,
+          update: Record<string, unknown>,
+          options: Record<string, unknown>,
+        ) => Promise<unknown>
+      )(
         safeFilter({ tenantId, date }),
         {
           $set: {
@@ -419,12 +421,7 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
   await leave.save();
 
   // Side-effect: mark each leave day as on_leave on the attendance board
-  await markAttendanceOnLeave(
-    String(leave.tenantId),
-    leave.fromDate,
-    leave.toDate,
-    authUser.sub,
-  );
+  await markAttendanceOnLeave(String(leave.tenantId), leave.fromDate, leave.toDate, authUser.sub);
 
   const updated = await LeaveApplication.findById(id)
     .populate({

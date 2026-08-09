@@ -139,7 +139,11 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
     if (code === 11000) {
-      return badRequest(c, 'Attendance already recorded for today (concurrent request).', 'ALREADY_RECORDED');
+      return badRequest(
+        c,
+        'Attendance already recorded for today (concurrent request).',
+        'ALREADY_RECORDED',
+      );
     }
     throw err;
   }
@@ -392,7 +396,10 @@ attendance.get('/:id', authGuard, async (c) => {
 });
 
 const updateAttendanceSchema = z.strictObject({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   status: z.enum(['present', 'absent', 'on_leave', 'not_returned']).optional(),
   // FE sends HH:mm; also accept ISO
   checkInTime: z.string().optional(),
@@ -442,14 +449,12 @@ attendance.put(
     const checkInRaw = body.checkInTime ?? body.checkIn;
     const checkOutRaw = body.checkOutTime ?? body.checkOut;
     if (checkInRaw !== undefined) {
-      existing.checkIn = checkInRaw === '' || checkInRaw === null
-        ? null
-        : parseTimeOnDate(dateStr, checkInRaw);
+      existing.checkIn =
+        checkInRaw === '' || checkInRaw === null ? null : parseTimeOnDate(dateStr, checkInRaw);
     }
     if (checkOutRaw !== undefined) {
-      existing.checkOut = checkOutRaw === '' || checkOutRaw === null
-        ? null
-        : parseTimeOnDate(dateStr, checkOutRaw);
+      existing.checkOut =
+        checkOutRaw === '' || checkOutRaw === null ? null : parseTimeOnDate(dateStr, checkOutRaw);
     }
 
     await existing.save();

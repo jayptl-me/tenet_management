@@ -157,7 +157,7 @@ export default function AssetDetailPage() {
           <DetailCard title="Dates & Service" icon={<Wrench />}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                   Purchase Date
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
@@ -166,7 +166,7 @@ export default function AssetDetailPage() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                   Last Service
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
@@ -175,7 +175,7 @@ export default function AssetDetailPage() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                   Next Service
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">

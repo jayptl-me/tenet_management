@@ -7,13 +7,13 @@
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/laundrySlot.ts` |
-| Routes | `apps/api/src/routes/laundry.ts` |
-| Types | `packages/types/src/laundry.ts` (tenant booking slots -- aligned) |
-| Admin FE | `apps/web/src/app/(admin)/laundry/**` |
-| Flutter | `mobile/lib/features/tenant/presentation/laundry_screen.dart` |
+| Layer    | Path                                                              |
+| -------- | ----------------------------------------------------------------- |
+| Model    | `apps/api/src/models/laundrySlot.ts`                              |
+| Routes   | `apps/api/src/routes/laundry.ts`                                  |
+| Types    | `packages/types/src/laundry.ts` (tenant booking slots -- aligned) |
+| Admin FE | `apps/web/src/app/(admin)/laundry/**`                             |
+| Flutter  | `mobile/lib/features/tenant/presentation/laundry_screen.dart`     |
 
 ## Open gaps
 

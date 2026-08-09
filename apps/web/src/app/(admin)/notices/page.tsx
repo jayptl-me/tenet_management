@@ -98,10 +98,7 @@ export default function NoticesPage() {
     {
       header: 'Audience',
       accessor: (row) => (
-        <StatusBadge
-          variant="info"
-          label={(row.targetType ?? 'all').replace(/_/g, ' ')}
-        />
+        <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
       ),
     },
     {
@@ -195,10 +192,7 @@ export default function NoticesPage() {
               <span className="max-w-[70%] truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
                 {row.title}
               </span>
-              <StatusBadge
-                variant="info"
-                label={(row.targetType ?? 'all').replace(/_/g, ' ')}
-              />
+              <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
             </div>
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
               <StatusBadge

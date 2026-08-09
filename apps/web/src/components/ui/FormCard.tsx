@@ -43,7 +43,7 @@ export function FormCard({
       {(title || description) && (
         <div className="border-b border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-4 sm:px-6">
           {title && (
-            <h2 className="font-[family:var(--font-display)] text-base font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-lg">
+            <h2 className="text-base font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-lg">
               {title}
             </h2>
           )}

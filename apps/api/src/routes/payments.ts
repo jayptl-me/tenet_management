@@ -450,102 +450,103 @@ payments.post(
   tenantOnly,
   zValidator('json', utrSubmitSchema),
   async (c) => {
-  const body = c.req.valid('json');
-  const userId = c.get('user').sub;
+    const body = c.req.valid('json');
+    const userId = c.get('user').sub;
 
-  const invoiceRaw = await invoiceFindOne(
-    safeFilter({ _id: new mongoose.Types.ObjectId(body.invoiceId) }),
-  );
-  if (!invoiceRaw) return notFound(c, 'Invoice');
-
-  const invoice = invoiceRaw as Record<string, unknown>;
-
-  const tenantRaw = await tenantFindOne(safeFilter({ userId }));
-  if (!tenantRaw) return notFound(c, 'Tenant profile');
-  const tenant = tenantRaw as Record<string, unknown>;
-
-  if (String(invoice.tenantId) !== String(tenant._id)) {
-    return c.json(
-      { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-      403,
+    const invoiceRaw = await invoiceFindOne(
+      safeFilter({ _id: new mongoose.Types.ObjectId(body.invoiceId) }),
     );
-  }
+    if (!invoiceRaw) return notFound(c, 'Invoice');
 
-  if (invoice.status === 'paid' || invoice.status === 'cancelled') {
-    return badRequest(c, 'Invoice is not payable', 'INVOICE_NOT_PAYABLE');
-  }
+    const invoice = invoiceRaw as Record<string, unknown>;
 
-  const balance = await getInvoiceBalance(
-    String(invoice._id),
-    invoice.totalAmount as number | undefined,
-  );
-  if (balance <= 0) {
-    return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
-  }
+    const tenantRaw = await tenantFindOne(safeFilter({ userId }));
+    if (!tenantRaw) return notFound(c, 'Tenant profile');
+    const tenant = tenantRaw as Record<string, unknown>;
 
-  const existingUtr = await paymentFindOne(safeFilter({ utrNumber: body.utrNumber }));
-  if (existingUtr) {
-    return c.json(
+    if (String(invoice.tenantId) !== String(tenant._id)) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+
+    if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+      return badRequest(c, 'Invoice is not payable', 'INVOICE_NOT_PAYABLE');
+    }
+
+    const balance = await getInvoiceBalance(
+      String(invoice._id),
+      invoice.totalAmount as number | undefined,
+    );
+    if (balance <= 0) {
+      return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
+    }
+
+    const existingUtr = await paymentFindOne(safeFilter({ utrNumber: body.utrNumber }));
+    if (existingUtr) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'DUPLICATE_UTR', message: 'This UTR number has already been submitted.' },
+        },
+        409,
+      );
+    }
+
+    // Only open (pending / pending_verification) rows may receive a UTR.
+    // Never mutate a paid row (would reopen a settled payment).
+    const openRow = (await Payment.findOne(
+      safeFilter({
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        status: { $in: ['pending', 'pending_verification'] },
+      }),
+    )
+      .sort({ createdAt: 1 })
+      .lean()) as unknown as Record<string, unknown> | null;
+
+    if (!openRow) {
+      const newPayment = await paymentCreate({
+        tenantId: tenant._id,
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        amount: balance,
+        type: 'rent',
+        method: 'upi',
+        status: 'pending_verification',
+        month: invoice.month,
+        dueDate: resolveInvoiceDueDate(invoice as unknown as Record<string, unknown>),
+        utrNumber: body.utrNumber,
+        screenshotUrl: body.screenshotUrl ?? null,
+      });
+
+      logger.info(
+        { paymentId: (newPayment as Record<string, unknown>)._id, utr: body.utrNumber },
+        'UTR submitted',
+      );
+
+      return c.json({ success: true, data: newPayment }, 201);
+    }
+
+    const updated = await (Payment.findByIdAndUpdate(
+      openRow._id,
       {
-        success: false,
-        error: { code: 'DUPLICATE_UTR', message: 'This UTR number has already been submitted.' },
+        utrNumber: body.utrNumber,
+        screenshotUrl: body.screenshotUrl ?? openRow.screenshotUrl ?? null,
+        status: 'pending_verification',
+        // Align open obligation to remaining balance when submitting UTR.
+        amount: balance,
       },
-      409,
-    );
-  }
-
-  // Only open (pending / pending_verification) rows may receive a UTR.
-  // Never mutate a paid row (would reopen a settled payment).
-  const openRow = (await Payment.findOne(
-    safeFilter({
-      invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-      status: { $in: ['pending', 'pending_verification'] },
-    }),
-  )
-    .sort({ createdAt: 1 })
-    .lean()) as unknown as Record<string, unknown> | null;
-
-  if (!openRow) {
-    const newPayment = await paymentCreate({
-      tenantId: tenant._id,
-      invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-      amount: balance,
-      type: 'rent',
-      method: 'upi',
-      status: 'pending_verification',
-      month: invoice.month,
-      dueDate: resolveInvoiceDueDate(invoice as unknown as Record<string, unknown>),
-      utrNumber: body.utrNumber,
-      screenshotUrl: body.screenshotUrl ?? null,
-    });
+      { returnDocument: 'after' },
+    ).lean() as unknown);
 
     logger.info(
-      { paymentId: (newPayment as Record<string, unknown>)._id, utr: body.utrNumber },
-      'UTR submitted',
+      { paymentId: openRow._id, utr: body.utrNumber },
+      'UTR submitted (existing payment updated)',
     );
 
-    return c.json({ success: true, data: newPayment }, 201);
-  }
-
-  const updated = await (Payment.findByIdAndUpdate(
-    openRow._id,
-    {
-      utrNumber: body.utrNumber,
-      screenshotUrl: body.screenshotUrl ?? openRow.screenshotUrl ?? null,
-      status: 'pending_verification',
-      // Align open obligation to remaining balance when submitting UTR.
-      amount: balance,
-    },
-    { returnDocument: 'after' },
-  ).lean() as unknown);
-
-  logger.info(
-    { paymentId: openRow._id, utr: body.utrNumber },
-    'UTR submitted (existing payment updated)',
-  );
-
-  return c.json({ success: true, data: updated });
-});
+    return c.json({ success: true, data: updated });
+  },
+);
 
 // ── POST /payments/verify-utr/:paymentId ────────────────
 payments.post(
@@ -608,9 +609,7 @@ payments.post(
 function mapPayment(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenantId;
   const tenant =
-    tenantRaw && typeof tenantRaw === 'object'
-      ? (tenantRaw as Record<string, unknown>)
-      : undefined;
+    tenantRaw && typeof tenantRaw === 'object' ? (tenantRaw as Record<string, unknown>) : undefined;
   const userRaw = tenant?.userId;
   const user =
     userRaw && typeof userRaw === 'object' ? (userRaw as Record<string, unknown>) : undefined;
@@ -618,7 +617,8 @@ function mapPayment(doc: Record<string, unknown>) {
   const room =
     roomRaw && typeof roomRaw === 'object' ? (roomRaw as Record<string, unknown>) : undefined;
   const invRaw = doc.invoiceId;
-  const inv = invRaw && typeof invRaw === 'object' ? (invRaw as Record<string, unknown>) : undefined;
+  const inv =
+    invRaw && typeof invRaw === 'object' ? (invRaw as Record<string, unknown>) : undefined;
 
   return {
     ...doc,
@@ -632,9 +632,7 @@ function mapPayment(doc: Record<string, unknown>) {
                 phone: user.phone,
               }
             : undefined,
-          room: room
-            ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber }
-            : undefined,
+          room: room ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber } : undefined,
         }
       : undefined,
     invoiceId: inv ? String(inv._id ?? '') : invRaw ? String(invRaw) : undefined,
@@ -732,10 +730,7 @@ payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchem
   const body = c.req.valid('json');
   if (Object.keys(body).length === 0) return badRequest(c, 'No fields to update');
 
-  const existing = (await Payment.findById(id).lean()) as unknown as Record<
-    string,
-    unknown
-  > | null;
+  const existing = (await Payment.findById(id).lean()) as unknown as Record<string, unknown> | null;
   if (!existing) return notFound(c, 'Payment');
 
   // Paid rows are immutable via generic PUT. Use verify/void flows instead.

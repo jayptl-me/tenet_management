@@ -10,36 +10,36 @@ Code is truth. Prior audit claimed no full `PUT /:id` (edit 404) and loose statu
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/enquiry.ts` |
-| Routes | `apps/api/src/routes/enquiries.ts` (mounted `/api/v1/enquiries`) |
-| Types | `packages/types/src/enquiry.ts` |
-| Admin list | `apps/web/src/app/(admin)/enquiries/page.tsx` |
-| Admin detail | `apps/web/src/app/(admin)/enquiries/[id]/page.tsx` |
-| Admin new | `apps/web/src/app/(admin)/enquiries/new/page.tsx` |
-| Admin edit | `apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx` |
-| Public landing | `apps/web/src/app/page.tsx` (unauthenticated POST) |
-| Convert handoff | Detail -> `/tenants/new?name&phone&email&source=enquiry&enquiryId=...` |
-| Flutter | **None** (lead capture is public web + admin; correct) |
-| HTTP smoke | `apps/api/src/__tests__/module-http-e2e.test.ts` (create/edit/list/delete) |
-| Dashboard | Recent enquiries + pending count on admin dashboard / sidebar badge |
+| Layer           | Path                                                                       |
+| --------------- | -------------------------------------------------------------------------- |
+| Model           | `apps/api/src/models/enquiry.ts`                                           |
+| Routes          | `apps/api/src/routes/enquiries.ts` (mounted `/api/v1/enquiries`)           |
+| Types           | `packages/types/src/enquiry.ts`                                            |
+| Admin list      | `apps/web/src/app/(admin)/enquiries/page.tsx`                              |
+| Admin detail    | `apps/web/src/app/(admin)/enquiries/[id]/page.tsx`                         |
+| Admin new       | `apps/web/src/app/(admin)/enquiries/new/page.tsx`                          |
+| Admin edit      | `apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx`                    |
+| Public landing  | `apps/web/src/app/page.tsx` (unauthenticated POST)                         |
+| Convert handoff | Detail -> `/tenants/new?name&phone&email&source=enquiry&enquiryId=...`     |
+| Flutter         | **None** (lead capture is public web + admin; correct)                     |
+| HTTP smoke      | `apps/api/src/__tests__/module-http-e2e.test.ts` (create/edit/list/delete) |
+| Dashboard       | Recent enquiries + pending count on admin dashboard / sidebar badge        |
 
 ---
 
 ## Model truth
 
-| Field | Constraints | Notes |
-|-------|-------------|-------|
-| `name` | required, trim, max 100 | |
-| `phone` | required, `/^\+91[6-9]\d{9}$/` | |
-| `email` | optional, lowercase | |
-| `preferredSharing` | enum **`2 \| 3 \| 4 \| single`** required | |
-| `message` | max 1000, default `''` | |
-| `status` | `new \| contacted \| converted \| lost`, default `new` | |
-| `source` | `landing_page \| referral \| walk_in \| phone_call \| other`, default `landing_page` | |
-| `notes` | max 1000, default `''` | staff notes |
-| timestamps | **createdAt only** (`updatedAt: false`) | Detail page may show `updatedAt` -- **always empty** |
+| Field              | Constraints                                                                          | Notes                                                |
+| ------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `name`             | required, trim, max 100                                                              |                                                      |
+| `phone`            | required, `/^\+91[6-9]\d{9}$/`                                                       |                                                      |
+| `email`            | optional, lowercase                                                                  |                                                      |
+| `preferredSharing` | enum **`2 \| 3 \| 4 \| single`** required                                            |                                                      |
+| `message`          | max 1000, default `''`                                                               |                                                      |
+| `status`           | `new \| contacted \| converted \| lost`, default `new`                               |                                                      |
+| `source`           | `landing_page \| referral \| walk_in \| phone_call \| other`, default `landing_page` |                                                      |
+| `notes`            | max 1000, default `''`                                                               | staff notes                                          |
+| timestamps         | **createdAt only** (`updatedAt: false`)                                              | Detail page may show `updatedAt` -- **always empty** |
 
 Indexes: status, createdAt desc.
 
@@ -47,14 +47,14 @@ Indexes: status, createdAt desc.
 
 ## API surface
 
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| POST | `/` | **public** + `publicLimiter` | Create; optional source (default landing_page); preferredSharing required |
-| GET | `/` | admin | status, fromDate, toDate; pagination; sort createdAt desc |
-| GET | `/:id` | admin | |
-| PUT | `/:id/status` | admin | `{ status, notes? }` |
-| PUT | `/:id` | admin | Full partial: name, phone, email, message, source, status, notes, preferredSharing |
-| DELETE | `/:id` | admin | Hard delete |
+| Method | Path          | Auth                         | Notes                                                                              |
+| ------ | ------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| POST   | `/`           | **public** + `publicLimiter` | Create; optional source (default landing_page); preferredSharing required          |
+| GET    | `/`           | admin                        | status, fromDate, toDate; pagination; sort createdAt desc                          |
+| GET    | `/:id`        | admin                        |                                                                                    |
+| PUT    | `/:id/status` | admin                        | `{ status, notes? }`                                                               |
+| PUT    | `/:id`        | admin                        | Full partial: name, phone, email, message, source, status, notes, preferredSharing |
+| DELETE | `/:id`        | admin                        | Hard delete                                                                        |
 
 ### Enums (API Zod === model === @pg/types)
 
@@ -68,13 +68,13 @@ No transition FSM -- any status may be set anytime.
 
 ## FE page matrix (admin + public)
 
-| Page | Verdict | Calls | Notes |
-|------|---------|-------|-------|
-| List | **PASS** | GET + DELETE | Status filter all four enums; StatusBadge; preferredSharing **not** in columns |
-| Detail | **PASS** status | GET; PUT `/:id/status` for status only | Shows preferredSharing, notes; Convert to Tenant CTA |
-| New | **PASS** | POST with source | normalizeInPhone; preferredSharing + source Select |
-| Edit | **PASS** | GET; full PUT `/:id` | preferredSharing, source, status, notes; pipeline status hints |
-| Landing contact | **PASS** | public POST | preferredSharing native `<select>` values 2/3/4/single; phone validation client-side |
+| Page            | Verdict         | Calls                                  | Notes                                                                                |
+| --------------- | --------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
+| List            | **PASS**        | GET + DELETE                           | Status filter all four enums; StatusBadge; preferredSharing **not** in columns       |
+| Detail          | **PASS** status | GET; PUT `/:id/status` for status only | Shows preferredSharing, notes; Convert to Tenant CTA                                 |
+| New             | **PASS**        | POST with source                       | normalizeInPhone; preferredSharing + source Select                                   |
+| Edit            | **PASS**        | GET; full PUT `/:id`                   | preferredSharing, source, status, notes; pipeline status hints                       |
+| Landing contact | **PASS**        | public POST                            | preferredSharing native `<select>` values 2/3/4/single; phone validation client-side |
 
 ### Convert to tenant (detail)
 
@@ -90,17 +90,17 @@ Builds:
 
 ## Field coverage
 
-| Field | Model | Public POST | Admin new | Admin edit | Admin detail | List |
-|-------|:-----:|:-----------:|:---------:|:----------:|:------------:|:----:|
-| name | Y | Y | Y | Y | Y | Y |
-| phone | Y | Y | Y (+91) | Y | Y | Y |
-| email | Y | optional | Y | Y | Y | Y |
-| preferredSharing | Y | Y | Y | Y | Y | **N** |
-| message | Y | Y | Y | Y | Y | **N** |
-| source | Y | default landing | Y | Y | Y | Y |
-| status | Y | default new | -- | Y | Y form | Y + filter |
-| notes | Y | -- | -- | Y | Y read | **N** |
-| updatedAt | **N** | -- | -- | -- | shown if truthy (never) | -- |
+| Field            | Model |   Public POST   | Admin new | Admin edit |      Admin detail       |    List    |
+| ---------------- | :---: | :-------------: | :-------: | :--------: | :---------------------: | :--------: |
+| name             |   Y   |        Y        |     Y     |     Y      |            Y            |     Y      |
+| phone            |   Y   |        Y        |  Y (+91)  |     Y      |            Y            |     Y      |
+| email            |   Y   |    optional     |     Y     |     Y      |            Y            |     Y      |
+| preferredSharing |   Y   |        Y        |     Y     |     Y      |            Y            |   **N**    |
+| message          |   Y   |        Y        |     Y     |     Y      |            Y            |   **N**    |
+| source           |   Y   | default landing |     Y     |     Y      |            Y            |     Y      |
+| status           |   Y   |   default new   |    --     |     Y      |         Y form          | Y + filter |
+| notes            |   Y   |       --        |    --     |     Y      |         Y read          |   **N**    |
+| updatedAt        | **N** |       --        |    --     |     --     | shown if truthy (never) |     --     |
 
 ---
 
@@ -124,14 +124,14 @@ Suggested pipeline on edit UI (hints only, not enforced):
 
 ## Design
 
-| Rule | Status |
-|------|--------|
-| FormPage stack | New + edit |
-| StatusBadge | List + detail |
-| Themed Select | Admin forms + list filter |
-| Landing preferredSharing | **Native select** (marketing page exception) |
-| Tokens | Admin yes |
-| mobileCardRenderer | List yes (delete hidden on mobile card only; desktop table has delete) |
+| Rule                     | Status                                                                 |
+| ------------------------ | ---------------------------------------------------------------------- |
+| FormPage stack           | New + edit                                                             |
+| StatusBadge              | List + detail                                                          |
+| Themed Select            | Admin forms + list filter                                              |
+| Landing preferredSharing | **Native select** (marketing page exception)                           |
+| Tokens                   | Admin yes                                                              |
+| mobileCardRenderer       | List yes (delete hidden on mobile card only; desktop table has delete) |
 
 ---
 
@@ -164,12 +164,12 @@ _None open for convert pipeline._ `tenants/new` reads `enquiryId`, prefills cont
 
 ## Closed (verified 2026-07-16 -- do not re-file)
 
-| Prior claim | Live status |
-|-------------|-------------|
-| Edit `PUT enquiries/:id` 404 (status-only API) | **FIXED** -- full `updateEnquirySchema` + PUT `/:id` |
-| Status enum FE/model drift | **FIXED** -- new/contacted/converted/lost everywhere |
-| preferredSharing mismatch | **FIXED** -- `2/3/4/single` on model, Zod, new, edit, landing |
-| Design Select native on admin | **FIXED** for admin CRUD (Radix Select); landing still native |
+| Prior claim                                       | Live status                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------------- |
+| Edit `PUT enquiries/:id` 404 (status-only API)    | **FIXED** -- full `updateEnquirySchema` + PUT `/:id`                 |
+| Status enum FE/model drift                        | **FIXED** -- new/contacted/converted/lost everywhere                 |
+| preferredSharing mismatch                         | **FIXED** -- `2/3/4/single` on model, Zod, new, edit, landing        |
+| Design Select native on admin                     | **FIXED** for admin CRUD (Radix Select); landing still native        |
 | Convert ignores enquiryId / never marks converted | **FIXED** -- `tenants/new` consumes enquiryId + PUT status converted |
 
 ---

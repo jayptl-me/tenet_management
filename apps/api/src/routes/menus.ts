@@ -63,9 +63,15 @@ menus.get('/', authGuard, async (c) => {
     const today = todayInTZ();
     const existing = (filter.date as Record<string, string> | undefined) ?? {};
     if (isActive === 'true') {
-      filter.date = { ...existing, $gte: existing.$gte && existing.$gte > today ? existing.$gte : today };
+      filter.date = {
+        ...existing,
+        $gte: existing.$gte && existing.$gte > today ? existing.$gte : today,
+      };
     } else {
-      filter.date = { ...existing, $lt: existing.$lt && existing.$lt < today ? existing.$lt : today };
+      filter.date = {
+        ...existing,
+        $lt: existing.$lt && existing.$lt < today ? existing.$lt : today,
+      };
     }
   }
   // Support partial date search from frontend

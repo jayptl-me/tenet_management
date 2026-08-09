@@ -29,24 +29,12 @@ export function TenantStatusControl({
     <div className="flex items-center gap-3">
       <StatusBadge variant={variant} label={statusLabel} />
       {isActive ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCheckout}
-          loading={loading}
-          animate={false}
-        >
+        <Button variant="outline" size="sm" onClick={onCheckout} loading={loading} animate={false}>
           <LogOut className="h-4 w-4" />
           Checkout
         </Button>
       ) : (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={onReinstate}
-          loading={loading}
-          animate={false}
-        >
+        <Button variant="primary" size="sm" onClick={onReinstate} loading={loading} animate={false}>
           <RotateCcw className="h-4 w-4" />
           Reinstate
         </Button>

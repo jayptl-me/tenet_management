@@ -904,7 +904,7 @@ The approach has two layers:
 
 **How this differs from the original (incorrect) approach:**
 
--  Old: `@theme inline` everywhere → hex values baked into utilities → theme switching silently fails
+- Old: `@theme inline` everywhere → hex values baked into utilities → theme switching silently fails
 
 ### 6.4 Component Migration Plan
 

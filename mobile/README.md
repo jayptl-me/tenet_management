@@ -12,11 +12,11 @@ Role-based **tenant**, **guardian**, and **visitor** portals for the Tenet PG ma
 
 ## Platforms (all supported)
 
-| Target | Folder | Run | Build |
-|--------|--------|-----|-------|
-| Flutter Web | `web/` | `flutter run -d chrome` | `flutter build web` |
-| iOS | `ios/` | `flutter run -d ios` | `flutter build ios` |
-| Android | `android/` | `flutter run -d android` | `flutter build apk` / `appbundle` |
+| Target      | Folder     | Run                      | Build                             |
+| ----------- | ---------- | ------------------------ | --------------------------------- |
+| Flutter Web | `web/`     | `flutter run -d chrome`  | `flutter build web`               |
+| iOS         | `ios/`     | `flutter run -d ios`     | `flutter build ios`               |
+| Android     | `android/` | `flutter run -d android` | `flutter build apk` / `appbundle` |
 
 ```bash
 # Web
@@ -56,22 +56,22 @@ The API allows any `http://localhost:*` / `http://127.0.0.1:*` origin in **devel
 
 Production requires:
 
-| Env | Purpose |
-|-----|---------|
-| `FRONTEND_URL` | Admin Next.js origin |
-| `PORTAL_URL` | This Flutter web origin |
+| Env                  | Purpose                                  |
+| -------------------- | ---------------------------------------- |
+| `FRONTEND_URL`       | Admin Next.js origin                     |
+| `PORTAL_URL`         | This Flutter web origin                  |
 | `CORS_EXTRA_ORIGINS` | Optional extra origins (comma-separated) |
 
 See `apps/api/src/lib/cors-origins.ts` and monorepo `apps/api/.env.example`.
 
 ## Roles & routes
 
-| Role (JWT) | Shell | Main routes |
-|------------|-------|-------------|
-| `tenant` | Tenant shell | `/tenant`, invoices, payments, visitors, complaints, meals, laundry, notices |
-| `guardian` | Guardian shell | `/guardian` (ward), `/guardian/attendance` |
-| tenant → visitor desk | Visitor portal | `/visitor`, `/visitor/register`, `/visitor/status` |
-| `admin` | **Rejected** | Use `apps/web` admin login |
+| Role (JWT)            | Shell          | Main routes                                                                  |
+| --------------------- | -------------- | ---------------------------------------------------------------------------- |
+| `tenant`              | Tenant shell   | `/tenant`, invoices, payments, visitors, complaints, meals, laundry, notices |
+| `guardian`            | Guardian shell | `/guardian` (ward), `/guardian/attendance`                                   |
+| tenant → visitor desk | Visitor portal | `/visitor`, `/visitor/register`, `/visitor/status`                           |
+| `admin`               | **Rejected**   | Use `apps/web` admin login                                                   |
 
 ## Architecture
 
@@ -87,32 +87,32 @@ lib/
     shared/       # shared UI widgets
 ```
 
-- **State:** Riverpod  
-- **Routing:** go_router (role redirects + shell routes)  
-- **HTTP:** Dio against Hono API (`@pg/api`)  
+- **State:** Riverpod
+- **Routing:** go_router (role redirects + shell routes)
+- **HTTP:** Dio against Hono API (`@pg/api`)
 - **Storage:** Secure storage (mobile) / SharedPreferences (web)
 
 ## Auth flow
 
-1. `POST /auth/login`  
-2. Reject `admin` (admin panel only)  
-3. Persist tokens + user  
-4. Redirect by role to tenant or guardian shell  
+1. `POST /auth/login`
+2. Reject `admin` (admin panel only)
+3. Persist tokens + user
+4. Redirect by role to tenant or guardian shell
 5. Visitor portal requires authenticated **tenant**
 
 ## Feature map (API)
 
-| Portal | Endpoints used |
-|--------|----------------|
-| Tenant invoices | `GET /invoices/my` |
-| Tenant payments | `GET /payments/my`, `POST /payments/submit-utr` |
-| Tenant complaints | `GET /complaints/my`, `POST /complaints` |
-| Tenant visitors | `GET /visitors/my`, `POST /visitors`, arrive/depart |
-| Tenant laundry | `GET/POST /laundry-slots` |
-| Tenant meals | `GET /menus/today`, `POST /meals/feedback` |
-| Tenant notices | `GET /notices` |
-| Guardian ward | `GET /guardians/me/ward` |
-| Guardian attendance | `GET /guardians/me/ward/attendance` |
+| Portal              | Endpoints used                                      |
+| ------------------- | --------------------------------------------------- |
+| Tenant invoices     | `GET /invoices/my`                                  |
+| Tenant payments     | `GET /payments/my`, `POST /payments/submit-utr`     |
+| Tenant complaints   | `GET /complaints/my`, `POST /complaints`            |
+| Tenant visitors     | `GET /visitors/my`, `POST /visitors`, arrive/depart |
+| Tenant laundry      | `GET/POST /laundry-slots`                           |
+| Tenant meals        | `GET /menus/today`, `POST /meals/feedback`          |
+| Tenant notices      | `GET /notices`                                      |
+| Guardian ward       | `GET /guardians/me/ward`                            |
+| Guardian attendance | `GET /guardians/me/ward/attendance`                 |
 
 ## Seed credentials
 

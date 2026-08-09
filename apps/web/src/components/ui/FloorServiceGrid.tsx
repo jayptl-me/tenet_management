@@ -202,7 +202,7 @@ export function FloorServiceGrid({
             return (
               <div
                 key={svc.serviceType}
-                className="group relative inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[color:var(--color-text-secondary)]"
+                className="group relative inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] leading-none font-semibold text-[color:var(--color-text-secondary)]"
                 title={`${resolveLabel(svc.serviceType)}: ${cfg.label}${svc.openComplaintCount ? ` (${svc.openComplaintCount} open complaints)` : ''}`}
               >
                 <span className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
@@ -284,7 +284,7 @@ export function FloorServiceGrid({
       {/* Header with health summary */}
       {floorLabel && (
         <div className="flex items-center gap-2">
-          <h4 className="font-[family:var(--font-display)] text-sm font-bold text-[color:var(--color-text-primary)]">
+          <h4 className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
             {floorLabel}
           </h4>
           {anyDown ? (

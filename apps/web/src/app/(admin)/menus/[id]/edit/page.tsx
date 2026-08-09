@@ -255,18 +255,18 @@ export default function EditMenuPage() {
                         id={`${key}-${itemIdx}-name`}
                         {...register(`meals.${key}.${itemIdx}.name` as const)}
                         placeholder="Item name"
-                        className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                        className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
                       />
                     </div>
                     <input
                       {...register(`meals.${key}.${itemIdx}.description` as const)}
                       placeholder="Description (optional)"
-                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
                     />
                     <input
                       {...register(`meals.${key}.${itemIdx}.category` as const)}
                       placeholder="Category (optional)"
-                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
                     />
                     <div className="flex justify-end sm:pb-0.5">
                       <Button

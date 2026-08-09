@@ -149,8 +149,7 @@ export default function EditNotificationPage() {
     setSubmitError('');
     const payload = {
       ...data,
-      targetIds:
-        data.targetType === 'all' ? [] : parseTargetIds(data.targetIds),
+      targetIds: data.targetType === 'all' ? [] : parseTargetIds(data.targetIds),
     };
     try {
       await api.put(`notifications/${id}`, { json: payload }).json();

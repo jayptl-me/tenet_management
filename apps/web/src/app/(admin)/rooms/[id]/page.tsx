@@ -210,7 +210,7 @@ export default function RoomDetailPage() {
                         {availableBeds} Available
                       </span>
                     </div>
-                    <div className="pt-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                    <div className="pt-2 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                       {totalBeds} Total Beds
                     </div>
                   </div>
@@ -229,13 +229,13 @@ export default function RoomDetailPage() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-[color:var(--border-color)]">
-                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Bed
                       </th>
-                      <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Tenant
                       </th>
-                      <th className="pb-3 text-right text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pb-3 text-right text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Status
                       </th>
                     </tr>

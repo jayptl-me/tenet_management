@@ -10,31 +10,31 @@
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/guardian.ts` |
-| Routes | `apps/api/src/routes/guardians.ts` |
-| Types | `packages/types/src/guardian.ts` |
-| Admin list | `apps/web/src/app/(admin)/guardians/page.tsx` |
-| Admin new | `apps/web/src/app/(admin)/guardians/new/page.tsx` |
-| Admin detail | `apps/web/src/app/(admin)/guardians/[id]/page.tsx` |
-| Admin edit | `apps/web/src/app/(admin)/guardians/[id]/edit/page.tsx` |
-| Flutter | `mobile/lib/features/guardian/**` |
-| Feature flag | `guardianPortalEnabled` via `requireFeature` on router |
+| Layer        | Path                                                    |
+| ------------ | ------------------------------------------------------- |
+| Model        | `apps/api/src/models/guardian.ts`                       |
+| Routes       | `apps/api/src/routes/guardians.ts`                      |
+| Types        | `packages/types/src/guardian.ts`                        |
+| Admin list   | `apps/web/src/app/(admin)/guardians/page.tsx`           |
+| Admin new    | `apps/web/src/app/(admin)/guardians/new/page.tsx`       |
+| Admin detail | `apps/web/src/app/(admin)/guardians/[id]/page.tsx`      |
+| Admin edit   | `apps/web/src/app/(admin)/guardians/[id]/edit/page.tsx` |
+| Flutter      | `mobile/lib/features/guardian/**`                       |
+| Feature flag | `guardianPortalEnabled` via `requireFeature` on router  |
 
 ---
 
 ## API surface
 
-| Method | Path | Role | Notes |
-|--------|------|------|-------|
-| POST | `/guardians` | admin | Transaction User(role=guardian) + Guardian; returns `temporaryPassword`; 409 on duplicate phone/email |
-| GET | `/guardians` | admin | Paginated; `search`, `tenantId`; `mapGuardian` populate |
-| GET | `/guardians/me/ward` | guardian JWT | **Registered before `/:id`** |
-| GET | `/guardians/me/ward/attendance` | guardian JWT | Paginated attendance for ward |
-| GET | `/guardians/:id` | admin | Single + mapGuardian |
-| PUT | `/guardians/:id` | admin | Whitelist fields; syncs User name/phone/email/isActive |
-| DELETE | `/guardians/:id` | admin | Soft deactivate guardian + User |
+| Method | Path                            | Role         | Notes                                                                                                 |
+| ------ | ------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| POST   | `/guardians`                    | admin        | Transaction User(role=guardian) + Guardian; returns `temporaryPassword`; 409 on duplicate phone/email |
+| GET    | `/guardians`                    | admin        | Paginated; `search`, `tenantId`; `mapGuardian` populate                                               |
+| GET    | `/guardians/me/ward`            | guardian JWT | **Registered before `/:id`**                                                                          |
+| GET    | `/guardians/me/ward/attendance` | guardian JWT | Paginated attendance for ward                                                                         |
+| GET    | `/guardians/:id`                | admin        | Single + mapGuardian                                                                                  |
+| PUT    | `/guardians/:id`                | admin        | Whitelist fields; syncs User name/phone/email/isActive                                                |
+| DELETE | `/guardians/:id`                | admin        | Soft deactivate guardian + User                                                                       |
 
 All routes: `requireFeature('guardianPortalEnabled')` (defaults true if config missing).
 
@@ -54,12 +54,12 @@ Does **not** allow: `tenantId`, `isEmergencyContact`, extra keys.
 
 ## FE page matrix
 
-| Page | Stack | Verdict |
-|------|-------|---------|
-| List | PageHeader, DataTable, TableActions, mobileCardRenderer, StatusBadge, ConfirmModal, search | **PASS** |
-| Detail | FormPage, DetailCard, Edit + View Tenant CTAs, emergency badge | **PASS** (phantom types only) |
-| New | FormPage, ResourceSelect tenant, relation enum correct, phone normalize, temp password banner | **PASS** |
-| Edit | FormPage, tenant ResourceSelect **disabled**, whitelist PUT payload, relation enum, isActive checkbox, emergency display-only | **PASS** |
+| Page   | Stack                                                                                                                         | Verdict                       |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| List   | PageHeader, DataTable, TableActions, mobileCardRenderer, StatusBadge, ConfirmModal, search                                    | **PASS**                      |
+| Detail | FormPage, DetailCard, Edit + View Tenant CTAs, emergency badge                                                                | **PASS** (phantom types only) |
+| New    | FormPage, ResourceSelect tenant, relation enum correct, phone normalize, temp password banner                                 | **PASS**                      |
+| Edit   | FormPage, tenant ResourceSelect **disabled**, whitelist PUT payload, relation enum, isActive checkbox, emergency display-only | **PASS**                      |
 
 Sidebar / QuickCreate respect `guardianPortalEnabled`.
 
@@ -67,20 +67,20 @@ Sidebar / QuickCreate respect `guardianPortalEnabled`.
 
 ## Field coverage
 
-| Model field | List | Detail | New | Edit | Notes |
-|-------------|:----:|:------:|:---:|:----:|-------|
-| userId | -- | -- | created server-side | -- | Unique User link |
-| tenantId | via tenant name | linked tenant | ResourceSelect | display-only (disabled) | Not reassignable on PUT |
-| name | Y | Y | Y | Y | |
-| phone | Y | Y | normalize +91 | normalize +91 | |
-| email | -- | Y if present | **required** | optional | Create requires email for login |
-| relation | Y | Y | enum 4 | enum 4 | Matches model |
-| isActive | Y badge | Y badge | default true | Checkbox | Syncs User on PUT |
-| isEmergencyContact | Y (computed) | Y (computed) | n/a | display-only disabled | **Not in model** |
-| address | -- | typed only | -- | -- | **Phantom** -- never from API |
-| notes | -- | conditional render | -- | -- | **Phantom** -- never from API |
-| temporaryPassword | n/a | n/a | inline banner | n/a | One-time create response |
-| createdAt / updatedAt | -- | Y | n/a | n/a | |
+| Model field           |      List       |       Detail       |         New         |          Edit           | Notes                           |
+| --------------------- | :-------------: | :----------------: | :-----------------: | :---------------------: | ------------------------------- |
+| userId                |       --        |         --         | created server-side |           --            | Unique User link                |
+| tenantId              | via tenant name |   linked tenant    |   ResourceSelect    | display-only (disabled) | Not reassignable on PUT         |
+| name                  |        Y        |         Y          |          Y          |            Y            |                                 |
+| phone                 |        Y        |         Y          |    normalize +91    |      normalize +91      |                                 |
+| email                 |       --        |    Y if present    |    **required**     |        optional         | Create requires email for login |
+| relation              |        Y        |         Y          |       enum 4        |         enum 4          | Matches model                   |
+| isActive              |     Y badge     |      Y badge       |    default true     |        Checkbox         | Syncs User on PUT               |
+| isEmergencyContact    |  Y (computed)   |    Y (computed)    |         n/a         |  display-only disabled  | **Not in model**                |
+| address               |       --        |     typed only     |         --          |           --            | **Phantom** -- never from API   |
+| notes                 |       --        | conditional render |         --          |           --            | **Phantom** -- never from API   |
+| temporaryPassword     |       n/a       |        n/a         |    inline banner    |           n/a           | One-time create response        |
+| createdAt / updatedAt |       --        |         Y          |         n/a         |           n/a           |                                 |
 
 ---
 
@@ -94,13 +94,13 @@ Guardian JWT -> GET /me/ward + /me/ward/attendance
 Tenant DELETE cascade -> deactivates guardian Users then deletes Guardian docs (P1-G1 closed)
 ```
 
-| Step | Status |
-|------|--------|
-| Create + credentials | **PASS** |
-| Edit save (whitelist) | **PASS** |
-| Soft delete | **PASS** API + UI -- ConfirmModal "Deactivate Guardian" / reinstate later |
-| /me/ward portal | **PASS** route order + Flutter repo |
-| Feature flag off | **PASS** API 403; FE nav hidden |
+| Step                  | Status                                                                    |
+| --------------------- | ------------------------------------------------------------------------- |
+| Create + credentials  | **PASS**                                                                  |
+| Edit save (whitelist) | **PASS**                                                                  |
+| Soft delete           | **PASS** API + UI -- ConfirmModal "Deactivate Guardian" / reinstate later |
+| /me/ward portal       | **PASS** route order + Flutter repo                                       |
+| Feature flag off      | **PASS** API 403; FE nav hidden                                           |
 
 ---
 
@@ -121,32 +121,32 @@ _None verified open._
 
 ### P1
 
-| ID | Gap | Proof |
-|----|-----|-------|
+| ID  | Gap | Proof |
+| --- | --- | ----- |
 
 ### P2
 
-| ID | Gap | Proof |
-|----|-----|-------|
+| ID    | Gap                                                                                             | Proof                     |
+| ----- | ----------------------------------------------------------------------------------------------- | ------------------------- |
 | P2-G1 | Detail TypeScript interface includes `address` / `notes` never returned by API (dead branches). | `guardians/[id]/page.tsx` |
-| P2-G3 | New guardian temp password not using shared `TempCredentialsDialog`. | `guardians/new/page.tsx` |
-| P2-G4 | No admin path to reassign `tenantId` (product choice; create new link instead). | update schema |
+| P2-G3 | New guardian temp password not using shared `TempCredentialsDialog`.                            | `guardians/new/page.tsx`  |
+| P2-G4 | No admin path to reassign `tenantId` (product choice; create new link instead).                 | update schema             |
 
 ---
 
 ## Closed / do-not-refile
 
-| Old claim | Live status |
-|-----------|-------------|
-| `/me/ward` shadowed by `/:id` | **FIXED** -- static routes registered first |
-| Edit PUT sends tenantId + isEmergencyContact + bad relation enum | **FIXED** -- whitelist + enum aligned |
-| Phone min(10) without +91 | **FIXED** -- `normalizeInPhone` + `isValidInPhone` |
-| `guardianPortalEnabled` never checked | **FIXED** -- `requireFeature` on router |
-| Relation options brother/sister/spouse on edit | **FIXED** -- father/mother/guardian/other only |
-| PUT does not sync User | **FIXED** -- name/phone/email/isActive sync |
-| ConfirmModal hard-delete copy (P2-G2) | **FIXED** -- "Deactivate Guardian" + reinstate later message |
-| P1-G1 orphaned guardian Users on tenant DELETE | **FIXED** -- deactivate Users before Guardian.deleteMany (`tenants.ts`) |
-| P1-G2 Flutter 403 swallow as empty ward | **FIXED** -- FeatureDisabledWidget on ward screens |
+| Old claim                                                        | Live status                                                             |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `/me/ward` shadowed by `/:id`                                    | **FIXED** -- static routes registered first                             |
+| Edit PUT sends tenantId + isEmergencyContact + bad relation enum | **FIXED** -- whitelist + enum aligned                                   |
+| Phone min(10) without +91                                        | **FIXED** -- `normalizeInPhone` + `isValidInPhone`                      |
+| `guardianPortalEnabled` never checked                            | **FIXED** -- `requireFeature` on router                                 |
+| Relation options brother/sister/spouse on edit                   | **FIXED** -- father/mother/guardian/other only                          |
+| PUT does not sync User                                           | **FIXED** -- name/phone/email/isActive sync                             |
+| ConfirmModal hard-delete copy (P2-G2)                            | **FIXED** -- "Deactivate Guardian" + reinstate later message            |
+| P1-G1 orphaned guardian Users on tenant DELETE                   | **FIXED** -- deactivate Users before Guardian.deleteMany (`tenants.ts`) |
+| P1-G2 Flutter 403 swallow as empty ward                          | **FIXED** -- FeatureDisabledWidget on ward screens                      |
 
 ---
 

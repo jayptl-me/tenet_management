@@ -45,7 +45,10 @@ export function LowStockBanner({ onFilterLowStock }: LowStockBannerProps) {
   // Render nothing while loading or when there are no low-stock items.
   if (!loaded || items.length === 0) return null;
 
-  const itemNames = items.slice(0, 5).map((i) => i.name).join(', ');
+  const itemNames = items
+    .slice(0, 5)
+    .map((i) => i.name)
+    .join(', ');
   const remaining = items.length - 5;
 
   const Wrapper = onFilterLowStock ? 'button' : 'div';

@@ -226,7 +226,7 @@ export default function EnquiryDetailPage() {
                   <p className="mb-2 text-xs font-medium text-[color:var(--color-text-muted)]">
                     Message
                   </p>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                     {enquiry.message}
                   </p>
                 </div>
@@ -253,7 +253,7 @@ export default function EnquiryDetailPage() {
               {enquiry.notes && (
                 <div className="mt-3 border-t border-[color:var(--border-color)] pt-3">
                   <p className="text-xs font-medium text-[color:var(--color-text-muted)]">Notes</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--color-text-secondary)]">
+                  <p className="mt-1 text-sm whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                     {enquiry.notes}
                   </p>
                 </div>

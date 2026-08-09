@@ -7,42 +7,42 @@
 
 ## Source map
 
-| Layer | Path |
-|-------|------|
-| Model | `apps/api/src/models/leaveApplication.ts` |
-| Routes | `apps/api/src/routes/leaves.ts` |
-| Types | `packages/types/src/attendance.ts` (`ILeaveApplication*`) |
-| Admin FE | `apps/web/src/app/(admin)/leaves/**` |
-| Flutter | `mobile/lib/features/tenant/presentation/leaves_screen.dart` |
-| Repo | `tenant_repository.dart` (`myLeaves`, create leave) |
-| Cascade | Tenant delete removes leave applications (`tenants.ts`) |
+| Layer    | Path                                                         |
+| -------- | ------------------------------------------------------------ |
+| Model    | `apps/api/src/models/leaveApplication.ts`                    |
+| Routes   | `apps/api/src/routes/leaves.ts`                              |
+| Types    | `packages/types/src/attendance.ts` (`ILeaveApplication*`)    |
+| Admin FE | `apps/web/src/app/(admin)/leaves/**`                         |
+| Flutter  | `mobile/lib/features/tenant/presentation/leaves_screen.dart` |
+| Repo     | `tenant_repository.dart` (`myLeaves`, create leave)          |
+| Cascade  | Tenant delete removes leave applications (`tenants.ts`)      |
 
 ## Model truth
 
-| Field | Constraints |
-|-------|-------------|
-| tenantId | ObjectId Tenant, required |
-| fromDate / toDate | YYYY-MM-DD strings |
-| reason | required, max 500 |
-| status | `pending \| approved \| rejected` (default pending) |
-| approvedBy | ObjectId User \| null |
-| approvedAt | Date \| null |
-| adminNotes | max 500, default `''` |
-| Indexes | `{ tenantId, fromDate }`, `{ status, createdAt }` |
+| Field             | Constraints                                         |
+| ----------------- | --------------------------------------------------- |
+| tenantId          | ObjectId Tenant, required                           |
+| fromDate / toDate | YYYY-MM-DD strings                                  |
+| reason            | required, max 500                                   |
+| status            | `pending \| approved \| rejected` (default pending) |
+| approvedBy        | ObjectId User \| null                               |
+| approvedAt        | Date \| null                                        |
+| adminNotes        | max 500, default `''`                               |
+| Indexes           | `{ tenantId, fromDate }`, `{ status, createdAt }`   |
 
 **No dedicated leaves feature flag.** Admin nav for Leaves uses **`attendanceEnabled`**. API leaves routes are **always on** (no `requireFeature`).
 
 ## API surface
 
-| Method | Path | Auth | Notes |
-|--------|------|------|-------|
-| POST | `/leaves` | JWT | tenant self-only; admin any tenant; overlap 409 OVERLAPPING_LEAVE; inactive tenant rejected |
-| GET | `/leaves` | admin | status, tenantId, **search** (tenant name via User regex) |
-| GET | `/leaves/my` | JWT | tenant own list |
-| GET | `/leaves/:id` | JWT | mapLeave; **no ownership** |
-| DELETE | `/leaves/:id` | admin | **pending only** else LEAVE_NOT_PENDING |
-| PUT | `/leaves/:id/approve` | admin | **no body schema**; sets approved + approvedBy/At |
-| PUT | `/leaves/:id/reject` | admin | **JSON body required** by zValidator: `{ adminNotes?: string max 500 }` |
+| Method | Path                  | Auth  | Notes                                                                                       |
+| ------ | --------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| POST   | `/leaves`             | JWT   | tenant self-only; admin any tenant; overlap 409 OVERLAPPING_LEAVE; inactive tenant rejected |
+| GET    | `/leaves`             | admin | status, tenantId, **search** (tenant name via User regex)                                   |
+| GET    | `/leaves/my`          | JWT   | tenant own list                                                                             |
+| GET    | `/leaves/:id`         | JWT   | mapLeave; **no ownership**                                                                  |
+| DELETE | `/leaves/:id`         | admin | **pending only** else LEAVE_NOT_PENDING                                                     |
+| PUT    | `/leaves/:id/approve` | admin | **no body schema**; sets approved + approvedBy/At                                           |
+| PUT    | `/leaves/:id/reject`  | admin | **JSON body required** by zValidator: `{ adminNotes?: string max 500 }`                     |
 
 `mapLeave` aliases `startDate`/`endDate` from fromDate/toDate and nests `tenant.user` / `tenant.room` + `approvedByName`.
 
@@ -50,41 +50,41 @@
 
 ## FE page matrix
 
-| Page | Verdict | Notes |
-|------|---------|-------|
-| List | **PASS** | DataTable; status filter OK; server `search` by tenant name; delete only when pending |
-| Detail | **PASS** | Uses `startDate`/`endDate` aliases; approve/reject with JSON `{}` or `{ adminNotes: '' }`; Edit CTA |
-| New | **PASS** | POST leaves with fromDate/toDate/reason/tenantId -- matches createLeaveSchema |
-| Edit | **PASS (workflow)** | Not a field editor; approve/reject + adminNotes textarea; reject sends `{ adminNotes }` |
+| Page   | Verdict             | Notes                                                                                               |
+| ------ | ------------------- | --------------------------------------------------------------------------------------------------- |
+| List   | **PASS**            | DataTable; status filter OK; server `search` by tenant name; delete only when pending               |
+| Detail | **PASS**            | Uses `startDate`/`endDate` aliases; approve/reject with JSON `{}` or `{ adminNotes: '' }`; Edit CTA |
+| New    | **PASS**            | POST leaves with fromDate/toDate/reason/tenantId -- matches createLeaveSchema                       |
+| Edit   | **PASS (workflow)** | Not a field editor; approve/reject + adminNotes textarea; reject sends `{ adminNotes }`             |
 
 ### FE zod vs API
 
-| Surface | FE | API | Match |
-|---------|----|-----|-------|
-| Create | tenantId, fromDate, toDate, reason min 1 | same + date regex + reason max 500 | **YES** (FE lacks max 500) |
-| Approve | PUT `.../approve` (edit: no body; detail: `{}`) | no zValidator body | **YES** |
-| Reject | PUT `.../reject` + `{ adminNotes? }` | strictObject adminNotes optional | **YES** |
+| Surface | FE                                              | API                                | Match                      |
+| ------- | ----------------------------------------------- | ---------------------------------- | -------------------------- |
+| Create  | tenantId, fromDate, toDate, reason min 1        | same + date regex + reason max 500 | **YES** (FE lacks max 500) |
+| Approve | PUT `.../approve` (edit: no body; detail: `{}`) | no zValidator body                 | **YES**                    |
+| Reject  | PUT `.../reject` + `{ adminNotes? }`            | strictObject adminNotes optional   | **YES**                    |
 
 ### Date field dual names
 
-| Consumer | Fields used |
-|----------|-------------|
-| List / Detail | `startDate`, `endDate` (aliases) |
+| Consumer       | Fields used                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| List / Detail  | `startDate`, `endDate` (aliases)                                 |
 | Edit page load | `fromDate`, `toDate` (raw; still present via spread in mapLeave) |
-| API create | `fromDate`, `toDate` |
+| API create     | `fromDate`, `toDate`                                             |
 
 Both shapes work on mapped GET because mapLeave spreads doc then adds aliases. Prefer one convention in FE.
 
 ## Field coverage
 
-| Field | List | Detail | New | Edit | API |
-|-------|------|--------|-----|------|-----|
-| tenant | Y | Y | ResourceSelect | read-only | populate |
-| from/to dates | period | Y | Y | read-only | Y |
-| reason | truncated | Y | Y | read-only | Y |
-| status | badge | badge | pending | approve/reject | enum |
-| adminNotes | -- | if set | -- | reject input | reject only |
-| approvedBy/At | -- | partial | -- | display if set | Y |
+| Field         | List      | Detail  | New            | Edit           | API         |
+| ------------- | --------- | ------- | -------------- | -------------- | ----------- |
+| tenant        | Y         | Y       | ResourceSelect | read-only      | populate    |
+| from/to dates | period    | Y       | Y              | read-only      | Y           |
+| reason        | truncated | Y       | Y              | read-only      | Y           |
+| status        | badge     | badge   | pending        | approve/reject | enum        |
+| adminNotes    | --        | if set  | --             | reject input   | reject only |
+| approvedBy/At | --        | partial | --             | display if set | Y           |
 
 ## Lifecycle
 
@@ -99,22 +99,22 @@ Overlap: any pending/approved leave intersecting date range blocks create (409).
 
 ## Feature flags
 
-| Surface | Behavior |
-|---------|----------|
-| API leaves | **Gated** -- `leaves.use('*', requireFeature('attendanceEnabled'))` (FLAG-leaves FIXED) |
-| Admin Sidebar Leaves | `featureFlag: 'attendanceEnabled'` (shared with attendance) |
-| Flutter | 403 FEATURE_DISABLED when attendance flag off |
+| Surface              | Behavior                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| API leaves           | **Gated** -- `leaves.use('*', requireFeature('attendanceEnabled'))` (FLAG-leaves FIXED) |
+| Admin Sidebar Leaves | `featureFlag: 'attendanceEnabled'` (shared with attendance)                             |
+| Flutter              | 403 FEATURE_DISABLED when attendance flag off                                           |
 
 Product coupling: Leaves share attendance flag (nav + API).
 
 ## Design
 
-| Check | Verdict |
-|-------|---------|
-| PageHeader / DataTable / FormPage | PASS |
-| StatusBadge on list/detail | PASS |
-| Edit status chips use token colors (not StatusBadge) | PARTIAL |
-| FormSection / FormActions | PASS on edit |
+| Check                                                | Verdict      |
+| ---------------------------------------------------- | ------------ |
+| PageHeader / DataTable / FormPage                    | PASS         |
+| StatusBadge on list/detail                           | PASS         |
+| Edit status chips use token colors (not StatusBadge) | PARTIAL      |
+| FormSection / FormActions                            | PASS on edit |
 
 ## Open gaps
 

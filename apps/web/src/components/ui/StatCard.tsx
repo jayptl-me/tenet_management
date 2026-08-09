@@ -93,7 +93,7 @@ export function StatCard({
           <p className="text-[12px] font-semibold tracking-tight text-[color:var(--color-text-secondary)]">
             {title}
           </p>
-          <p className="font-[family:var(--font-display)] mt-1 text-2xl font-bold tabular-nums tracking-tight text-[color:var(--color-text-primary)]">
+          <p className="mt-1 text-2xl font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
             {value}
           </p>
         </div>

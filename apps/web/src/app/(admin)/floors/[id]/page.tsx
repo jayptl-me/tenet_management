@@ -216,19 +216,19 @@ export default function FloorDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[color:var(--border-color)] text-left">
-                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pr-4 pb-3 text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Room #
                       </th>
-                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pr-4 pb-3 text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Sharing
                       </th>
-                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pr-4 pb-3 text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Rent
                       </th>
-                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pr-4 pb-3 text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Occupancy
                       </th>
-                      <th className="font-[family:var(--font-display)] pb-3 pr-4 text-xs font-bold uppercase tracking-wider text-[color:var(--color-text-muted)]">
+                      <th className="pr-4 pb-3 text-xs font-[family:var(--font-display)] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                         Status
                       </th>
                     </tr>
@@ -301,7 +301,7 @@ export default function FloorDetailPage() {
 
           {floor.description && (
             <DetailCard title="Description" icon={<FileText />}>
-              <p className="whitespace-pre-wrap text-sm text-[color:var(--color-text-secondary)]">
+              <p className="text-sm whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
                 {floor.description}
               </p>
             </DetailCard>

@@ -78,9 +78,7 @@ export default function NotificationDetailPage() {
   const formatType = (type: string) =>
     type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-  const displayStatus =
-    notification?.status ||
-    (notification?.sentAt ? 'sent' : 'recorded');
+  const displayStatus = notification?.status || (notification?.sentAt ? 'sent' : 'recorded');
 
   return (
     <FormPage
@@ -107,14 +105,14 @@ export default function NotificationDetailPage() {
               </p>
             </DetailCard>
             <DetailCard title="Target" icon={<Target />}>
-              <p className="text-sm font-semibold capitalize text-[color:var(--color-text-primary)]">
+              <p className="text-sm font-semibold text-[color:var(--color-text-primary)] capitalize">
                 {notification.targetType}
               </p>
             </DetailCard>
           </div>
 
           <DetailCard title="Message" icon={<MessageCircle />}>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
               {notification.body}
             </p>
           </DetailCard>

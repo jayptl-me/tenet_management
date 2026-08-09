@@ -208,7 +208,7 @@ export function ServiceStatusIndicator({
 
     return (
       <div
-        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] leading-none font-semibold ${
           anyDown
             ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
             : allOk
@@ -241,7 +241,7 @@ export function ServiceStatusIndicator({
         return (
           <div
             key={s.serviceType}
-            className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] font-semibold leading-none ${colors.bg}`}
+            className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[10px] leading-none font-semibold ${colors.bg}`}
             title={`${getLabel(s.serviceType)}: ${s.status}`}
           >
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${colors.dot}`} />

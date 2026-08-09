@@ -2,12 +2,7 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner';
 
 export type MealFeedbackStatus = 'submitted' | 'acknowledged' | 'actioned';
 
-export type MealFeedbackCategory =
-  | 'taste'
-  | 'variety'
-  | 'quantity'
-  | 'cleanliness'
-  | 'service';
+export type MealFeedbackCategory = 'taste' | 'variety' | 'quantity' | 'cleanliness' | 'service';
 
 export interface IMealFeedback {
   id: string;

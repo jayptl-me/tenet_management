@@ -69,13 +69,11 @@ export default function ExportPage() {
       const allRows: Record<string, unknown>[] = [];
 
       while (page <= totalPages) {
-        const res = await api
-          .get(`${resource}?limit=${pageSize}&page=${page}`)
-          .json<{
-            success: boolean;
-            data: Record<string, unknown>[];
-            meta?: { totalPages?: number; total?: number };
-          }>();
+        const res = await api.get(`${resource}?limit=${pageSize}&page=${page}`).json<{
+          success: boolean;
+          data: Record<string, unknown>[];
+          meta?: { totalPages?: number; total?: number };
+        }>();
 
         if (!res.success) {
           setError(`Failed to export ${resource} data. Please try again.`);
@@ -198,7 +196,7 @@ export default function ExportPage() {
                 {option.label}
               </h3>
             </div>
-            <p className="font-[family:var(--font-body)] mb-5 flex-1 text-sm text-[color:var(--color-text-secondary)]">
+            <p className="mb-5 flex-1 text-sm font-[family:var(--font-body)] text-[color:var(--color-text-secondary)]">
               {option.description}
             </p>
             <Button
