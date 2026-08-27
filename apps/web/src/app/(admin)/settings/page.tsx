@@ -134,7 +134,7 @@ function mapToForm(config: Partial<IAppConfig>): ConfigFormData {
     gstNumber: config.gstNumber ?? '',
     panNumber: config.panNumber ?? '',
     termsAndConditions: config.termsAndConditions ?? '',
-    features: { ...defaultFeatureFlags, ...(config.features ?? {}) },
+    features: { ...defaultFeatureFlags, ...config.features },
     theme: config.theme ?? { preset: 'saas', mode: 'light' },
     amenityDefinitions: config.amenityDefinitions ?? [],
   };

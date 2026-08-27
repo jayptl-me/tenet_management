@@ -138,7 +138,7 @@ export default function EditMenuPage() {
     // Validate all items have names
     const allItems = [...data.meals.breakfast, ...data.meals.lunch, ...data.meals.dinner];
 
-    if (allItems.length === 0 || allItems.every((item) => !item.name.trim())) {
+    if (allItems.every((item) => !item.name.trim())) {
       setSubmitError('At least one meal item with a name is required.');
       return;
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,7 +25,7 @@ function localTodayYmd(): string {
 }
 
 function isValidYmd(value: string | null): value is string {
-  return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 // ── Schema ──────────────────────────────────────────────
@@ -55,7 +55,7 @@ const MEAL_SECTIONS = [
 
 // ── Component ───────────────────────────────────────────
 
-export default function NewMenuPage() {
+function MenuForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [submitError, setSubmitError] = useState('');
@@ -103,7 +103,7 @@ export default function NewMenuPage() {
     setSubmitError('');
 
     const allItems = [...data.breakfast, ...data.lunch, ...data.dinner];
-    if (allItems.length === 0 || allItems.every((item) => !item.name.trim())) {
+    if (allItems.every((item) => !item.name.trim())) {
       setSubmitError('At least one meal item with a name is required.');
       return;
     }
@@ -271,5 +271,19 @@ export default function NewMenuPage() {
         </FormSection>
       </FormCard>
     </FormPage>
+  );
+}
+
+export default function NewMenuPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
+      <MenuForm />
+    </Suspense>
   );
 }

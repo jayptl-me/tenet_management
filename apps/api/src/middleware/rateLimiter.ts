@@ -29,8 +29,11 @@ setInterval(
  */
 export function rateLimiter(maxRequests: number, windowMs: number): MiddlewareHandler {
   return async (c, next) => {
-    // Skip rate limiting in development unless RATE_LIMIT_ENABLED_IN_DEV=true
-    if (env.NODE_ENV === 'development' && !env.RATE_LIMIT_ENABLED_IN_DEV) {
+    // Skip rate limiting in development/test unless RATE_LIMIT_ENABLED_IN_DEV=true
+    if (
+      (env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
+      !env.RATE_LIMIT_ENABLED_IN_DEV
+    ) {
       return next();
     }
 
