@@ -142,3 +142,17 @@ When changing auth, CORS, or portal APIs: update API + env + render.yaml if need
 2. `bun run typecheck` and lint green for JS changes; `flutter analyze` for Flutter changes.
 3. No emojis introduced.
 4. Connectivity and agent docs updated when architecture or CORS changes.
+
+## Decision Gates — Two-Gate Law (adopted 2026-08-26, global across ~/Development)
+
+1. GATE R — Research that feeds planning finalizes ONLY when Jay picks from named,
+   distinct, production-grade options (official docs, live sites, shipped OSS, cited
+   sources). Rejection means research MORE distinct/deeper sources; never re-serve
+   the same options reworded.
+2. GATE P — Implementation starts ONLY after a written plan citing finalized research
+   AND Jay's explicit approval. No code edits, DB writes, deploys, builds, or messages
+   sent on Jay's behalf before Gate P passes.
+
+Read-only research and diagnostics are unrestricted. Full protocol: Hermes global
+skill `option-rack-protocol`. Per-project decision registers log their own entries
+(pm/DECISIONS.md where present); numbering is independent per project.

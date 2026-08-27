@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, type ReactNode, type ErrorInfo } from 'react';
+import Link from 'next/link';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -80,13 +81,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 <RefreshCw className="h-4 w-4" />
                 Refresh Page
               </button>
-              <a
+              <Link
                 href="/dashboard"
                 className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-white shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
               >
                 <Home className="h-4 w-4" />
                 Go to Dashboard
-              </a>
+              </Link>
             </div>
           </div>
         </div>

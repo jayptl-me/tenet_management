@@ -1,4 +1,4 @@
-import type { SSEMessage } from '@pg/types';
+import type { SSEMessage, SSEEventType } from '@pg/types';
 
 // ── Types ───────────────────────────────────────────────
 type EventHandler = (message: SSEMessage) => void;
@@ -66,8 +66,26 @@ export function sendToClient(clientId: string, message: SSEMessage): void {
 }
 
 /**
+ * Broadcast an event with payload to all connected SSE clients.
+ */
+export function publishEvent(event: SSEEventType, data: unknown): void {
+  broadcast({
+    event,
+    data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
  * Get the number of currently connected clients.
  */
 export function getClientCount(): number {
   return clients.size;
+}
+
+/**
+ * Clear all connected clients and handlers (useful for tests).
+ */
+export function clearAll(): void {
+  clients.clear();
 }

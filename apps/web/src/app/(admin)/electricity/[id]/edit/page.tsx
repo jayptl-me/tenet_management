@@ -107,8 +107,9 @@ export default function EditElectricityPage() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      api.get(`electricity/${id}`).json<{
+    api
+      .get(`electricity/${id}`)
+      .json<{
         success: boolean;
         data: {
           month: string;
@@ -123,9 +124,8 @@ export default function EditElectricityPage() {
             ratePerUnit: number;
           }>;
         };
-      }>(),
-    ])
-      .then(([billRes]) => {
+      }>()
+      .then((billRes) => {
         const b = billRes.data;
         setBillStatus(b.status);
 

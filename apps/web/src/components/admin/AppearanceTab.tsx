@@ -56,7 +56,7 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
   const updateFont = (key: 'display' | 'body' | 'mono', value: string) => {
     onChange({
       ...theme,
-      fonts: { ...(theme.fonts ?? {}), [key]: value },
+      fonts: { ...theme.fonts, [key]: value },
     });
   };
 
