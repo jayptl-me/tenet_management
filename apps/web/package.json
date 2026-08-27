@@ -7,8 +7,9 @@
     "dev": "next dev --port 3000 --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src/",
+    "lint": "oxlint src/",
     "typecheck": "tsc --noEmit",
+    "test:unit": "bun test src/",
     "test:e2e": "playwright test",
     "clean": "rm -rf .next out"
   },

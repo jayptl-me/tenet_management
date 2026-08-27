@@ -66,6 +66,53 @@ export async function connectDatabase(): Promise<void> {
     }
   }
 
+  if (process.env.NODE_ENV === 'development') {
+    logger.warn('Remote Atlas MongoDB unavailable. Starting local MongoMemoryServer fallback...');
+    try {
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
+      const mongod = await MongoMemoryServer.create();
+      const uri = mongod.getUri();
+      await mongoose.connect(uri);
+      isConnected = true;
+      logger.info({ uri }, 'Local MongoMemoryServer connected successfully');
+
+      // Auto-seed admin user and config in memory server
+      const { User } = await import('../models/user.js');
+      const { AppConfig } = await import('../models/appConfig.js');
+
+      const existingAdmin = await User.findOne({ email: env.ADMIN_EMAIL.toLowerCase() });
+      if (!existingAdmin) {
+        await User.create({
+          name: env.ADMIN_NAME,
+          email: env.ADMIN_EMAIL,
+          phone: env.ADMIN_PHONE,
+          passwordHash: env.ADMIN_PASSWORD,
+          role: 'admin',
+        });
+      }
+
+      const existingConfig = await AppConfig.findOne();
+      if (!existingConfig) {
+        await AppConfig.create({
+          pgName: 'Sunrise PG',
+          tagline: 'Your home, your space.',
+          address: {
+            line1: '42 MG Road',
+            city: 'Bangalore',
+            state: 'Karnataka',
+            pincode: '560001',
+          },
+          phone: '+919876543210',
+          email: 'hello@sunrisepg.in',
+        });
+      }
+
+      return;
+    } catch (memErr: unknown) {
+      logger.error({ err: memErr }, 'MongoMemoryServer fallback failed');
+    }
+  }
+
   throw new Error('Failed to connect to MongoDB after 3 attempts — check MONGODB_URI and network');
 }
 

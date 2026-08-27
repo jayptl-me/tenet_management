@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -133,9 +134,9 @@ function ResetPasswordForm() {
         )}
 
         <p className="text-center text-xs text-[color:var(--color-text-muted)]">
-          <a href="/login" className="text-[color:var(--color-brand-500)] hover:underline">
+          <Link href="/login" className="text-[color:var(--color-brand-500)] hover:underline">
             Back to login
-          </a>
+          </Link>
         </p>
       </motion.div>
     </div>

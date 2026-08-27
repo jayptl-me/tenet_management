@@ -95,6 +95,21 @@ assets.get('/low-stock', authGuard, adminOnly, async (c) => {
   return c.json({ success: true, data });
 });
 
+// ── GET /assets/service-due ──────────────────────────────
+assets.get('/service-due', authGuard, adminOnly, async (c) => {
+  const now = new Date();
+  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const data = await Asset.find({
+    nextServiceDate: { $ne: null, $lte: thirtyDaysFromNow },
+    status: { $ne: 'retired' },
+  } as Record<string, unknown>)
+    .sort({ nextServiceDate: 1 } as Record<string, 1 | -1>)
+    .lean();
+
+  return c.json({ success: true, data });
+});
+
 // ── GET /assets/:id ─────────────────────────────────────
 assets.get('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));

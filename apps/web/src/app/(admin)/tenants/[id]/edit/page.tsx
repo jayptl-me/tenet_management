@@ -397,7 +397,7 @@ export default function EditTenantPage() {
                       ? {
                           ...prev,
                           documents: {
-                            ...((prev.documents as Record<string, string>) ?? {}),
+                            ...(prev.documents as Record<string, string>),
                             aadhaarUrl: url,
                           },
                         }
@@ -415,7 +415,7 @@ export default function EditTenantPage() {
                       ? {
                           ...prev,
                           documents: {
-                            ...((prev.documents as Record<string, string>) ?? {}),
+                            ...(prev.documents as Record<string, string>),
                             photoUrl: url,
                           },
                         }

@@ -2,13 +2,17 @@
  * Tenant model tests — validates tenant creation, bed consistency, and lifecycle.
  * Mongoose 9 compatibility: after create(), re-fetch via findById() for typed access.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { Tenant } from '../models/tenant.js';
 
 type AnyDoc = Record<string, unknown>;
 const tenantCreate = Tenant.create.bind(Tenant) as unknown as (doc: AnyDoc) => Promise<AnyDoc>;
 
 describe('Tenant Model', () => {
+  beforeAll(async () => {
+    await Tenant.init();
+  });
+
   const validTenantData: AnyDoc = {
     userId: '000000000000000000000010',
     roomId: '000000000000000000000020',

@@ -80,14 +80,7 @@ sseRoutes.get('/admin', sseAuthGuard, (c) => {
   logger.info({ clientId, userId: user.sub }, 'SSE client connected');
 
   return streamSSE(c, async (stream) => {
-    // Send initial connection event
-    await stream.writeSSE({
-      event: 'connected',
-      data: JSON.stringify({ message: 'SSE connection established', clientId }),
-      id: String(Date.now()),
-    });
-
-    // Subscribe to the event bus
+    // Subscribe to the event bus immediately so no broadcast events are dropped
     const unsubscribe = subscribe(clientId, (message) => {
       stream
         .writeSSE({
@@ -98,6 +91,13 @@ sseRoutes.get('/admin', sseAuthGuard, (c) => {
         .catch((err) => {
           logger.error({ err, clientId }, 'Failed to write SSE message');
         });
+    });
+
+    // Send initial connection event
+    await stream.writeSSE({
+      event: 'connected',
+      data: JSON.stringify({ message: 'SSE connection established', clientId }),
+      id: String(Date.now()),
     });
 
     // Keep-alive ping every 30 seconds
@@ -112,7 +112,10 @@ sseRoutes.get('/admin', sseAuthGuard, (c) => {
 
     // Wait until the connection closes
     await new Promise<void>((resolve) => {
+      let isCleanedUp = false;
       const cleanup = () => {
+        if (isCleanedUp) return;
+        isCleanedUp = true;
         clearInterval(keepAlive);
         unsubscribe();
         unsubscribeAll(clientId);
@@ -120,8 +123,13 @@ sseRoutes.get('/admin', sseAuthGuard, (c) => {
         resolve();
       };
 
-      // Hono's streamSSE context resolves on close
-      c.req.raw.signal?.addEventListener('abort', cleanup);
+      if (c.req.raw.signal?.aborted) {
+        cleanup();
+        return;
+      }
+
+      stream.onAbort(cleanup);
+      c.req.raw.signal?.addEventListener('abort', cleanup, { once: true });
     });
   });
 });

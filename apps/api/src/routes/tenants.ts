@@ -16,6 +16,7 @@ import { Guardian } from '../models/guardian.js';
 import { LaundrySlot } from '../models/laundrySlot.js';
 import { MealFeedback } from '../models/mealFeedback.js';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
+import { Enquiry } from '../models/enquiry.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import {
@@ -67,6 +68,7 @@ const createTenantSchema = z.strictObject({
   emergencyContact: emergencyContactSchema.optional(),
   aadhaarUrl: z.string().url().optional(),
   photoUrl: z.string().url().optional(),
+  enquiryId: z.string().optional(),
 });
 
 const updateTenantSchema = z.strictObject({
@@ -206,6 +208,10 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
       await room.save({ session });
 
       await User.findByIdAndUpdate(u._id, { tenantId: t._id }, { session });
+
+      if (body.enquiryId && mongoose.Types.ObjectId.isValid(body.enquiryId)) {
+        await Enquiry.findByIdAndUpdate(body.enquiryId, { status: 'converted' }, { session });
+      }
 
       result = { tenantId: String(t._id), userId: String(u._id) };
     });
