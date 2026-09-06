@@ -168,7 +168,7 @@ export type { NoticeTargetType, INoticePost, INoticePostCreate } from './notice'
 export type { IAuditAction, IAuditLog } from './audit';
 
 // ── Export ─────────────────────────────────────────────
-export type { IExportFormat, IExportRequest } from './export';
+export type { IExportFormat, IExportRequest, ExportResource } from './export';
 
 // ── Attendance ─────────────────────────────────────────
 export type {

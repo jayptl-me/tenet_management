@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   CreditCard,
   User,
@@ -17,10 +17,12 @@ import {
   Hash,
   Download,
   X,
+  Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -138,6 +140,7 @@ function receiptRoomNumber(receipt: ReceiptData): string {
 }
 
 export default function PaymentDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
@@ -218,6 +221,14 @@ export default function PaymentDetailPage() {
       backHref="/payments"
       isLoading={isLoading}
       maxWidth="4xl"
+      actions={
+        payment ? (
+          <Button variant="outline" onClick={() => router.push(`/payments/${payment._id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+            Edit Payment
+          </Button>
+        ) : undefined
+      }
       badge={
         payment ? (
           <StatusBadge variant={statusVariant} label={formatStatusLabel(payment.status)} />
@@ -428,9 +439,10 @@ export default function PaymentDetailPage() {
                             json: { approved: true },
                           })
                           .json();
+                        toast.success('Payment verified successfully');
                         window.location.reload();
                       } catch {
-                        alert('Failed to verify payment');
+                        toast.error('Failed to verify payment');
                       } finally {
                         setActionLoading(null);
                       }
@@ -451,9 +463,10 @@ export default function PaymentDetailPage() {
                             json: { approved: false },
                           })
                           .json();
+                        toast.success('Payment rejected');
                         window.location.reload();
                       } catch {
-                        alert('Failed to reject payment');
+                        toast.error('Failed to reject payment');
                       } finally {
                         setActionLoading(null);
                       }

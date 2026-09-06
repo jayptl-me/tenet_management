@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Star } from 'lucide-react';
+import { Save, Plus, Trash2, Star, Lock } from 'lucide-react';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -28,6 +30,7 @@ type TabKey =
   | 'testimonials'
   | 'features'
   | 'appearance'
+  | 'security'
   | 'advanced';
 
 const tabs: { key: TabKey; label: string }[] = [
@@ -39,6 +42,7 @@ const tabs: { key: TabKey; label: string }[] = [
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'features', label: 'Features' },
   { key: 'appearance', label: 'Appearance' },
+  { key: 'security', label: 'Security' },
   { key: 'advanced', label: 'Advanced' },
 ];
 
@@ -148,6 +152,55 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [newAmenity, setNewAmenity] = useState('');
+
+  // Admin password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await api.put('auth/password', {
+        json: {
+          currentPassword,
+          newPassword,
+        },
+      }).json();
+
+      setPasswordSuccess('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Password updated successfully');
+    } catch (err: unknown) {
+      const parsed = await parseApiError(err);
+      setPasswordError(parsed.message || 'Failed to update password');
+      toast.error(parsed.message || 'Failed to update password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   // Tab persistence via URL hash
   useEffect(() => {
@@ -691,6 +744,58 @@ export default function SettingsPage() {
             onChange={(theme) => update({ theme })}
           />
         )}
+
+        {activeTab === 'security' &&
+          renderSection(
+            'Admin Security & Password',
+            'Update your administrator master password credentials',
+            <form onSubmit={handlePasswordChange} className="max-w-md space-y-4">
+              {passwordError && (
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-sm font-medium text-[color:var(--color-danger-800)]">
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-sm font-medium text-[color:var(--color-success-800)]">
+                  {passwordSuccess}
+                </div>
+              )}
+              <Input
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter your current password"
+                required
+              />
+              <Input
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                required
+              />
+              <Input
+                label="Confirm New Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                required
+              />
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  loading={isUpdatingPassword}
+                  disabled={isUpdatingPassword}
+                >
+                  <Lock className="h-4 w-4" />
+                  Update Password
+                </Button>
+              </div>
+            </form>,
+          )}
 
         {activeTab === 'advanced' &&
           renderSection(

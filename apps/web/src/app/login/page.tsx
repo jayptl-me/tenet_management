@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock, KeyRound, AlertTriangle, ArrowRight, Building2 } from 'lucide-react';
+import { Lock, KeyRound, AlertTriangle, ArrowRight, Building2, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -271,10 +271,11 @@ export default function AdminLoginPage() {
                   handleSubmit(onSubmit)();
                 }
               }}
-              className="w-full text-[12px] font-semibold"
+              className="w-full text-[12px] font-semibold flex items-center justify-center gap-1.5"
               size="sm"
             >
-              🚀 Auto-fill Demo Admin
+              <Zap className="h-3.5 w-3.5" />
+              Auto-fill Demo Admin
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-center">

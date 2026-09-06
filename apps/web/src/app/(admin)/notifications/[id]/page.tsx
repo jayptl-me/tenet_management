@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Bell, Calendar, Target, Info, MessageCircle } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { Bell, Calendar, Target, Info, MessageCircle, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
@@ -38,6 +39,7 @@ function formatDateTime(dateStr: string | null | undefined): string {
 }
 
 export default function NotificationDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
@@ -87,6 +89,17 @@ export default function NotificationDetailPage() {
       backHref="/notifications"
       isLoading={isLoading}
       maxWidth="4xl"
+      actions={
+        notification ? (
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/notifications/${notification._id}/edit`)}
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Notification
+          </Button>
+        ) : undefined
+      }
       badge={
         notification ? (
           <StatusBadge

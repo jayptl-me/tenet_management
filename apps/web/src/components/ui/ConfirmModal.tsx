@@ -108,8 +108,9 @@ export function ConfirmModal({
                 </div>
               </div>
               <button
-                onClick={onCancel}
-                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-secondary)]"
+                onClick={loading ? undefined : onCancel}
+                disabled={loading}
+                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-secondary)] disabled:pointer-events-none disabled:opacity-40"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

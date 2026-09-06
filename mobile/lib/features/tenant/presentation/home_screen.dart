@@ -138,6 +138,12 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                       style: TextStyle(fontWeight: FontWeight.w700)),
                   onPressed: () => context.go('/tenant/services'),
                 ),
+                ActionChip(
+                  avatar: const Icon(Icons.bolt, size: 16),
+                  label: const Text('Electricity',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  onPressed: () => context.go('/tenant/electricity'),
+                ),
               ],
             ),
             const SizedBox(height: 24),

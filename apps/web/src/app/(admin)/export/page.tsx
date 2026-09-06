@@ -9,13 +9,26 @@
  */
 
 import { useState } from 'react';
-import { Download, Users, CreditCard, Receipt, AlertTriangle, Check, Loader2 } from 'lucide-react';
+import {
+  Download,
+  Users,
+  CreditCard,
+  Receipt,
+  AlertTriangle,
+  Check,
+  Loader2,
+  PhoneCall,
+  DoorOpen,
+  CalendarCheck,
+  Zap,
+  Package,
+  CalendarClock,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-
-type ExportResource = 'tenants' | 'payments' | 'invoices' | 'complaints';
+import type { ExportResource } from '@pg/types';
 
 interface ExportOption {
   resource: ExportResource;
@@ -48,6 +61,42 @@ const exportOptions: ExportOption[] = [
     label: 'Complaints',
     description: 'Export complaint records with status, severity, and resolution as CSV',
     icon: <AlertTriangle className="h-5 w-5" />,
+  },
+  {
+    resource: 'enquiries',
+    label: 'Enquiries',
+    description: 'Export prospect leads with contact info, source, and conversion status as CSV',
+    icon: <PhoneCall className="h-5 w-5" />,
+  },
+  {
+    resource: 'visitors',
+    label: 'Visitors',
+    description: 'Export visitor logs with purpose, check-in and check-out times as CSV',
+    icon: <DoorOpen className="h-5 w-5" />,
+  },
+  {
+    resource: 'attendance',
+    label: 'Attendance',
+    description: 'Export tenant daily attendance and check-in/out records as CSV',
+    icon: <CalendarCheck className="h-5 w-5" />,
+  },
+  {
+    resource: 'electricity',
+    label: 'Electricity',
+    description: 'Export electricity billing records, meter readings, and consumption units as CSV',
+    icon: <Zap className="h-5 w-5" />,
+  },
+  {
+    resource: 'assets',
+    label: 'Assets',
+    description: 'Export physical assets inventory, serial tags, condition, and service dates as CSV',
+    icon: <Package className="h-5 w-5" />,
+  },
+  {
+    resource: 'leaves',
+    label: 'Leaves',
+    description: 'Export leave applications with reason, date intervals, and approval status as CSV',
+    icon: <CalendarClock className="h-5 w-5" />,
   },
 ];
 
@@ -238,9 +287,9 @@ export default function ExportPage() {
 
       <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 text-sm text-[color:var(--color-text-secondary)]">
         <p className="font-[family:var(--font-body)]">
-          <strong>Client-side export:</strong> CSV files are generated in the browser from the
-          standard list API. No server-side export endpoint is used. Currently supports tenants,
-          payments, invoices, and complaints.
+          <strong>Client-side export:</strong> CSV files are generated securely in the browser from
+          the standard list APIs with automatic pagination walking. Supports tenants, payments, invoices,
+          complaints, enquiries, visitors, attendance, electricity, assets, and leaves.
         </p>
       </div>
     </div>

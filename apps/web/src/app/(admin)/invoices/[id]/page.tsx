@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { DonutChart } from '@/components/ui/DonutChart';
@@ -489,7 +490,7 @@ export default function InvoiceDetailPage() {
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                       } catch {
-                        alert('Failed to download PDF. Ensure you are logged in.');
+                        toast.error('Failed to download PDF. Ensure you are logged in.');
                       }
                     }}
                   >

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, UserPlus, Phone, Mail, Tag, FileText, User } from 'lucide-react';
+import { Save, UserPlus, Phone, Mail, Tag, FileText, User, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
@@ -145,6 +145,14 @@ export default function EnquiryDetailPage() {
       backHref="/enquiries"
       isLoading={isLoading}
       maxWidth="4xl"
+      actions={
+        enquiry ? (
+          <Button variant="outline" onClick={() => router.push(`/enquiries/${enquiry._id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+            Edit Enquiry
+          </Button>
+        ) : undefined
+      }
       badge={
         enquiry ? (
           <StatusBadge variant={statusVariant} label={enquiry.status.replace(/_/g, ' ')} />

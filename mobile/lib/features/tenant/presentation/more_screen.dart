@@ -34,6 +34,12 @@ class TenantMoreScreen extends ConsumerWidget {
             subtitle: const Text('Wi-Fi, water, lift operational health'),
             onTap: () => context.go('/tenant/services'),
           ),
+          ListTile(
+            leading: const Icon(Icons.bolt_outlined),
+            title: const Text('Electricity & Submeters'),
+            subtitle: const Text('Units consumed, tariff rates, occupant share'),
+            onTap: () => context.go('/tenant/electricity'),
+          ),
           // Menus always-on; meal feedback flag only gates feedback API
           ListTile(
             leading: const Icon(Icons.restaurant_outlined),

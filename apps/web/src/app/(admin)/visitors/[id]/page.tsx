@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { User, Phone, Home, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { User, Phone, Home, Calendar, Clock, CheckCircle, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
@@ -46,6 +47,7 @@ function statusToDisplayLabel(status: string): string {
 
 export default function VisitorDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [visitor, setVisitor] = useState<VisitorDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,6 +110,14 @@ export default function VisitorDetailPage() {
       isLoading={isLoading}
       maxWidth="4xl"
       error={actionError}
+      actions={
+        visitor ? (
+          <Button variant="outline" onClick={() => router.push(`/visitors/${visitor._id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+            Edit Visitor
+          </Button>
+        ) : undefined
+      }
       badge={
         visitor ? (
           <StatusBadge

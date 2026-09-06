@@ -89,6 +89,7 @@
 | [apps/web/src/components/ui/FormCard.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormCard.tsx)       | Elevated form surface with optional footer actions                                     |
 | [apps/web/src/components/ui/FormSection.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormSection.tsx) | Multi-block form sections + FormGrid                                                   |
 | [apps/web/src/components/ui/FormActions.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/FormActions.tsx) | Standard Cancel/Save form footer                                                       |
+| [apps/web/src/components/ui/ServiceDueBanner.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/ServiceDueBanner.tsx) | Asset service-due alert banner (30 days window)                                         |
 | [apps/web/src/components/ui/Surface.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/Surface.tsx)         | Token-driven elevated surfaces (card/nested/glass)                                     |
 | [apps/web/src/components/ui/Checkbox.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/Checkbox.tsx)       | Token-driven labeled checkbox control                                                  |
 | [apps/web/src/lib/field-styles.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/lib/field-styles.ts)                     | Shared field/control class fragments (theme-agnostic)                                  |
@@ -99,16 +100,16 @@
 
 ### mobile (Flutter portals -- tenant / guardian / visitor)
 
-| Path                                                                                                                                          | Purpose                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [mobile/lib/main.dart](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/main.dart)                   | Flutter entry                                                         |
-| [mobile/lib/core/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/core/)                           | Env, Dio client, CORS-facing base URL, router, theme, token storage   |
-| [mobile/lib/features/auth/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/auth/)         | Login, session restore (rejects admin)                                |
-| [mobile/lib/features/tenant/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/)     | Tenant shell: invoices, payments, complaints, laundry, meals, notices, services, electricity |
-| [mobile/lib/features/guardian/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/guardian/) | Guardian shell: ward + attendance                                     |
-| [mobile/lib/features/visitor/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/visitor/)   | Visitor desk (tenant-authenticated)                                   |
-| [mobile/README.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/README.md)                           | Flutter setup and routes                                              |
-| [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md)     | Multi-client connectivity + CORS                                      |
+| Path                                                                                                                                          | Purpose                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [mobile/lib/main.dart](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/main.dart)                   | Flutter entry                                                                                |
+| [mobile/lib/core/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/core/)                           | Env, Dio client, CORS-facing base URL, router, theme, token storage                          |
+| [mobile/lib/features/auth/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/auth/)         | Login, session restore (rejects admin)                                                       |
+| [mobile/lib/features/tenant/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/)     | Tenant shell: invoices, payments, complaints, laundry, meals, notices, services, electricity, weekly menu, kyc |
+| [mobile/lib/features/guardian/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/guardian/) | Guardian shell: ward overview, dues, attendance, notices, profile/password change           |
+| [mobile/lib/features/visitor/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/visitor/)   | Visitor desk (tenant-authenticated)                                                          |
+| [mobile/README.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/README.md)                           | Flutter setup and routes                                                                     |
+| [docs/PORTAL_CONNECTIVITY.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/docs/PORTAL_CONNECTIVITY.md)     | Multi-client connectivity + CORS                                                             |
 
 ### packages/types (Shared Typings Workspace)
 

@@ -8,7 +8,9 @@ import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
 class TenantComplaintsScreen extends ConsumerStatefulWidget {
-  const TenantComplaintsScreen({super.key});
+  const TenantComplaintsScreen({super.key, this.initialCategory});
+
+  final String? initialCategory;
 
   @override
   ConsumerState<TenantComplaintsScreen> createState() => _TenantComplaintsScreenState();
@@ -31,6 +33,22 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
   @override
   void initState() {
     super.initState();
+    final cat = widget.initialCategory?.trim().toLowerCase();
+    const valid = [
+      'wifi',
+      'water',
+      'electricity',
+      'food_quality',
+      'cleaning_room',
+      'noise',
+      'other',
+    ];
+    if (cat != null && cat.isNotEmpty) {
+      if (valid.contains(cat)) {
+        _category = cat;
+      }
+      _title.text = 'Issue with ${cat.replaceAll('_', ' ')}';
+    }
     Future.microtask(_bootstrap);
   }
 

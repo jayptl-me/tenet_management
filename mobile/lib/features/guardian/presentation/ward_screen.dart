@@ -73,6 +73,11 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
         title: const Text('Ward overview'),
         actions: [
           IconButton(
+            tooltip: 'My Profile',
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => context.push('/guardian/profile'),
+          ),
+          IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
@@ -137,11 +142,103 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                             const SizedBox(height: 8),
                             StatusChip(
                               label: (tenant?['isActive'] == true)
-                                  ? 'active'
+                                   ? 'active'
                                   : 'inactive',
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Fee & Rent Status',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                StatusChip(
+                                  label: (_ward?['duesSummary']?['isClear'] == true)
+                                      ? 'Paid'
+                                      : 'Pending',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _row(
+                              'Total outstanding',
+                              formatMoney(
+                                _ward?['duesSummary']?['totalDue'] as num?,
+                              ),
+                            ),
+                            _row(
+                              'Pending invoices',
+                              '${_ward?['duesSummary']?['unpaidCount'] ?? 0} invoice${_ward?['duesSummary']?['unpaidCount'] == 1 ? '' : 's'}',
+                            ),
+                            if (_ward?['duesSummary']?['latestMonth'] != null)
+                              _row(
+                                'Billing cycle',
+                                _ward!['duesSummary']['latestMonth'].toString(),
+                              ),
+                            if (_ward?['duesSummary']?['isClear'] != true) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warningSoft,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.info_outline, size: 18, color: AppTheme.warning),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Dues can be settled by the resident via UPI QR or at the PG reception.',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.warningText,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.calendar_month_outlined, color: AppTheme.brand),
+                            title: const Text('Ward Attendance', style: TextStyle(fontWeight: FontWeight.w700)),
+                            subtitle: const Text('View daily and monthly attendance calendar'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.go('/guardian/attendance'),
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.campaign_outlined, color: AppTheme.brand),
+                            title: const Text('PG Notices', style: TextStyle(fontWeight: FontWeight.w700)),
+                            subtitle: const Text('View updates and announcements from the PG'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.go('/guardian/notices'),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),

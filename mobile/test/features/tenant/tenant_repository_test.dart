@@ -69,6 +69,21 @@ void main() {
         completes,
       );
     });
+
+    test('appendComplaintPhotos posts photos array to complaint photos endpoint', () async {
+      dioAdapter.onPost(
+        '/complaints/cmp-1/photos',
+        (server) => server.reply(200, {'success': true, 'data': {'id': 'cmp-1'}}),
+        data: {
+          'photos': ['https://example.com/photo1.jpg'],
+        },
+      );
+
+      await expectLater(
+        repository.appendComplaintPhotos('cmp-1', ['https://example.com/photo1.jpg']),
+        completes,
+      );
+    });
   });
 
   group('TenantRepository Leaves Lifecycle', () {
@@ -121,6 +136,91 @@ void main() {
         repository.submitUtr(invoiceId: 'inv-100', utrNumber: 'sbi123456789'),
         completes,
       );
+    });
+
+    test('paymentReceipt queries payment receipt by id', () async {
+      dioAdapter.onGet(
+        '/payments/pay-100/receipt',
+        (server) => server.reply(200, {
+          'success': true,
+          'data': {
+            '_id': 'pay-100',
+            'amount': 8500,
+            'method': 'upi',
+            'status': 'paid',
+            'utrNumber': 'SBI123456789',
+          },
+        }),
+      );
+
+      final receipt = await repository.paymentReceipt('pay-100');
+      expect(receipt, isNotNull);
+      expect(receipt!['_id'], 'pay-100');
+      expect(receipt['amount'], 8500);
+      expect(receipt['method'], 'upi');
+      expect(receipt['status'], 'paid');
+    });
+  });
+
+  group('TenantRepository Electricity Readings', () {
+    test('myElectricityReadings fetches and returns room readings', () async {
+      dioAdapter.onGet(
+        '/electricity/my',
+        (server) => server.reply(200, {
+          'success': true,
+          'data': {
+            'roomNumber': '101',
+            'readings': [
+              {
+                'month': '2026-07',
+                'previousReading': 1000,
+                'currentReading': 1150,
+                'unitsConsumed': 150,
+                'ratePerUnit': 10,
+                'roomTotalAmount': 1500,
+                'occupantCount': 2,
+                'tenantShare': 750,
+                'status': 'finalized',
+              }
+            ],
+          },
+        }),
+      );
+
+      final data = await repository.myElectricityReadings();
+      expect(data, isNotNull);
+      expect(data!['roomNumber'], '101');
+      final readings = data['readings'] as List;
+      expect(readings.length, 1);
+      expect(readings.first['tenantShare'], 750);
+    });
+  });
+
+  group('TenantRepository Menus', () {
+    test('weeklyMenus fetches and parses list of menu days', () async {
+      dioAdapter.onGet(
+        '/menus',
+        (server) => server.reply(200, {
+          'success': true,
+          'data': [
+            {
+              'date': '2026-03-02',
+              'dayOfWeek': 'Monday',
+              'breakfast': {'items': ['Poha', 'Tea']},
+              'lunch': {'items': ['Roti', 'Dal', 'Rice']},
+              'dinner': {'items': ['Paneer', 'Roti']},
+              'specialItem': 'Gulab Jamun',
+              'isMessHoliday': false,
+            }
+          ],
+        }),
+        queryParameters: {'limit': 14},
+      );
+
+      final menus = await repository.weeklyMenus();
+      expect(menus.length, 1);
+      expect(menus.first['dayOfWeek'], 'Monday');
+      expect(menus.first['specialItem'], 'Gulab Jamun');
     });
   });
 }

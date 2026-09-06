@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LowStockBanner } from '@/components/ui/LowStockBanner';
+import { ServiceDueBanner } from '@/components/ui/ServiceDueBanner';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 
@@ -41,6 +42,7 @@ export default function AssetsPage() {
   const [deleteTarget, setDeleteTarget] = useState<AssetRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [lowStockIds, setLowStockIds] = useState<Set<string> | null>(null);
+  const [serviceDueIds, setServiceDueIds] = useState<Set<string> | null>(null);
 
   const fetchAssets = useCallback(async () => {
     setIsLoading(true);
@@ -86,10 +88,32 @@ export default function AssetsPage() {
     }
   }, [lowStockIds]);
 
+  const handleFilterServiceDue = useCallback(async () => {
+    if (serviceDueIds) {
+      setServiceDueIds(null);
+      return;
+    }
+    try {
+      const res = await api.get('assets/service-due').json<{
+        success: boolean;
+        data: { _id: string }[];
+      }>();
+      setServiceDueIds(new Set((res.data ?? []).map((item) => item._id)));
+    } catch {
+      toast.error('Failed to load assets due for service');
+    }
+  }, [serviceDueIds]);
+
   const displayedAssets = useMemo(() => {
-    if (!lowStockIds) return assets;
-    return assets.filter((a) => lowStockIds.has(a._id));
-  }, [assets, lowStockIds]);
+    let filtered = assets;
+    if (lowStockIds) {
+      filtered = filtered.filter((a) => lowStockIds.has(a._id));
+    }
+    if (serviceDueIds) {
+      filtered = filtered.filter((a) => serviceDueIds.has(a._id));
+    }
+    return filtered;
+  }, [assets, lowStockIds, serviceDueIds]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -162,12 +186,23 @@ export default function AssetsPage() {
       />
       <ErrorBanner message={error} />
       <LowStockBanner onFilterLowStock={handleFilterLowStock} />
+      <ServiceDueBanner onFilterServiceDue={handleFilterServiceDue} />
       {lowStockIds && (
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
           <span className="font-semibold text-[color:var(--color-text-secondary)]">
             Showing low-stock assets only ({displayedAssets.length} on this page)
           </span>
           <Button type="button" variant="outline" size="sm" onClick={() => setLowStockIds(null)}>
+            Clear filter
+          </Button>
+        </div>
+      )}
+      {serviceDueIds && (
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
+          <span className="font-semibold text-[color:var(--color-text-secondary)]">
+            Showing assets due for service ({displayedAssets.length} on this page)
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setServiceDueIds(null)}>
             Clear filter
           </Button>
         </div>
@@ -208,7 +243,7 @@ export default function AssetsPage() {
         pagination={{
           page,
           perPage,
-          total: lowStockIds ? displayedAssets.length : total,
+          total: lowStockIds || serviceDueIds ? displayedAssets.length : total,
           onPageChange: setPage,
           onPerPageChange: (pp) => {
             setPerPage(pp);
@@ -218,15 +253,21 @@ export default function AssetsPage() {
         emptyState={
           <EmptyState
             icon={<Wrench className="h-12 w-12" />}
-            title={lowStockIds ? 'No low-stock assets on this page' : 'No assets yet'}
+            title={lowStockIds || serviceDueIds ? 'No matching assets on this page' : 'No assets yet'}
             description={
-              lowStockIds
-                ? 'Try another page or clear the low-stock filter'
+              lowStockIds || serviceDueIds
+                ? 'Try another page or clear active filters'
                 : 'Add your first asset to start tracking equipment'
             }
             action={
-              lowStockIds
-                ? { label: 'Clear filter', onClick: () => setLowStockIds(null) }
+              lowStockIds || serviceDueIds
+                ? {
+                    label: 'Clear filter',
+                    onClick: () => {
+                      setLowStockIds(null);
+                      setServiceDueIds(null);
+                    },
+                  }
                 : { label: 'Add Asset', onClick: () => router.push('/assets/new') }
             }
           />

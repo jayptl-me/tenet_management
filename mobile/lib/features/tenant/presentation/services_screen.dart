@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../shared/widgets/portal_widgets.dart';
@@ -237,6 +238,30 @@ class _TenantServicesScreenState extends ConsumerState<TenantServicesScreen> {
                             ],
                           ),
                         ],
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (complaints > 0)
+                              TextButton.icon(
+                                onPressed: () =>
+                                    context.go('/tenant/complaints'),
+                                icon: const Icon(Icons.list_alt, size: 16),
+                                label: const Text('Complaints'),
+                              ),
+                            TextButton.icon(
+                              onPressed: () {
+                                final cat = Uri.encodeComponent(
+                                  svc['serviceType']?.toString() ?? '',
+                                );
+                                context.go('/tenant/complaints?category=$cat');
+                              },
+                              icon: const Icon(Icons.report_problem_outlined,
+                                  size: 16),
+                              label: const Text('Report issue'),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

@@ -148,6 +148,13 @@ class _TenantInvoiceDetailScreenState
                         icon: const Icon(Icons.payments_outlined),
                         label: const Text('Pay / Submit UTR'),
                       ),
+                    ] else if (_invoice!['status'] == 'paid') ...[
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => context.go('/tenant/payments'),
+                        icon: const Icon(Icons.receipt_outlined),
+                        label: const Text('View payment receipts'),
+                      ),
                     ],
                     const SizedBox(height: 12),
                     FilledButton.tonalIcon(

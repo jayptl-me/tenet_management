@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'ward_screen.dart';
@@ -54,6 +56,63 @@ class _GuardianNoticesScreenState extends ConsumerState<GuardianNoticesScreen> {
         _loading = false;
       });
     }
+  }
+
+  void _showNoticeDetail(BuildContext context, Map<String, dynamic> notice) {
+    final title = notice['title']?.toString() ?? 'Notice';
+    final body = notice['content']?.toString() ??
+        notice['body']?.toString() ??
+        'No content provided.';
+    final date = notice['createdAt'] != null
+        ? formatDate(notice['createdAt'])
+        : null;
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (date != null) ...[
+                Text(
+                  'Posted: $date',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                body,
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('Copy'),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: '$title\n\n$body'));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notice copied to clipboard')),
+              );
+            },
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmSignOut(BuildContext context) async {
@@ -127,6 +186,8 @@ class _GuardianNoticesScreenState extends ConsumerState<GuardianNoticesScreen> {
                             title: n['title']?.toString() ?? 'Notice',
                             subtitle: n['content']?.toString() ??
                                 n['body']?.toString(),
+                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            onTap: () => _showNoticeDetail(context, n),
                           ),
                         ),
                     ],
