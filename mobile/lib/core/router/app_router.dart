@@ -9,8 +9,10 @@ import '../../features/guardian/presentation/guardian_shell.dart';
 import '../../features/guardian/presentation/ward_attendance_screen.dart';
 import '../../features/guardian/presentation/ward_screen.dart';
 import '../../features/guardian/presentation/guardian_notices_screen.dart';
+import '../../features/guardian/presentation/guardian_profile_screen.dart';
 import '../../features/tenant/presentation/complaint_detail_screen.dart';
 import '../../features/tenant/presentation/complaints_screen.dart';
+import '../../features/tenant/presentation/electricity_screen.dart';
 import '../../features/tenant/presentation/home_screen.dart';
 import '../../features/tenant/presentation/invoice_detail_screen.dart';
 import '../../features/tenant/presentation/invoices_screen.dart';
@@ -147,7 +149,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // Tenant stacked routes (outside bottom nav shell index)
       GoRoute(
         path: '/tenant/complaints',
-        builder: (_, __) => const TenantComplaintsScreen(),
+        builder: (_, state) {
+          final category = state.uri.queryParameters['category'];
+          return TenantComplaintsScreen(initialCategory: category);
+        },
       ),
       GoRoute(
         path: '/tenant/complaints/:id',
@@ -179,6 +184,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/services',
         builder: (_, __) => const TenantServicesScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/electricity',
+        builder: (_, __) => const TenantElectricityScreen(),
       ),
       GoRoute(
         path: '/tenant/leaves',
@@ -231,6 +240,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/guardian/profile',
+        builder: (_, __) => const GuardianProfileScreen(),
       ),
 
       // ── Visitor portal (tenant-owned) ───────────────────

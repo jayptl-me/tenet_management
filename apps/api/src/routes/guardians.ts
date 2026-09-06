@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import { Guardian } from '../models/guardian.js';
 import { User } from '../models/user.js';
 import { Tenant } from '../models/tenant.js';
+import { Invoice } from '../models/invoice.js';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
@@ -274,9 +275,43 @@ guardians.get('/me/ward', authGuard, async (c) => {
 
   if (!guardian) return notFound(c, 'Guardian record');
 
+  const tenantRecord = guardian.tenantId as unknown as Record<string, unknown> | null;
+  const tenantId = tenantRecord?._id ? String(tenantRecord._id) : null;
+
+  let duesSummary = {
+    totalDue: 0,
+    unpaidCount: 0,
+    isClear: true,
+    latestMonth: null as string | null,
+  };
+
+  if (tenantId) {
+    const unpaidInvoices = (await Invoice.find(
+      safeFilter({
+        tenantId,
+        status: { $in: ['sent', 'partial', 'overdue'] },
+      }),
+    ).lean()) as unknown as Array<{ totalAmount?: number; month?: string }>;
+
+    if (unpaidInvoices.length > 0) {
+      const totalDue = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+      duesSummary = {
+        totalDue,
+        unpaidCount: unpaidInvoices.length,
+        isClear: totalDue <= 0,
+        latestMonth: unpaidInvoices[0]?.month ?? null,
+      };
+    }
+  }
+
+  const mapped = mapGuardian(guardian as unknown as Record<string, unknown>);
+
   return c.json({
     success: true,
-    data: mapGuardian(guardian as unknown as Record<string, unknown>),
+    data: {
+      ...mapped,
+      duesSummary,
+    },
   });
 });
 

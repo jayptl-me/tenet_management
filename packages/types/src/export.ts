@@ -1,7 +1,17 @@
 // ── Export ─────────────────────────────────────────────
 export type IExportFormat = 'csv' | 'json';
 
-export type ExportResource = 'tenants' | 'payments' | 'invoices' | 'complaints' | 'enquiries';
+export type ExportResource =
+  | 'tenants'
+  | 'payments'
+  | 'invoices'
+  | 'complaints'
+  | 'enquiries'
+  | 'visitors'
+  | 'attendance'
+  | 'electricity'
+  | 'assets'
+  | 'leaves';
 
 export interface IExportRequest {
   resource: ExportResource;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
@@ -97,6 +99,42 @@ class _TenantNotificationsScreenState
     }
   }
 
+  Future<void> _handleTap(Map<String, dynamic> n) async {
+    final id = _notificationId(n);
+    if (id != null && n['isRead'] != true) {
+      await _markRead(id);
+    }
+
+    if (!mounted) return;
+
+    final type = n['type']?.toString();
+    final rawData = n['data'];
+    final data = rawData is Map ? Map<String, dynamic>.from(rawData) : null;
+
+    final invoiceId = data?['invoiceId']?.toString();
+    final complaintId = data?['complaintId']?.toString();
+
+    if (type == 'payment_reminder' && invoiceId != null && invoiceId.isNotEmpty) {
+      context.go('/tenant/invoices/$invoiceId');
+    } else if (type == 'payment_verified') {
+      context.go('/tenant/payments');
+    } else if (type == 'complaint_update' &&
+        complaintId != null &&
+        complaintId.isNotEmpty) {
+      context.go('/tenant/complaints/$complaintId');
+    } else if (type == 'electricity_bill') {
+      context.go('/tenant/electricity');
+    } else if (type == 'announcement') {
+      context.go('/tenant/notices');
+    } else if (type == 'service_update') {
+      context.go('/tenant/services');
+    } else if (type == 'meal_feedback') {
+      context.go('/tenant/meals');
+    } else if (type == 'welcome') {
+      context.go('/tenant/profile');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -131,12 +169,15 @@ class _TenantNotificationsScreenState
                   else
                     ..._notifications.map((n) {
                       final isRead = n['isRead'] == true;
-                      final id = _notificationId(n) ?? '';
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
-                          onTap:
-                              isRead || id.isEmpty ? null : () => _markRead(id),
+                          onTap: () => _handleTap(n),
+                          trailing: const Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: AppTheme.muted,
+                          ),
                           title: Row(
                             children: [
                               if (!isRead)

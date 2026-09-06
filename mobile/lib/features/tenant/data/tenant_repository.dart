@@ -49,6 +49,17 @@ class TenantRepository {
     );
   }
 
+  Future<void> appendComplaintPhotos(
+    String complaintId,
+    List<String> photos,
+  ) async {
+    await _api.postJson(
+      'complaints/$complaintId/photos',
+      body: {'photos': photos},
+      parse: (_) => null,
+    );
+  }
+
   Future<void> submitUtr({
     required String invoiceId,
     required String utrNumber,
@@ -76,6 +87,16 @@ class TenantRepository {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Payment receipt details (`GET payments/:id/receipt`).
+  Future<Map<String, dynamic>?> paymentReceipt(String paymentId) async {
+    final data = await _api.getJson(
+      'payments/$paymentId/receipt',
+      parse: (d) => d,
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return null;
   }
 
   /// Raw PDF bytes for an invoice (`GET invoices/:id/pdf`).
@@ -151,6 +172,20 @@ class TenantRepository {
     } on ApiException catch (e) {
       if (e.statusCode == 404) return null;
       rethrow;
+    }
+  }
+
+  /// Weekly menus schedule (`GET menus`).
+  Future<List<Map<String, dynamic>>> weeklyMenus() async {
+    try {
+      final data = await _api.getJson(
+        'menus',
+        query: {'limit': '14'},
+        parse: (d) => d,
+      );
+      return _asMapList(data);
+    } catch (_) {
+      return const [];
     }
   }
 

@@ -17,6 +17,13 @@ import {
   Wifi,
   Package,
   ShieldCheck,
+  DoorOpen,
+  Utensils,
+  Shirt,
+  Zap,
+  CalendarCheck,
+  CalendarClock,
+  Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppConfigPublic } from '@/hooks/useAppConfig';
@@ -49,6 +56,49 @@ const createActions: CreateAction[] = [
     href: '/guardians/new',
     icon: <ShieldCheck className="h-4 w-4" />,
     featureFlag: 'guardianPortalEnabled',
+  },
+  {
+    label: 'New Visitor',
+    href: '/visitors/new',
+    icon: <DoorOpen className="h-4 w-4" />,
+    featureFlag: 'visitorManagementEnabled',
+  },
+  { label: 'New Daily Menu', href: '/menus/new', icon: <Utensils className="h-4 w-4" /> },
+  {
+    label: 'New Meal Opt-Out',
+    href: '/meals/new',
+    icon: <Utensils className="h-4 w-4" />,
+    featureFlag: 'messFeedbackEnabled',
+  },
+  {
+    label: 'New Laundry Request',
+    href: '/laundry/new',
+    icon: <Shirt className="h-4 w-4" />,
+    featureFlag: 'laundryEnabled',
+  },
+  {
+    label: 'New Washing Machine',
+    href: '/washing-machines/new',
+    icon: <Shirt className="h-4 w-4" />,
+    featureFlag: 'laundryEnabled',
+  },
+  { label: 'New Electricity Reading', href: '/electricity/new', icon: <Zap className="h-4 w-4" /> },
+  {
+    label: 'Record Attendance',
+    href: '/attendance/new',
+    icon: <CalendarCheck className="h-4 w-4" />,
+    featureFlag: 'attendanceEnabled',
+  },
+  {
+    label: 'New Leave',
+    href: '/leaves/new',
+    icon: <CalendarClock className="h-4 w-4" />,
+    featureFlag: 'attendanceEnabled',
+  },
+  {
+    label: 'Broadcast Notification',
+    href: '/notifications?tab=compose',
+    icon: <Bell className="h-4 w-4" />,
   },
 ];
 

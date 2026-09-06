@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Megaphone, Calendar, Target, MessageCircle, Info } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { Megaphone, Calendar, Target, MessageCircle, Info, Copy, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
-import { generateWhatsAppUrl } from '@/lib/whatsapp';
+import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+import { toast } from 'sonner';
 
 interface NoticeDetail {
   _id: string;
@@ -34,6 +35,7 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 export default function NoticeDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
@@ -72,6 +74,14 @@ export default function NoticeDetailPage() {
       backHref="/notices"
       isLoading={isLoading}
       maxWidth="4xl"
+      actions={
+        notice ? (
+          <Button variant="outline" onClick={() => router.push(`/notices/${notice._id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+            Edit Notice
+          </Button>
+        ) : undefined
+      }
       badge={
         notice ? (
           <div className="flex items-center gap-2">
@@ -158,6 +168,16 @@ export default function NoticeDetailPage() {
               >
                 <MessageCircle className="h-4 w-4" />
                 Share via WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await copyToClipboard(`${notice.title}\n\n${notice.content}`);
+                  toast.success('Notice copied to clipboard');
+                }}
+              >
+                <Copy className="h-4 w-4" />
+                Copy Text
               </Button>
             </div>
           </DetailCard>

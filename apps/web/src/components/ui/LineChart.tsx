@@ -97,7 +97,11 @@ export function LineChart({
     );
 
     return (
-      <div className="w-full">
+      <div
+        className="w-full"
+        role="region"
+        aria-label={lines.map((l) => `${l.label} chart`).join(', ') || 'Bar chart'}
+      >
         <div className="flex gap-0">
           {showGrid && (
             <div
@@ -230,7 +234,10 @@ export function LineChart({
             className="h-full w-full overflow-visible"
             preserveAspectRatio="none"
             role="img"
-            aria-label="Line chart"
+            aria-label={
+              lines.map((l) => `${l.label} trend across ${data.length} periods`).join(', ') ||
+              'Line chart trend'
+            }
           >
             {showGrid &&
               gridRows.map((gr, i) => (

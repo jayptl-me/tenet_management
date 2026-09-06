@@ -176,7 +176,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           <RadixSelect.Trigger
             id={selectId}
             aria-invalid={error ? true : undefined}
-            aria-labelledby={label ? `${selectId}-label` : (rest['aria-labelledby'] as string | undefined)}
+            aria-labelledby={
+              label ? `${selectId}-label` : (rest['aria-labelledby'] as string | undefined)
+            }
             aria-label={rest['aria-label'] || (!label ? placeholder || 'Select option' : undefined)}
             className={clsx(
               fieldControlBase,

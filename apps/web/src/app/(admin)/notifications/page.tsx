@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import {
   Bell,
   Send,
@@ -40,7 +40,7 @@ import {
   tenantLabel,
   tenantSublabel,
 } from '@/lib/resource-select-presets';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { INotification, INotificationType } from '@pg/types';
 
 type TargetFilter = 'all' | 'floor' | 'room' | 'individual';
@@ -87,9 +87,19 @@ const typeOptions: { value: INotificationType; label: string }[] = [
   { value: 'meal_feedback', label: 'Meal Feedback' },
 ];
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'compose' | 'history'>(
+    tabParam === 'history' ? 'history' : 'compose',
+  );
+
+  useEffect(() => {
+    if (tabParam === 'history' || tabParam === 'compose') {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
@@ -538,12 +548,7 @@ export default function NotificationsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div
-          role="tabpanel"
-          id="panel-history"
-          aria-labelledby="tab-history"
-          className="space-y-4"
-        >
+        <div role="tabpanel" id="panel-history" aria-labelledby="tab-history" className="space-y-4">
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <Select
@@ -626,5 +631,19 @@ export default function NotificationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
+      <NotificationsContent />
+    </Suspense>
   );
 }

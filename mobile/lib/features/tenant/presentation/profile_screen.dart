@@ -308,36 +308,129 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _sectionTitle(context, 'Status'),
+        _sectionTitle(context, 'Tenancy Status'),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  p['isActive'] == true ? Icons.check_circle : Icons.cancel,
-                  color: p['isActive'] == true ? cs.primary : cs.error,
+                Row(
+                  children: [
+                    Icon(
+                      p['isActive'] == true
+                          ? Icons.check_circle
+                          : Icons.cancel_outlined,
+                      color: p['isActive'] == true ? cs.primary : cs.error,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Account Status',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(p['isActive'] == true ? 'Active' : 'Inactive'),
+                StatusChip(label: p['isActive'] == true ? 'Active' : 'Inactive'),
               ],
             ),
           ),
         ),
-        if (docs != null) ...[
-          const SizedBox(height: 16),
-          _sectionTitle(context, 'Documents'),
-          Card(
+        const SizedBox(height: 16),
+        _sectionTitle(context, 'KYC & Verification'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _infoRow(context, 'Aadhaar',
-                    docs['aadhaarUrl'] != null ? 'Uploaded' : 'Not uploaded'),
-                _infoRow(context, 'Photo',
-                    docs['photoUrl'] != null ? 'Uploaded' : 'Not uploaded'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Document Status',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    StatusChip(
+                      label: (docs?['aadhaarUrl'] != null && docs?['photoUrl'] != null)
+                          ? 'Verified'
+                          : 'Pending KYC',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _documentItem(
+                  context,
+                  title: 'Aadhaar / National ID',
+                  subtitle: docs?['aadhaarUrl'] != null
+                      ? 'Document verified and on file'
+                      : 'Government photo ID required',
+                  isUploaded: docs?['aadhaarUrl'] != null,
+                  icon: Icons.badge_outlined,
+                ),
+                const Divider(height: 20),
+                _documentItem(
+                  context,
+                  title: 'Passport Size Photo',
+                  subtitle: docs?['photoUrl'] != null
+                      ? 'Profile photo on file'
+                      : 'Recent photograph required',
+                  isUploaded: docs?['photoUrl'] != null,
+                  icon: Icons.account_box_outlined,
+                ),
+                const Divider(height: 20),
+                _documentItem(
+                  context,
+                  title: 'Tenancy Agreement',
+                  subtitle: p['moveInDate'] != null
+                      ? 'Active occupancy agreement'
+                      : 'Standard PG terms apply',
+                  isUploaded: true,
+                  icon: Icons.description_outlined,
+                ),
               ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _documentItem(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required bool isUploaded,
+    required IconData icon,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        StatusChip(label: isUploaded ? 'Uploaded' : 'Missing'),
       ],
     );
   }
