@@ -24,7 +24,7 @@ void main() {
   group('GuardianRepository Ward and Attendance Flows', () {
     test('ward fetches ward details successfully', () async {
       dioAdapter.onGet(
-        'guardians/me/ward',
+        '/guardians/me/ward',
         (server) => server.reply(200, {
           'success': true,
           'data': {
@@ -45,7 +45,7 @@ void main() {
 
     test('wardAttendance fetches attendance history of ward', () async {
       dioAdapter.onGet(
-        'guardians/me/ward/attendance',
+        '/guardians/me/ward/attendance',
         (server) => server.reply(200, {
           'success': true,
           'data': [
@@ -58,22 +58,21 @@ void main() {
             {
               'id': 'att-2',
               'date': '2026-05-09',
-              'status': 'present',
-              'checkIn': '2026-05-09T08:15:00Z',
+              'status': 'absent',
             },
           ],
         }),
       );
 
-      final attendance = await repository.wardAttendance();
-      expect(attendance.length, 2);
-      expect(attendance.first['status'], 'present');
-      expect(attendance.first['date'], '2026-05-10');
+      final history = await repository.wardAttendance();
+      expect(history.length, 2);
+      expect(history.first['id'], 'att-1');
+      expect(history.first['status'], 'present');
     });
 
     test('notices fetches targeted notice feed for guardian', () async {
       dioAdapter.onGet(
-        'notices',
+        '/notices',
         (server) => server.reply(200, {
           'success': true,
           'data': [

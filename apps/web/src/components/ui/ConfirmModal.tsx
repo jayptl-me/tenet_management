@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalContent } from '@/lib/animations';
@@ -46,6 +47,17 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading) {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, loading, onCancel]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -57,11 +69,15 @@ export function ConfirmModal({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 backdrop-blur-sm"
-            onClick={onCancel}
+            onClick={loading ? undefined : onCancel}
           />
 
           {/* Panel */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-modal-title"
+            aria-describedby="confirm-modal-desc"
             variants={modalContent}
             initial="hidden"
             animate="visible"
@@ -77,10 +93,16 @@ export function ConfirmModal({
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+                  <h3
+                    id="confirm-modal-title"
+                    className="text-[15px] font-bold text-[color:var(--color-text-primary)]"
+                  >
                     {title}
                   </h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]">
+                  <p
+                    id="confirm-modal-desc"
+                    className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]"
+                  >
                     {message}
                   </p>
                 </div>

@@ -171,7 +171,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
   return (
     <div className={clsx('flex flex-col gap-1.5', className)} ref={containerRef}>
       {label && (
-        <label htmlFor={selectId} className={fieldLabelClass}>
+        <label id={`${selectId}-label`} htmlFor={selectId} className={fieldLabelClass}>
           {label}
         </label>
       )}
@@ -194,6 +194,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
           )}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-labelledby={label ? `${selectId}-label` : undefined}
           aria-describedby={error ? `${selectId}-error` : undefined}
         >
           {isLoading ? (

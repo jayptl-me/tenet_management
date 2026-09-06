@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, Send, X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAppConfigPublic } from '@/hooks/useAppConfig';
@@ -14,6 +14,17 @@ export function EmergencyAlertButton() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !sending) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, sending]);
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) return;
@@ -58,6 +69,7 @@ export function EmergencyAlertButton() {
         onClick={() => setIsOpen(true)}
         className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
         title="Send Emergency Alert"
+        aria-label="Send Emergency Alert"
       >
         <AlertTriangle className="h-4 w-4" />
         <span className="hidden sm:inline">Emergency</span>
@@ -65,17 +77,29 @@ export function EmergencyAlertButton() {
 
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="emergency-alert-title"
+            aria-describedby="emergency-alert-desc"
+            className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-100)]">
                   <AlertTriangle className="h-5 w-5 text-[color:var(--color-danger-600)]" />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-bold text-[color:var(--color-surface-900)]">
+                  <h3
+                    id="emergency-alert-title"
+                    className="font-display text-lg font-bold text-[color:var(--color-surface-900)]"
+                  >
                     Emergency Alert
                   </h3>
-                  <p className="text-sm text-[color:var(--color-surface-500)]">
+                  <p
+                    id="emergency-alert-desc"
+                    className="text-sm text-[color:var(--color-surface-500)]"
+                  >
                     This will notify ALL tenants immediately via push + in-app
                   </p>
                 </div>
@@ -84,6 +108,7 @@ export function EmergencyAlertButton() {
                 onClick={() => setIsOpen(false)}
                 className="rounded-md p-1 text-[color:var(--color-surface-400)] transition-colors hover:text-[color:var(--color-surface-600)]"
                 disabled={sending}
+                aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -103,10 +128,14 @@ export function EmergencyAlertButton() {
             ) : (
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
+                  <label
+                    htmlFor="emergency-alert-title-input"
+                    className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]"
+                  >
                     Alert Title
                   </label>
                   <input
+                    id="emergency-alert-title-input"
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -117,10 +146,14 @@ export function EmergencyAlertButton() {
                   />
                 </div>
                 <div>
-                  <label className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]">
+                  <label
+                    htmlFor="emergency-alert-body-input"
+                    className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]"
+                  >
                     Message
                   </label>
                   <textarea
+                    id="emergency-alert-body-input"
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     placeholder="Describe the emergency and what tenants should do..."

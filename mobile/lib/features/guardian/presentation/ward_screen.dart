@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
@@ -70,7 +71,18 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ward overview'),
-        actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))],
+        actions: [
+          IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            tooltip: 'Sign out',
+            icon: const Icon(Icons.logout),
+            onPressed: () => _confirmSignOut(context),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -98,7 +110,7 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                   const SizedBox(height: 12),
                   if (_error != null) ErrorBanner(message: _error!),
                   if (_loading)
-                    const Center(child: CircularProgressIndicator())
+                    const SkeletonList(cardCount: 3, height: 110)
                   else if (_ward == null)
                     const EmptyState(message: 'No ward linked to this account')
                   else ...[
@@ -158,11 +170,52 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.logout, color: AppTheme.danger),
+                        title: const Text(
+                          'Sign out',
+                          style: TextStyle(
+                            color: AppTheme.danger,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        subtitle: const Text('Log out of the guardian portal'),
+                        onTap: () => _confirmSignOut(context),
+                      ),
+                    ),
                   ],
                 ],
               ),
       ),
     );
+  }
+
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+          'Are you sure you want to sign out of the guardian portal?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(authProvider.notifier).logout();
+      if (context.mounted) context.go('/login');
+    }
   }
 
   Widget _row(String label, String value) {

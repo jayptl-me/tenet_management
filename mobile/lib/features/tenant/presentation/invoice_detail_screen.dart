@@ -22,6 +22,7 @@ class TenantInvoiceDetailScreen extends ConsumerStatefulWidget {
 class _TenantInvoiceDetailScreenState
     extends ConsumerState<TenantInvoiceDetailScreen> {
   Map<String, dynamic>? _invoice;
+  Map<String, dynamic>? _electricityReading;
   bool _loading = true;
   String? _error;
   bool _pdfLoading = false;
@@ -41,9 +42,25 @@ class _TenantInvoiceDetailScreenState
       final data = await ref
           .read(tenantRepositoryProvider)
           .invoiceDetail(widget.invoiceId);
+      Map<String, dynamic>? elecReading;
+      final month = data?['month']?.toString();
+      if (month != null && month.isNotEmpty) {
+        try {
+          final elecData = await ref
+              .read(tenantRepositoryProvider)
+              .myElectricityReadings(month: month);
+          final readings = elecData?['readings'];
+          if (readings is List && readings.isNotEmpty && readings.first is Map) {
+            elecReading = Map<String, dynamic>.from(readings.first as Map);
+          }
+        } catch (_) {
+          // best-effort
+        }
+      }
       if (!mounted) return;
       setState(() {
         _invoice = data;
+        _electricityReading = elecReading;
         _loading = false;
         if (data == null) {
           _error = 'Invoice not found.';
@@ -112,7 +129,7 @@ class _TenantInvoiceDetailScreenState
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 3, height: 110)
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -250,6 +267,67 @@ class _TenantInvoiceDetailScreenState
             ),
           ),
         ),
+        if (_electricityReading != null) ...[
+          const SizedBox(height: 16),
+          _sectionTitle(context, 'Electricity Meter Breakdown'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.bolt, color: Colors.amber, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Meter Readings (${_electricityReading!['month'] ?? ''})',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  _kv(
+                    context,
+                    'Previous reading',
+                    '${_electricityReading!['previousReading'] ?? '--'} kWh',
+                  ),
+                  _kv(
+                    context,
+                    'Current reading',
+                    '${_electricityReading!['currentReading'] ?? '--'} kWh',
+                  ),
+                  _kv(
+                    context,
+                    'Units consumed',
+                    '${_electricityReading!['unitsConsumed'] ?? '--'} units',
+                  ),
+                  _kv(
+                    context,
+                    'Rate per unit',
+                    formatMoney(_electricityReading!['ratePerUnit'] as num?),
+                  ),
+                  _kv(
+                    context,
+                    'Room total',
+                    formatMoney(_electricityReading!['roomTotalAmount'] as num?),
+                  ),
+                  _kv(
+                    context,
+                    'Room occupants',
+                    '${_electricityReading!['occupantCount'] ?? 1}',
+                  ),
+                  const Divider(height: 16),
+                  _kv(
+                    context,
+                    'Your calculated share',
+                    formatMoney(_electricityReading!['tenantShare'] as num?),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         if (payments != null && payments.isNotEmpty) ...[
           const SizedBox(height: 16),
           _sectionTitle(context, 'Payment History'),

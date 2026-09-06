@@ -442,6 +442,9 @@ export function CommandPalette({
 
           {/* Panel */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command Palette"
             variants={modalContent}
             initial="hidden"
             animate="visible"
@@ -460,6 +463,7 @@ export function CommandPalette({
                   setSelectedIdx(0);
                 }}
                 placeholder="Search pages and actions..."
+                aria-label="Search pages and actions"
                 className="flex-1 bg-transparent text-[15px] font-medium text-[color:var(--color-text-primary)] outline-none placeholder:text-[color:var(--color-text-muted)]"
               />
               <kbd className="hidden h-5 items-center gap-0.5 rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 text-[10px] font-semibold text-[color:var(--color-text-muted)] sm:inline-flex">
@@ -468,6 +472,7 @@ export function CommandPalette({
               <button
                 onClick={onClose}
                 className="rounded-md p-0.5 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
+                aria-label="Close command palette"
               >
                 <span className="text-xs font-semibold">ESC</span>
               </button>

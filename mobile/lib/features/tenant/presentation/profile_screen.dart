@@ -123,7 +123,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 3, height: 110)
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -165,6 +165,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       labelText: 'Current password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
+                        tooltip:
+                            _obscureCurrent ? 'Show password' : 'Hide password',
                         onPressed: () => setState(
                           () => _obscureCurrent = !_obscureCurrent,
                         ),
@@ -190,6 +192,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       labelText: 'New password',
                       prefixIcon: const Icon(Icons.lock_reset_outlined),
                       suffixIcon: IconButton(
+                        tooltip:
+                            _obscureNew ? 'Show password' : 'Hide password',
                         onPressed: () =>
                             setState(() => _obscureNew = !_obscureNew),
                         icon: Icon(
@@ -214,6 +218,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       labelText: 'Confirm new password',
                       prefixIcon: const Icon(Icons.lock_reset_outlined),
                       suffixIcon: IconButton(
+                        tooltip:
+                            _obscureConfirm ? 'Show password' : 'Hide password',
                         onPressed: () => setState(
                           () => _obscureConfirm = !_obscureConfirm,
                         ),

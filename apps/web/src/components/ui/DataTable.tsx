@@ -99,6 +99,7 @@ export function DataTable<T>({
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
           <Input
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-9"
@@ -228,6 +229,7 @@ export function DataTable<T>({
             <Select
               options={PER_PAGE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
               value={String(pagination.perPage)}
+              aria-label="Rows per page"
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
               className="min-h-8 w-[4.5rem] py-1 text-[13px] font-semibold"
             />

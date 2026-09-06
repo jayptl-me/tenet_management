@@ -218,13 +218,18 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
       appBar: AppBar(title: const Text('Payments')),
       body: RefreshIndicator(
         onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            if (_error != null) ...[
-              ErrorBanner(message: _error!),
-              const SizedBox(height: 12),
-            ],
+        child: _loading && _invoices.isEmpty && _payments.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: SkeletonList(cardCount: 3, height: 120),
+              )
+            : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_error != null) ...[
+                    ErrorBanner(message: _error!),
+                    const SizedBox(height: 12),
+                  ],
             if (_success != null) ...[
               Material(
                 color: AppTheme.successSoft,

@@ -122,7 +122,7 @@ class _TenantLeavesScreenState extends ConsumerState<TenantLeavesScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 4, height: 85)
             : _featureDisabled
                 ? const FeatureDisabledWidget()
                 : ListView(

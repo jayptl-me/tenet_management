@@ -104,7 +104,7 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 4, height: 85)
             : _featureDisabled
                 ? ListView(
                     physics: const AlwaysScrollableScrollPhysics(),

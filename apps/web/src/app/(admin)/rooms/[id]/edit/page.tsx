@@ -45,6 +45,7 @@ interface RoomData {
   monthlyRent: number;
   isActive: boolean;
   description?: string;
+  photos?: string[];
   roomAmenities?: Array<{ amenityKey: string; status: string }>;
 }
 
@@ -70,6 +71,7 @@ export default function EditRoomPage() {
       .max(50000, 'Monthly rent cannot exceed Rs 50000'),
     isActive: z.boolean(),
     description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
+    photoUrls: z.string().max(2000, 'Photo URLs text cannot exceed 2000 characters').optional(),
     ...Object.fromEntries(
       roomAmenityDefs.map((a) => [
         `amenity_${a.key}`,
@@ -113,6 +115,7 @@ export default function EditRoomPage() {
           monthlyRent: d.monthlyRent ?? 0,
           isActive: d.isActive ?? true,
           description: d.description ?? '',
+          photoUrls: (d.photos ?? []).join('\n'),
         };
 
         for (const a of defs) {
@@ -139,6 +142,11 @@ export default function EditRoomPage() {
         status: data[`amenity_${a.key}`] ?? 'operational',
       }));
 
+      const photos = (data.photoUrls ?? '')
+        .split('\n')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+
       await api
         .put(`rooms/${roomId}`, {
           json: {
@@ -148,6 +156,7 @@ export default function EditRoomPage() {
             monthlyRent: Number(data.monthlyRent),
             isActive: data.isActive,
             description: data.description || undefined,
+            photos,
             roomAmenities,
           },
         })
@@ -216,6 +225,14 @@ export default function EditRoomPage() {
           </FormGrid>
           <div className="mt-4 space-y-4">
             <Textarea label="Description" rows={2} {...register('description')} />
+            <Textarea
+              label="Photo URLs"
+              rows={3}
+              placeholder="Paste image URLs (one per line, e.g. https://...)"
+              helperText="Add public image links for this room. One URL per line."
+              error={err.photoUrls?.message}
+              {...register('photoUrls')}
+            />
             <Checkbox
               label="Active"
               description="Inactive rooms are hidden from new tenant assignment"

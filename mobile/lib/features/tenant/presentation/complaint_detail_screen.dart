@@ -59,7 +59,7 @@ class _TenantComplaintDetailScreenState
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 2, height: 140)
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [

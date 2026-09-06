@@ -7,8 +7,8 @@
 
 ### 2026-07-16 full re-audit
 
-- **23** admin modules under `apps/web/src/app/(admin)/` inventoried.
-- **22** feature audit files under `docs/audit/features/` with **Last verified: 2026-07-16**.
+- **24** admin modules under `apps/web/src/app/(admin)/` inventoried.
+- **23** feature audit files under `docs/audit/features/` with **Last verified: 2026-09-06**.
 - **4** interconnection docs updated.
 - **Authoritative backlog:** [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md) (Open P1 between `AUTO:OPEN-P1` markers).
 - **Open P0 happy-path:** 0.
@@ -70,31 +70,32 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 
 ## Module health matrix (admin) -- 2026-07-16
 
-| Module        | Grade  | Headline residual                                                       |
-| ------------- | :----: | ----------------------------------------------------------------------- |
-| Tenants       | **A**  | P2 polish (bed picker reuse, docs)                                      |
-| Rooms         | **A-** | Photos; P2 polish                                                       |
-| Floors        | **A-** | P2 (totalRooms create UX, seed keys)                                    |
-| Services      | **A-** | P2 (lastUpdatedBy populate, labels)                                     |
-| Settings      | **A-** | P2 types / amenity migration                                            |
-| Payments      | **A-** | Unused special APIs P2                                                  |
-| Invoices      | **A-** | P2 polish                                                               |
-| Electricity   | **A-** | ELEC-P1-1 share window **FIXED**; residual P2 (upload, list locks)      |
-| Complaints    | **A**  | photos URL attach live; ownership closed; status path clears resolvedAt |
-| Assets        | **A**  | P2 service-due surface                                                  |
-| Enquiries     | **A**  | Convert closed; P2 polish                                               |
-| Visitors      | **A-** | Lifecycle solid; P2 polish                                              |
-| Guardians     | **A**  | P2 phantoms / TempCredentialsDialog                                     |
-| Attendance    | **A-** | Flag default-off                                                        |
-| Leaves        | **A**  | Flag-gated with attendance                                              |
-| Laundry       | **A-** | Types package lag P2                                                    |
-| Meals         | **A**  | mealType unique edge residual                                           |
-| Menus         | **A**  | Always-on vs meals flag product split                                   |
-| Notices       | **A-** | Portal targeting closed; P2 polish                                      |
-| Notifications | **A-** | F1-F3 closed; F5+ P2                                                    |
-| Dashboard     | **A**  | badges + SSE fixed                                                      |
-| Export        | **B**  | Client multipage CSV                                                    |
-| Audit Logs    | **B+** | Writers expanded; residual coverage                                     |
+| Module           | Grade  | Headline residual                                                       |
+| ---------------- | :----: | ----------------------------------------------------------------------- |
+| Tenants          | **A**  | P2 polish (bed picker reuse, docs)                                      |
+| Rooms            | **A-** | Photos; P2 polish                                                       |
+| Floors           | **A-** | P2 (totalRooms create UX, seed keys)                                    |
+| Services         | **A-** | P2 (lastUpdatedBy populate, labels)                                     |
+| Settings         | **A-** | P2 types / amenity migration                                            |
+| Payments         | **A-** | Unused special APIs P2                                                  |
+| Invoices         | **A-** | P2 polish                                                               |
+| Electricity      | **A-** | ELEC-P1-1 share window **FIXED**; residual P2 (upload, list locks)      |
+| Complaints       | **A**  | photos URL attach live; ownership closed; status path clears resolvedAt |
+| Assets           | **A**  | P2 service-due surface                                                  |
+| Enquiries        | **A**  | Convert closed; P2 polish                                               |
+| Visitors         | **A-** | Lifecycle solid; P2 polish                                              |
+| Guardians        | **A**  | P2 phantoms / TempCredentialsDialog                                     |
+| Attendance       | **A-** | Flag default-off                                                        |
+| Leaves           | **A**  | Flag-gated with attendance                                              |
+| Laundry          | **A-** | Types package lag P2                                                    |
+| Washing Machines | **A-** | live timer; 1 claim limit                                               |
+| Meals            | **A**  | mealType unique edge residual                                           |
+| Menus            | **A**  | Always-on vs meals flag product split                                   |
+| Notices          | **A-** | Portal targeting closed; P2 polish                                      |
+| Notifications    | **A-** | F1-F3 closed; F5+ P2                                                    |
+| Dashboard        | **A**  | badges + SSE fixed                                                      |
+| Export           | **B**  | Client multipage CSV                                                    |
+| Audit Logs       | **B+** | Writers expanded; residual coverage                                     |
 
 Full open/closed IDs: [LIVE_GAP_INVENTORY.md](./LIVE_GAP_INVENTORY.md).
 

@@ -125,7 +125,7 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
             const SizedBox(height: 12),
           ],
           if (_loading)
-            const Center(child: CircularProgressIndicator())
+            const SkeletonList(cardCount: 3, height: 100)
           else ...[
             Text(
               'Today\'s menu',

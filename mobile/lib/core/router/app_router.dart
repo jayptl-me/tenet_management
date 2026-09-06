@@ -24,6 +24,7 @@ import '../../features/tenant/presentation/notices_screen.dart';
 import '../../features/tenant/presentation/notifications_screen.dart';
 import '../../features/tenant/presentation/payments_screen.dart';
 import '../../features/tenant/presentation/profile_screen.dart';
+import '../../features/tenant/presentation/services_screen.dart';
 import '../../features/tenant/presentation/tenant_shell.dart';
 import '../../features/tenant/presentation/visitors_tab_screen.dart';
 import '../../features/visitor/presentation/visitor_home_screen.dart';
@@ -174,6 +175,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/profile',
         builder: (_, __) => const TenantProfileScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/services',
+        builder: (_, __) => const TenantServicesScreen(),
       ),
       GoRoute(
         path: '/tenant/leaves',

@@ -42,6 +42,8 @@ export function StatusFilterSelect({
     <Select
       options={options}
       value={value}
+      placeholder={allLabel}
+      aria-label={allLabel}
       onChange={(e) => onChange(e.target.value)}
       className={className}
     />
