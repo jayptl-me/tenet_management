@@ -15,6 +15,9 @@ import {
   MoonStar,
   Fan,
   Refrigerator,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -23,6 +26,7 @@ import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { TableActions } from '@/components/ui/TableActions';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
@@ -62,6 +66,12 @@ interface ServiceStatusRow {
   openComplaintCount?: number;
 }
 
+interface ServiceSummary {
+  operational: number;
+  degraded: number;
+  down: number;
+}
+
 function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (status) {
     case 'operational':
@@ -85,6 +95,7 @@ export default function ServicesPage() {
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
+  const [summary, setSummary] = useState<ServiceSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -98,6 +109,19 @@ export default function ServicesPage() {
       .catch(() => {});
   }, []);
 
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await api
+        .get('services/summary')
+        .json<{ success: boolean; data: ServiceSummary }>();
+      if (res.success) {
+        setSummary(res.data);
+      }
+    } catch {
+      // Summary load failure is non-blocking
+    }
+  }, []);
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -105,6 +129,7 @@ export default function ServicesPage() {
       await api.delete(`services/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchServices();
+      fetchSummary();
     } catch {
       setError('Failed to delete service');
     } finally {
@@ -137,7 +162,8 @@ export default function ServicesPage() {
 
   useEffect(() => {
     fetchServices();
-  }, [fetchServices]);
+    fetchSummary();
+  }, [fetchServices, fetchSummary]);
 
   const getLabel = (serviceType: string): string => {
     const def = definitions.find((d) => d.key === serviceType);
@@ -236,6 +262,44 @@ export default function ServicesPage() {
       />
 
       <ErrorBanner message={error} />
+
+      {summary && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            title="Operational"
+            value={summary.operational ?? 0}
+            variant="success"
+            icon={<CheckCircle className="h-5 w-5 text-[color:var(--color-success-600)]" />}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'operational' ? '' : 'operational');
+              setPage(1);
+            }}
+            className="cursor-pointer"
+          />
+          <StatCard
+            title="Degraded"
+            value={summary.degraded ?? 0}
+            variant="warning"
+            icon={<AlertTriangle className="h-5 w-5 text-[color:var(--color-warning-600)]" />}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'degraded' ? '' : 'degraded');
+              setPage(1);
+            }}
+            className="cursor-pointer"
+          />
+          <StatCard
+            title="Down"
+            value={summary.down ?? 0}
+            variant="danger"
+            icon={<XCircle className="h-5 w-5 text-[color:var(--color-danger-600)]" />}
+            onClick={() => {
+              setStatusFilter(statusFilter === 'down' ? '' : 'down');
+              setPage(1);
+            }}
+            className="cursor-pointer"
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Select

@@ -388,7 +388,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
             ),
             const SizedBox(height: 16),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const SkeletonList(cardCount: 2, height: 72)
             else if (_payments.isEmpty)
               const EmptyState(message: 'No payments yet')
             else
@@ -397,10 +397,272 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                   title: formatMoney(p['amount'] as num?),
                   subtitle: (p['method']?.toString() ?? '--').replaceAll('_', ' '),
                   trailing: StatusChip(label: p['status']?.toString() ?? '--'),
+                  onTap: () => _showPaymentDetails(p),
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showPaymentDetails(Map<String, dynamic> p) async {
+    final paymentId = p['_id']?.toString() ?? p['id']?.toString() ?? '';
+    final amount = p['amount'] as num?;
+    final method = (p['method']?.toString() ?? '--').replaceAll('_', ' ');
+    final type = (p['type']?.toString() ?? '--').replaceAll('_', ' ');
+    final status = p['status']?.toString() ?? '--';
+    final utr = p['utrNumber']?.toString();
+    final date = formatDate(p['paidAt'] ?? p['createdAt']);
+    final notes = p['notes']?.toString();
+    final invoiceId = p['invoiceId'] is Map
+        ? (p['invoiceId'] as Map)['invoiceNumber']?.toString() ??
+            (p['invoiceId'] as Map)['_id']?.toString()
+        : p['invoiceNumber']?.toString() ?? p['invoiceId']?.toString();
+
+    final canViewReceipt =
+        status == 'paid' || status == 'approved' || status == 'completed';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Payment details',
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    StatusChip(label: status),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    formatMoney(amount),
+                    style: Theme.of(ctx).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(ctx).colorScheme.primary,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _sheetKv(ctx, 'Method', method),
+                _sheetKv(ctx, 'Category', type),
+                _sheetKv(ctx, 'Date', date),
+                if (invoiceId != null && invoiceId.isNotEmpty)
+                  _sheetKv(ctx, 'Invoice', invoiceId),
+                if (utr != null && utr.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'UTR / Ref',
+                          style: TextStyle(
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              utr,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 16),
+                              tooltip: 'Copy UTR',
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(text: utr));
+                                if (!ctx.mounted) return;
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text('UTR copied: $utr')),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (notes != null && notes.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Notes: $notes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (canViewReceipt && paymentId.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _showReceipt(paymentId);
+                    },
+                    icon: const Icon(Icons.receipt_long),
+                    label: const Text('View receipt'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showReceipt(String paymentId) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+    Map<String, dynamic>? receipt;
+    String? receiptError;
+    try {
+      receipt =
+          await ref.read(tenantRepositoryProvider).paymentReceipt(paymentId);
+    } catch (e) {
+      receiptError = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      if (mounted) Navigator.pop(context);
+    }
+
+    if (!mounted) return;
+    if (receiptError != null || receipt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(receiptError ?? 'Failed to load receipt')),
+      );
+      return;
+    }
+
+    final amount = receipt['amount'] as num?;
+    final method =
+        (receipt['method']?.toString() ?? '--').replaceAll('_', ' ');
+    final date = formatDate(receipt['paidAt'] ?? receipt['createdAt']);
+    final utr = receipt['utrNumber']?.toString();
+    final tenant =
+        receipt['tenantId'] is Map ? receipt['tenantId'] as Map : null;
+    final tenantUser =
+        tenant?['userId'] is Map ? tenant!['userId'] as Map : null;
+    final tenantName = tenantUser?['name']?.toString() ?? 'Tenant';
+    final room = tenant?['roomId'] is Map ? tenant!['roomId'] as Map : null;
+    final roomNumber = room?['roomNumber']?.toString();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(ctx)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 40,
+                      color: Theme.of(ctx).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Payment Receipt',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                Text(
+                  'Receipt ID: $paymentId',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                _sheetKv(ctx, 'Tenant', tenantName),
+                if (roomNumber != null) _sheetKv(ctx, 'Room', roomNumber),
+                _sheetKv(ctx, 'Amount Paid', formatMoney(amount)),
+                _sheetKv(ctx, 'Payment Method', method),
+                _sheetKv(ctx, 'Date', date),
+                if (utr != null && utr.isNotEmpty)
+                  _sheetKv(ctx, 'UTR / Ref', utr),
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sheetKv(BuildContext ctx, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     );
   }

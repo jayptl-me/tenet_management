@@ -129,8 +129,17 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
       {...listeners}
       {...attributes}
       style={style}
+      role="button"
+      tabIndex={0}
+      aria-label={`Complaint: ${complaint.title}, status: ${complaint.status}, priority: ${complaint.priority}`}
       onClick={onClick}
-      className={`cursor-grab rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-3 shadow-[var(--shadow-button)] transition-all hover:shadow-[var(--shadow-card)] active:cursor-grabbing ${isDragging ? 'rotate-1 opacity-50' : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`cursor-grab rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-3 shadow-[var(--shadow-button)] transition-all hover:shadow-[var(--shadow-card)] focus:ring-2 focus:ring-[color:var(--color-brand-500)] focus:outline-none active:cursor-grabbing ${isDragging ? 'rotate-1 opacity-50' : ''}`}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <p className="font-display flex-1 truncate text-sm font-bold text-[color:var(--color-text-primary)]">

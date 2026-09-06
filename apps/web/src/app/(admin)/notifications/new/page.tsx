@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 export default function NewNotificationRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/notifications');
+    router.replace('/notifications?tab=compose');
   }, [router]);
   return null;
 }

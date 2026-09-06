@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -49,6 +50,84 @@ class _TenantComplaintDetailScreenState
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _showAddPhotoDialog(int currentCount) async {
+    if (currentCount >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 5 photos already attached.')),
+      );
+      return;
+    }
+
+    final controller = TextEditingController();
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add photo evidence'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Attach a photo URL (HTTPS) to provide more context (${5 - currentCount} remaining).',
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Photo URL',
+                hintText: 'https://...',
+                prefixIcon: Icon(Icons.link, size: 18),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isNotEmpty) {
+                Navigator.pop(ctx, text);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (url == null || url.isEmpty || !mounted) return;
+
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid URL. Expected http:// or https://')),
+      );
+      return;
+    }
+
+    try {
+      await ref.read(tenantRepositoryProvider).appendComplaintPhotos(
+            widget.complaintId,
+            [url],
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo attached successfully')),
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
   }
 
@@ -146,16 +225,53 @@ class _TenantComplaintDetailScreenState
             ),
           ),
         ),
-        if (photos.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Photos',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Photos (${photos.length}/5)',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            if (c['status'] != 'resolved' &&
+                c['status'] != 'dismissed' &&
+                photos.length < 5)
+              TextButton.icon(
+                onPressed: () => _showAddPhotoDialog(photos.length),
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                label: const Text('Add photo'),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (photos.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.photo_outlined, color: AppTheme.muted),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'No photos attached yet.',
+                      style: TextStyle(color: AppTheme.muted),
+                    ),
+                  ),
+                  if (c['status'] != 'resolved' && c['status'] != 'dismissed')
+                    OutlinedButton.icon(
+                      onPressed: () => _showAddPhotoDialog(0),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Attach'),
+                    ),
+                ],
+              ),
+            ),
+          )
+        else
           SizedBox(
             height: 96,
             child: ListView.separated(
@@ -173,7 +289,8 @@ class _TenantComplaintDetailScreenState
                     errorBuilder: (_, __, ___) => Container(
                       width: 96,
                       height: 96,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       alignment: Alignment.center,
                       child: const Icon(Icons.broken_image_outlined),
                     ),
@@ -182,7 +299,6 @@ class _TenantComplaintDetailScreenState
               },
             ),
           ),
-        ],
         if (c['adminNotes'] != null &&
             c['adminNotes'].toString().trim().isNotEmpty) ...[
           const SizedBox(height: 16),

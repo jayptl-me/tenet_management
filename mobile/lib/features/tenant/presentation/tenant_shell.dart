@@ -123,6 +123,14 @@ class TenantShell extends ConsumerWidget {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.room_service_outlined),
+                title: const Text('Services & Amenities'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/tenant/services');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.restaurant_outlined),
                 title: const Text('Meals & menu'),
                 onTap: () {
@@ -137,6 +145,15 @@ class TenantShell extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     context.go('/tenant/laundry');
+                  },
+                ),
+              if (features.laundryEnabled)
+                ListTile(
+                  leading: const Icon(Icons.local_laundry_service_outlined),
+                  title: const Text('Washing Machines'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.go('/tenant/washing-machines');
                   },
                 ),
               if (features.noticeBoardEnabled)

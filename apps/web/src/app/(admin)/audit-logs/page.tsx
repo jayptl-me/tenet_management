@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ScrollText } from 'lucide-react';
+import { ScrollText, Eye, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
 import { DataTable } from '@/components/ui/DataTable';
+import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -21,6 +24,22 @@ interface AuditLogRow {
   ip?: string;
   timestamp: string;
 }
+
+const DEFAULT_ACTIONS = [
+  'create',
+  'update',
+  'delete',
+  'login',
+  'logout',
+  'payment_verify',
+  'complaint_status_change',
+  'tenant_checkout',
+  'tenant_transfer',
+  'settings_change',
+  'notification_send',
+  'visitor_approve',
+  'export',
+];
 
 const ACTION_LABELS: Record<
   string,
@@ -52,6 +71,21 @@ export default function AuditLogsPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
+  const [selectedLog, setSelectedLog] = useState<AuditLogRow | null>(null);
+  const [availableActions, setAvailableActions] = useState<string[]>(DEFAULT_ACTIONS);
+
+  useEffect(() => {
+    api
+      .get('audit-logs/actions')
+      .json<{ success: boolean; data: string[] }>()
+      .then((res) => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const merged = Array.from(new Set([...DEFAULT_ACTIONS, ...res.data]));
+          setAvailableActions(merged);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -158,6 +192,24 @@ export default function AuditLogsPage() {
         </span>
       ),
     },
+    {
+      header: '',
+      accessor: (row) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedLog(row);
+          }}
+          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]"
+          title="Inspect log details"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span>Details</span>
+        </button>
+      ),
+      className: 'w-[90px] text-right',
+    },
   ];
 
   return (
@@ -170,19 +222,10 @@ export default function AuditLogsPage() {
         <Select
           options={[
             { value: '', label: 'All Actions' },
-            { value: 'create', label: 'Created' },
-            { value: 'update', label: 'Updated' },
-            { value: 'delete', label: 'Deleted' },
-            { value: 'login', label: 'Login' },
-            { value: 'logout', label: 'Logout' },
-            { value: 'payment_verify', label: 'Payment Verified' },
-            { value: 'complaint_status_change', label: 'Complaint Status' },
-            { value: 'tenant_checkout', label: 'Checkout' },
-            { value: 'tenant_transfer', label: 'Transfer' },
-            { value: 'settings_change', label: 'Settings' },
-            { value: 'notification_send', label: 'Notification' },
-            { value: 'visitor_approve', label: 'Visitor Approved' },
-            { value: 'export', label: 'Export' },
+            ...availableActions.map((act) => ({
+              value: act,
+              label: formatAction(act),
+            })),
           ]}
           value={actionFilter}
           onChange={(e) => {
@@ -241,6 +284,7 @@ export default function AuditLogsPage() {
         data={logs}
         keyExtractor={(row: AuditLogRow) => row._id}
         isLoading={isLoading}
+        onRowClick={(row) => setSelectedLog(row)}
         pagination={{
           page,
           perPage,
@@ -259,7 +303,10 @@ export default function AuditLogsPage() {
           />
         }
         mobileCardRenderer={(row) => (
-          <div className="space-y-2">
+          <div
+            className="space-y-2 cursor-pointer"
+            onClick={() => setSelectedLog(row)}
+          >
             <div className="flex items-center justify-between">
               <StatusBadge
                 variant={formatActionVariant(row.action)}
@@ -288,6 +335,114 @@ export default function AuditLogsPage() {
           </div>
         )}
       />
+
+      <AnimatePresence>
+        {selectedLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 backdrop-blur-sm"
+              onClick={() => setSelectedLog(null)}
+            />
+            <motion.div
+              variants={modalContent}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="relative w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-0)] p-6 shadow-[var(--shadow-modal)]"
+            >
+              <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] pb-4">
+                <div className="flex items-center gap-2">
+                  <StatusBadge
+                    variant={formatActionVariant(selectedLog.action)}
+                    label={formatAction(selectedLog.action)}
+                  />
+                  <h3 className="text-base font-semibold text-[color:var(--color-text-primary)]">
+                    Audit Log Details
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLog(null)}
+                  className="rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-xs text-[color:var(--color-text-muted)]">User</span>
+                    <p className="font-semibold text-[color:var(--color-text-primary)]">
+                      {selectedLog.userId?.name ?? 'System'}
+                    </p>
+                    {selectedLog.userId?.email && (
+                      <p className="text-xs text-[color:var(--color-text-muted)]">
+                        {selectedLog.userId.email}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-[color:var(--color-text-muted)]">Role</span>
+                    <p className="font-semibold text-[color:var(--color-text-primary)] capitalize">
+                      {selectedLog.userId?.role ?? '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-[color:var(--color-text-muted)]">Resource</span>
+                    <p className="font-semibold text-[color:var(--color-text-primary)]">
+                      {selectedLog.resource}
+                    </p>
+                    <p className="font-mono text-xs text-[color:var(--color-text-muted)]">
+                      ID: {selectedLog.resourceId}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-[color:var(--color-text-muted)]">IP Address</span>
+                    <p className="font-mono text-xs text-[color:var(--color-text-primary)]">
+                      {selectedLog.ip ?? '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-xs text-[color:var(--color-text-muted)]">Timestamp</span>
+                  <p className="text-xs text-[color:var(--color-text-secondary)]">
+                    {new Date(selectedLog.timestamp).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                  </p>
+                </div>
+
+                {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
+                  <div>
+                    <span className="text-xs text-[color:var(--color-text-muted)]">Action Details</span>
+                    <pre className="mt-1 max-h-48 overflow-auto rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-3 text-xs font-mono text-[color:var(--color-text-primary)]">
+                      {JSON.stringify(selectedLog.details, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setSelectedLog(null)}>
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

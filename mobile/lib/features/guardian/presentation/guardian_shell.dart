@@ -71,6 +71,14 @@ class GuardianShell extends ConsumerWidget {
                   navigationShell.goBranch(2);
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('My Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/guardian/profile');
+                },
+              ),
               const Spacer(),
               ListTile(
                 leading: const Icon(Icons.logout),

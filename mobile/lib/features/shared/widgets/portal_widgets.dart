@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_theme.dart';
+
 class PortalScaffold extends StatelessWidget {
   const PortalScaffold({
     super.key,
@@ -139,12 +141,46 @@ class StatusChip extends StatelessWidget {
 
   final String label;
 
+  ({Color bg, Color text}) _resolveColors(BuildContext context) {
+    final lower = label.trim().toLowerCase().replaceAll('-', '_');
+    if (lower == 'paid' ||
+        lower == 'resolved' ||
+        lower == 'approved' ||
+        lower == 'operational' ||
+        lower == 'active' ||
+        lower == 'available') {
+      return (bg: AppTheme.successSoft, text: AppTheme.success);
+    }
+    if (lower == 'overdue' ||
+        lower == 'rejected' ||
+        lower == 'down' ||
+        lower == 'cancelled' ||
+        lower == 'inactive' ||
+        lower == 'urgent') {
+      return (bg: AppTheme.dangerSoft, text: AppTheme.danger);
+    }
+    if (lower == 'pending' ||
+        lower == 'partial' ||
+        lower == 'pending_verification' ||
+        lower == 'in_progress' ||
+        lower == 'degraded' ||
+        lower == 'high' ||
+        lower == 'sent') {
+      return (bg: AppTheme.warningSoft, text: AppTheme.warningText);
+    }
+    return (
+      bg: Theme.of(context).colorScheme.surfaceContainerHighest,
+      text: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = _resolveColors(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+        color: colors.bg,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -152,7 +188,7 @@ class StatusChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.primary,
+          color: colors.text,
         ),
       ),
     );
