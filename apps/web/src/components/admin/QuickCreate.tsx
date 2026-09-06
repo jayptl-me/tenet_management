@@ -90,6 +90,7 @@ export function QuickCreate() {
         onClick={() => setOpen(true)}
         className="fixed right-6 bottom-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-lg)] transition-all duration-[var(--transition-duration)] hover:scale-105 hover:bg-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-xl)] active:scale-95"
         title="Quick Create (Cmd+N)"
+        aria-label="Quick Create (Cmd+N)"
       >
         <Plus className="h-6 w-6" />
       </button>
@@ -108,6 +109,9 @@ export function QuickCreate() {
 
             {/* Panel */}
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Quick Create"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -120,6 +124,7 @@ export function QuickCreate() {
                 <input
                   type="text"
                   placeholder="Quick create..."
+                  aria-label="Quick create search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   autoFocus
@@ -131,6 +136,7 @@ export function QuickCreate() {
                 <button
                   onClick={() => setOpen(false)}
                   className="text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)]"
+                  aria-label="Close"
                 >
                   <X className="h-4 w-4" />
                 </button>

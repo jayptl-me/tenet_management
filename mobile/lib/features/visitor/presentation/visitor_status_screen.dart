@@ -112,7 +112,7 @@ class _VisitorStatusScreenState extends ConsumerState<VisitorStatusScreen> {
         ),
         const SizedBox(height: 16),
         if (_error != null) ErrorBanner(message: _error!),
-        if (_loading) const Center(child: CircularProgressIndicator()),
+        if (_loading) const SkeletonBlock(height: 160),
         if (!_loading && _visitor != null) ...[
           Card(
             child: Padding(

@@ -33,6 +33,7 @@ class TenantRepository {
     required String description,
     required String category,
     required String priority,
+    List<String>? photos,
   }) async {
     await _api.postJson(
       'complaints',
@@ -42,6 +43,7 @@ class TenantRepository {
         'description': description,
         'category': category,
         'priority': priority,
+        if (photos != null && photos.isNotEmpty) 'photos': photos,
       },
       parse: (_) => null,
     );
@@ -352,6 +354,32 @@ class TenantRepository {
     );
   }
 
+  // -- Facility / Services Health --------------------------
+  /// Fetch health of services/amenities (Wi-Fi, water, lift, etc.) on a floor.
+  Future<List<Map<String, dynamic>>> floorServices(String floorId) async {
+    final data = await _api.getJson(
+      'services/floor/$floorId/with-complaints',
+      parse: (d) => d,
+    );
+    return _asMapList(data);
+  }
+
+  // -- Electricity Submeter Readings -----------------------
+  /// Fetch room submeter readings and tenant share calculation.
+  Future<Map<String, dynamic>?> myElectricityReadings({String? month}) async {
+    try {
+      final data = await _api.getJson(
+        'electricity/my',
+        query: {if (month != null && month.isNotEmpty) 'month': month},
+        parse: (d) => d,
+      );
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Raw auth/me response (for tenantId resolution).
   Future<Map<String, dynamic>?> myAuthProfile() async {
     try {
@@ -373,7 +401,7 @@ class TenantRepository {
         if (me == null) return null;
         final t = me['tenantId']?.toString();
         if (t == null || t.isEmpty) return null;
-        return myFloorId(t);
+        return await myFloorId(t);
       }
       final profile = await _api.getJson('tenants/$tid', parse: (d) => d);
       if (profile is! Map) return null;

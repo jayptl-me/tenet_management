@@ -302,10 +302,18 @@ export default function SettingsPage() {
       )}
 
       {/* Tab bar */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] p-1">
+      <div
+        role="tablist"
+        aria-label="Settings categories"
+        className="flex gap-1 overflow-x-auto rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] p-1"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            role="tab"
+            id={`tab-${tab.key}`}
+            aria-selected={activeTab === tab.key}
+            aria-controls={`panel-${tab.key}`}
             onClick={() => handleTabChange(tab.key)}
             className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all ${
               activeTab === tab.key
@@ -319,7 +327,12 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab content */}
-      <div className="space-y-6">
+      <div
+        role="tabpanel"
+        id={`panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+        className="space-y-6"
+      >
         {activeTab === 'general' &&
           renderSection(
             'Brand & Contact',

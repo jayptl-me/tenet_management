@@ -50,14 +50,14 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
       appBar: AppBar(title: const Text('Invoices')),
       body: RefreshIndicator(
         onRefresh: _load,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (_error != null) ErrorBanner(message: _error!),
-                  if (_rows.isEmpty)
-                    const EmptyState(message: 'No invoices found')
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (_error != null) ErrorBanner(message: _error!),
+            if (_loading)
+              const SkeletonList(count: 5)
+            else if (_rows.isEmpty)
+              const EmptyState(message: 'No invoices found')
                   else
                     ..._rows.map(
                       (inv) {

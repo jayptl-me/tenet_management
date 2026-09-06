@@ -63,13 +63,18 @@ class ApiClient {
 
   Dio get dio => _dio;
 
+  String _normalizePath(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return path.startsWith('/') ? path : '/$path';
+  }
+
   Future<T> getJson<T>(
     String path, {
     Map<String, dynamic>? query,
     required T Function(dynamic data) parse,
   }) async {
     try {
-      final res = await _dio.get(path, queryParameters: query);
+      final res = await _dio.get(_normalizePath(path), queryParameters: query);
       return parse(_unwrap(res.data));
     } on DioException catch (e) {
       throw _mapError(e);
@@ -82,7 +87,7 @@ class ApiClient {
     required T Function(dynamic data) parse,
   }) async {
     try {
-      final res = await _dio.post(path, data: body);
+      final res = await _dio.post(_normalizePath(path), data: body);
       return parse(_unwrap(res.data));
     } on DioException catch (e) {
       throw _mapError(e);
@@ -95,7 +100,7 @@ class ApiClient {
     required T Function(dynamic data) parse,
   }) async {
     try {
-      final res = await _dio.put(path, data: body);
+      final res = await _dio.put(_normalizePath(path), data: body);
       return parse(_unwrap(res.data));
     } on DioException catch (e) {
       throw _mapError(e);
@@ -108,7 +113,7 @@ class ApiClient {
     required T Function(dynamic data) parse,
   }) async {
     try {
-      final res = await _dio.patch(path, data: body);
+      final res = await _dio.patch(_normalizePath(path), data: body);
       return parse(_unwrap(res.data));
     } on DioException catch (e) {
       throw _mapError(e);
@@ -117,7 +122,7 @@ class ApiClient {
 
   Future<void> delete(String path) async {
     try {
-      await _dio.delete(path);
+      await _dio.delete(_normalizePath(path));
     } on DioException catch (e) {
       throw _mapError(e);
     }
@@ -131,7 +136,7 @@ class ApiClient {
   }) async {
     try {
       final res = await _dio.get<List<int>>(
-        path,
+        _normalizePath(path),
         queryParameters: query,
         options: Options(
           responseType: ResponseType.bytes,

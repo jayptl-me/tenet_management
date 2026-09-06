@@ -104,7 +104,7 @@
 | [mobile/lib/main.dart](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/main.dart)                   | Flutter entry                                                         |
 | [mobile/lib/core/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/core/)                           | Env, Dio client, CORS-facing base URL, router, theme, token storage   |
 | [mobile/lib/features/auth/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/auth/)         | Login, session restore (rejects admin)                                |
-| [mobile/lib/features/tenant/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/)     | Tenant shell: invoices, payments, complaints, laundry, meals, notices |
+| [mobile/lib/features/tenant/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/)     | Tenant shell: invoices, payments, complaints, laundry, meals, notices, services, electricity |
 | [mobile/lib/features/guardian/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/guardian/) | Guardian shell: ward + attendance                                     |
 | [mobile/lib/features/visitor/](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/visitor/)   | Visitor desk (tenant-authenticated)                                   |
 | [mobile/README.md](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/README.md)                           | Flutter setup and routes                                              |

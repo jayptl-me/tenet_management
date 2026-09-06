@@ -66,32 +66,33 @@ Router: `mobile/lib/core/router/app_router.dart`.
 
 ## Screen inventory
 
-| Role     | Screen file                                         | Route                   | Data repo                                | Wired vs half-baked vs stub | Notes                                                            |
-| -------- | --------------------------------------------------- | ----------------------- | ---------------------------------------- | --------------------------- | ---------------------------------------------------------------- |
-| Auth     | `auth/presentation/splash_screen.dart`              | `/`                     | `AuthRepository` + storage               | **Wired**                   | Restores session, redirects by role                              |
-| Auth     | `auth/presentation/login_screen.dart`               | `/login`                | `AuthRepository.login`                   | **Wired**                   | Rejects admin client-side after login response                   |
-| Tenant   | `tenant/presentation/tenant_shell.dart`             | shell                   | auth                                     | **Wired**                   | Bottom nav Home/Invoices/Pay/Visitors/More + drawer              |
-| Tenant   | `tenant/presentation/home_screen.dart`              | `/tenant`               | invoices/my, complaints/my, unread-count | **Wired**                   | Chips + snippets navigate detail; notification Badge             |
-| Tenant   | `tenant/presentation/invoices_screen.dart`          | `/tenant/invoices`      | `myInvoices`                             | **Wired**                   | List + tap -> detail                                             |
-| Tenant   | `tenant/presentation/invoice_detail_screen.dart`    | `/tenant/invoices/:id`  | detail + PDF + pay CTA                   | **Wired**                   | PDF download; Pay/UTR deep-link                                  |
-| Tenant   | `tenant/presentation/payments_screen.dart`          | `/tenant/payments`      | payments, UTR, QR                        | **Wired**                   | UPI QR + UTR; invoiceId query preselect                          |
-| Tenant   | `tenant/presentation/visitors_tab_screen.dart`      | `/tenant/visitors`      | embeds visitor home                      | **Wired**                   | FAB -> register; hidden when flag off                            |
-| Tenant   | `tenant/presentation/more_screen.dart`              | `/tenant/more`          | app-config features                      | **Wired**                   | Hub filtered by flags + logout                                   |
-| Tenant   | `tenant/presentation/complaints_screen.dart`        | `/tenant/complaints`    | list/create + ensureTenantId             | **Wired**                   | Detail route; room via healed tenantId                           |
-| Tenant   | `tenant/presentation/meals_screen.dart`             | `/tenant/meals`         | menu + feedback                          | **Wired**                   | Categories + history; FeatureDisabledWidget                      |
-| Tenant   | `tenant/presentation/laundry_screen.dart`           | `/tenant/laundry`       | book + list                              | **Wired**                   | FeatureDisabledWidget + ensureTenantId; items P2                 |
-| Tenant   | `tenant/presentation/notices_screen.dart`           | `/tenant/notices`       | notices                                  | **Wired**                   | List + FeatureDisabledWidget; detail P2                          |
-| Tenant   | `tenant/presentation/profile_screen.dart`           | `/tenant/profile`       | profile + change password                | **Wired**                   | Read-only fields + password change                               |
-| Tenant   | `tenant/presentation/leaves_screen.dart`            | `/tenant/leaves`        | list/create/cancel                       | **Wired**                   | Cancel pending; FeatureDisabledWidget                            |
-| Tenant   | `tenant/presentation/attendance_screen.dart`        | `/tenant/attendance`    | check-in/out                             | **Wired**                   | FeatureDisabledWidget + ensureTenantId                           |
-| Tenant   | `tenant/presentation/notifications_screen.dart`     | `/tenant/notifications` | list/read                                | **Wired**                   | Mark read; home Badge uses unread-count                          |
-| Guardian | `guardian/presentation/guardian_shell.dart`         | shell                   | auth                                     | **Wired**                   | Ward + Attendance + Notices tabs                                 |
-| Guardian | `guardian/presentation/ward_screen.dart`            | `/guardian`             | ward                                     | **Wired**                   | Overview; finance API not product scope                          |
-| Guardian | `guardian/presentation/ward_attendance_screen.dart` | `/guardian/attendance`  | attendance                               | **Wired**                   | FeatureDisabledWidget                                            |
-| Visitor  | `visitor/presentation/visitor_shell.dart`           | shell                   | auth                                     | **Wired**                   | Tenant-only routes; back to tenant                               |
-| Visitor  | `visitor/presentation/visitor_home_screen.dart`     | `/visitor`              | `visitors/my`                            | **Wired**                   | List + status chip + navigate status                             |
-| Visitor  | `visitor/presentation/visitor_register_screen.dart` | `/visitor/register`     | `createVisitor`                          | **Wired**                   | tenantId self-heal via `refreshUser`; phone normalize +91        |
-| Visitor  | `visitor/presentation/visitor_status_screen.dart`   | `/visitor/status?id=`   | getById, arrive, depart                  | **Wired**                   | Manual ID paste allowed; approve is admin-only (correct absence) |
+| Role     | Screen file                                         | Route                      | Data repo                                | Wired vs half-baked vs stub | Notes                                                            |
+| -------- | --------------------------------------------------- | -------------------------- | ---------------------------------------- | --------------------------- | ---------------------------------------------------------------- |
+| Auth     | `auth/presentation/splash_screen.dart`              | `/`                        | `AuthRepository` + storage               | **Wired**                   | Restores session, redirects by role                              |
+| Auth     | `auth/presentation/login_screen.dart`               | `/login`                   | `AuthRepository.login`                   | **Wired**                   | Rejects admin client-side after login response                   |
+| Tenant   | `tenant/presentation/tenant_shell.dart`             | shell                      | auth                                     | **Wired**                   | Bottom nav Home/Invoices/Pay/Visitors/More + drawer              |
+| Tenant   | `tenant/presentation/home_screen.dart`              | `/tenant`                  | invoices/my, complaints/my, unread-count | **Wired**                   | Chips + snippets navigate detail; notification Badge             |
+| Tenant   | `tenant/presentation/invoices_screen.dart`          | `/tenant/invoices`         | `myInvoices`                             | **Wired**                   | List + tap -> detail                                             |
+| Tenant   | `tenant/presentation/invoice_detail_screen.dart`    | `/tenant/invoices/:id`     | detail + PDF + pay CTA                   | **Wired**                   | PDF download; Pay/UTR deep-link                                  |
+| Tenant   | `tenant/presentation/payments_screen.dart`          | `/tenant/payments`         | payments, UTR, QR                        | **Wired**                   | UPI QR + UTR; invoiceId query preselect                          |
+| Tenant   | `tenant/presentation/visitors_tab_screen.dart`      | `/tenant/visitors`         | embeds visitor home                      | **Wired**                   | FAB -> register; hidden when flag off                            |
+| Tenant   | `tenant/presentation/more_screen.dart`              | `/tenant/more`             | app-config features                      | **Wired**                   | Hub filtered by flags + logout                                   |
+| Tenant   | `tenant/presentation/complaints_screen.dart`        | `/tenant/complaints`       | list/create + ensureTenantId             | **Wired**                   | Detail route; room via healed tenantId                           |
+| Tenant   | `tenant/presentation/meals_screen.dart`             | `/tenant/meals`            | menu + feedback                          | **Wired**                   | Categories + history; FeatureDisabledWidget                      |
+| Tenant   | `tenant/presentation/laundry_screen.dart`           | `/tenant/laundry`          | book + list                              | **Wired**                   | FeatureDisabledWidget + ensureTenantId; items P2                 |
+| Tenant   | `tenant/presentation/washing_machines_screen.dart`  | `/tenant/washing-machines` | `floorWashingMachines`                   | **Wired**                   | Timer + claim/release; floor resolution; FeatureDisabledWidget   |
+| Tenant   | `tenant/presentation/notices_screen.dart`           | `/tenant/notices`          | notices                                  | **Wired**                   | List + FeatureDisabledWidget; detail P2                          |
+| Tenant   | `tenant/presentation/profile_screen.dart`           | `/tenant/profile`          | profile + change password                | **Wired**                   | Read-only fields + password change                               |
+| Tenant   | `tenant/presentation/leaves_screen.dart`            | `/tenant/leaves`           | list/create/cancel                       | **Wired**                   | Cancel pending; FeatureDisabledWidget                            |
+| Tenant   | `tenant/presentation/attendance_screen.dart`        | `/tenant/attendance`       | check-in/out                             | **Wired**                   | FeatureDisabledWidget + ensureTenantId                           |
+| Tenant   | `tenant/presentation/notifications_screen.dart`     | `/tenant/notifications`    | list/read                                | **Wired**                   | Mark read; home Badge uses unread-count                          |
+| Guardian | `guardian/presentation/guardian_shell.dart`         | shell                      | auth                                     | **Wired**                   | Ward + Attendance + Notices tabs                                 |
+| Guardian | `guardian/presentation/ward_screen.dart`            | `/guardian`                | ward                                     | **Wired**                   | Overview; finance API not product scope                          |
+| Guardian | `guardian/presentation/ward_attendance_screen.dart` | `/guardian/attendance`     | attendance                               | **Wired**                   | FeatureDisabledWidget                                            |
+| Visitor  | `visitor/presentation/visitor_shell.dart`           | shell                      | auth                                     | **Wired**                   | Tenant-only routes; back to tenant                               |
+| Visitor  | `visitor/presentation/visitor_home_screen.dart`     | `/visitor`                 | `visitors/my`                            | **Wired**                   | List + status chip + navigate status                             |
+| Visitor  | `visitor/presentation/visitor_register_screen.dart` | `/visitor/register`        | `createVisitor`                          | **Wired**                   | tenantId self-heal via `refreshUser`; phone normalize +91        |
+| Visitor  | `visitor/presentation/visitor_status_screen.dart`   | `/visitor/status?id=`      | getById, arrive, depart                  | **Wired**                   | Manual ID paste allowed; approve is admin-only (correct absence) |
 
 **Stub count:** 0 pure stubs. Several **half-baked** screens (list/create only, missing secondary APIs).
 
@@ -119,23 +120,24 @@ Visitor is **not** a JWT role. Visitor desk is a tenant-authenticated surface un
 
 ## Feature depth matrix
 
-| Domain              |          List           | Detail |    Create    | Special                          | Status         |
-| ------------------- | :---------------------: | :----: | :----------: | -------------------------------- | -------------- |
-| Auth                |           --            |   --   |    login     | restore, refresh, reject admin   | **PASS**       |
-| Home                |        snippets         |   --   |      --      | action chips                     | **Thin**       |
-| Invoices            |           yes           |  yes   |     n/a      | no PDF                           | **Partial**    |
-| Payments            |           yes           |   no   |  UTR submit  | no QR/UPI                        | **Partial**    |
-| Complaints          |           yes           | **no** |     yes      | roomId from profile              | **Partial**    |
-| Visitors            |           yes           | status |     yes      | arrive/depart                    | **PASS** (MVP) |
-| Meals               | menu + feedback history |   --   |   feedback   | categories chips; mess flag      | **PASS**       |
-| Laundry             |           yes           |   no   |     book     | no cancel; weak flag UX          | **Partial**    |
-| Notices             |           yes           |   no   |     n/a      | no read/priority                 | **Thin**       |
-| Profile             |       yes (read)        |   --   |      --      | docs uploaded flags only         | **Partial**    |
-| Leaves              |           yes           |   no   |     yes      | 403 UI                           | **PASS** (MVP) |
-| Attendance          |           yes           |   --   | check-in/out | 403 UI; default flag off in seed | **PASS** (MVP) |
-| Notifications       |           yes           |   --   |      --      | mark read / all                  | **PASS** (MVP) |
-| Guardian ward       |        overview         |   --   |      --      | no invoices/payments             | **Thin**       |
-| Guardian attendance |           yes           |   --   |      --      | no flag UX                       | **Thin**       |
+| Domain              |          List           | Detail |    Create     | Special                          | Status         |
+| ------------------- | :---------------------: | :----: | :-----------: | -------------------------------- | -------------- |
+| Auth                |           --            |   --   |     login     | restore, refresh, reject admin   | **PASS**       |
+| Home                |        snippets         |   --   |      --       | action chips                     | **Thin**       |
+| Invoices            |           yes           |  yes   |      n/a      | no PDF                           | **Partial**    |
+| Payments            |           yes           |   no   |  UTR submit   | no QR/UPI                        | **Partial**    |
+| Complaints          |           yes           | **no** |      yes      | roomId from profile              | **Partial**    |
+| Visitors            |           yes           | status |      yes      | arrive/depart                    | **PASS** (MVP) |
+| Meals               | menu + feedback history |   --   |   feedback    | categories chips; mess flag      | **PASS**       |
+| Laundry             |           yes           |   no   |     book      | no cancel; weak flag UX          | **Partial**    |
+| Washing Machines    |       floor list        |   no   | claim/release | countdown timer; 1 active limit  | **PASS**       |
+| Notices             |           yes           |   no   |      n/a      | no read/priority                 | **Thin**       |
+| Profile             |       yes (read)        |   --   |      --       | docs uploaded flags only         | **Partial**    |
+| Leaves              |           yes           |   no   |      yes      | 403 UI                           | **PASS** (MVP) |
+| Attendance          |           yes           |   --   | check-in/out  | 403 UI; default flag off in seed | **PASS** (MVP) |
+| Notifications       |           yes           |   --   |      --       | mark read / all                  | **PASS** (MVP) |
+| Guardian ward       |        overview         |   --   |      --       | no invoices/payments             | **Thin**       |
+| Guardian attendance |           yes           |   --   |      --       | no flag UX                       | **Thin**       |
 
 ---
 
@@ -204,14 +206,16 @@ None remaining for "missing MVP screens" (profile, leaves, attendance, notificat
 
 ### P2
 
-| ID       | Gap                                                                                | Paths                                           |
-| -------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
-| P2-NTC   | Notices are title+body list only; no pin/priority/date chips                       | `notices_screen.dart`                           |
-| P2-LDY   | Laundry no items count, no cancel, free-form time (not admin slot catalogue)       | `laundry_screen.dart`                           |
-| P2-PROF  | Profile read-only; docs show Uploaded/Not only                                     | `profile_screen.dart`                           |
-| P2-NOTIF | Notifications no navigation to related invoice/complaint                           | `notifications_screen.dart`                     |
-| P2-THEME | StatusChip monochrome primary only; some hardcoded `AppTheme.muted` vs ColorScheme | `portal_widgets.dart`, guardian/visitor screens |
-| P2-TYPES | All repos parse `Map<String, dynamic>` (no typed Dart models)                      | `*/data/*_repository.dart`                      |
+| ID         | Gap                                                                                | Paths                                           |
+| ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
+| P2-NTC     | Notices are title+body list only; no pin/priority/date chips                       | `notices_screen.dart`                           |
+| P2-LDY     | Laundry no items count, no cancel, free-form time (not admin slot catalogue)       | `laundry_screen.dart`                           |
+| P2-PROF    | Profile read-only; docs show Uploaded/Not only                                     | `profile_screen.dart`                           |
+| P2-NOTIF   | Notifications no navigation to related invoice/complaint                           | `notifications_screen.dart`                     |
+| P2-THEME   | StatusChip monochrome primary only; some hardcoded `AppTheme.muted` vs ColorScheme | `portal_widgets.dart`, guardian/visitor screens |
+| P2-TYPES   | All repos parse `Map<String, dynamic>` (no typed Dart models)                      | `*/data/*_repository.dart`                      |
+| P2-A11Y-TT | 7 IconButtons missing `tooltip` for screen reader accessibility labels             | profile, home, ward, visitor shell, login       |
+| P2-SHIMMER | 0 skeleton/shimmer layouts (all 17 screens use `CircularProgressIndicator`)        | `portal_widgets.dart`, all presentation screens |
 
 ---
 
