@@ -131,7 +131,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       <div className="flex flex-col gap-1.5">
         {label && (
           <div className="flex items-center justify-between gap-2">
-            <label htmlFor={selectId} className={fieldLabelClass}>
+            <label id={`${selectId}-label`} htmlFor={selectId} className={fieldLabelClass}>
               {label}
               {required ? (
                 <span className="ml-0.5 text-[color:var(--color-danger-600)]">*</span>
@@ -176,6 +176,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           <RadixSelect.Trigger
             id={selectId}
             aria-invalid={error ? true : undefined}
+            aria-labelledby={label ? `${selectId}-label` : (rest['aria-labelledby'] as string | undefined)}
+            aria-label={rest['aria-label'] || (!label ? placeholder || 'Select option' : undefined)}
             className={clsx(
               fieldControlBase,
               'flex cursor-pointer items-center justify-between gap-2 text-left',

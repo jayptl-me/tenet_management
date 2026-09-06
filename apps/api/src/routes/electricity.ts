@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { authGuard } from '../middleware/auth.js';
-import { adminOnly } from '../middleware/roles.js';
+import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { ElectricityBill } from '../models/electricityBill.js';
 import { Tenant } from '../models/tenant.js';
@@ -61,6 +61,97 @@ electricity.get('/', authGuard, adminOnly, async (c) => {
     success: true,
     data,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+// -- GET /electricity/my ----------------------------------
+// Returns room submeter readings and calculation for the authenticated tenant.
+electricity.get('/my', authGuard, tenantOnly, async (c) => {
+  const userId = c.get('user').sub;
+  const month = c.req.query('month');
+
+  const tenant = await Tenant.findOne(safeFilter({ userId, isActive: true }))
+    .populate('roomId', 'roomNumber sharingType')
+    .lean();
+
+  if (!tenant) {
+    return notFound(c, 'Tenant profile');
+  }
+
+  const roomId = tenant.roomId
+    ? typeof tenant.roomId === 'object' && '_id' in tenant.roomId
+      ? String(tenant.roomId._id)
+      : String(tenant.roomId)
+    : null;
+
+  if (!roomId) {
+    return c.json({
+      success: true,
+      data: {
+        roomNumber: null,
+        readings: [],
+      },
+    });
+  }
+
+  const billFilter: Record<string, unknown> = {
+    status: { $in: ['finalized', 'distributed'] },
+  };
+  if (month) billFilter.month = month;
+
+  const bills = await ElectricityBill.find(safeFilter(billFilter))
+    .sort({ month: -1 })
+    .limit(month ? 1 : 12)
+    .lean();
+
+  const roomObjId = new mongoose.Types.ObjectId(roomId);
+  const roomNumber =
+    typeof tenant.roomId === 'object' && 'roomNumber' in tenant.roomId
+      ? String((tenant.roomId as { roomNumber?: unknown }).roomNumber ?? '')
+      : '';
+
+  const readings = [];
+  for (const bill of bills) {
+    const entry = bill.roomEntries.find((e) => String(e.roomId) === roomId);
+    if (entry) {
+      const [year, monthNum] = String(bill.month).split('-').map(Number);
+      const lastDayOfMonth = new Date(year!, monthNum!, 0).getDate();
+      const monthEnd = new Date(`${bill.month}-${String(lastDayOfMonth).padStart(2, '0')}`);
+      const monthStart = new Date(`${bill.month}-01`);
+
+      const occupants = await Tenant.countDocuments(
+        safeFilter({
+          roomId: roomObjId,
+          isActive: true,
+          moveInDate: { $lte: monthEnd },
+          $or: [{ moveOutDate: { $gte: monthStart } }, { moveOutDate: null }],
+        }),
+      );
+
+      const occupantCount = occupants > 0 ? occupants : 1;
+      const tenantShare = Math.round(((entry.amount ?? 0) / occupantCount) * 100) / 100;
+
+      readings.push({
+        month: bill.month,
+        status: bill.status,
+        previousReading: entry.previousReading,
+        currentReading: entry.currentReading,
+        unitsConsumed: entry.unitsConsumed,
+        ratePerUnit: entry.ratePerUnit,
+        roomTotalAmount: entry.amount,
+        occupantCount,
+        tenantShare,
+        billImageUrl: bill.billImageUrl ?? null,
+      });
+    }
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      roomNumber,
+      readings,
+    },
   });
 });
 

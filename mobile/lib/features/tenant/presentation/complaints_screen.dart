@@ -23,6 +23,7 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
 
   final _title = TextEditingController();
   final _description = TextEditingController();
+  final _photoUrl = TextEditingController();
   String _category = 'other';
   String _priority = 'medium';
   bool _submitting = false;
@@ -37,6 +38,7 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
   void dispose() {
     _title.dispose();
     _description.dispose();
+    _photoUrl.dispose();
     super.dispose();
   }
 
@@ -95,15 +97,18 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
       _success = null;
     });
     try {
+      final photo = _photoUrl.text.trim();
       await ref.read(tenantRepositoryProvider).createComplaint(
             roomId: _roomId!,
             title: _title.text.trim(),
             description: _description.text.trim(),
             category: _category,
             priority: _priority,
+            photos: photo.isNotEmpty ? [photo] : null,
           );
       _title.clear();
       _description.clear();
+      _photoUrl.clear();
       setState(() => _success = 'Complaint submitted.');
       await _load();
     } catch (e) {
@@ -185,6 +190,15 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
                       decoration: const InputDecoration(labelText: 'Description'),
                     ),
                     const SizedBox(height: 12),
+                    TextField(
+                      controller: _photoUrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Photo URL (optional)',
+                        hintText: 'https://...',
+                        prefixIcon: Icon(Icons.link, size: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     FilledButton(
                       onPressed: _submitting ? null : _submit,
                       child: Text(_submitting ? 'Submitting…' : 'Submit'),
@@ -195,7 +209,7 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
             ),
             const SizedBox(height: 16),
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const SkeletonList(count: 3)
             else if (_rows.isEmpty)
               const EmptyState(message: 'No complaints yet')
             else

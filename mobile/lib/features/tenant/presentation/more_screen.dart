@@ -28,6 +28,12 @@ class TenantMoreScreen extends ConsumerWidget {
             title: const Text('Complaints'),
             onTap: () => context.go('/tenant/complaints'),
           ),
+          ListTile(
+            leading: const Icon(Icons.room_service_outlined),
+            title: const Text('Services & Amenities'),
+            subtitle: const Text('Wi-Fi, water, lift operational health'),
+            onTap: () => context.go('/tenant/services'),
+          ),
           // Menus always-on; meal feedback flag only gates feedback API
           ListTile(
             leading: const Icon(Icons.restaurant_outlined),

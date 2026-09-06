@@ -24,7 +24,7 @@ void main() {
   group('TenantRepository Complaints Flow', () {
     test('myComplaints fetches and parses list of complaints', () async {
       dioAdapter.onGet(
-        'complaints/my',
+        '/complaints/my',
         (server) => server.reply(200, {
           'success': true,
           'data': [
@@ -47,7 +47,7 @@ void main() {
 
     test('createComplaint posts valid complaint payload', () async {
       dioAdapter.onPost(
-        'complaints',
+        '/complaints',
         (server) => server.reply(201, {'success': true, 'data': {'id': 'cmp-2'}}),
         data: {
           'roomId': 'room-101',
@@ -74,7 +74,7 @@ void main() {
   group('TenantRepository Leaves Lifecycle', () {
     test('myLeaves returns list of submitted leave applications', () async {
       dioAdapter.onGet(
-        'leaves/my',
+        '/leaves/my',
         (server) => server.reply(200, {
           'success': true,
           'data': [
@@ -97,7 +97,7 @@ void main() {
 
     test('cancelLeave posts cancellation request for pending leave', () async {
       dioAdapter.onPost(
-        'leaves/leave-1/cancel',
+        '/leaves/leave-1/cancel',
         (server) => server.reply(200, {'success': true, 'data': {'status': 'cancelled'}}),
         data: {},
       );
@@ -109,7 +109,7 @@ void main() {
   group('TenantRepository Payments and Invoices', () {
     test('submitUtr posts UTR reference for invoice settlement', () async {
       dioAdapter.onPost(
-        'payments/submit-utr',
+        '/payments/submit-utr',
         (server) => server.reply(200, {'success': true, 'data': {'status': 'pending_verification'}}),
         data: {
           'invoiceId': 'inv-100',

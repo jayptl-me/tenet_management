@@ -70,6 +70,7 @@ function NewRoomForm() {
       .min(1000, 'Monthly rent must be at least Rs 1000')
       .max(50000, 'Monthly rent cannot exceed Rs 50000'),
     description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
+    photoUrls: z.string().max(2000, 'Photo URLs text cannot exceed 2000 characters').optional(),
     ...Object.fromEntries(
       roomAmenityDefs.map((a) => [
         `amenity_${a.key}`,
@@ -93,6 +94,7 @@ function NewRoomForm() {
       sharingType: 2,
       monthlyRent: 0,
       description: '',
+      photoUrls: '',
       ...Object.fromEntries(roomAmenityDefs.map((a) => [`amenity_${a.key}`, 'operational'])),
     },
   });
@@ -105,6 +107,11 @@ function NewRoomForm() {
         status: data[`amenity_${a.key}`] ?? 'operational',
       }));
 
+      const photos = (data.photoUrls ?? '')
+        .split('\n')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+
       await api
         .post('rooms', {
           json: {
@@ -113,6 +120,7 @@ function NewRoomForm() {
             sharingType: Number(data.sharingType),
             monthlyRent: Number(data.monthlyRent),
             description: data.description || undefined,
+            ...(photos.length > 0 ? { photos } : {}),
             roomAmenities,
           },
         })
@@ -190,6 +198,16 @@ function NewRoomForm() {
               rows={3}
               placeholder="Optional description..."
               {...register('description')}
+            />
+          </div>
+          <div className="mt-4">
+            <Textarea
+              label="Photo URLs"
+              rows={3}
+              placeholder="Paste image URLs (one per line, e.g. https://...)"
+              helperText="Add public image links for this room. One URL per line."
+              error={err.photoUrls?.message}
+              {...register('photoUrls')}
             />
           </div>
         </FormSection>

@@ -163,7 +163,7 @@ class _TenantAttendanceScreenState
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SkeletonList(cardCount: 4, height: 80)
             : _featureDisabled
                 ? const FeatureDisabledWidget()
                 : ListView(

@@ -77,7 +77,11 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
               child: const Icon(Icons.notifications_outlined),
             ),
           ),
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+          IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -128,6 +132,12 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                       style: TextStyle(fontWeight: FontWeight.w700)),
                   onPressed: () => context.go('/tenant/complaints'),
                 ),
+                ActionChip(
+                  avatar: const Icon(Icons.room_service_outlined, size: 16),
+                  label: const Text('Services',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  onPressed: () => context.go('/tenant/services'),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -150,12 +160,7 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
             ),
             const SizedBox(height: 8),
             if (_loading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              )
+              const SkeletonList(count: 3)
             else if (_invoices.isEmpty)
               const EmptyState(message: 'No invoices yet')
             else
@@ -194,7 +199,9 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            if (!_loading && _complaints.isEmpty)
+            if (_loading)
+              const SkeletonList(count: 2)
+            else if (_complaints.isEmpty)
               const EmptyState(message: 'No complaints')
             else
               ..._complaints.map((c) {

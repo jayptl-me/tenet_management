@@ -224,6 +224,7 @@ export function NotificationBell() {
                         onClick={() => handleMarkAsRead(notif.id)}
                         className="flex-shrink-0 rounded-md p-1 text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-secondary)]"
                         title="Mark as read"
+                        aria-label="Mark as read"
                       >
                         <X className="h-3 w-3" />
                       </button>

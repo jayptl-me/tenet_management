@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { KeyRound, Copy, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalContent } from '@/lib/animations';
@@ -24,6 +24,17 @@ export function TempCredentialsDialog({
   entityLabel = 'Tenant',
 }: TempCredentialsDialogProps) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!open || !temporaryPassword) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, temporaryPassword, onClose]);
 
   const handleCopy = async () => {
     if (!temporaryPassword) return;
@@ -52,6 +63,10 @@ export function TempCredentialsDialog({
 
           {/* Panel */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="temp-creds-title"
+            aria-describedby="temp-creds-desc"
             variants={modalContent}
             initial="hidden"
             animate="visible"
@@ -65,10 +80,16 @@ export function TempCredentialsDialog({
                   <KeyRound className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+                  <h3
+                    id="temp-creds-title"
+                    className="text-[15px] font-bold text-[color:var(--color-text-primary)]"
+                  >
                     {entityLabel} created
                   </h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]">
+                  <p
+                    id="temp-creds-desc"
+                    className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]"
+                  >
                     A login account was created for this {entityLabel.toLowerCase()}.
                   </p>
                 </div>

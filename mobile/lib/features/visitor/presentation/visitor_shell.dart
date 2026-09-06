@@ -23,6 +23,7 @@ class VisitorShell extends ConsumerWidget {
         title: const Text('Visitor portal'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
           onPressed: () {
             final role = ref.read(authProvider).user?.role;
             if (role?.name == 'tenant') {

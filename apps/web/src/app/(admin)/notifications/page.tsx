@@ -269,8 +269,16 @@ export default function NotificationsPage() {
       />
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-1 shadow-[var(--shadow-xs)]">
+      <div
+        role="tablist"
+        aria-label="Notification views"
+        className="mb-6 flex gap-1 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-1 shadow-[var(--shadow-xs)]"
+      >
         <button
+          role="tab"
+          id="tab-compose"
+          aria-selected={activeTab === 'compose'}
+          aria-controls="panel-compose"
           onClick={() => setActiveTab('compose')}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'compose'
@@ -282,6 +290,10 @@ export default function NotificationsPage() {
           Compose
         </button>
         <button
+          role="tab"
+          id="tab-history"
+          aria-selected={activeTab === 'history'}
+          aria-controls="panel-history"
           onClick={() => setActiveTab('history')}
           className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'history'
@@ -296,7 +308,12 @@ export default function NotificationsPage() {
 
       {/* Compose Tab */}
       {activeTab === 'compose' && (
-        <div className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+        <div
+          role="tabpanel"
+          id="panel-compose"
+          aria-labelledby="tab-compose"
+          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]"
+        >
           <div className="grid gap-5">
             {/* Target Type */}
             <div>
@@ -521,7 +538,12 @@ export default function NotificationsPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div className="space-y-4">
+        <div
+          role="tabpanel"
+          id="panel-history"
+          aria-labelledby="tab-history"
+          className="space-y-4"
+        >
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <Select

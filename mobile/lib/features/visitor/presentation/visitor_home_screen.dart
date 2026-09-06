@@ -101,7 +101,7 @@ class _VisitorHomeScreenState extends ConsumerState<VisitorHomeScreen> {
           const SizedBox(height: 12),
           if (_error != null) ErrorBanner(message: _error!),
           if (_loading)
-            const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+            const SkeletonList(cardCount: 4, height: 72)
           else if (_rows.isEmpty)
             const EmptyState(message: 'No visitors yet. Register one from the next tab.')
           else
