@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Calculator, Zap, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Calculator, Zap, AlertTriangle, Building2, FileUp } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -34,13 +35,14 @@ const roomEntrySchema = z.object({
 const formSchema = z
   .object({
     month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
-    totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    totalBillAmount: z.coerce.number().min(0, 'Total bill amount cannot be negative'),
     billImageUrl: z
       .string()
       .optional()
       .or(z.literal(''))
       .refine((v) => !v || /^https?:\/\//i.test(v), 'Must be a valid http(s) URL'),
     notes: z.string().optional(),
+    varianceReason: z.string().max(500).optional(),
     roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
   })
   .refine((data) => data.roomEntries.every((e) => e.currentReading >= e.previousReading), {
@@ -66,6 +68,9 @@ function currentMonth(): string {
 export default function NewElectricityPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
+  const [billImage, setBillImage] = useState<File | null>(null);
+
+  const [populatingRooms, setPopulatingRooms] = useState(false);
 
   const {
     register,
@@ -79,13 +84,38 @@ export default function NewElectricityPage() {
       totalBillAmount: 0,
       billImageUrl: '',
       notes: '',
+      varianceReason: '',
       roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'roomEntries' });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: 'roomEntries' });
   const entries = useWatch({ control, name: 'roomEntries' });
   const totalBillAmount = useWatch({ control, name: 'totalBillAmount' });
+
+  const populateAllRooms = async () => {
+    setPopulatingRooms(true);
+    try {
+      const res = await api.get('rooms?limit=100&isActive=true').json<{
+        success: boolean;
+        data: Array<{ _id: string }>;
+      }>();
+      if (res.data && res.data.length > 0) {
+        replace(
+          res.data.map((r) => ({
+            roomId: r._id,
+            previousReading: 0,
+            currentReading: 0,
+            ratePerUnit: 8,
+          })),
+        );
+      }
+    } catch {
+      // preserve current entries on fetch failure
+    } finally {
+      setPopulatingRooms(false);
+    }
+  };
 
   const computeAutoTotal = (roomEntries: FormData['roomEntries']) => {
     return roomEntries.reduce((sum, e) => {
@@ -113,12 +143,13 @@ export default function NewElectricityPage() {
     }
 
     try {
-      await api
+      const res = await api
         .post('electricity', {
           json: {
             month: data.month,
             totalBillAmount: data.totalBillAmount,
             billImageUrl: data.billImageUrl?.trim() || undefined,
+            varianceReason: data.varianceReason?.trim() || undefined,
             notes: data.notes || undefined,
             roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
@@ -128,12 +159,31 @@ export default function NewElectricityPage() {
             })),
           },
         })
-        .json<{ success: boolean }>();
+        .json<{
+          success: boolean;
+          data: { _id?: string; id?: string } | Record<string, unknown>;
+        }>();
+
+      // Upload the bill proof image when one was picked (best-effort)
+      const billId =
+        (res.data as { _id?: string; id?: string })?._id ?? (res.data as { id?: string })?.id;
+      if (billId && billImage) {
+        try {
+          const formData = new FormData();
+          formData.append('file', billImage);
+          await api.post(`electricity/${billId}/image`, { body: formData }).json();
+        } catch (uploadErr) {
+          const parsedUpload = await parseApiError(uploadErr);
+          // Bill exists; surface the upload problem without failing the flow
+          setSubmitError(`Bill saved, but image upload failed: ${parsedUpload.message}`);
+          router.push(`/electricity/${billId}`);
+          return;
+        }
+      }
       router.push('/electricity');
-    } catch {
-      setSubmitError(
-        'Failed to create bill. A bill for this month may already exist, or validation failed.',
-      );
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setSubmitError(parsed.message);
     }
   };
 
@@ -186,6 +236,36 @@ export default function NewElectricityPage() {
                 {...register('billImageUrl')}
               />
             </FormGrid>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--color-text-primary)] hover:border-[color:var(--color-brand-400)]">
+                <FileUp className="h-4 w-4" />
+                {billImage ? billImage.name : 'Upload bill image (optional)'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    if (file && file.size > 5 * 1024 * 1024) {
+                      setSubmitError('Bill image must be under 5MB.');
+                      return;
+                    }
+                    setSubmitError('');
+                    setBillImage(file);
+                  }}
+                />
+              </label>
+              {billImage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBillImage(null)}
+                >
+                  Remove file
+                </Button>
+              )}
+            </div>
           </FormSection>
 
           <FormSection
@@ -193,16 +273,28 @@ export default function NewElectricityPage() {
             description="Per-room meter readings for this billing period"
             divided
             action={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
-                }
-              >
-                <Plus className="h-4 w-4" /> Add room
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={populatingRooms}
+                  onClick={populateAllRooms}
+                  title="Populate all active rooms"
+                >
+                  <Building2 className="h-4 w-4" /> Populate rooms
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
+                  }
+                >
+                  <Plus className="h-4 w-4" /> Add room
+                </Button>
+              </div>
             }
           >
             <div className="space-y-3">
@@ -356,6 +448,12 @@ export default function NewElectricityPage() {
           </FormSection>
 
           <FormSection title="Notes" description="Optional remarks for this bill" divided>
+            <Textarea
+              label="Variance reason (optional)"
+              rows={2}
+              placeholder="Explain any gap between bill total and room sum, e.g. common-area charges..."
+              {...register('varianceReason')}
+            />
             <Textarea
               label="Notes"
               rows={3}

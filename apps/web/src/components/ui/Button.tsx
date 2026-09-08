@@ -63,13 +63,12 @@ const variantStyles: Record<ButtonVariant, string> = {
     'active:bg-[color:var(--color-field-bg-hover)] active:scale-[0.98]',
     focusRing,
   ].join(' '),
+  // Deprecated: glass maps to outline internally so existing callers keep working.
   glass: [
-    'bg-[color:var(--glass-bg)] text-[color:var(--color-text-primary)]',
-    'border border-[color:var(--glass-border)]',
-    'backdrop-blur-[var(--glass-blur)]',
-    'shadow-[var(--shadow-sm)]',
-    'hover:bg-[color:var(--glass-bg-strong)] hover:shadow-[var(--shadow-md)]',
-    'active:scale-[0.98]',
+    'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)]',
+    'border border-[color:var(--border-color)]',
+    'hover:bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-400)]',
+    'active:bg-[color:var(--color-field-bg-hover)] active:scale-[0.98]',
     focusRing,
   ].join(' '),
 };
@@ -124,8 +123,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <motion.button
         ref={ref}
         disabled={isDisabled}
-        whileHover={isDisabled ? undefined : { y: -1 }}
-        whileTap={isDisabled ? undefined : { scale: 0.98, y: 0 }}
+        whileTap={isDisabled ? undefined : { scale: 0.98 }}
         transition={transitionTween}
         className={clsx(
           'inline-flex items-center justify-center font-medium tracking-tight transition-colors duration-[var(--transition-duration)] ease-[var(--transition-easing)]',

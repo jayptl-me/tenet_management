@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { WashingMachine, Settings2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -13,7 +15,7 @@ import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
-import { FormGrid } from '@/components/ui/FormSection';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
@@ -58,10 +60,8 @@ export default function NewWashingMachinePage() {
     try {
       await api.post('washing-machines', { json: data }).json<{ success: boolean }>();
       router.push('/washing-machines');
-    } catch {
-      setSubmitError(
-        'Failed to create washing machine. A machine with this number may already exist on this floor.',
-      );
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -85,7 +85,11 @@ export default function NewWashingMachinePage() {
           />
         }
       >
-        <div className="space-y-5">
+        <FormSection
+          title="Placement"
+          icon={<WashingMachine />}
+          description="Floor and machine number (unique per floor)"
+        >
           <FormGrid>
             <Controller
               name="floorId"
@@ -110,6 +114,13 @@ export default function NewWashingMachinePage() {
               {...register('machineNumber')}
             />
           </FormGrid>
+        </FormSection>
+        <FormSection
+          title="Configuration"
+          icon={<Settings2 />}
+          description="Label, cycle timer, initial status, and notes"
+          divided
+        >
           <FormGrid>
             <Input
               label="Label (optional)"
@@ -126,19 +137,21 @@ export default function NewWashingMachinePage() {
               {...register('timerDuration')}
             />
           </FormGrid>
-          <Select
-            label="Status"
-            options={STATUS_OPTIONS}
-            error={err.status?.message}
-            {...register('status')}
-          />
-          <Textarea
-            label="Notes (optional)"
-            rows={3}
-            placeholder="Any additional notes..."
-            {...register('notes')}
-          />
-        </div>
+          <div className="mt-4 space-y-4">
+            <Select
+              label="Status"
+              options={STATUS_OPTIONS}
+              error={err.status?.message}
+              {...register('status')}
+            />
+            <Textarea
+              label="Notes (optional)"
+              rows={3}
+              placeholder="Any additional notes..."
+              {...register('notes')}
+            />
+          </div>
+        </FormSection>
       </FormCard>
     </FormPage>
   );

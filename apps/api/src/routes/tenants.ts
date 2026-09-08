@@ -17,6 +17,7 @@ import { LaundrySlot } from '../models/laundrySlot.js';
 import { MealFeedback } from '../models/mealFeedback.js';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Enquiry } from '../models/enquiry.js';
+import { broadcastBadgesUpdate } from '../lib/broadcast-badges.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import {
@@ -209,12 +210,24 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
 
       await User.findByIdAndUpdate(u._id, { tenantId: t._id }, { session });
 
-      if (body.enquiryId && mongoose.Types.ObjectId.isValid(body.enquiryId)) {
-        await Enquiry.findByIdAndUpdate(body.enquiryId, { status: 'converted' }, { session });
+      if (body.enquiryId) {
+        if (!mongoose.Types.ObjectId.isValid(body.enquiryId)) {
+          throw new AppError('Invalid enquiry ID', 400, 'ENQUIRY_NOT_FOUND');
+        }
+        const linked = await Enquiry.findByIdAndUpdate(
+          body.enquiryId,
+          { status: 'converted', convertedTenantId: t._id },
+          { session },
+        );
+        if (!linked) throw new AppError('Enquiry not found', 400, 'ENQUIRY_NOT_FOUND');
       }
 
       result = { tenantId: String(t._id), userId: String(u._id) };
     });
+
+    if (body.enquiryId) {
+      void broadcastBadgesUpdate();
+    }
 
     // Re-fetch lean document AFTER the session ends so JSON response has no
     // circular Mongo session refs (c.json on a session-bound doc throws 500).
@@ -223,6 +236,19 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
       .populate('user')
       .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
       .lean();
+
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      await writeAuditLog({
+        userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+        action: 'create',
+        resource: 'tenant',
+        resourceId: ids.tenantId,
+        details: { userId: ids.userId, roomId: body.roomId, bedId: body.bedId },
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return c.json(
       {
@@ -549,7 +575,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
         const { writeAuditLog } = await import('../lib/write-audit-log.js');
         await writeAuditLog({
           userId: adminId,
-          action: 'update',
+          action: 'tenant_transfer',
           resource: 'tenant',
           resourceId: id,
           details: {
@@ -631,7 +657,7 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
   const unresolvedPayments = await Payment.countDocuments(
     safeFilter({
       tenantId: id,
-      status: { $in: ['pending_verification', 'overdue'] },
+      status: { $in: ['pending', 'pending_verification', 'overdue'] },
     }),
   );
   if (unresolvedPayments > 0) {
@@ -677,18 +703,41 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
         { session },
       );
 
-      // Deactivate guardian portal users so they cannot access after move-out
+      // Deactivate guardian portal users so they cannot access after move-out.
+      // Guardian docs flip too: /guardians/me/ward filters Guardian.isActive.
       const guardians = await Guardian.find(safeFilter({ tenantId: id }))
         .session(session)
         .lean();
       for (const g of guardians) {
         const gUserId = (g as { userId?: unknown }).userId;
+        await Guardian.findByIdAndUpdate(
+          (g as { _id?: unknown })._id as string,
+          { isActive: false },
+          { session },
+        );
         if (gUserId) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (User as any).findByIdAndUpdate(String(gUserId), { isActive: false }, { session });
         }
       }
     });
+
+    // Write audit log for tenant checkout (outside transaction — best-effort)
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      const adminId = c.get('user').sub;
+      await writeAuditLog({
+        userId: adminId,
+        action: 'tenant_checkout',
+        resource: 'tenant',
+        resourceId: id,
+        details: {
+          checkoutDate: new Date(),
+        },
+      });
+    } catch {
+      // Non-fatal
+    }
 
     const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
     return c.json({ success: true, data: updatedTenant });
@@ -781,12 +830,17 @@ router.post(
 
         await User.findByIdAndUpdate(String(tenant.userId), { isActive: true }, { session });
 
-        // Re-enable guardian portal users linked to this tenant
+        // Re-enable guardian portal users linked to this tenant (docs + logins).
         const guardians = await Guardian.find(safeFilter({ tenantId: id }))
           .session(session)
           .lean();
         for (const g of guardians) {
           const gUserId = (g as { userId?: unknown }).userId;
+          await Guardian.findByIdAndUpdate(
+            (g as { _id?: unknown })._id as string,
+            { isActive: true },
+            { session },
+          );
           if (gUserId) {
             await User.findByIdAndUpdate(String(gUserId), { isActive: true }, { session });
           }
@@ -794,6 +848,20 @@ router.post(
       });
 
       const updatedTenant = await Tenant.findById(id).populate('user').populate('room').lean();
+
+      try {
+        const { writeAuditLog } = await import('../lib/write-audit-log.js');
+        await writeAuditLog({
+          userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+          action: 'update',
+          resource: 'tenant',
+          resourceId: id,
+          details: { reinstated: true },
+        });
+      } catch {
+        // Non-fatal
+      }
+
       return c.json({ success: true, data: updatedTenant });
     } catch (err: unknown) {
       console.error('REINSTATE_ERROR:', err);
@@ -809,6 +877,24 @@ router.post(
     }
   },
 );
+
+async function deleteCloudinaryAsset(publicId?: string): Promise<void> {
+  if (!isServiceAvailable('cloudinary') || !publicId) return;
+  try {
+    const cloudName = env.CLOUDINARY_CLOUD_NAME;
+    const form = new FormData();
+    form.append('public_id', publicId);
+    await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+      method: 'POST',
+      body: form,
+      headers: {
+        Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
+      },
+    });
+  } catch (err) {
+    logger.warn({ err, publicId }, 'Failed to delete Cloudinary asset');
+  }
+}
 
 // ── POST /:id/documents — upload KYC documents (Aadhaar, photo)
 router.post('/:id/documents', authGuard, adminOnly, async (c) => {
@@ -853,6 +939,13 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
       throw new ValidationError('File size must be under 5MB.');
     }
 
+    // Delete previous asset if overwriting to prevent storage leaks
+    if (docType === 'aadhaar' && tenant.documents?.aadhaarPublicId) {
+      await deleteCloudinaryAsset(tenant.documents.aadhaarPublicId);
+    } else if (docType === 'photo' && tenant.documents?.photoPublicId) {
+      await deleteCloudinaryAsset(tenant.documents.photoPublicId);
+    }
+
     // Build Cloudinary upload form
     const uploadForm = new FormData();
     uploadForm.append('file', file);
@@ -891,16 +984,33 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
       height?: number;
     };
 
-    // Update tenant with document URL (nested under documents field)
+    // Update tenant with document URL and public_id
     if (!tenant.documents) {
       (tenant as unknown as Record<string, unknown>).documents = {};
     }
     if (docType === 'aadhaar') {
       tenant.documents.aadhaarUrl = result.secure_url;
+      tenant.documents.aadhaarPublicId = result.public_id;
     } else {
       tenant.documents.photoUrl = result.secure_url;
+      tenant.documents.photoPublicId = result.public_id;
     }
     await tenant.save();
+
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      await writeAuditLog({
+        userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+        action: 'update',
+        resource: 'tenant',
+        resourceId: String(tenant._id),
+        details: { documentUploaded: docType, url: result.secure_url },
+        ip: c.req.header('x-forwarded-for') || undefined,
+        userAgent: c.req.header('user-agent') || undefined,
+      });
+    } catch (auditErr) {
+      logger.warn({ auditErr }, 'Failed to write audit log for document upload');
+    }
 
     logger.info({ tenantId: id, docType, url: result.secure_url }, 'Tenant document uploaded');
 
@@ -921,6 +1031,46 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
     }
     throw err;
   }
+});
+
+// ── POST /:id/verify-kyc — admin marks tenant KYC documents as verified
+router.post('/:id/verify-kyc', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const tenant = await Tenant.findById(id);
+  if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+
+  if (!tenant.documents) {
+    (tenant as unknown as Record<string, unknown>).documents = {};
+  }
+  tenant.documents.isVerified = true;
+  tenant.documents.verifiedAt = new Date();
+  await tenant.save();
+
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+      action: 'update',
+      resource: 'tenant',
+      resourceId: String(tenant._id),
+      details: { kycVerified: true, verifiedAt: tenant.documents.verifiedAt },
+      ip: c.req.header('x-forwarded-for') || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+  } catch (auditErr) {
+    logger.warn({ auditErr }, 'Failed to write audit log for KYC verification');
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      isVerified: true,
+      verifiedAt: tenant.documents.verifiedAt,
+      message: 'Tenant KYC marked as verified.',
+    },
+  });
 });
 
 // ── GET /:id/payments
@@ -961,6 +1111,14 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
       if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
 
       const tenantIdStr = String(tenant._id);
+
+      // Clean up Cloudinary documents to prevent storage leakage
+      if (tenant.documents?.aadhaarPublicId) {
+        await deleteCloudinaryAsset(tenant.documents.aadhaarPublicId);
+      }
+      if (tenant.documents?.photoPublicId) {
+        await deleteCloudinaryAsset(tenant.documents.photoPublicId);
+      }
 
       // Cascade-delete all child entities
       const paymentResult = await Payment.deleteMany(safeFilter({ tenantId: tenantIdStr })).session(
@@ -1067,6 +1225,19 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
 
       logger.info({ tenantId: id, deletedCounts }, 'Tenant and children cascade-deleted');
     });
+
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      await writeAuditLog({
+        userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+        action: 'delete',
+        resource: 'tenant',
+        resourceId: id,
+        details: { deletedCounts },
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return c.json({
       success: true,

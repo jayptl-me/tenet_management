@@ -14,8 +14,10 @@ import {
   CheckCircle2,
   FileText,
   Image as ImageIcon,
+  Plus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { DonutChart } from '@/components/ui/DonutChart';
@@ -76,7 +78,9 @@ export default function RoomDetailPage() {
       .get(`rooms/${id}`)
       .json<{ success: boolean; data: RoomDetail }>()
       .then((res) => setRoom(res.data))
-      .catch(() => setError('Failed to load room details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -297,8 +301,8 @@ export default function RoomDetailPage() {
                         {bed.isOccupied ? 'Occupied' : 'Available'}
                       </span>
                     </div>
-                    {bed.isOccupied &&
-                      (bed.tenantId ? (
+                    {bed.isOccupied ? (
+                      bed.tenantId ? (
                         <Link
                           href={`/tenants/${bed.tenantId}`}
                           className="block truncate text-xs font-semibold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
@@ -309,7 +313,18 @@ export default function RoomDetailPage() {
                         <p className="truncate text-xs font-semibold text-[color:var(--color-text-secondary)]">
                           {bed.tenantName ?? 'Occupied'}
                         </p>
-                      ))}
+                      )
+                    ) : (
+                      <div className="pt-1">
+                        <Link
+                          href={`/tenants/new?roomId=${room._id}&bedId=${bed.bedId}`}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--color-success-700)] underline-offset-2 hover:underline"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Assign Tenant
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

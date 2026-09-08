@@ -8,6 +8,11 @@ import { complaintStatusPatch, type ComplaintStatus } from '../lib/complaint-sta
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
 import { Tenant } from '../models/tenant.js';
+import { User } from '../models/user.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+import { broadcastBadgesUpdate } from '../lib/broadcast-badges.js';
+import { publishEvent } from '../lib/eventBus.js';
+import { createNotification } from '../services/notification.service.js';
 
 const complaints = new Hono();
 
@@ -32,6 +37,31 @@ const createComplaintSchema = z.strictObject({
   photos: z.array(photoUrlSchema).max(5, 'At most 5 photos').optional().default([]),
 });
 
+/** Shared host-tenancy populate: tenant identity + room/bed/floor chain. */
+const complaintStayPopulate = [
+  { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
+  {
+    path: 'tenant',
+    populate: {
+      path: 'roomId',
+      select: 'roomNumber floor',
+      populate: { path: 'floor', select: 'label floorNumber' },
+    },
+  },
+  {
+    path: 'room',
+    select: 'roomNumber floor',
+    populate: { path: 'floor', select: 'label floorNumber' },
+  },
+];
+
+function floorOf(room: Record<string, unknown> | undefined) {
+  const f = room?.floor as Record<string, unknown> | undefined;
+  return f && typeof f === 'object' && 'label' in f
+    ? { _id: String(f._id ?? ''), label: f.label, floorNumber: f.floorNumber }
+    : null;
+}
+
 /** Map lean complaint so FE can use tenant.user / tenant.room consistently. */
 function mapComplaint(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenant;
@@ -54,6 +84,7 @@ function mapComplaint(doc: Record<string, unknown>) {
     tenant: tenant
       ? {
           _id: String(tenant._id ?? ''),
+          bedId: (tenant.bedId as string | undefined) ?? null,
           user: user
             ? {
                 _id: String(user._id ?? ''),
@@ -63,9 +94,17 @@ function mapComplaint(doc: Record<string, unknown>) {
               }
             : undefined,
           room: roomNested
-            ? { _id: String(roomNested._id ?? ''), roomNumber: roomNested.roomNumber }
+            ? {
+                _id: String(roomNested._id ?? ''),
+                roomNumber: roomNested.roomNumber,
+                floor: floorOf(roomNested),
+              }
             : room
-              ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber }
+              ? {
+                  _id: String(room._id ?? ''),
+                  roomNumber: room.roomNumber,
+                  floor: floorOf(room),
+                }
               : undefined,
         }
       : undefined,
@@ -87,6 +126,31 @@ const updateComplaintSchema = z.strictObject({
   /** Replace full photo URL list (max 5). */
   photos: z.array(photoUrlSchema).max(5, 'At most 5 photos').optional(),
 });
+
+const COMPLAINT_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as const;
+const COMPLAINT_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+const COMPLAINT_CATEGORIES = [
+  'wifi',
+  'water',
+  'electricity',
+  'food_quality',
+  'cleaning_room',
+  'cleaning_washroom',
+  'washing_machine',
+  'fridge',
+  'lights',
+  'noise',
+  'other',
+] as const;
+
+/** Terminal states can only reopen to open; all other moves are free. */
+function assertComplaintTransition(from: string, to: string): string | null {
+  if (from === to) return null;
+  if ((from === 'resolved' || from === 'dismissed') && to !== 'open') {
+    return `Cannot move a ${from} complaint to ${to}. Reopen to open first.`;
+  }
+  return null;
+}
 
 // ── GET /complaints/stats ───────────────────────────────
 complaints.get('/stats', authGuard, adminOnly, async (c) => {
@@ -122,10 +186,13 @@ complaints.get('/my', authGuard, tenantOnly, async (c) => {
 
   const data = await Complaint.find({ tenantId: tenant._id } as Record<string, unknown>)
     .sort({ createdAt: -1 })
-    .populate('tenant', 'room')
+    .populate(complaintStayPopulate)
     .lean();
 
-  return c.json({ success: true, data });
+  return c.json({
+    success: true,
+    data: (data as unknown as Record<string, unknown>[]).map(mapComplaint),
+  });
 });
 
 // ── POST /complaints ────────────────────────────────────
@@ -133,6 +200,16 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
   const body = c.req.valid('json');
   const authUser = c.get('user');
   const userId = authUser.sub;
+
+  if (authUser.role !== 'admin' && authUser.role !== 'tenant') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can file complaints.' },
+      },
+      403,
+    );
+  }
 
   // Validate room exists
   const roomId = parseId(body.roomId);
@@ -142,7 +219,9 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
   if (!room) return notFound(c, 'Room');
 
   // Resolve tenant: admin may pass tenantId; tenants always use their own profile
+  // and their own room (server-authoritative; prevents wrong-room filings).
   let tenant: { _id: unknown };
+  let effectiveRoomId = roomId;
   if (authUser.role === 'admin') {
     if (!body.tenantId) {
       return badRequest(
@@ -166,6 +245,11 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
       );
     }
     tenant = selfTenant;
+    const ownRoomId = parseId(
+      String((selfTenant as unknown as Record<string, unknown>).roomId ?? ''),
+    );
+    if (!ownRoomId) return badRequest(c, 'Tenant has no room assigned', 'ROOM_REQUIRED');
+    effectiveRoomId = ownRoomId;
   }
 
   // Cooldown: prevent duplicate complaints in same category within 30 minutes
@@ -194,13 +278,38 @@ complaints.post('/', authGuard, zValidator('json', createComplaintSchema), async
     Complaint as unknown as { create: (doc: Record<string, unknown>) => Promise<unknown> }
   ).create({
     tenantId: tenant._id,
-    roomId,
+    roomId: effectiveRoomId,
     category: body.category,
     title: body.title,
     description: body.description,
     priority: body.priority,
     photos: body.photos ?? [],
   });
+
+  const complaintId = String((complaint as { _id?: unknown })._id ?? '');
+
+  await writeAuditLog({
+    userId,
+    action: 'create',
+    resource: 'complaint',
+    resourceId: complaintId,
+    details: {
+      category: body.category,
+      priority: body.priority,
+      roomId: String(effectiveRoomId),
+      tenantId: String(tenant._id),
+      title: body.title,
+    },
+  });
+
+  publishEvent('new_complaint', {
+    complaintId,
+    title: body.title,
+    category: body.category,
+    priority: body.priority,
+    tenantId: String(tenant._id),
+  });
+  void broadcastBadgesUpdate();
 
   return c.json({ success: true, data: complaint }, 201);
 });
@@ -210,19 +319,67 @@ complaints.get('/', authGuard, adminOnly, async (c) => {
   const filter: Record<string, unknown> = {};
 
   const status = c.req.query('status');
-  if (status) filter.status = status;
+  if (status) {
+    if (!(COMPLAINT_STATUSES as readonly string[]).includes(status)) {
+      return badRequest(c, 'Invalid status filter', 'INVALID_STATUS');
+    }
+    filter.status = status;
+  }
 
   const category = c.req.query('category');
-  if (category) filter.category = category;
+  if (category) {
+    if (!(COMPLAINT_CATEGORIES as readonly string[]).includes(category)) {
+      return badRequest(c, 'Invalid category filter', 'INVALID_CATEGORY');
+    }
+    filter.category = category;
+  }
 
   const priority = c.req.query('priority');
-  if (priority) filter.priority = priority;
+  if (priority) {
+    if (!(COMPLAINT_PRIORITIES as readonly string[]).includes(priority)) {
+      return badRequest(c, 'Invalid priority filter', 'INVALID_PRIORITY');
+    }
+    filter.priority = priority;
+  }
 
   const roomIdQ = c.req.query('roomId');
   if (roomIdQ) {
     const parsed = parseId(roomIdQ);
     if (!parsed) return badRequest(c, 'Invalid roomId');
     filter.roomId = parsed;
+  }
+
+  // Search filter (title, description, or tenant user name)
+  const search = c.req.query('search')?.trim();
+  if (search) {
+    const matchingUsers = await User.find({
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+      ],
+    })
+      .select('_id')
+      .lean();
+
+    const matchingUserIds = matchingUsers.map((u) => u._id);
+    let matchingTenantIds: unknown[] = [];
+    if (matchingUserIds.length > 0) {
+      const matchingTenants = await Tenant.find(
+        safeFilter({
+          userId: { $in: matchingUserIds },
+        }),
+      )
+        .select('_id')
+        .lean();
+      matchingTenantIds = matchingTenants.map((t) => t._id);
+    }
+
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } },
+      ...(matchingTenantIds.length > 0 ? [{ tenantId: { $in: matchingTenantIds } }] : []),
+    ];
   }
 
   // Date range filtering
@@ -243,11 +400,7 @@ complaints.get('/', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate([
-        { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
-        { path: 'tenant', populate: { path: 'roomId', select: 'roomNumber' } },
-        { path: 'room', select: 'roomNumber' },
-      ])
+      .populate(complaintStayPopulate)
       .lean(),
     Complaint.countDocuments(filter as Record<string, unknown>),
   ]);
@@ -271,16 +424,10 @@ complaints.get('/:id', authGuard, async (c) => {
 
   const authUser = c.get('user');
 
-  const complaint = await Complaint.findById(id)
-    .populate([
-      { path: 'tenant', populate: { path: 'userId', select: 'name email phone' } },
-      { path: 'tenant', populate: { path: 'roomId', select: 'roomNumber' } },
-      { path: 'room', select: 'roomNumber' },
-    ])
-    .lean();
+  const complaint = await Complaint.findById(id).populate(complaintStayPopulate).lean();
   if (!complaint) return notFound(c, 'Complaint');
 
-  // CMP-authz: tenants may only read their own complaints
+  // CMP-authz: tenants may only read their own complaints; reject non-tenant/non-admin roles
   if (authUser.role === 'tenant') {
     const tenant = await Tenant.findOne({
       userId: authUser.sub,
@@ -296,6 +443,8 @@ complaints.get('/:id', authGuard, async (c) => {
     if (!tenant || complaintTenantId !== String(tenant._id)) {
       return notFound(c, 'Complaint');
     }
+  } else if (authUser.role !== 'admin') {
+    return notFound(c, 'Complaint');
   }
 
   return c.json({
@@ -316,6 +465,17 @@ complaints.put(
 
     const body = c.req.valid('json');
 
+    const existingComplaint = await Complaint.findById(id).lean();
+    if (!existingComplaint) return notFound(c, 'Complaint');
+
+    const transitionError = assertComplaintTransition(existingComplaint.status, body.status);
+    if (transitionError) {
+      return c.json(
+        { success: false, error: { code: 'INVALID_TRANSITION', message: transitionError } },
+        409,
+      );
+    }
+
     const updateData: Record<string, unknown> = {
       ...complaintStatusPatch(body.status as ComplaintStatus),
     };
@@ -330,6 +490,46 @@ complaints.put(
     }).lean();
 
     if (!complaint) return notFound(c, 'Complaint');
+
+    const adminId = c.get('user').sub;
+    await writeAuditLog({
+      userId: adminId,
+      action: 'complaint_status_change',
+      resource: 'complaint',
+      resourceId: id,
+      details: {
+        previousStatus: existingComplaint.status,
+        newStatus: body.status,
+        adminNotes: body.adminNotes,
+      },
+    });
+
+    // Notify tenant if status changed
+    if (existingComplaint.status !== body.status && existingComplaint.tenantId) {
+      try {
+        const tenantDoc = await Tenant.findById(existingComplaint.tenantId).lean();
+        if (tenantDoc && (tenantDoc as { userId?: unknown }).userId) {
+          const tenantUserId = String((tenantDoc as { userId: unknown }).userId);
+          await createNotification({
+            targetType: 'individual',
+            targetIds: [tenantUserId],
+            title: 'Complaint status updated',
+            body: `Your complaint "${existingComplaint.title}" status changed to ${body.status.replace(/_/g, ' ')}.`,
+            type: 'complaint_update',
+            data: { complaintId: id },
+          });
+        }
+      } catch {
+        // Notification failure should not block the status change
+      }
+    }
+
+    publishEvent('complaint_updated', {
+      complaintId: id,
+      status: body.status,
+      adminNotes: body.adminNotes,
+    });
+    void broadcastBadgesUpdate();
 
     return c.json({ success: true, data: complaint });
   },
@@ -372,6 +572,14 @@ complaints.post('/:id/photos', authGuard, zValidator('json', appendPhotosSchema)
   complaint.photos = merged;
   await complaint.save();
 
+  await writeAuditLog({
+    userId: authUser.sub,
+    action: 'update',
+    resource: 'complaint',
+    resourceId: id,
+    details: { photosAdded: body.photos.length, photoCount: merged.length },
+  });
+
   return c.json({ success: true, data: complaint });
 });
 
@@ -386,6 +594,22 @@ complaints.put(
     if (!id) return badRequest(c, 'Invalid complaint ID');
 
     const body = c.req.valid('json');
+    const existingComplaint = await Complaint.findById(id).lean();
+    if (!existingComplaint) return notFound(c, 'Complaint');
+
+    if (body.status !== undefined) {
+      const transitionError = assertComplaintTransition(
+        existingComplaint.status,
+        body.status as string,
+      );
+      if (transitionError) {
+        return c.json(
+          { success: false, error: { code: 'INVALID_TRANSITION', message: transitionError } },
+          409,
+        );
+      }
+    }
+
     const updateData: Record<string, unknown> = { ...body };
 
     if (body.status !== undefined) {
@@ -399,6 +623,45 @@ complaints.put(
 
     if (!complaint) return notFound(c, 'Complaint');
 
+    const adminId = c.get('user').sub;
+    await writeAuditLog({
+      userId: adminId,
+      action: 'update',
+      resource: 'complaint',
+      resourceId: id,
+      details: {
+        previousStatus: existingComplaint.status,
+        newStatus: complaint.status,
+        updatedFields: Object.keys(body),
+      },
+    });
+
+    // Notify tenant if status changed
+    if (body.status && existingComplaint.status !== body.status && existingComplaint.tenantId) {
+      try {
+        const tenantDoc = await Tenant.findById(existingComplaint.tenantId).lean();
+        if (tenantDoc && (tenantDoc as { userId?: unknown }).userId) {
+          const tenantUserId = String((tenantDoc as { userId: unknown }).userId);
+          await createNotification({
+            targetType: 'individual',
+            targetIds: [tenantUserId],
+            title: 'Complaint status updated',
+            body: `Your complaint "${existingComplaint.title}" status changed to ${body.status.replace(/_/g, ' ')}.`,
+            type: 'complaint_update',
+            data: { complaintId: id },
+          });
+        }
+      } catch {
+        // Notification failure should not block update
+      }
+    }
+
+    publishEvent('complaint_updated', {
+      complaintId: id,
+      status: complaint.status,
+    });
+    void broadcastBadgesUpdate();
+
     return c.json({ success: true, data: complaint });
   },
 );
@@ -410,6 +673,25 @@ complaints.delete('/:id', authGuard, adminOnly, async (c) => {
 
   const complaint = await Complaint.findByIdAndDelete(id);
   if (!complaint) return notFound(c, 'Complaint');
+
+  const adminId = c.get('user').sub;
+  await writeAuditLog({
+    userId: adminId,
+    action: 'delete',
+    resource: 'complaint',
+    resourceId: id,
+    details: {
+      title: complaint.title,
+      category: complaint.category,
+      tenantId: String(complaint.tenantId),
+    },
+  });
+
+  publishEvent('complaint_updated', {
+    complaintId: id,
+    deleted: true,
+  });
+  void broadcastBadgesUpdate();
 
   return c.json({ success: true, data: { message: 'Complaint deleted' } });
 });

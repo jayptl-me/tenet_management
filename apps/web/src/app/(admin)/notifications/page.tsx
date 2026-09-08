@@ -18,6 +18,7 @@ import {
   Waves,
   Utensils,
   Copy,
+  Download,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -31,6 +32,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { toast } from 'sonner';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 import {
@@ -113,11 +115,30 @@ function NotificationsContent() {
   const [total, setTotal] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [filterType, setFilterType] = useState<INotificationType | ''>('');
+  const [filterStatus, setFilterStatus] = useState<'' | 'unread' | 'all'>('');
+  const [deleteTarget, setDeleteTarget] = useState<INotification | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`notifications/${deleteTarget.id}`).json();
+      toast.success('Notification deleted successfully');
+      setDeleteTarget(null);
+      fetchHistory();
+    } catch {
+      toast.error('Failed to delete notification');
+    } finally {
+      setDeleting(false);
+    }
+  };
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const params: Record<string, string | number> = { page, limit: perPage };
       if (filterType) params.type = filterType;
+      if (filterStatus) params.status = filterStatus;
       const res = await api.get('notifications', { searchParams: params }).json<{
         success: boolean;
         data: INotification[];
@@ -130,7 +151,51 @@ function NotificationsContent() {
     } finally {
       setLoadingHistory(false);
     }
-  }, [page, perPage, filterType]);
+  }, [page, perPage, filterType, filterStatus]);
+
+  const handleExportCsv = () => {
+    if (notifications.length === 0) return;
+    const headers = [
+      'Title',
+      'Type',
+      'Target Type',
+      'Recipients Count',
+      'Unread Count',
+      'Sent Date',
+    ];
+    const escapeCsv = (val: unknown) => {
+      let str = String(val ?? '');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const rows = notifications.map((n) => [
+      escapeCsv(n.title),
+      escapeCsv(n.type),
+      escapeCsv(n.targetType),
+      escapeCsv(
+        n.targetType === 'all'
+          ? (n.recipientUserIds?.length ?? n.unreadBy?.length ?? 0)
+          : (n.targetIds?.length ?? 0),
+      ),
+      escapeCsv(n.unreadBy?.length ?? 0),
+      escapeCsv(n.sentAt ? new Date(n.sentAt).toISOString().slice(0, 10) : '—'),
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `notifications-history-${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (activeTab === 'history') {
@@ -264,7 +329,7 @@ function NotificationsContent() {
         <TableActions
           onView={() => router.push(`/notifications/${row.id}`)}
           onEdit={() => router.push(`/notifications/${row.id}/edit`)}
-          showDelete={false}
+          onDelete={() => setDeleteTarget(row)}
         />
       ),
       className: 'w-[130px]',
@@ -290,7 +355,7 @@ function NotificationsContent() {
           aria-selected={activeTab === 'compose'}
           aria-controls="panel-compose"
           onClick={() => setActiveTab('compose')}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-display font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'compose'
               ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
@@ -305,7 +370,7 @@ function NotificationsContent() {
           aria-selected={activeTab === 'history'}
           aria-controls="panel-history"
           onClick={() => setActiveTab('history')}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-[family:var(--font-display)] font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-display font-bold transition-all duration-[var(--transition-duration)] ${
             activeTab === 'history'
               ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
               : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
@@ -351,6 +416,12 @@ function NotificationsContent() {
                   </button>
                 ))}
               </div>
+              {form.targetType === 'all' && (
+                <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+                  Broadcasts facility-wide to all active PG residents (tenants). Excludes staff and
+                  guardians.
+                </p>
+              )}
             </div>
 
             {/* Target pickers (required when audience is not all) */}
@@ -407,7 +478,7 @@ function NotificationsContent() {
                         className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
                         title="Remove"
                       >
-                        <span className="max-w-[12rem] truncate font-[family:var(--font-mono)]">
+                        <span className="max-w-[12rem] truncate font-mono">
                           {id}
                         </span>
                         <span aria-hidden="true">x</span>
@@ -479,7 +550,7 @@ function NotificationsContent() {
                         href={whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 truncate text-xs font-[family:var(--font-mono)] text-[color:var(--color-brand-600)] underline"
+                        className="flex-1 truncate text-xs font-mono text-[color:var(--color-brand-600)] underline"
                       >
                         {whatsappUrl}
                       </a>
@@ -557,13 +628,36 @@ function NotificationsContent() {
                 setFilterType(e.target.value as INotificationType | '');
                 setPage(1);
               }}
-              className="min-h-8 w-auto min-w-[10rem] py-1.5 text-xs font-semibold"
+              className="min-h-8 w-auto min-w-[13rem] py-1.5 text-xs font-semibold"
               options={[
                 { value: '', label: 'All Types' },
                 ...typeOptions.map((opt) => ({ value: opt.value, label: opt.label })),
               ]}
             />
-            <span className="ml-auto text-xs font-[family:var(--font-mono)] text-[color:var(--color-text-muted)]">
+            <Select
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value as '' | 'unread' | 'all');
+                setPage(1);
+              }}
+              className="min-h-8 w-auto min-w-[10rem] py-1.5 text-xs font-semibold"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'unread', label: 'Unread only' },
+                { value: 'all', label: 'All (incl. read)' },
+              ]}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              disabled={notifications.length === 0}
+              className="flex items-center gap-1.5 text-xs font-medium"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+            <span className="ml-auto text-xs font-mono text-[color:var(--color-text-muted)]">
               {total} notification{total !== 1 ? 's' : ''}
             </span>
           </div>
@@ -622,7 +716,7 @@ function NotificationsContent() {
                   <TableActions
                     onView={() => router.push(`/notifications/${row.id}`)}
                     onEdit={() => router.push(`/notifications/${row.id}/edit`)}
-                    showDelete={false}
+                    onDelete={() => setDeleteTarget(row)}
                   />
                 </div>
               </div>
@@ -630,6 +724,17 @@ function NotificationsContent() {
           />
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete Notification"
+        message={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

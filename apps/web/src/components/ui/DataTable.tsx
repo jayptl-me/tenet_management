@@ -1,7 +1,7 @@
 'use client';
 
 import { clsx } from 'clsx';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { staggerContainer } from '@/lib/animations';
 import { Input } from './Input';
@@ -42,6 +42,13 @@ export interface DataTableProps<T> {
   animate?: boolean;
   /** When provided, on mobile (<768px) render each row as a card instead of a table */
   mobileCardRenderer?: (row: T) => React.ReactNode;
+  /** Row selection + contextual bulk action bar */
+  selectable?: boolean;
+  selectedKeys?: Set<string>;
+  onSelectionChange?: (keys: Set<string>) => void;
+  bulkActions?: React.ReactNode;
+  /** Slot rendered above the table (filter rows, tab strips, etc.). */
+  toolbar?: React.ReactNode;
 }
 
 const PER_PAGE_OPTIONS = [10, 25, 50, 100];
@@ -60,8 +67,6 @@ function SkeletonRow({ columns }: { columns: number }) {
   );
 }
 
-// ── Component ──────────────────────────────────────────
-
 // ── Mobile Card Skeleton ───────────────────────────────
 
 function MobileCardSkeleton() {
@@ -72,6 +77,8 @@ function MobileCardSkeleton() {
     </div>
   );
 }
+
+// ── Component ──────────────────────────────────────────
 
 export function DataTable<T>({
   columns,
@@ -88,22 +95,79 @@ export function DataTable<T>({
   className,
   animate = true,
   mobileCardRenderer,
+  selectable = false,
+  selectedKeys,
+  onSelectionChange,
+  bulkActions,
+  toolbar,
 }: DataTableProps<T>) {
   const pages = pagination ? Math.ceil(pagination.total / pagination.perPage) : 0;
+  const selection = selectedKeys ?? new Set<string>();
+  const pageSelectedCount = data.filter((row) => selection.has(keyExtractor(row))).length;
+  const allPageSelected = data.length > 0 && pageSelectedCount === data.length;
+  const somePageSelected = pageSelectedCount > 0 && !allPageSelected;
+
+  const toggleRow = (key: string) => {
+    if (!onSelectionChange) return;
+    const next = new Set(selection);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onSelectionChange(next);
+  };
+
+  const togglePage = () => {
+    if (!onSelectionChange) return;
+    const next = new Set(selection);
+    if (allPageSelected) {
+      for (const row of data) next.delete(keyExtractor(row));
+    } else {
+      for (const row of data) next.add(keyExtractor(row));
+    }
+    onSelectionChange(next);
+  };
+
+  const clearSelection = () => onSelectionChange?.(new Set<string>());
 
   const tableContent = (
     <>
-      {/* Search */}
-      {searchable && onSearchChange && (
-        <div className="relative max-w-sm">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
-          <Input
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9"
-          />
+      {/* Toolbar / search */}
+      {(searchable || toolbar) && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {searchable && onSearchChange && (
+            <div className="relative max-w-sm sm:w-72">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+              <Input
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                value={searchValue}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
+          {toolbar && <div className="flex flex-1 flex-wrap items-center gap-3">{toolbar}</div>}
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectable && selection.size > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] px-4 py-2.5"
+          role="region"
+          aria-label="Bulk actions"
+        >
+          <span className="text-[13px] font-bold text-[color:var(--color-brand-800)] tabular-nums">
+            {selection.size} selected
+          </span>
+          <div className="flex flex-wrap items-center gap-2">{bulkActions}</div>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--color-brand-700)] hover:underline"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear selection
+          </button>
         </div>
       )}
 
@@ -146,13 +210,27 @@ export function DataTable<T>({
       {/* Desktop Table (hidden on mobile when card view is active) */}
       <div
         className={clsx(
-          'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-sm)]',
+          'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]',
           mobileCardRenderer && 'hidden md:block',
         )}
       >
         <table className="w-full border-collapse bg-[color:var(--color-card-bg)]">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="bg-[color:var(--color-field-bg)]">
+              {selectable && (
+                <th className="w-10 border-b border-b-[color:var(--border-color)] px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = somePageSelected;
+                    }}
+                    onChange={togglePage}
+                    className="h-4 w-4 cursor-pointer accent-[color:var(--color-brand-500)]"
+                    aria-label="Select all rows on this page"
+                  />
+                </th>
+              )}
               {columns.map((col, i) => (
                 <th
                   key={i}
@@ -169,11 +247,11 @@ export function DataTable<T>({
           <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <SkeletonRow key={`skel-${i}`} columns={columns.length} />
+                <SkeletonRow key={`skel-${i}`} columns={columns.length + (selectable ? 1 : 0)} />
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-16 text-center">
+                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-16 text-center">
                   {emptyState ?? (
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
@@ -187,33 +265,48 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIdx) => (
-                <tr
-                  key={keyExtractor(row)}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
-                  className={clsx(
-                    'border-b border-b-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
-                    onRowClick && 'cursor-pointer hover:bg-[color:var(--color-brand-50)]',
-                    rowIdx % 2 === 0
-                      ? 'bg-[color:var(--color-card-bg)]'
-                      : 'bg-[color:var(--color-field-bg)]',
-                  )}
-                >
-                  {columns.map((col, colIdx) => (
-                    <td
-                      key={colIdx}
-                      className={clsx(
-                        'px-4 py-3 text-[13px] font-medium text-[color:var(--color-text-primary)]',
-                        col.className,
-                      )}
-                    >
-                      {typeof col.accessor === 'function'
-                        ? col.accessor(row)
-                        : String(row[col.accessor] ?? '')}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              data.map((row) => {
+                const rowKey = keyExtractor(row);
+                const isSelected = selection.has(rowKey);
+                return (
+                  <tr
+                    key={rowKey}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={clsx(
+                      'border-b border-b-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
+                      isSelected
+                        ? 'bg-[color:var(--color-brand-50)]'
+                        : 'bg-[color:var(--color-card-bg)] hover:bg-[color:var(--color-field-bg-hover)]',
+                      onRowClick && 'cursor-pointer',
+                    )}
+                  >
+                    {selectable && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(rowKey)}
+                          className="h-4 w-4 cursor-pointer accent-[color:var(--color-brand-500)]"
+                          aria-label={`Select row ${rowKey}`}
+                        />
+                      </td>
+                    )}
+                    {columns.map((col, colIdx) => (
+                      <td
+                        key={colIdx}
+                        className={clsx(
+                          'px-4 py-3 text-[13px] font-medium text-[color:var(--color-text-primary)]',
+                          col.className,
+                        )}
+                      >
+                        {typeof col.accessor === 'function'
+                          ? col.accessor(row)
+                          : String(row[col.accessor] ?? '')}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

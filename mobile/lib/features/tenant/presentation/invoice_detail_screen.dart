@@ -220,6 +220,39 @@ class _TenantInvoiceDetailScreenState
           ),
         ),
         const SizedBox(height: 16),
+        Builder(builder: (context) {
+          final t = inv['tenantId'];
+          if (t is! Map) return const SizedBox.shrink();
+          final user = t['userId'];
+          final room = t['roomId'];
+          final name = user is Map ? (user['name']?.toString() ?? '') : '';
+          final roomNo =
+              room is Map ? (room['roomNumber']?.toString() ?? '') : '';
+          final bed = t['bedId']?.toString() ?? '';
+          if (name.isEmpty && roomNo.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _sectionTitle(context, 'Billed Resident'),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      if (name.isNotEmpty) _kv(context, 'Tenant', name),
+                      if (roomNo.isNotEmpty)
+                        _kv(context, 'Room',
+                            bed.isNotEmpty ? '$roomNo · Bed $bed' : roomNo),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          );
+        }),
         _sectionTitle(context, 'Line Items'),
         Card(
           child: Column(
@@ -330,6 +363,29 @@ class _TenantInvoiceDetailScreenState
                     'Your calculated share',
                     formatMoney(_electricityReading!['tenantShare'] as num?),
                   ),
+                  if (((_electricityReading!['variance'] as num?)?.abs() ??
+                          0) >
+                      0.5) ...[
+                    const Divider(height: 16),
+                    _kv(
+                      context,
+                      'Bill variance',
+                      formatMoney(
+                          _electricityReading!['variance'] as num?),
+                    ),
+                    if (((_electricityReading!['varianceReason']
+                                    ?.toString() ??
+                                '')
+                            .isNotEmpty))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _electricityReading!['varianceReason'].toString(),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.grey, height: 1.4),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

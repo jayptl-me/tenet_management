@@ -1,6 +1,10 @@
 export interface ITenantDocuments {
   aadhaarUrl?: string;
+  aadhaarPublicId?: string;
   photoUrl?: string;
+  photoPublicId?: string;
+  isVerified?: boolean;
+  verifiedAt?: string;
 }
 
 export interface IEmergencyContact {

@@ -5,14 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { UserRound, CalendarDays, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
-import { FormGrid } from '@/components/ui/FormSection';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 import { parseApiError } from '@/lib/errorParser';
 
@@ -77,14 +79,18 @@ export default function NewLaundrySlotPage() {
           />
         }
       >
-        <div className="space-y-5">
+        <FormSection
+          title="Resident"
+          icon={<UserRound />}
+          description="Only active residents can hold slots"
+        >
           <Controller
             name="tenantId"
             control={control}
             render={({ field }) => (
               <ResourceSelect
                 label="Tenant"
-                endpoint="tenants"
+                endpoint="tenants?isActive=true"
                 value={field.value}
                 onChange={field.onChange}
                 placeholder="Select tenant..."
@@ -92,14 +98,21 @@ export default function NewLaundrySlotPage() {
                 valueKey="_id"
                 labelKey={tenantLabel}
                 sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
+                dataPath="data"
               />
             )}
           />
+        </FormSection>
 
+        <FormSection
+          title="Schedule"
+          icon={<CalendarDays />}
+          description="Facility allows 5 concurrent bookings per slot time"
+          divided
+        >
           <FormGrid>
-            <Input
+            <DatePicker
               label="Slot Date"
-              type="date"
               error={errors.slotDate?.message}
               {...register('slotDate')}
             />
@@ -110,7 +123,14 @@ export default function NewLaundrySlotPage() {
               {...register('slotTime')}
             />
           </FormGrid>
+        </FormSection>
 
+        <FormSection
+          title="Load"
+          icon={<Package />}
+          description="Items and handling notes (max 300 chars)"
+          divided
+        >
           <FormGrid>
             <Input
               label="Number of Items"
@@ -127,7 +147,7 @@ export default function NewLaundrySlotPage() {
               {...register('notes')}
             />
           </FormGrid>
-        </div>
+        </FormSection>
       </FormCard>
     </FormPage>
   );

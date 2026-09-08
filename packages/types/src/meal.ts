@@ -31,6 +31,7 @@ export interface IAdminMealFeedbackCreate {
   date: string;
   mealType: MealType;
   rating: number;
+  categories?: MealFeedbackCategory[];
   comment?: string;
 }
 

@@ -14,7 +14,9 @@ export interface IEnquiry {
   status: IEnquiryStatus;
   source: IEnquirySource;
   notes?: string;
+  convertedTenantId?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface IEnquiryCreate {
@@ -24,4 +26,12 @@ export interface IEnquiryCreate {
   preferredSharing: IPreferredSharing;
   message?: string;
   source?: IEnquirySource;
+  notes?: string;
+}
+
+export interface IEnquiryStats {
+  byStatus: Record<IEnquiryStatus, number>;
+  bySource: Record<IEnquirySource, number>;
+  total: number;
+  conversionRate: number;
 }

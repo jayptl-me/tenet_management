@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Utensils, MessageSquare } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormPage } from '@/components/ui/FormPage';
@@ -49,15 +50,12 @@ interface MealFeedbackDetail {
   status: string;
   date?: string;
   categories?: string[];
-  tenantId?: {
+  tenantId?: unknown;
+  tenant?: {
     _id?: string;
-    userId?: { name?: string };
-    roomId?: { roomNumber?: string };
-  };
-  menuId?: {
-    _id?: string;
-    date?: string;
-    meals?: Record<string, unknown>;
+    bedId?: string | null;
+    user?: { name?: string };
+    room?: { roomNumber?: string };
   };
   createdAt: string;
 }
@@ -97,8 +95,8 @@ export default function EditMealFeedbackPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load meal feedback');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -108,12 +106,22 @@ export default function EditMealFeedbackPage() {
     try {
       await api.put(`meals/${id}`, { json: data }).json();
       router.push('/meals');
-    } catch {
-      setSubmitError('Failed to update meal feedback');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
-  const tenant = feedbackData?.tenantId;
+  interface MealTenant {
+    user?: { name?: string };
+    room?: { roomNumber?: string };
+    userId?: { name?: string };
+    roomId?: { roomNumber?: string };
+  }
+
+  const tenant = (feedbackData?.tenant ??
+    (typeof feedbackData?.tenantId === 'object' && feedbackData?.tenantId !== null
+      ? feedbackData.tenantId
+      : null)) as MealTenant | null;
   const err = errors as Record<string, { message?: string }>;
 
   return (
@@ -129,8 +137,11 @@ export default function EditMealFeedbackPage() {
         {tenant && (
           <DetailCard title="Submitted by" icon={<Utensils />}>
             <DetailList>
-              <DetailRow label="Name" value={tenant.userId?.name ?? 'N/A'} />
-              <DetailRow label="Room" value={tenant.roomId?.roomNumber ?? 'N/A'} />
+              <DetailRow label="Name" value={tenant.user?.name ?? tenant.userId?.name ?? 'N/A'} />
+              <DetailRow
+                label="Room"
+                value={tenant.room?.roomNumber ?? tenant.roomId?.roomNumber ?? 'N/A'}
+              />
               <DetailRow
                 label="Date"
                 value={

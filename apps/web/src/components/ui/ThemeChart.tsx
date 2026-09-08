@@ -3,6 +3,13 @@
 import { useId, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { chartTokens } from '@/lib/chart-theme';
+import { Sparkline } from '@/components/ui/Sparkline';
+import { DonutChart } from '@/components/ui/DonutChart';
+
+// Canonical chart primitives re-exported under their existing names.
+// (Legacy ThemeChart-local Sparkline/Donut definitions were removed in
+// favor of components/ui/Sparkline and components/ui/DonutChart.)
+export { Sparkline, DonutChart };
 
 // ── Types ──────────────────────────────────────────────
 
@@ -316,149 +323,4 @@ export function BarChart({
   );
 }
 
-// ── Mini Sparkline (legacy export from ThemeChart) ────
 
-export interface SparklineProps {
-  data: number[];
-  width?: number;
-  height?: number;
-  color?: string;
-  strokeWidth?: number;
-  showDot?: boolean;
-}
-
-export function Sparkline({
-  data,
-  width = 80,
-  height = 32,
-  color,
-  strokeWidth = 2,
-  showDot = true,
-}: SparklineProps) {
-  const lineColor = color ?? chartTokens.bar;
-
-  if (data.length < 2) {
-    return (
-      <div
-        style={{ width, height }}
-        className="flex items-center justify-center text-[10px] text-[color:var(--color-text-muted)]"
-      >
-        —
-      </div>
-    );
-  }
-
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const padV = 4;
-  const plotH = height - padV * 2;
-
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * (width - 4) + 2;
-    const y = padV + plotH - ((val - min) / range) * plotH;
-    return `${x},${y}`;
-  });
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      className="overflow-visible"
-      role="img"
-      aria-label="Sparkline"
-    >
-      <polyline
-        points={points.join(' ')}
-        fill="none"
-        stroke={lineColor}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {showDot && (
-        <circle
-          cx={Number(points[points.length - 1].split(',')[0])}
-          cy={Number(points[points.length - 1].split(',')[1])}
-          r={3}
-          fill={lineColor}
-          stroke="var(--color-card-bg)"
-          strokeWidth={1.5}
-        />
-      )}
-    </svg>
-  );
-}
-
-// ── Donut / Ring Chart (single-value) ─────────────────
-
-export interface DonutChartProps {
-  value: number;
-  max?: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  bgColor?: string;
-  label?: string;
-  sublabel?: string;
-}
-
-export function DonutChart({
-  value,
-  max = 100,
-  size = 64,
-  strokeWidth = 6,
-  color,
-  bgColor,
-  label,
-  sublabel,
-}: DonutChartProps) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const pct = Math.min(value / max, 1);
-  const offset = circumference * (1 - pct);
-  const center = size / 2;
-
-  return (
-    <div className="inline-flex flex-col items-center gap-1">
-      <svg
-        width={size}
-        height={size}
-        className="-rotate-90"
-        role="img"
-        aria-label={`${value} of ${max}`}
-      >
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke={bgColor ?? chartTokens.track}
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={center}
-          cy={center}
-          r={radius}
-          fill="none"
-          stroke={color ?? chartTokens.bar}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none"
-        />
-      </svg>
-      {label && (
-        <span className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
-          {label}
-        </span>
-      )}
-      {sublabel && (
-        <span className="text-xs font-[family:var(--font-body)] text-[color:var(--color-text-muted)]">
-          {sublabel}
-        </span>
-      )}
-    </div>
-  );
-}

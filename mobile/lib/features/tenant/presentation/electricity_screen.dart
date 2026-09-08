@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/network/open_bytes.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -290,6 +291,105 @@ class _TenantElectricityScreenState
                   ),
                 ),
                 const SizedBox(height: 20),
+                if ((((selectedReading['variance'] as num?)?.abs()) ?? 0) >
+                    0.5) ...[
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 16, color: AppTheme.muted),
+                              SizedBox(width: 6),
+                              Text(
+                                'Bill reconciliation note',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Room readings total ${formatMoney(selectedReading['computedRoomTotal'] as num? ?? selectedReading['roomTotalAmount'] as num?)} vs bill total. Variance: ${formatMoney(selectedReading['variance'] as num?)}.',
+                            style: const TextStyle(fontSize: 13, height: 1.4),
+                          ),
+                          if ('${selectedReading['varianceReason'] ?? ''}'
+                              .isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              selectedReading['varianceReason'].toString(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.muted,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if ('${selectedReading['billImageUrl'] ?? ''}'
+                    .isNotEmpty) ...[
+                  Builder(builder: (context) {
+                    final proofUrl =
+                        selectedReading['billImageUrl'].toString();
+                    final isPdf =
+                        proofUrl.toLowerCase().contains('.pdf');
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.receipt_long_outlined,
+                                    size: 16, color: AppTheme.muted),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Bill proof',
+                                  style: TextStyle(fontWeight: FontWeight.w800),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (!isPdf)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  proofUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Text(
+                                    'Preview unavailable — open the proof externally.',
+                                    style: TextStyle(
+                                        fontSize: 12, height: 1.4),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  launchExternalUri(proofUrl),
+                              icon: const Icon(
+                                  Icons.open_in_new,
+                                  size: 16),
+                              label: Text(isPdf
+                                  ? 'Open bill PDF'
+                                  : 'Open full image'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                ],
               ],
 
               // History list

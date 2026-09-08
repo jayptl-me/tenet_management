@@ -10,7 +10,9 @@ export interface IEnquiryDocument extends Document {
   status: string;
   source: string;
   notes?: string;
+  convertedTenantId?: Schema.Types.ObjectId | string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const enquirySchema = new Schema<IEnquiryDocument>(
@@ -58,9 +60,14 @@ const enquirySchema = new Schema<IEnquiryDocument>(
       maxlength: [1000, 'Notes cannot exceed 1000 characters'],
       default: '',
     },
+    convertedTenantId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Tenant',
+      default: null,
+    },
   },
   {
-    timestamps: { createdAt: true, updatedAt: false },
+    timestamps: { createdAt: true, updatedAt: true },
     toJSON: {
       virtuals: true,
       transform(_doc, ret: Record<string, unknown>) {
@@ -75,6 +82,7 @@ const enquirySchema = new Schema<IEnquiryDocument>(
 );
 
 enquirySchema.index({ status: 1 });
+enquirySchema.index({ source: 1 });
 enquirySchema.index({ createdAt: -1 });
 
 export const Enquiry: Model<IEnquiryDocument> = model<IEnquiryDocument>('Enquiry', enquirySchema);

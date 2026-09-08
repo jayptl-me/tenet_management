@@ -34,10 +34,10 @@ export const fieldErrorClass = 'text-[12px] font-medium text-[color:var(--color-
 
 export const fieldHelperClass = 'text-[12px] font-medium text-[color:var(--color-text-secondary)]';
 
-/** Elevated card surface used by forms, tables, detail panels, dashboard panels. */
 export const surfaceCardClass = clsx(
   'rounded-[var(--radius-xl)] border border-[color:var(--border-color)]',
   'bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]',
+  'transition-[border-color,box-shadow] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
 );
 
 /** Dashboard / list panel surface (alias for consistent SaaS panels). */
@@ -54,7 +54,7 @@ export const surfaceNestedClass = clsx(
  * Sentence-case product hierarchy (not tiny tracked uppercase eyebrows).
  */
 export const formSectionTitleClass = clsx(
-  'font-[family:var(--font-display)] text-sm font-bold tracking-tight',
+  'font-display text-sm font-bold tracking-tight',
   'text-[color:var(--color-text-primary)]',
 );
 

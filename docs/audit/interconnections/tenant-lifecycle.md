@@ -43,21 +43,21 @@ Hard DELETE /tenants/:id
 
 ## Code paths (source files)
 
-| Concern                   | Path                                                       |
-| ------------------------- | ---------------------------------------------------------- |
-| API routes                | `apps/api/src/routes/tenants.ts`                           |
-| Tenant model / indexes    | `apps/api/src/models/tenant.ts`                            |
-| Room beds                 | `apps/api/src/models/room.ts`                              |
-| Guardian create           | `apps/api/src/routes/guardians.ts`                         |
-| Admin new                 | `apps/web/src/app/(admin)/tenants/new/page.tsx`            |
-| Admin detail hub          | `apps/web/src/app/(admin)/tenants/[id]/page.tsx`           |
-| Admin edit / transfer     | `apps/web/src/app/(admin)/tenants/[id]/edit/page.tsx`      |
-| Admin list                | `apps/web/src/app/(admin)/tenants/page.tsx`                |
-| Temp password UI          | `apps/web/src/components/ui/TempCredentialsDialog.tsx`     |
-| Bed picker (create)       | OccupancyBedPicker (new page)                              |
-| Flutter portal            | `mobile/lib/features/tenant/**`, auth rejects admin        |
-| Related feature audit     | `docs/audit/features/tenants.md`                           |
-| Occupancy interconnection | `docs/audit/interconnections/occupancy-bed-consistency.md` |
+| Concern                   | Path                                                         |
+| ------------------------- | ------------------------------------------------------------ |
+| API routes                | `apps/api/src/routes/tenants.ts`                             |
+| Tenant model / indexes    | `apps/api/src/models/tenant.ts`                              |
+| Room beds                 | `apps/api/src/models/room.ts`                                |
+| Guardian create           | `apps/api/src/routes/guardians.ts`                           |
+| Admin new                 | `apps/web/src/app/(admin)/tenants/new/page.tsx`              |
+| Admin detail hub          | `apps/web/src/app/(admin)/tenants/[id]/page.tsx`             |
+| Admin edit / transfer     | `apps/web/src/app/(admin)/tenants/[id]/edit/page.tsx`        |
+| Admin list                | `apps/web/src/app/(admin)/tenants/page.tsx`                  |
+| Temp password UI          | `apps/web/src/components/ui/TempCredentialsDialog.tsx`       |
+| Bed picker (create)       | OccupancyBedPicker (new page)                                |
+| Flutter portal            | `mobile/lib/features/tenant/**`, auth rejects admin          |
+| Related feature audit     | `docs/audit/features/tenants_audit_pass1_20260907-230647.md` |
+| Occupancy interconnection | `docs/audit/interconnections/occupancy-bed-consistency.md`   |
 
 ### API surface (verified)
 

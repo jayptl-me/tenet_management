@@ -8,8 +8,10 @@ import { notFound, badRequest, conflict, parseId, safeFilter } from '../lib/rout
 import { ServiceStatus } from '../models/serviceStatus.js';
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
+import { Tenant } from '../models/tenant.js';
 import { AppConfig } from '../models/appConfig.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { broadcast } from '../lib/eventBus.js';
 
 // ── Helper: derive complaint categories from AppConfig amenity definitions ──
 async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
@@ -32,7 +34,7 @@ async function isValidFloorServiceType(serviceType: string): Promise<boolean> {
   return definitions.some((d) => d.key === serviceType && d.isPerFloor === true);
 }
 
-// ── Helper: attach complaint counts per service per floor (dynamic) ──
+// ── Helper: attach complaint counts per service per floor (dynamic, batched) ──
 async function enrichWithComplaintCounts(
   services_list: Array<{
     floorId?: { _id: string } | string;
@@ -44,36 +46,60 @@ async function enrichWithComplaintCounts(
 
   const serviceToCategory = await getAmenityComplaintMap();
 
-  const enriched = await Promise.all(
-    services_list.map(async (svc) => {
-      const floorId =
-        typeof svc.floorId === 'object' && svc.floorId?._id
-          ? String(svc.floorId._id)
-          : typeof svc.floorId === 'string'
-            ? svc.floorId
-            : null;
+  const floorIds = Array.from(
+    new Set(
+      services_list.map((svc) => {
+        const f = svc.floorId;
+        return typeof f === 'object' && f?._id ? String(f._id) : typeof f === 'string' ? f : '';
+      }),
+    ),
+  ).filter((id) => id !== '');
 
-      if (!floorId) {
-        return { ...svc, openComplaintCount: 0 };
+  // One query: all rooms on the involved floors, grouped by floor.
+  const rooms = await Room.find(safeFilter({ floorId: { $in: floorIds } }))
+    .select('_id floorId')
+    .lean();
+  const roomsByFloor = new Map<string, string[]>();
+  for (const r of rooms as unknown as Array<{ _id: unknown; floorId: unknown }>) {
+    const f = String(r.floorId);
+    const list = roomsByFloor.get(f) ?? [];
+    list.push(String(r._id));
+    roomsByFloor.set(f, list);
+  }
+  const allRoomIds = Array.from(roomsByFloor.values()).flat();
+
+  // One aggregate: open complaint counts by (room, category).
+  const counts = allRoomIds.length
+    ? ((await Complaint.aggregate([
+        {
+          $match: {
+            status: { $in: ['open', 'in_progress'] },
+            roomId: { $in: allRoomIds.map((id) => new mongoose.Types.ObjectId(id)) },
+          },
+        },
+        { $group: { _id: { room: '$roomId', cat: '$category' }, n: { $sum: 1 } } },
+      ])) as Array<{ _id: { room: unknown; cat: string }; n: number }>)
+    : [];
+  const countByRoomCat = new Map<string, number>();
+  for (const row of counts) {
+    countByRoomCat.set(`${String(row._id.room)}:${row._id.cat}`, row.n);
+  }
+
+  return services_list.map((svc) => {
+    const f = svc.floorId;
+    const floorId =
+      typeof f === 'object' && f?._id ? String(f._id) : typeof f === 'string' ? f : null;
+    if (!floorId) return { ...svc, openComplaintCount: 0 };
+    const categories = serviceToCategory[svc.serviceType] ?? [svc.serviceType];
+    const roomIds = roomsByFloor.get(floorId) ?? [];
+    let openComplaintCount = 0;
+    for (const roomId of roomIds) {
+      for (const cat of categories) {
+        openComplaintCount += countByRoomCat.get(`${roomId}:${cat}`) ?? 0;
       }
-
-      const categories = serviceToCategory[svc.serviceType] ?? [svc.serviceType];
-
-      const roomIds = await Room.find({ floorId: new mongoose.Types.ObjectId(floorId) } as Record<
-        string,
-        unknown
-      >).distinct('_id');
-      const floorComplaintCount = await Complaint.countDocuments({
-        status: { $in: ['open', 'in_progress'] },
-        category: { $in: categories },
-        roomId: { $in: roomIds },
-      } as Record<string, unknown>);
-
-      return { ...svc, openComplaintCount: floorComplaintCount };
-    }),
-  );
-
-  return enriched;
+    }
+    return { ...svc, openComplaintCount };
+  });
 }
 
 const services = new Hono();
@@ -214,6 +240,26 @@ services.post(
         .populate('floor')
         .populate('lastUpdatedBy', 'name email')
         .lean();
+
+      await writeAuditLog({
+        userId: user.sub,
+        action: 'create',
+        resource: 'service',
+        resourceId: createdId,
+        details: {
+          floorId: body.floorId,
+          serviceType: body.serviceType,
+          status: body.status,
+          note: body.note,
+        },
+      });
+
+      broadcast({
+        event: 'service_update',
+        data: populated,
+        timestamp: new Date().toISOString(),
+      });
+
       return c.json({ success: true, data: populated }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create service status';
@@ -237,7 +283,35 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   const service = await ServiceStatus.findById(id);
   if (!service) return notFound(c, 'ServiceStatus');
 
+  // Non-admin reporters may only flag their own floor (guardians cannot report).
   if (user.role !== 'admin') {
+    if (user.role !== 'tenant') {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Only admins or tenants can report services.' },
+        },
+        403,
+      );
+    }
+    const tenantDoc = await Tenant.findOne(safeFilter({ userId: user.sub, isActive: true })).lean();
+    const roomDoc = tenantDoc
+      ? await Room.findById((tenantDoc as unknown as Record<string, unknown>).roomId)
+          .select('floorId')
+          .lean()
+      : null;
+    const ownFloorId = roomDoc
+      ? String((roomDoc as unknown as Record<string, unknown>).floorId)
+      : '';
+    if (!ownFloorId || ownFloorId !== String(service.floorId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only report services on your own floor.' },
+        },
+        403,
+      );
+    }
     if (body.status === 'operational') {
       return badRequest(
         c,
@@ -248,6 +322,7 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   }
 
   const previousStatus = service.status;
+  const previousNote = service.note;
   service.status = body.status;
   service.lastUpdatedBy = user.sub as unknown as typeof service.lastUpdatedBy;
   service.lastUpdatedAt = new Date();
@@ -256,7 +331,7 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
   }
   await service.save();
 
-  if (previousStatus !== body.status) {
+  if (previousStatus !== body.status || previousNote !== service.note) {
     await writeAuditLog({
       userId: user.sub,
       action: 'update',
@@ -265,6 +340,7 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
       details: {
         previousStatus,
         status: body.status,
+        noteChanged: previousNote !== service.note,
         serviceType: service.serviceType,
         floorId: String(service.floorId ?? ''),
       },
@@ -275,13 +351,20 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
     .populate('floor')
     .populate('lastUpdatedBy', 'name email')
     .lean();
+
+  broadcast({
+    event: 'service_update',
+    data: populated,
+    timestamp: new Date().toISOString(),
+  });
+
   return c.json({ success: true, data: populated });
 });
 
 // ── GET /services/:id — single service status with complaint count ──
 services.get('/:id', authGuard, async (c) => {
-  const id = c.req.param('id');
-  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid service ID');
 
   const service = await ServiceStatus.findById(id)
     .populate('floor')
@@ -308,8 +391,8 @@ services.put(
     }),
   ),
   async (c) => {
-    const id = c.req.param('id');
-    if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid service ID');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = c.req.valid('json') as any;
 
@@ -356,26 +439,32 @@ services.put(
     if (body.note !== undefined) service.note = body.note;
     await service.save();
 
-    if (body.status !== undefined && previousStatus !== body.status) {
-      const user = c.get('user');
-      await writeAuditLog({
-        userId: user.sub,
-        action: 'update',
-        resource: 'service',
-        resourceId: id,
-        details: {
-          previousStatus,
-          status: body.status,
-          serviceType: service.serviceType,
-          source: 'full',
-        },
-      });
-    }
+    const user = c.get('user');
+    await writeAuditLog({
+      userId: user.sub,
+      action: 'update',
+      resource: 'service',
+      resourceId: id,
+      details: {
+        previousStatus,
+        status: service.status,
+        serviceType: service.serviceType,
+        note: service.note,
+        source: 'full',
+      },
+    });
 
     const populated = await ServiceStatus.findById(service._id)
       .populate('floor')
       .populate('lastUpdatedBy', 'name email')
       .lean();
+
+    broadcast({
+      event: 'service_update',
+      data: populated,
+      timestamp: new Date().toISOString(),
+    });
+
     return c.json({ success: true, data: populated });
   },
 );
@@ -386,6 +475,25 @@ services.delete('/:id', authGuard, adminOnly, async (c) => {
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid service ID');
   const service = await ServiceStatus.findByIdAndDelete(id);
   if (!service) return notFound(c, 'Service');
+
+  const user = c.get('user');
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'service',
+    resourceId: id,
+    details: {
+      serviceType: service.serviceType,
+      floorId: String(service.floorId ?? ''),
+    },
+  });
+
+  broadcast({
+    event: 'service_update',
+    data: { id, deleted: true },
+    timestamp: new Date().toISOString(),
+  });
+
   return c.json({ success: true, data: { message: 'Service deleted' } });
 });
 

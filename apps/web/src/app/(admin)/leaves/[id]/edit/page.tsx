@@ -1,16 +1,30 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { CalendarDays, UserRound, Hash, Check, X } from 'lucide-react';
+import Link from 'next/link';
+import {
+  CalendarDays,
+  UserRound,
+  Phone,
+  DoorOpen,
+  Building2,
+  BedDouble,
+  Check,
+  X,
+  ExternalLink,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { LeaveAttendanceImpact } from '@/components/ui/LeaveAttendanceImpact';
 import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
@@ -18,14 +32,16 @@ interface LeaveDetail {
   _id: string;
   fromDate: string;
   toDate: string;
+  startDate?: string;
+  endDate?: string;
   reason: string;
   status: string;
   adminNotes?: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { _id: string; name: string; phone: string };
-    room?: { _id: string; roomNumber: string };
-    bedId?: string;
+    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
   };
   approvedAt?: string;
   approvedByName?: string;
@@ -50,7 +66,7 @@ function daysBetween(from: string, to: string): number {
   return Math.max(1, Math.floor((t.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 }
 
-function LeaveForm() {
+export default function EditLeavePage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -70,7 +86,9 @@ function LeaveForm() {
         setLeaveData(res.data);
         setAdminNotes(res.data.adminNotes ?? '');
       })
-      .catch(() => setSubmitError('Failed to load leave application'))
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -78,10 +96,10 @@ function LeaveForm() {
     setActionLoading('approve');
     setSubmitError('');
     try {
-      await api.put(`leaves/${id}/approve`).json();
-      router.push('/leaves');
-    } catch {
-      setSubmitError('Failed to approve leave');
+      await api.put(`leaves/${id}/approve`, { json: {} }).json();
+      router.push(`/leaves/${id}`);
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     } finally {
       setActionLoading(null);
     }
@@ -96,21 +114,23 @@ function LeaveForm() {
           json: { adminNotes: adminNotes.trim() || undefined },
         })
         .json();
-      router.push('/leaves');
-    } catch {
-      setSubmitError('Failed to reject leave');
+      router.push(`/leaves/${id}`);
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     } finally {
       setActionLoading(null);
     }
   };
 
   const tenant = leaveData?.tenant;
+  const from = leaveData?.fromDate ?? '';
+  const to = leaveData?.toDate ?? '';
 
   return (
     <FormPage
-      title="Leave Application"
+      title="Review Leave"
       description="Approve or reject this leave request"
-      backHref="/leaves"
+      backHref={leaveData ? `/leaves/${leaveData._id}` : '/leaves'}
       error={submitError}
       isLoading={isLoading}
       maxWidth="3xl"
@@ -120,17 +140,62 @@ function LeaveForm() {
           {tenant && (
             <DetailCard title="Applicant" icon={<UserRound />}>
               <DetailList>
-                <DetailRow label="Name" value={tenant.user?.name ?? 'N/A'} />
-                <DetailRow label="Phone" value={tenant.user?.phone ?? 'N/A'} />
+                <DetailRow
+                  label="Name"
+                  value={
+                    tenant._id ? (
+                      <Link
+                        href={`/tenants/${tenant._id}`}
+                        className="inline-flex items-center gap-1 font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      >
+                        {tenant.user?.name ?? 'View tenant'}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      (tenant.user?.name ?? 'N/A')
+                    )
+                  }
+                />
+                <DetailRow
+                  label="Phone"
+                  value={
+                    <span className="inline-flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {tenant.user?.phone ?? 'N/A'}
+                    </span>
+                  }
+                />
                 <DetailRow
                   label="Room & Bed"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <DoorOpen className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
                       {tenant.room?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
                     </span>
                   }
                 />
+                {tenant.room?.floor?.label && (
+                  <DetailRow
+                    label="Floor"
+                    value={
+                      <span className="inline-flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {tenant.room.floor.label}
+                      </span>
+                    }
+                  />
+                )}
+                {tenant.bedId && (
+                  <DetailRow
+                    label="Bed"
+                    value={
+                      <span className="inline-flex items-center gap-1.5">
+                        <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {tenant.bedId}
+                      </span>
+                    }
+                  />
+                )}
               </DetailList>
             </DetailCard>
           )}
@@ -144,11 +209,10 @@ function LeaveForm() {
                   </p>
                   <p className="mt-1 flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
                     <CalendarDays className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-                    {formatDate(leaveData.fromDate)} — {formatDate(leaveData.toDate)}
+                    {formatDate(from)} — {formatDate(to)}
                   </p>
                   <p className="mt-0.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
-                    {daysBetween(leaveData.fromDate, leaveData.toDate)} day
-                    {daysBetween(leaveData.fromDate, leaveData.toDate) !== 1 ? 's' : ''}
+                    {daysBetween(from, to)} day{daysBetween(from, to) !== 1 ? 's' : ''} inclusive
                   </p>
                 </div>
 
@@ -156,19 +220,12 @@ function LeaveForm() {
                   <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                     Status
                   </p>
-                  <span
-                    className={clsx(
-                      'mt-1.5 inline-block rounded-full px-3 py-1 text-xs font-bold',
-                      leaveData.status === 'pending' &&
-                        'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-                      leaveData.status === 'approved' &&
-                        'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
-                      leaveData.status === 'rejected' &&
-                        'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-                    )}
-                  >
-                    {leaveData.status.charAt(0).toUpperCase() + leaveData.status.slice(1)}
-                  </span>
+                  <div className="mt-1.5">
+                    <StatusBadge
+                      variant={statusToVariant(leaveData.status)}
+                      label={leaveData.status.replace(/_/g, ' ')}
+                    />
+                  </div>
                   {leaveData.approvedByName && (
                     <p className="mt-1 text-xs font-medium text-[color:var(--color-text-muted)]">
                       by {leaveData.approvedByName}
@@ -177,6 +234,14 @@ function LeaveForm() {
                   )}
                 </div>
               </FormGrid>
+              <div className={clsx(surfaceNestedClass, 'mt-4 p-4')}>
+                <LeaveAttendanceImpact
+                  tenantId={tenant?._id}
+                  fromDate={from}
+                  toDate={to}
+                  status={leaveData.status}
+                />
+              </div>
             </FormSection>
 
             <FormSection title="Reason" divided>
@@ -212,7 +277,7 @@ function LeaveForm() {
             {leaveData.status === 'pending' && (
               <FormActions
                 loading={false}
-                cancelHref="/leaves"
+                cancelHref={`/leaves/${leaveData._id}`}
                 submitLabel="Approve"
                 hideSubmit
                 divided
@@ -242,7 +307,13 @@ function LeaveForm() {
             )}
 
             {leaveData.status !== 'pending' && (
-              <FormActions loading={false} cancelHref="/leaves" submitLabel="" hideSubmit divided />
+              <FormActions
+                loading={false}
+                cancelHref={`/leaves/${leaveData._id}`}
+                submitLabel=""
+                hideSubmit
+                divided
+              />
             )}
 
             {leaveData.adminNotes && (
@@ -258,19 +329,5 @@ function LeaveForm() {
         </div>
       )}
     </FormPage>
-  );
-}
-
-export default function EditLeavePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
-        </div>
-      }
-    >
-      <LeaveForm />
-    </Suspense>
   );
 }

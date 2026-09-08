@@ -6,6 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -104,8 +105,8 @@ export default function EditGuardianPage() {
     try {
       await api.put(`guardians/${id}`, { json: payload }).json();
       router.push('/guardians');
-    } catch {
-      setSubmitError('Failed to update guardian. Check phone format (+91...) and try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -195,13 +196,11 @@ export default function EditGuardianPage() {
           description="Active status (emergency is derived from relation)"
           divided
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6">
-            <Checkbox
-              label="Emergency contact (father/mother)"
-              checked={isEmergencyContact}
-              disabled
-              onChange={() => undefined}
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
+            <p className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
+              Emergency contact: {isEmergencyContact ? 'Yes (father/mother)' : 'No'} — change the
+              relation above to update it.
+            </p>
             <Checkbox label="Active" error={errors.isActive?.message} {...register('isActive')} />
           </div>
         </FormSection>

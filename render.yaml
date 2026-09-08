@@ -4,6 +4,7 @@ services:
     runtime: bun
     buildCommand: cd apps/api && bun install && bun run build
     startCommand: cd apps/api && bun run start
+    healthCheckPath: /api/v1/health
     envVars:
       - key: PORT
         value: 8000
@@ -14,6 +15,8 @@ services:
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CRON_SECRET
         generateValue: true
       - key: CLOUDINARY_CLOUD_NAME
         sync: false

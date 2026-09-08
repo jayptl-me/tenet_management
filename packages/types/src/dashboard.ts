@@ -1,5 +1,6 @@
 export interface IDashboardOccupancyStats {
   totalRooms: number;
+  totalBeds: number;
   occupiedBeds: number;
   vacancyRate: number;
 }
@@ -25,6 +26,8 @@ export interface IDashboardServiceStats {
 
 export interface IDashboardEnquiryStats {
   pending: number;
+  contacted?: number;
+  newThisWeek?: number;
 }
 
 export interface IRevenueHistoryPoint {
@@ -93,10 +96,27 @@ export interface IDashboardRecent {
   enquiries: IDashboardEnquiryRecent[];
 }
 
+export interface IComplaintSlaMetrics {
+  aging: {
+    under24h: number;
+    between24And48h: number;
+    over48h: number;
+  };
+  priority: {
+    urgent: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  avgResolutionHours: number | null;
+  slaComplianceRate: number;
+}
+
 export interface IDashboardStats {
   occupancy: IDashboardOccupancyStats;
   revenue: IDashboardRevenueStats;
   complaints: IDashboardComplaintStats;
+  complaintSla?: IComplaintSlaMetrics;
   services: IDashboardServiceStats;
   enquiries: IDashboardEnquiryStats;
   recent: IDashboardRecent;

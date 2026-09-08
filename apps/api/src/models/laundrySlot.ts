@@ -75,8 +75,3 @@ export const LaundrySlot: Model<ILaundrySlotDocument> = model<ILaundrySlotDocume
   'LaundrySlot',
   laundrySlotSchema,
 );
-
-/** Stub retained for backwards-compat — slot generation is now manual via admin UI */
-export async function generateLaundrySlots(): Promise<void> {
-  // no-op: slots are now created manually through the admin dashboard
-}

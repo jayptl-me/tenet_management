@@ -2,10 +2,12 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { UserRound, Phone, Mail, Shield, DoorOpen, Building2, BedDouble } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -13,7 +15,8 @@ import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
-import { FormGrid } from '@/components/ui/FormSection';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { TempCredentialsDialog } from '@/components/ui/TempCredentialsDialog';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
@@ -36,17 +39,27 @@ const RELATION_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+interface TenantPreview {
+  name: string;
+  roomNumber?: string;
+  bedId?: string;
+  floorLabel?: string;
+}
+
 function NewGuardianForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefillTenantId = searchParams.get('tenantId') ?? '';
   const [submitError, setSubmitError] = useState('');
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [hostPreview, setHostPreview] = useState<TenantPreview | null>(null);
+  const [hostLoading, setHostLoading] = useState(false);
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -54,6 +67,36 @@ function NewGuardianForm() {
       tenantId: prefillTenantId,
     },
   });
+
+  const tenantIdWatch = useWatch({ control, name: 'tenantId' });
+
+  const onTenantChange = async (tenantId: string) => {
+    setValue('tenantId', tenantId);
+    setHostPreview(null);
+    if (!tenantId) return;
+    setHostLoading(true);
+    try {
+      const res = await api.get(`tenants/${tenantId}`).json<{
+        success: boolean;
+        data: {
+          user?: { name?: string };
+          room?: { roomNumber?: string; floor?: { label?: string } };
+          bedId?: string;
+        };
+      }>();
+      const d = res.data;
+      setHostPreview({
+        name: d.user?.name ?? 'Unknown',
+        roomNumber: d.room?.roomNumber,
+        bedId: d.bedId,
+        floorLabel: d.room?.floor?.label,
+      });
+    } catch {
+      setHostPreview(null);
+    } finally {
+      setHostLoading(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -75,10 +118,12 @@ function NewGuardianForm() {
       } else {
         router.push('/guardians');
       }
-    } catch {
-      setSubmitError('Failed to create guardian. Check phone, unique email, and try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
+
+  const err = errors as Record<string, { message?: string }>;
 
   return (
     <FormPage
@@ -86,24 +131,8 @@ function NewGuardianForm() {
       description="Add a guardian for a tenant (creates login credentials)"
       backHref="/guardians"
       error={submitError}
+      maxWidth="3xl"
     >
-      {tempPassword && (
-        <div className="mb-4 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-4">
-          <p className="text-sm font-bold text-[color:var(--color-warning-800)]">
-            Guardian created. Share this temporary password once (it will not be shown again):
-          </p>
-          <p className="mt-2 font-mono text-lg font-bold tracking-wide text-[color:var(--color-text-primary)]">
-            {tempPassword}
-          </p>
-          <button
-            type="button"
-            className="mt-3 text-sm font-semibold text-[color:var(--color-brand-600)] underline"
-            onClick={() => router.push('/guardians')}
-          >
-            Continue to guardians list
-          </button>
-        </div>
-      )}
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
         footer={
@@ -115,55 +144,122 @@ function NewGuardianForm() {
           />
         }
       >
-        <div className="space-y-5">
+        <FormSection
+          title="Linked resident"
+          icon={<UserRound />}
+          description="Only active residents can have guardians"
+        >
           <Controller
             name="tenantId"
             control={control}
             render={({ field }) => (
               <ResourceSelect
                 label="Tenant"
-                endpoint="tenants"
+                endpoint="tenants?isActive=true"
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(val) => {
+                  field.onChange(val);
+                  void onTenantChange(val);
+                }}
                 placeholder="Select tenant..."
-                error={errors.tenantId?.message}
+                error={err.tenantId?.message}
                 valueKey="_id"
                 labelKey={tenantLabel}
                 sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
+                dataPath="data"
               />
             )}
           />
+          {tenantIdWatch ? (
+            <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
+              {hostLoading ? (
+                <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
+                  Loading resident stay…
+                </p>
+              ) : hostPreview ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-[color:var(--color-brand-800)]">
+                  <span className="inline-flex items-center gap-1">
+                    <UserRound className="h-3.5 w-3.5" />
+                    {hostPreview.name}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <DoorOpen className="h-3.5 w-3.5" />
+                    Room {hostPreview.roomNumber ?? 'N/A'}
+                    {hostPreview.bedId ? ` · Bed ${hostPreview.bedId}` : ''}
+                  </span>
+                  {hostPreview.floorLabel && (
+                    <span className="inline-flex items-center gap-1">
+                      <Building2 className="h-3.5 w-3.5" />
+                      {hostPreview.floorLabel}
+                    </span>
+                  )}
+                  {hostPreview.bedId && (
+                    <span className="inline-flex items-center gap-1">
+                      <BedDouble className="h-3.5 w-3.5" />
+                      Bed {hostPreview.bedId}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+                  Select a tenant to preview their room and bed placement.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </FormSection>
+
+        <FormSection
+          title="Guardian details"
+          icon={<Shield />}
+          description="Contact used for portal login and ward updates"
+          divided
+        >
           <FormGrid>
             <Input
-              label="Name"
-              placeholder="Full name"
-              error={errors.name?.message}
+              label="Full name"
+              placeholder="Guardian name"
+              error={err.name?.message}
+              leftIcon={<UserRound className="h-4 w-4" />}
+              autoComplete="name"
               {...register('name')}
             />
             <Input
               label="Phone"
               placeholder="+919876543210"
-              error={errors.phone?.message}
+              inputMode="tel"
+              error={err.phone?.message}
+              leftIcon={<Phone className="h-4 w-4" />}
+              autoComplete="tel"
               {...register('phone')}
             />
-          </FormGrid>
-          <FormGrid>
             <Input
               label="Email (required for login)"
               type="email"
               placeholder="guardian@example.com"
-              error={errors.email?.message}
+              error={err.email?.message}
+              leftIcon={<Mail className="h-4 w-4" />}
+              autoComplete="email"
               {...register('email')}
             />
             <Select
               label="Relation"
               options={RELATION_OPTIONS}
-              error={errors.relation?.message}
+              error={err.relation?.message}
               {...register('relation')}
             />
           </FormGrid>
-        </div>
+        </FormSection>
       </FormCard>
+      <TempCredentialsDialog
+        open={!!tempPassword}
+        temporaryPassword={tempPassword}
+        onClose={() => {
+          setTempPassword(null);
+          router.push('/guardians');
+        }}
+        entityLabel="Guardian"
+      />
     </FormPage>
   );
 }

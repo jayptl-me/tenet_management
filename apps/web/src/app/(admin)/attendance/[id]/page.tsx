@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   User,
@@ -13,13 +13,26 @@ import {
   FileText,
   CheckCircle,
   Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Timer,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import {
+  AttendanceMonthCalendar,
+  type AttendanceDayMap,
+} from '@/components/ui/AttendanceMonthCalendar';
+import type { IAttendanceSummaryResponse } from '@pg/types';
 
 interface AttendanceDetail {
   _id: string;
@@ -27,16 +40,28 @@ interface AttendanceDetail {
     _id: string;
     user?: { _id: string; name: string; email: string; phone: string };
     room?: { _id: string; roomNumber: string };
-  };
+  } | null;
   date: string;
   status: string;
   checkInTime?: string;
   checkOutTime?: string;
+  checkIn?: string;
+  checkOut?: string;
   method?: string;
-  recordedBy?: { _id: string; name: string };
+  recordedBy?: { _id: string; name: string } | null;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface LeaveRow {
+  _id?: string;
+  id?: string;
+  fromDate?: string;
+  toDate?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 }
 
 const methodIcons: Record<string, React.ReactNode> = {
@@ -54,12 +79,15 @@ const methodLabels: Record<string, string> = {
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    return new Date(dateStr.length <= 10 ? `${dateStr}T00:00:00` : dateStr).toLocaleDateString(
+      'en-IN',
+      {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      },
+    );
   } catch {
     return '—';
   }
@@ -93,6 +121,30 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
+function durationBetween(
+  checkIn: string | null | undefined,
+  checkOut: string | null | undefined,
+): string {
+  if (!checkIn || !checkOut) return '—';
+  try {
+    const diff = new Date(checkOut).getTime() - new Date(checkIn).getTime();
+    if (Number.isNaN(diff) || diff < 0) return 'Invalid (out < in)';
+    const mins = Math.floor(diff / 60000);
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  } catch {
+    return '—';
+  }
+}
+
+function shiftYmd(ymd: string, delta: number): string {
+  const d = new Date(`${ymd.slice(0, 10)}T00:00:00`);
+  d.setDate(d.getDate() + delta);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function AttendanceDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -101,6 +153,24 @@ export default function AttendanceDetailPage() {
   const [record, setRecord] = useState<AttendanceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [navError, setNavError] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [calendarDays, setCalendarDays] = useState<AttendanceDayMap>({});
+  const [leaveLink, setLeaveLink] = useState<LeaveRow | null>(null);
+
+  const handleDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`attendance/${id}`).json();
+      router.push('/attendance');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+      setIsDeleting(false);
+      setConfirmDeleteOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -113,6 +183,74 @@ export default function AttendanceDetailPage() {
       .catch(() => setError('Failed to load attendance details'))
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  const fetchMonth = useCallback(async (year: number, month: number, tenantId?: string) => {
+    try {
+      const last = new Date(year, month + 1, 0).getDate();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const params = new URLSearchParams();
+      params.set('fromDate', `${year}-${pad(month + 1)}-01`);
+      params.set('toDate', `${year}-${pad(month + 1)}-${pad(last)}`);
+      if (tenantId) params.set('tenantId', tenantId);
+      const res = await api.get(`attendance/summary?${params.toString()}`).json<{
+        success: boolean;
+        data: IAttendanceSummaryResponse;
+      }>();
+      setCalendarDays(res.data.days ?? {});
+    } catch {
+      setCalendarDays({});
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!record) return;
+    const ymd = record.date.slice(0, 10);
+    const d = new Date(`${ymd}T00:00:00`);
+    fetchMonth(d.getFullYear(), d.getMonth(), record.tenant?._id);
+    if (record.status === 'on_leave' && record.tenant?._id) {
+      const tenantId = record.tenant._id;
+      api
+        .get(`leaves?tenantId=${tenantId}&limit=50`)
+        .json<{ success: boolean; data: LeaveRow[] }>()
+        .then((res) => {
+          const rows = res.data ?? [];
+          const covering = rows.find((l) => {
+            const from = (l.fromDate ?? l.startDate ?? '').slice(0, 10);
+            const to = (l.toDate ?? l.endDate ?? '').slice(0, 10);
+            return from !== '' && to !== '' && from <= ymd && ymd <= to;
+          });
+          setLeaveLink(covering ?? null);
+        })
+        .catch(() => setLeaveLink(null));
+    } else {
+      setLeaveLink(null);
+    }
+  }, [record, fetchMonth]);
+
+  const goToDate = async (target: string) => {
+    if (!record) return;
+    setNavError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('date', target);
+      params.set('limit', '10');
+      if (record.tenant?._id) params.set('tenantId', record.tenant._id);
+      const res = await api.get(`attendance?${params.toString()}`).json<{
+        success: boolean;
+        data: Array<{ _id: string }>;
+      }>();
+      const first = (res.data ?? [])[0];
+      if (first) router.push(`/attendance/${first._id}`);
+      else setNavError(`No attendance record on ${target}`);
+    } catch {
+      setNavError('Failed to navigate to adjacent day');
+    }
+  };
+
+  const goDay = async (delta: number) => {
+    if (!record) return;
+    await goToDate(shiftYmd(record.date.slice(0, 10), delta));
+  };
 
   if (!isLoading && (error || !record)) {
     return (
@@ -129,8 +267,14 @@ export default function AttendanceDetailPage() {
   const statusVariant = record ? statusToVariant(record.status) : 'neutral';
   const tenantName = record?.tenant?.user?.name ?? 'N/A';
   const roomNumber = record?.tenant?.room?.roomNumber ?? 'N/A';
+  const tenantId = record?.tenant?._id;
+  const checkIn = record?.checkInTime ?? record?.checkIn;
+  const checkOut = record?.checkOutTime ?? record?.checkOut;
   const methodIcon = record?.method ? methodIcons[record.method] : <Monitor className="h-4 w-4" />;
   const methodLabel = record?.method ? (methodLabels[record.method] ?? record.method) : 'Unknown';
+  const duration = durationBetween(checkIn ?? null, checkOut ?? null);
+  const recordYmd = record ? record.date.slice(0, 10) : '';
+  const recordMonth = record ? new Date(`${recordYmd}T00:00:00`) : new Date();
 
   return (
     <FormPage
@@ -146,20 +290,38 @@ export default function AttendanceDetailPage() {
       }
       actions={
         record ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/attendance/${record._id}/edit`)}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => goDay(-1)}
+              aria-label="Previous day"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => goDay(1)} aria-label="Next day">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/attendance/${record._id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setConfirmDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
         ) : undefined
       }
     >
       {record && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ErrorBanner message={navError} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard
               title="Date"
               value={formatDate(record.date)}
@@ -180,14 +342,20 @@ export default function AttendanceDetailPage() {
             />
             <StatCard
               title="Check-in"
-              value={formatTime(record.checkInTime)}
+              value={formatTime(checkIn)}
               icon={<Clock className="h-4 w-4" />}
               variant="default"
             />
             <StatCard
               title="Check-out"
-              value={formatTime(record.checkOutTime)}
+              value={formatTime(checkOut)}
               icon={<Clock className="h-4 w-4" />}
+              variant="default"
+            />
+            <StatCard
+              title="Duration"
+              value={duration}
+              icon={<Timer className="h-4 w-4" />}
               variant="default"
             />
           </div>
@@ -222,6 +390,21 @@ export default function AttendanceDetailPage() {
                     </span>
                   }
                 />
+                {tenantId && (
+                  <DetailRow
+                    label="Tenant"
+                    value={
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/tenants/${tenantId}`)}
+                        className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      >
+                        View tenant
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </button>
+                    }
+                  />
+                )}
               </DetailList>
             </DetailCard>
 
@@ -233,10 +416,45 @@ export default function AttendanceDetailPage() {
                     <StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} />
                   }
                 />
-                <DetailRow label="Check-in Time" value={formatTime(record.checkInTime)} />
-                <DetailRow label="Check-out Time" value={formatTime(record.checkOutTime)} />
+                <DetailRow label="Check-in Time" value={formatTime(checkIn)} />
+                <DetailRow label="Check-out Time" value={formatTime(checkOut)} />
+                <DetailRow label="Duration" value={duration} />
+                {record.status === 'on_leave' && (
+                  <DetailRow
+                    label="Leave"
+                    value={
+                      leaveLink ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            router.push(`/leaves/${leaveLink._id ?? leaveLink.id ?? ''}`)
+                          }
+                          className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                        >
+                          View covering leave ({leaveLink.status ?? 'leave'})
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        'No covering leave found'
+                      )
+                    }
+                  />
+                )}
               </DetailList>
             </DetailCard>
+          </div>
+
+          <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4">
+            <AttendanceMonthCalendar
+              days={calendarDays}
+              initialYear={recordMonth.getFullYear()}
+              initialMonth={recordMonth.getMonth()}
+              selectedDay={recordYmd}
+              onSelectDay={(ymd) => {
+                if (ymd && ymd !== recordYmd) goToDate(ymd);
+              }}
+              onMonthChange={(y, m) => fetchMonth(y, m, tenantId)}
+            />
           </div>
 
           <DetailCard title="Recording Info" icon={<CheckCircle />}>
@@ -281,6 +499,15 @@ export default function AttendanceDetailPage() {
           <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
             Recorded {formatDateTime(record.createdAt)} · Updated {formatDateTime(record.updatedAt)}
           </p>
+
+          <ConfirmModal
+            open={confirmDeleteOpen}
+            title="Delete Attendance Record"
+            message="Are you sure you want to delete this attendance record? This action cannot be undone."
+            loading={isDeleting}
+            onConfirm={handleDelete}
+            onCancel={() => setConfirmDeleteOpen(false)}
+          />
         </div>
       )}
     </FormPage>

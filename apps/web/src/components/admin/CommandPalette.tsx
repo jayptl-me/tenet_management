@@ -381,10 +381,10 @@ function buildCommands(
     },
     {
       id: 'create-meal',
-      label: 'New Meal Opt-Out',
+      label: 'Record Meal Feedback',
       category: 'Create',
       href: '/meals/new',
-      keywords: ['skip', 'optout', 'food'],
+      keywords: ['meal', 'feedback', 'food', 'rating', 'mess'],
       icon: Utensils,
       featureFlag: 'messFeedbackEnabled',
     },

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Megaphone } from 'lucide-react';
+import { Plus, Megaphone, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -22,6 +23,7 @@ interface NoticeRow {
   content: string;
   pinned?: boolean;
   targetType?: string;
+  targetIds?: string[];
   createdAt: string;
 }
 
@@ -55,8 +57,8 @@ export default function NoticesPage() {
       }>();
       setNotices(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load notices');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
@@ -73,11 +75,41 @@ export default function NoticesPage() {
       await api.delete(`notices/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchNotices();
-    } catch {
-      setError('Failed to delete notice');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (notices.length === 0) return;
+    const headers = ['Title', 'Content', 'Audience', 'Targets', 'Pinned', 'Created Date'];
+    const escapeCsv = (val: unknown) => {
+      let str = String(val ?? '');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const rows = notices.map((n) => [
+      escapeCsv(n.title),
+      escapeCsv(n.content),
+      escapeCsv(n.targetType ?? 'all'),
+      escapeCsv((n.targetIds ?? []).join('; ')),
+      escapeCsv(n.pinned ? 'Pinned' : 'Normal'),
+      escapeCsv(n.createdAt ? new Date(n.createdAt).toISOString().slice(0, 10) : '—'),
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `notices-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const columns: DataTableColumn<NoticeRow>[] = [
@@ -98,7 +130,14 @@ export default function NoticesPage() {
     {
       header: 'Audience',
       accessor: (row) => (
-        <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
+        <span className="inline-flex items-center gap-1.5">
+          <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
+          {(row.targetIds?.length ?? 0) > 0 && (
+            <span className="text-[11px] font-bold text-[color:var(--color-text-muted)]">
+              · {row.targetIds!.length}
+            </span>
+          )}
+        </span>
       ),
     },
     {
@@ -129,10 +168,21 @@ export default function NoticesPage() {
         title="Notices"
         description="Post announcements for tenants"
         action={
-          <Button onClick={() => router.push('/notices/new')}>
-            <Plus className="h-4 w-4" />
-            Post Notice
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handleExportCsv}
+              disabled={notices.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => router.push('/notices/new')}>
+              <Plus className="h-4 w-4" />
+              Post Notice
+            </Button>
+          </div>
         }
       />
       <ErrorBanner message={error} />

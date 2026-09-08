@@ -183,19 +183,19 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className={clsx(
               fieldControlBase,
               'flex cursor-pointer items-center justify-between gap-2 text-left',
-              leftIcon && 'pl-9',
               error ? fieldControlBorderError : fieldControlBorderOk,
               'data-[placeholder]:text-[color:var(--color-text-muted)]',
               className,
             )}
           >
-            <span className="relative flex min-w-0 flex-1 items-center gap-2">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
               {leftIcon && (
-                <span className="pointer-events-none absolute top-1/2 left-0 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+                <span className="shrink-0 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
                   {leftIcon}
                 </span>
               )}
               <span
+                title={selectedLabel ?? placeholder}
                 className={clsx('truncate', !current && 'text-[color:var(--color-text-muted)]')}
               >
                 {selectedLabel ?? placeholder}
@@ -232,7 +232,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                   >
                     <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
                       <RadixSelect.ItemIndicator>
-                        <Check className="h-3.5 w-3.5 text-[color:var(--color-primary-600)]" />
+                        <Check className="h-3.5 w-3.5 text-[color:var(--color-brand-600)]" />
                       </RadixSelect.ItemIndicator>
                     </span>
                     <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>

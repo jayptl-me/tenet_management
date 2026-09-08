@@ -57,20 +57,21 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
   return (
     <div
       className={clsx(
-        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'relative flex h-full min-h-[148px] flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-2.5">
           <ShimmerBlock className="h-3 w-20" />
-          <ShimmerBlock className="h-8 w-28" />
+          <ShimmerBlock className="h-7 w-28" />
+          <ShimmerBlock className="h-2.5 w-36" />
         </div>
-        {withIcon && <ShimmerBlock className="h-9 w-9 rounded-lg" />}
+        {withIcon && <ShimmerBlock className="h-8 w-8 rounded-[var(--radius-md)]" />}
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <ShimmerBlock className="h-5 w-16 rounded-full" />
-        <ShimmerBlock className="h-3 w-24" />
+      <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-color)]/60 pt-2.5">
+        <ShimmerBlock className="h-4 w-20 rounded-full" />
+        <ShimmerBlock className="h-3 w-12" />
       </div>
     </div>
   );
@@ -178,10 +179,28 @@ export function DashboardSkeleton() {
         ))}
       </div>
 
+      {/* Operational Triage Banner */}
+      <ShimmerBlock className="h-14 w-full rounded-[var(--radius-xl)]" />
+
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <ChartSkeleton className="lg:col-span-2" height={260} />
         <ChartSkeleton height={260} />
+      </div>
+
+      {/* Room Bed Heatmap Section */}
+      <div className="space-y-3 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5">
+        <ShimmerBlock className="h-5 w-44" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <ShimmerBlock key={i} className="h-16 rounded-[var(--radius-lg)]" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ShimmerBlock key={i} className="h-28 rounded-[var(--radius-lg)]" />
+          ))}
+        </div>
       </div>
 
       {/* Activity section */}

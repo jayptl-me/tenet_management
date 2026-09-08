@@ -2,10 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import Link from 'next/link';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Phone, UserRound, DoorOpen } from 'lucide-react';
+import {
+  Phone,
+  UserRound,
+  DoorOpen,
+  CalendarDays,
+  Clock,
+  BedDouble,
+  Building2,
+  ExternalLink,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
@@ -14,6 +25,15 @@ import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
+
+const PURPOSE_OPTIONS = [
+  'Family Visit',
+  'Friend Visit',
+  'Delivery',
+  'Maintenance',
+  'Interview',
+  'Official Work',
+];
 
 const schema = z.object({
   visitorName: z.string().min(2, 'Visitor name must be at least 2 characters').max(100),
@@ -27,6 +47,57 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+interface HostInfo {
+  id: string;
+  name: string;
+  phone?: string;
+  roomNumber?: string;
+  bedId?: string;
+  floorLabel?: string;
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  try {
+    return new Date(value).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return value;
+  }
+}
+
+function arrivalSummary(value: string): { label: string; detail: string; isPast: boolean } | null {
+  if (!value) return null;
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const diffDays = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / 86400000);
+  const time = target.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const day = target.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+  if (diffDays < 0) {
+    const n = Math.abs(diffDays);
+    return {
+      label: `Overdue by ${n} day${n === 1 ? '' : 's'}`,
+      detail: `${day} at ${time}`,
+      isPast: true,
+    };
+  }
+  if (diffDays === 0)
+    return { label: 'Today', detail: `Today at ${time}`, isPast: target.getTime() < now.getTime() };
+  if (diffDays === 1) return { label: 'Tomorrow', detail: `Tomorrow at ${time}`, isPast: false };
+  return { label: `In ${diffDays} days`, detail: `${day} at ${time}`, isPast: false };
+}
+
 export default function EditVisitorPage() {
   const router = useRouter();
   const params = useParams();
@@ -34,24 +105,51 @@ export default function EditVisitorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [currentStatus, setCurrentStatus] = useState<string>('');
+  const [host, setHost] = useState<HostInfo | null>(null);
+  const [originalArrival, setOriginalArrival] = useState('');
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
+  const purposeWatch = useWatch({ control, name: 'purpose' });
+  const arrivalWatch = useWatch({ control, name: 'expectedArrival' });
+  const summary = arrivalSummary(arrivalWatch ?? '');
+  const changed = Boolean(originalArrival && arrivalWatch && originalArrival !== arrivalWatch);
+
   useEffect(() => {
     if (!id) return;
     api
       .get(`visitors/${id}`)
-      .json<{ success: boolean; data: FormData & { _id: string; status?: string } }>()
+      .json<{
+        success: boolean;
+        data: {
+          _id: string;
+          status?: string;
+          visitorName?: string;
+          name?: string;
+          visitorPhone?: string;
+          phone?: string;
+          purpose?: string;
+          expectedArrival?: string;
+          tenant?: {
+            _id?: string;
+            bedId?: string;
+            user?: { name?: string; phone?: string };
+            room?: { roomNumber?: string; floor?: { label?: string } };
+          };
+        };
+      }>()
       .then((res) => {
-        const d = res.data as Record<string, unknown>;
-        const arrivalRaw = (d.expectedArrival as string) ?? '';
+        const d = res.data;
+        const arrivalRaw = d.expectedArrival ?? '';
         let expectedArrival = '';
         if (arrivalRaw) {
           const dt = new Date(arrivalRaw);
@@ -62,10 +160,22 @@ export default function EditVisitorPage() {
           }
         }
         setCurrentStatus(typeof d.status === 'string' ? d.status : '');
+        setOriginalArrival(expectedArrival);
+        const t = d.tenant;
+        if (t?._id) {
+          setHost({
+            id: t._id,
+            name: t.user?.name ?? 'Unknown',
+            phone: t.user?.phone,
+            roomNumber: t.room?.roomNumber,
+            bedId: t.bedId,
+            floorLabel: t.room?.floor?.label,
+          });
+        }
         reset({
-          visitorName: (d.visitorName as string) ?? (d.name as string) ?? '',
-          visitorPhone: (d.visitorPhone as string) ?? (d.phone as string) ?? '',
-          purpose: (d.purpose as string) ?? '',
+          visitorName: d.visitorName ?? d.name ?? '',
+          visitorPhone: d.visitorPhone ?? d.phone ?? '',
+          purpose: d.purpose ?? '',
           expectedArrival,
         });
         setIsLoading(false);
@@ -86,7 +196,7 @@ export default function EditVisitorPage() {
           json: {
             visitorName: data.visitorName.trim(),
             visitorPhone: normalizeInPhone(data.visitorPhone),
-            purpose: data.purpose,
+            purpose: data.purpose.trim(),
             expectedArrival: new Date(data.expectedArrival).toISOString(),
           },
         })
@@ -109,6 +219,7 @@ export default function EditVisitorPage() {
       backHref={`/visitors/${id}`}
       error={submitError}
       isLoading={isLoading}
+      maxWidth="3xl"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
@@ -121,7 +232,60 @@ export default function EditVisitorPage() {
           />
         }
       >
-        <FormSection title="Visitor details" description="Who is visiting and how to reach them">
+        <FormSection
+          title="Host resident"
+          icon={<UserRound />}
+          description="This visit is pinned to the resident below and cannot be reassigned here"
+        >
+          {host ? (
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+                <Link
+                  href={`/tenants/${host.id}`}
+                  className="inline-flex items-center gap-1 font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                >
+                  <UserRound className="h-3.5 w-3.5" />
+                  {host.name}
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+                <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                  <DoorOpen className="h-3.5 w-3.5" />
+                  Room {host.roomNumber ?? 'N/A'}
+                  {host.bedId ? ` · Bed ${host.bedId}` : ''}
+                </span>
+                {host.floorLabel && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                    <Building2 className="h-3.5 w-3.5" />
+                    {host.floorLabel}
+                  </span>
+                )}
+                {host.bedId && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                    <BedDouble className="h-3.5 w-3.5" />
+                    Bed {host.bedId}
+                  </span>
+                )}
+              </div>
+              {host.phone && (
+                <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                  <Phone className="h-3 w-3" />
+                  {host.phone}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+              Host resident details unavailable.
+            </p>
+          )}
+        </FormSection>
+
+        <FormSection
+          title="Visit details"
+          icon={<DoorOpen />}
+          description="Who is visiting and why"
+          divided
+        >
           <FormGrid>
             <Input
               label="Full name"
@@ -140,6 +304,8 @@ export default function EditVisitorPage() {
               autoComplete="tel"
               {...register('visitorPhone')}
             />
+          </FormGrid>
+          <div className="mt-4 space-y-2">
             <Input
               label="Purpose of visit"
               placeholder="e.g. Guest visit, delivery, maintenance"
@@ -147,6 +313,36 @@ export default function EditVisitorPage() {
               leftIcon={<DoorOpen className="h-4 w-4" />}
               {...register('purpose')}
             />
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Common purposes">
+              {PURPOSE_OPTIONS.map((option) => {
+                const selected = (purposeWatch ?? '').trim().toLowerCase() === option.toLowerCase();
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setValue('purpose', option, { shouldValidate: true })}
+                    className={
+                      selected
+                        ? 'rounded-full border border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-500)] px-3 py-1 text-xs font-bold text-white shadow-[var(--shadow-xs)]'
+                        : 'rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-300)] hover:text-[color:var(--color-text-primary)]'
+                    }
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Schedule"
+          icon={<CalendarDays />}
+          description="Reschedule the expected arrival"
+          divided
+        >
+          <FormGrid>
             <Input
               label="Expected arrival"
               type="datetime-local"
@@ -154,16 +350,62 @@ export default function EditVisitorPage() {
               {...register('expectedArrival')}
             />
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-[color:var(--color-text-primary)]">Status</p>
-              <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm text-[color:var(--color-text-secondary)]">
-                {statusLabel}
+              <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+                Arrival summary
               </p>
-              <p className="text-xs text-[color:var(--color-text-muted)]">
-                Use Arrive / Depart / Cancel on the visitor detail page. Status cannot be set freely
-                here.
-              </p>
+              {summary ? (
+                <div
+                  className={
+                    summary.isPast
+                      ? 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] px-3 py-2 text-sm'
+                      : 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm'
+                  }
+                >
+                  {summary.isPast ? (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-warning-600)]" />
+                  ) : (
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-brand-600)]" />
+                  )}
+                  <span>
+                    <span className="font-bold text-[color:var(--color-text-primary)]">
+                      {summary.label}
+                    </span>
+                    <span className="block text-xs font-medium text-[color:var(--color-text-secondary)]">
+                      {summary.detail}
+                    </span>
+                    {changed && (
+                      <span className="mt-1 block text-xs font-semibold text-[color:var(--color-brand-700)]">
+                        Previously {formatDateTime(originalArrival)}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm text-[color:var(--color-text-secondary)]">
+                  Pick a date and time to preview the visit window.
+                </p>
+              )}
             </div>
           </FormGrid>
+        </FormSection>
+
+        <FormSection
+          title="Status"
+          description="Lifecycle state is managed on the detail page"
+          divided
+        >
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+              Current status
+            </p>
+            <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm font-bold text-[color:var(--color-text-secondary)]">
+              {statusLabel}
+            </p>
+            <p className="text-xs text-[color:var(--color-text-muted)]">
+              Use Arrive / Depart / Cancel on the visitor detail page. Status cannot be set freely
+              here.
+            </p>
+          </div>
         </FormSection>
       </FormCard>
     </FormPage>

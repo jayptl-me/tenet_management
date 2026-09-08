@@ -13,6 +13,7 @@ export interface IDailyMenuDocument extends Document {
     breakfast: IMenuItemSubdoc[];
     lunch: IMenuItemSubdoc[];
     dinner: IMenuItemSubdoc[];
+    snacks?: IMenuItemSubdoc[];
   };
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,7 @@ const dailyMenuSchema = new Schema<IDailyMenuDocument>(
       breakfast: { type: [menuItemSchema], default: [] },
       lunch: { type: [menuItemSchema], default: [] },
       dinner: { type: [menuItemSchema], default: [] },
+      snacks: { type: [menuItemSchema], default: [] },
     },
   },
   {

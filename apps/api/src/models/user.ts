@@ -147,7 +147,13 @@ userSchema.methods.recordLoginFailed = async function (): Promise<void> {
 };
 
 userSchema.methods.toPublicJSON = function () {
-  const obj = this.toJSON();
+  const obj = this.toJSON() as Record<string, unknown>;
+  // Never expose secrets or lockout internals, even when the doc was loaded
+  // with explicit +passwordHash selection (e.g. login flow).
+  delete obj.passwordHash;
+  delete obj.loginAttempts;
+  delete obj.lockedUntil;
+  delete obj.ntfyTopic;
   return obj;
 };
 

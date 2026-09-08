@@ -40,6 +40,10 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
       'electricity',
       'food_quality',
       'cleaning_room',
+      'cleaning_washroom',
+      'washing_machine',
+      'fridge',
+      'lights',
       'noise',
       'other',
     ];
@@ -115,14 +119,26 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
       _success = null;
     });
     try {
-      final photo = _photoUrl.text.trim();
+      final photos = _photoUrl.text
+          .split(RegExp(r'[\n,]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .take(5)
+          .toList();
+      for (final u in photos) {
+        final uri = Uri.tryParse(u);
+        if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
+          setState(() => _error = 'Photo URLs must be valid http(s) links (max 5).');
+          return;
+        }
+      }
       await ref.read(tenantRepositoryProvider).createComplaint(
             roomId: _roomId!,
             title: _title.text.trim(),
             description: _description.text.trim(),
             category: _category,
             priority: _priority,
-            photos: photo.isNotEmpty ? [photo] : null,
+            photos: photos.isEmpty ? null : photos,
           );
       _title.clear();
       _description.clear();
@@ -175,6 +191,10 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
                         'electricity',
                         'food_quality',
                         'cleaning_room',
+                        'cleaning_washroom',
+                        'washing_machine',
+                        'fridge',
+                        'lights',
                         'noise',
                         'other',
                       ]
@@ -210,9 +230,10 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
                     const SizedBox(height: 12),
                     TextField(
                       controller: _photoUrl,
+                      maxLines: 2,
                       decoration: const InputDecoration(
-                        labelText: 'Photo URL (optional)',
-                        hintText: 'https://...',
+                        labelText: 'Photo URLs (optional, up to 5)',
+                        hintText: 'https://... (one per line or comma-separated)',
                         prefixIcon: Icon(Icons.link, size: 18),
                       ),
                     ),

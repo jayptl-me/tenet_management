@@ -77,48 +77,9 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 
 <!-- AUTO:RECENTLY-CLOSED:START -->
 
-| Claim                                                            | Live proof                                                                                 |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| No GET by id / No PUT                                            | **Fixed** -- both exist; edit is metadata-only                                             |
-| Detail/edit pages dead 404                                       | **Fixed** -- load via GET `/:id`                                                           |
-| Dual compose entry points                                        | **Fixed** -- `/new` redirects to list compose tab                                          |
-| Native OS select for type filter                                 | **Fixed** -- themed `Select`                                                               |
-| Sidebar badges use `readBy` (F4 / D1)                            | **FIXED** -- dashboard badges query `unreadBy`                                             |
-| F1                                                               | **FIXED**                                                                                  |
-| F2                                                               | **FIXED**                                                                                  |
-| F3                                                               | **FIXED**                                                                                  |
-| F4                                                               | **CLOSED**                                                                                 |
-| F6                                                               | **FIXED**                                                                                  |
-| Offline create missing                                           | **Closed** -- full form + balance prefill                                                  |
-| Verify CTA missing                                               | **Closed** -- detail approve/reject                                                        |
-| mobileCardRenderer missing                                       | **Closed**                                                                                 |
-| Receipt endpoint unused                                          | **Closed** -- detail modal + print                                                         |
-| UTR duplicate 409                                                | **Closed** API-side                                                                        |
-| List status filter for pending verification                      | **Closed**                                                                                 |
-| `?tenantId=` prefill ignored (PAY-P1-1)                          | **Closed** -- `useSearchParams` + defaultValues + invoice load                             |
-| Soft-delete ConfirmModal irreversible copy (RM-7)                | **FIXED** -- title "Deactivate Room"; message marked inactive / hidden from new assignment |
-| isValidServiceType any key (SV-1)                                | **FIXED** -- isValidFloorServiceType requires isPerFloor                                   |
-| No seed on floor create (SV-2)                                   | **FIXED** -- seedFloorServiceStatuses                                                      |
-| Feature flags partial PUT broken                                 | features object optional booleans; findOneAndUpdate upsert                                 |
-| socialLinks.youtube UI-only / not in API                         | **FIXED** -- model + Zod + sanitizeSettingsPayload + settings FE + unit tests              |
-| Transfer non-atomic / free-before-validate (P0-T1)               | **FIXED** -- validate then `withTransaction`                                               |
-| isActive free-set on PUT (P0-T2)                                 | **FIXED** -- removed from schema + edit FE                                                 |
-| temporaryPassword discarded (P0-T3)                              | **FIXED** -- returned + TempCredentialsDialog                                              |
-| Nested GET IDOR (P1-T6)                                          | **FIXED** -- `assertAdminOrTenantOwner`                                                    |
-| Occupied beds selectable on create                               | **FIXED** -- OccupancyBedPicker                                                            |
-| FE rent min 1 vs API 1000                                        | **FIXED** -- FE min 1000                                                                   |
-| Flutter profile missing                                          | **FIXED** -- `profile_screen.dart` + leaves/attendance/notifs present                      |
-| Detail missing reinstate / guardians hub                         | **FIXED**                                                                                  |
-| FE lifecycle errors generic (P1-T3)                              | **FIXED** -- `parseApiError` on checkout/reinstate (detail page)                           |
-| P1-V2 Flutter FEATURE_DISABLED UX                                | **FIXED** -- FeatureDisabledWidget on visitor home                                         |
-| List filter includes `pending`, omits expected/cancelled (P0-V1) | **FIXED** -- StatusFilterSelect enums match model                                          |
-| GET/arrive/depart no ownership (P1)                              | **FIXED** -- admin or owning tenant                                                        |
-| No transition guards on arrive/depart                            | **FIXED** -- 409 INVALID_TRANSITION                                                        |
-| Edit missing expectedArrival                                     | **FIXED**                                                                                  |
-| VisitorLifecycleActions missing                                  | **FIXED** -- shared component on detail                                                    |
-| Admin create 403 / /my shadowed                                  | **FIXED** (prior)                                                                          |
-| Flutter tenantId hard fail without heal                          | **FIXED** -- refreshUser + seed/me backfill path                                           |
-| Admin PUT free-sets status (P1-V1)                               | **FIXED** -- `status intentionally omitted` in PUT handler                                 |
+| Claim | Live proof |
+| ----- | ---------- |
+| --    | --         |
 
 <!-- AUTO:RECENTLY-CLOSED:END -->
 
@@ -140,14 +101,14 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 | Item                              | Notes                                                                                                               |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | ATT/Leaves page-local name search | **FIXED 2026-07-16** -- server `search` on both list APIs (User name regex -> Tenant IDs)                           |
-| ELEC-P1-2 API hard reconcile      | FE warns at >0.5 and hard-blocks large drift; optional server-side check residual                                   |
+| ELEC-P1-2 API hard reconcile      | **FIXED 2026-09-08 Pass 2** -- server-side assertReconcile on POST/PUT; FE hard block no longer bypassable          |
 | Room photos                       | **FIXED** -- photoUrls input on new/edit forms, gallery on detail page                                              |
 | Unused APIs                       | `rooms/available`, `services/summary`, payments summary/qr/pending-verification dual-verify, invoice payment-status |
 | Free-text Mongo IDs               | Notices **FIXED** ResourceSelect; notification compose uses pickers                                                 |
 | Types lag                         | laundry, meals, roomAmenities on IRoom, ITenantCreate temp password                                                 |
 | Soft-delete modal copy            | **Mostly FIXED** (rooms/guardians/assets Retire/Deactivate); residual polish elsewhere                              |
 | Seed key drift                    | ServiceStatus seed keys vs AppConfig defaults                                                                       |
-| Electricity billImage URL-only    | No Cloudinary                                                                                                       |
+| Electricity billImage URL-only    | **FIXED 2026-09-08 Pass 2** -- POST/DELETE /:id/image Cloudinary upload + admin UI                                  |
 | FE-SKELETON-FORMPAGE              | **FIXED** -- FormPage renders structured Skeleton.tsx shimmer layouts across all detail/edit pages                  |
 | WCAG-A11Y-INPUTS                  | **FIXED** -- Input.tsx defaults aria-label from placeholder when label is omitted                                   |
 | WCAG-A11Y-SELECTS                 | **FIXED** -- Select.tsx & StatusFilterSelect pass aria-label to RadixSelect.Trigger                                 |

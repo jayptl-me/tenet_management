@@ -2,8 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Calendar, Clock, User, Home, Hash, FileText, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Calendar,
+  Clock,
+  User,
+  Home,
+  Hash,
+  FileText,
+  Pencil,
+  BedDouble,
+  Building2,
+  Phone,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -14,8 +27,9 @@ interface LaundrySlotDetail {
   _id: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { name: string; phone?: string };
-    room?: { roomNumber: string };
+    room?: { roomNumber: string; floor?: { label?: string } | null };
   };
   slotDate: string;
   slotTime: string;
@@ -55,7 +69,9 @@ export default function LaundryDetailPage() {
       .get(`laundry-slots/${id}`)
       .json<{ success: boolean; data: LaundrySlotDetail }>()
       .then((res) => setSlot(res.data))
-      .catch(() => setError('Failed to load slot details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -125,9 +141,37 @@ export default function LaundryDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <DetailCard title="Tenant Information" icon={<User />}>
+            <DetailCard
+              title="Tenant Information"
+              icon={<User />}
+              action={
+                slot.tenant?._id ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/tenants/${slot.tenant!._id}`)}
+                  >
+                    View tenant
+                  </Button>
+                ) : undefined
+              }
+            >
               <DetailList>
-                <DetailRow label="Name" value={tenantName} />
+                <DetailRow
+                  label="Name"
+                  value={
+                    slot.tenant?._id ? (
+                      <Link
+                        href={`/tenants/${slot.tenant._id}`}
+                        className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      >
+                        {tenantName}
+                      </Link>
+                    ) : (
+                      tenantName
+                    )
+                  }
+                />
                 <DetailRow
                   label="Room"
                   value={
@@ -137,6 +181,39 @@ export default function LaundryDetailPage() {
                     </span>
                   }
                 />
+                {slot.tenant?.bedId && (
+                  <DetailRow
+                    label="Bed"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {slot.tenant.bedId}
+                      </span>
+                    }
+                  />
+                )}
+                {slot.tenant?.room?.floor?.label && (
+                  <DetailRow
+                    label="Floor"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {slot.tenant.room.floor.label}
+                      </span>
+                    }
+                  />
+                )}
+                {slot.tenant?.user?.phone && (
+                  <DetailRow
+                    label="Phone"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {slot.tenant.user.phone}
+                      </span>
+                    }
+                  />
+                )}
               </DetailList>
             </DetailCard>
 
