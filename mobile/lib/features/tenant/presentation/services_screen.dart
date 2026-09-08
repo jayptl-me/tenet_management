@@ -251,8 +251,16 @@ class _TenantServicesScreenState extends ConsumerState<TenantServicesScreen> {
                               ),
                             TextButton.icon(
                               onPressed: () {
+                                final svcType =
+                                    svc['serviceType']?.toString() ?? '';
+                                // Map floor service keys to complaint categories
+                                // (water_supply/geyser have no direct category).
+                                const categoryMap = {
+                                  'water_supply': 'water',
+                                  'geyser': 'other',
+                                };
                                 final cat = Uri.encodeComponent(
-                                  svc['serviceType']?.toString() ?? '',
+                                  categoryMap[svcType] ?? svcType,
                                 );
                                 context.go('/tenant/complaints?category=$cat');
                               },

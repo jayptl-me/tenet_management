@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Wifi, Calendar, Building, User, Pencil, AlertTriangle, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -76,7 +77,9 @@ export default function ServiceDetailPage() {
       .get(`services/${id}`)
       .json<{ success: boolean; data: ServiceDetail }>()
       .then((res) => setService(res.data))
-      .catch(() => setError('Failed to load service details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -231,17 +234,6 @@ export default function ServiceDetailPage() {
               </p>
             </DetailCard>
           )}
-
-          <DetailCard title="Actions" icon={<Pencil />}>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="primary"
-                onClick={() => router.push(`/services/${service._id}/edit`)}
-              >
-                <Pencil className="h-4 w-4" /> Edit Service
-              </Button>
-            </div>
-          </DetailCard>
         </div>
       )}
     </FormPage>

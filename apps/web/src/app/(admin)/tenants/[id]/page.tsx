@@ -24,12 +24,14 @@ import {
   RotateCcw,
   ExternalLink,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TenantActivityTimeline } from '@/components/ui/TenantActivityTimeline';
+import { TenantStayCalendar, type StayCalendarEvent } from '@/components/ui/TenantStayCalendar';
 import { DocumentUpload } from '@/components/ui/DocumentUpload';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
@@ -73,7 +75,12 @@ interface TenantDetail {
   moveInDate: string;
   moveOutDate: string | null;
   isActive: boolean;
-  documents?: { aadhaarUrl?: string; photoUrl?: string };
+  documents?: {
+    aadhaarUrl?: string;
+    photoUrl?: string;
+    isVerified?: boolean;
+    verifiedAt?: string;
+  };
   emergencyContact?: { name?: string; phone?: string; relation?: string };
   createdAt: string;
 }
@@ -137,6 +144,7 @@ export default function TenantDetailPage() {
   const [recentComplaints, setRecentComplaints] = useState<
     Array<{ _id: string; title: string; status: string; priority?: string }>
   >([]);
+  const [calendarEvents, setCalendarEvents] = useState<StayCalendarEvent[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -178,7 +186,53 @@ export default function TenantDetailPage() {
       if (!g.success && !p.success && !inv.success && !c.success) {
         setRelatedError('Could not load related records');
       }
+      const invoiceEvents: StayCalendarEvent[] = Array.isArray(inv.data)
+        ? inv.data
+            .filter(
+              (r: { month?: string; _id: string }) =>
+                typeof r.month === 'string' && /^\d{4}-\d{2}$/.test(r.month),
+            )
+            .map((r: { _id: string; month?: string; invoiceNumber?: string }) => ({
+              id: `invoice-${r._id}`,
+              date: `${r.month}-01`,
+              type: 'notice',
+              title: `Invoice ${r.invoiceNumber ?? r._id.slice(-6)}`,
+              subtitle: r.month ?? '',
+            }))
+        : [];
+      setCalendarEvents((prev) => [
+        ...prev.filter((e) => !e.id.startsWith('invoice-')),
+        ...invoiceEvents,
+      ]);
     });
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    api
+      .get(`tenants/${id}/activity`)
+      .json<{
+        success: boolean;
+        data: Array<{ id: string; type: string; title: string; subtitle?: string; date: string }>;
+      }>()
+      .then((res) => {
+        const mapped: StayCalendarEvent[] = Array.isArray(res.data)
+          ? res.data.map((e) => ({
+              id: e.id,
+              date: e.date,
+              type: e.type,
+              title: e.title,
+              subtitle: e.subtitle,
+            }))
+          : [];
+        setCalendarEvents((prev) => [
+          ...mapped,
+          ...prev.filter((e) => e.id.startsWith('invoice-')),
+        ]);
+      })
+      .catch(() => {
+        // Calendar stays with invoice markers only; timeline component shows its own error.
+      });
   }, [id]);
 
   const handleCheckoutClick = async () => {
@@ -246,6 +300,33 @@ export default function TenantDetailPage() {
       }
     } finally {
       setReinstating(false);
+    }
+  };
+
+  const [verifyingKyc, setVerifyingKyc] = useState(false);
+
+  const handleVerifyKyc = async () => {
+    if (!tenant) return;
+    setVerifyingKyc(true);
+    try {
+      await api.post(`tenants/${tenant._id}/verify-kyc`).json();
+      toast.success('KYC verified successfully');
+      setTenant((prev) =>
+        prev
+          ? {
+              ...prev,
+              documents: {
+                ...prev.documents,
+                isVerified: true,
+                verifiedAt: new Date().toISOString(),
+              },
+            }
+          : prev,
+      );
+    } catch {
+      toast.error('Failed to verify KYC');
+    } finally {
+      setVerifyingKyc(false);
     }
   };
 
@@ -366,7 +447,26 @@ export default function TenantDetailPage() {
             </DetailCard>
           )}
 
-          <DetailCard title="Documents" icon={<FileText />}>
+          <DetailCard
+            title="Documents & KYC"
+            icon={<FileText />}
+            action={
+              tenant.documents?.isVerified ? (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  KYC Verified
+                </span>
+              ) : tenant.documents?.aadhaarUrl && tenant.documents?.photoUrl ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleVerifyKyc}
+                  loading={verifyingKyc}
+                >
+                  Verify KYC
+                </Button>
+              ) : null
+            }
+          >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DocumentUpload
                 tenantId={tenant._id}
@@ -559,7 +659,7 @@ export default function TenantDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push(`/guardians?search=`)}
+                    onClick={() => router.push(`/guardians?tenantId=${tenant._id}`)}
                   >
                     View all guardians
                   </Button>
@@ -569,7 +669,16 @@ export default function TenantDetailPage() {
 
             <DetailCard title="Recent payments" icon={<CreditCard />}>
               {recentPayments.length === 0 ? (
-                <p className="text-sm text-[color:var(--color-text-muted)]">No payments yet.</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-[color:var(--color-text-muted)]">No payments yet.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/payments/new?tenantId=${tenant._id}`)}
+                  >
+                    Record payment
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {recentPayments.map((p) => (
@@ -599,7 +708,16 @@ export default function TenantDetailPage() {
 
             <DetailCard title="Recent invoices" icon={<Receipt />}>
               {recentInvoices.length === 0 ? (
-                <p className="text-sm text-[color:var(--color-text-muted)]">No invoices yet.</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-[color:var(--color-text-muted)]">No invoices yet.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/invoices/new?tenantId=${tenant._id}`)}
+                  >
+                    Generate invoice
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {recentInvoices.map((inv) => (
@@ -620,6 +738,13 @@ export default function TenantDetailPage() {
                       <span className="font-semibold">{formatCurrency(inv.totalAmount ?? 0)}</span>
                     </button>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/invoices/new?tenantId=${tenant._id}`)}
+                  >
+                    Generate invoice
+                  </Button>
                 </div>
               )}
             </DetailCard>
@@ -643,6 +768,17 @@ export default function TenantDetailPage() {
                       />
                     </button>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      router.push(
+                        `/complaints?search=${encodeURIComponent(tenant.user?.name ?? '')}`,
+                      )
+                    }
+                  >
+                    View all complaints
+                  </Button>
                 </div>
               )}
             </DetailCard>
@@ -692,12 +828,14 @@ export default function TenantDetailPage() {
                         </p>
                         <div className="max-h-40 space-y-1 overflow-y-auto">
                           {duesData.unpaidInvoices.map((inv) => (
-                            <div
+                            <button
                               key={inv._id}
-                              className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--border-color)] px-3 py-2 text-sm"
+                              type="button"
+                              onClick={() => router.push(`/invoices/${inv._id}`)}
+                              className="flex w-full items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm transition-colors hover:bg-[color:var(--color-field-bg)]"
                             >
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-bold text-[color:var(--color-text-muted)]">
+                                <span className="font-mono text-xs font-bold text-[color:var(--color-brand-600)]">
                                   {inv.invoiceNumber}
                                 </span>
                                 <span className="text-xs text-[color:var(--color-text-muted)]">
@@ -716,7 +854,7 @@ export default function TenantDetailPage() {
                                   </p>
                                 )}
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -758,6 +896,15 @@ export default function TenantDetailPage() {
               </div>
             </div>
           )}
+
+          <DetailCard title="Tenancy Calendar" icon={<Calendar />}>
+            <TenantStayCalendar
+              moveInDate={tenant.moveInDate}
+              moveOutDate={tenant.moveOutDate}
+              isActive={tenant.isActive}
+              events={calendarEvents}
+            />
+          </DetailCard>
 
           <DetailCard title="Activity Timeline" icon={<Activity />}>
             <TenantActivityTimeline tenantId={tenant._id} />

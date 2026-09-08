@@ -10,6 +10,12 @@ const DEFAULT_THEME: ThemeSettings = {
   mode: 'light',
 };
 
+const MONO_FONT_FAMILIES: readonly string[] = ['JetBrains Mono', 'Fira Code', 'IBM Plex Mono'];
+
+function getFontFallback(family: string): 'monospace' | 'sans-serif' {
+  return MONO_FONT_FAMILIES.includes(family) ? 'monospace' : 'sans-serif';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const prevThemeRef = useRef<string | null>(null);
 
@@ -52,15 +58,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyColorScaleToDOM(settings.brandColor, root);
     }
 
-    // Apply custom font overrides
+    // Apply custom font overrides (mono families get monospace fallback, others sans-serif)
     if (settings.fonts?.display) {
-      root.style.setProperty('--font-display', `'${settings.fonts.display}', sans-serif`);
+      root.style.setProperty(
+        '--font-display',
+        `'${settings.fonts.display}', ${getFontFallback(settings.fonts.display)}`,
+      );
     }
     if (settings.fonts?.body) {
-      root.style.setProperty('--font-body', `'${settings.fonts.body}', sans-serif`);
+      root.style.setProperty(
+        '--font-body',
+        `'${settings.fonts.body}', ${getFontFallback(settings.fonts.body)}`,
+      );
     }
     if (settings.fonts?.mono) {
-      root.style.setProperty('--font-mono', `'${settings.fonts.mono}', monospace`);
+      root.style.setProperty(
+        '--font-mono',
+        `'${settings.fonts.mono}', ${getFontFallback(settings.fonts.mono)}`,
+      );
     }
   }, []);
 

@@ -44,11 +44,11 @@ async function resolveTargetUsers(
   switch (targetType) {
     case 'all': {
       // Product intent: broadcast announcements to residents, not admins/guardians.
-      return UserModel.find({ isActive: true, role: 'tenant' }).select('_id ntfyTopic').exec();
+      return UserModel.find({ isActive: true, role: 'tenant' }).select('_id +ntfyTopic').exec();
     }
     case 'individual': {
       return UserModel.find({ _id: { $in: targetIds }, isActive: true })
-        .select('_id ntfyTopic')
+        .select('_id +ntfyTopic')
         .exec();
     }
     case 'floor': {
@@ -61,7 +61,7 @@ async function resolveTargetUsers(
         .exec();
       const userIds = tenants.map((t: any) => t.userId);
       return UserModel.find({ _id: { $in: userIds }, isActive: true })
-        .select('_id ntfyTopic')
+        .select('_id +ntfyTopic')
         .exec();
     }
     case 'room': {
@@ -70,7 +70,7 @@ async function resolveTargetUsers(
         .exec();
       const userIds = tenants.map((t: any) => t.userId);
       return UserModel.find({ _id: { $in: userIds }, isActive: true })
-        .select('_id ntfyTopic')
+        .select('_id +ntfyTopic')
         .exec();
     }
     default:
@@ -110,8 +110,7 @@ export async function createNotification(
   if (sendPush) {
     const clickUrl = buildClickUrl('/notifications');
     for (const user of targetUsers) {
-      const fullUser = await User.findWithNtfyTopic(String(user._id));
-      const topic = fullUser?.ntfyTopic;
+      const topic = user.ntfyTopic;
       if (topic) {
         publishToNtfy({
           topic,
@@ -211,7 +210,7 @@ export async function deleteNotification(
   return { deletedCount: result.deletedCount };
 }
 
-function serializeNotification(
+export function serializeNotification(
   doc: INotificationDocument,
   viewerUserId?: string,
 ): Record<string, unknown> {

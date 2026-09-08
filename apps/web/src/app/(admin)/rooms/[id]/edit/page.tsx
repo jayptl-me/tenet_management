@@ -1,21 +1,23 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { AlertTriangle, Hash, Banknote } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { findInvalidPhotoLine, parsePhotoUrls } from '@/lib/photo-urls';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import type { IAppConfig } from '@pg/types';
+import { floorLabel } from '@/lib/resource-select-presets';
 
 const SHARING_OPTIONS = [
   { value: '2', label: '2 Sharing' },
@@ -31,12 +33,6 @@ const STATUS_OPTIONS = [
 
 type RoomAmenityDef = { key: string; label: string; icon: string; category: string };
 
-interface FloorOption {
-  _id: string;
-  label: string;
-  floorNumber: number;
-}
-
 interface RoomData {
   roomNumber: string;
   floor?: { _id: string; label: string; floorNumber?: number };
@@ -47,6 +43,8 @@ interface RoomData {
   description?: string;
   photos?: string[];
   roomAmenities?: Array<{ amenityKey: string; status: string }>;
+  beds?: Array<{ bedId: string; isOccupied: boolean; tenantId?: string }>;
+  occupancyCount?: number;
 }
 
 export default function EditRoomPage() {
@@ -55,11 +53,19 @@ export default function EditRoomPage() {
   const roomId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [floors, setFloors] = useState<FloorOption[]>([]);
   const [roomAmenityDefs, setRoomAmenityDefs] = useState<RoomAmenityDef[]>([]);
+  const [currentOccupancy, setCurrentOccupancy] = useState(0);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type FormValues = Record<string, any>;
+  type FormValues = {
+    roomNumber: string;
+    floorId: string;
+    sharingType: number;
+    monthlyRent: number;
+    isActive: boolean;
+    description?: string;
+    photoUrls?: string;
+    [key: string]: string | number | boolean | undefined;
+  };
 
   const schema = z.object({
     roomNumber: z.string().min(1, 'Room number is required').max(20, 'Room number max 20 chars'),
@@ -82,30 +88,35 @@ export default function EditRoomPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
+
+  const watchedSharing = Number(watch('sharingType'));
+  const isDownsizeBlocked = currentOccupancy > 0 && watchedSharing < currentOccupancy;
 
   useEffect(() => {
     if (!roomId) return;
 
     Promise.all([
       api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>(),
-      api.get('floors').json<{ success: boolean; data: FloorOption[] }>(),
       api.get('app-config').json<{ success: boolean; data: IAppConfig }>(),
     ])
-      .then(([roomRes, floorsRes, configRes]) => {
-        setFloors(floorsRes.data);
-
+      .then(([roomRes, configRes]) => {
         const defs = (configRes.data.amenityDefinitions ?? [])
           .filter((d) => !d.isPerFloor)
           .map((d) => ({ key: d.key, label: d.label, icon: d.icon, category: d.category }));
         setRoomAmenityDefs(defs);
 
         const d = roomRes.data;
+        const occ = d.beds?.filter((b) => b.isOccupied).length ?? d.occupancyCount ?? 0;
+        setCurrentOccupancy(occ);
+
         const existingAmenities = d.roomAmenities ?? [];
 
         const defaults: Record<string, string | number | boolean> = {
@@ -136,16 +147,31 @@ export default function EditRoomPage() {
 
   const onSubmit = async (data: FormValues) => {
     setSubmitError('');
+    if (isDownsizeBlocked) {
+      setSubmitError(
+        `Cannot downsize room to ${watchedSharing} sharing: ${currentOccupancy} bed(s) are currently occupied. Check out or transfer tenants first.`,
+      );
+      return;
+    }
+    const badLine = findInvalidPhotoLine(
+      typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
+    );
+    if (badLine > 0) {
+      setSubmitError(`Photo URLs line ${badLine} is not a valid http(s) URL.`);
+      return;
+    }
     try {
       const roomAmenities = roomAmenityDefs.map((a) => ({
         amenityKey: a.key,
-        status: data[`amenity_${a.key}`] ?? 'operational',
+        status:
+          typeof data[`amenity_${a.key}`] === 'string'
+            ? (data[`amenity_${a.key}`] as string)
+            : 'operational',
       }));
 
-      const photos = (data.photoUrls ?? '')
-        .split('\n')
-        .map((s: string) => s.trim())
-        .filter((s: string) => s.length > 0);
+      const photos = parsePhotoUrls(
+        typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
+      );
 
       await api
         .put(`rooms/${roomId}`, {
@@ -155,14 +181,17 @@ export default function EditRoomPage() {
             sharingType: Number(data.sharingType),
             monthlyRent: Number(data.monthlyRent),
             isActive: data.isActive,
-            description: data.description || undefined,
+            description:
+              typeof data.description === 'string' && data.description.trim() !== ''
+                ? data.description
+                : undefined,
             photos,
             roomAmenities,
           },
         })
         .json<{ success: boolean }>();
 
-      router.push('/rooms');
+      router.push(`/rooms/${roomId}`);
     } catch (err) {
       const parsed = await parseApiError(err);
       setSubmitError(parsed.message || 'Failed to update room');
@@ -170,16 +199,12 @@ export default function EditRoomPage() {
   };
 
   const err = errors as Record<string, { message?: string }>;
-  const floorOptions = floors.map((f) => ({
-    value: f._id,
-    label: `${f.label} (Floor ${f.floorNumber})`,
-  }));
 
   return (
     <FormPage
       title="Edit Room"
       description="Update identity, rent, and amenity health for this room"
-      backHref="/rooms"
+      backHref={`/rooms/${roomId}`}
       error={submitError}
       isLoading={isLoading}
       maxWidth="3xl"
@@ -189,7 +214,8 @@ export default function EditRoomPage() {
         footer={
           <FormActions
             loading={isSubmitting}
-            cancelHref="/rooms"
+            disabled={isDownsizeBlocked}
+            cancelHref={`/rooms/${roomId}`}
             submitLabel="Save Changes"
             divided={false}
           />
@@ -200,25 +226,53 @@ export default function EditRoomPage() {
             <Input
               label="Room number"
               placeholder="e.g. 101"
+              aria-label="Room number"
+              leftIcon={<Hash className="h-4 w-4" />}
               error={err.roomNumber?.message}
               {...register('roomNumber')}
             />
-            <Select
-              label="Floor"
-              options={floorOptions}
-              error={err.floorId?.message}
-              {...register('floorId')}
+            <Controller
+              name="floorId"
+              control={control}
+              render={({ field }) => (
+                <ResourceSelect
+                  label="Floor"
+                  endpoint="floors"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select floor..."
+                  labelKey={floorLabel}
+                  error={err.floorId?.message}
+                />
+              )}
             />
-            <Select
-              label="Sharing type"
-              options={SHARING_OPTIONS}
-              error={err.sharingType?.message}
-              {...register('sharingType')}
-            />
+            <div className="space-y-1">
+              <Select
+                label="Sharing type"
+                aria-label="Sharing type"
+                options={SHARING_OPTIONS}
+                error={err.sharingType?.message}
+                helperText={`Currently ${currentOccupancy} bed${currentOccupancy === 1 ? '' : 's'} occupied.`}
+                {...register('sharingType')}
+              />
+              {isDownsizeBlocked && (
+                <div className="mt-2 flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-2.5 text-xs text-[color:var(--color-warning-800)]">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-warning-600)]" />
+                  <div>
+                    <span className="font-bold">Downsize Conflict:</span> Room currently has{' '}
+                    {currentOccupancy} active occupant{currentOccupancy === 1 ? '' : 's'}. You
+                    cannot reduce sharing capacity to {watchedSharing} until active tenants are
+                    checked out or transferred.
+                  </div>
+                </div>
+              )}
+            </div>
             <Input
               label="Monthly rent (₹)"
+              aria-label="Monthly rent in Rupees"
               type="number"
               inputMode="decimal"
+              leftIcon={<Banknote className="h-4 w-4" />}
               error={err.monthlyRent?.message}
               {...register('monthlyRent')}
             />

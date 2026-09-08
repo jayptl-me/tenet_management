@@ -6,7 +6,9 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-import { Input } from '@/components/ui/Input';
+import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
+import { parseApiError } from '@/lib/errorParser';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
@@ -14,12 +16,14 @@ import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormGrid } from '@/components/ui/FormSection';
+import { CategoryChipSelect } from '@/components/ui/CategoryChipSelect';
 
 const schema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
   date: z.string().min(1, 'Date is required'),
   mealType: z.enum(['breakfast', 'lunch', 'dinner']),
   rating: z.coerce.number().min(1, 'Min 1').max(5, 'Max 5'),
+  categories: z.array(z.string()).optional(),
   comment: z.string().optional(),
 });
 
@@ -39,13 +43,6 @@ const RATING_OPTIONS = [
   { value: '5', label: '5 Stars' },
 ];
 
-interface TenantOption {
-  _id: string;
-  user?: { name: string; phone: string };
-  room?: { roomNumber: string };
-  bedId?: string;
-}
-
 export default function NewMealFeedbackPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
@@ -57,7 +54,7 @@ export default function NewMealFeedbackPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { rating: 3, comment: '' },
+    defaultValues: { rating: 3, comment: '', categories: ['taste'] },
   });
 
   const err = errors as Record<string, { message?: string }>;
@@ -67,8 +64,8 @@ export default function NewMealFeedbackPage() {
     try {
       await api.post('meals', { json: data }).json<{ success: boolean }>();
       router.push('/meals');
-    } catch {
-      setSubmitError('Failed to submit feedback. Please try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -103,16 +100,14 @@ export default function NewMealFeedbackPage() {
                 placeholder="Select tenant..."
                 error={err.tenantId?.message}
                 valueKey="_id"
-                labelKey={(item) => (item as unknown as TenantOption).user?.name ?? 'Unknown'}
-                sublabelFn={(item) =>
-                  `Room ${(item as unknown as TenantOption).room?.roomNumber ?? 'N/A'}`
-                }
+                labelKey={tenantLabel}
+                sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
                 dataPath="data"
               />
             )}
           />
           <FormGrid cols={3}>
-            <Input label="Date" type="date" error={errors.date?.message} {...register('date')} />
+            <DatePicker label="Date" error={errors.date?.message} {...register('date')} />
             <Select
               label="Meal Type"
               options={MEAL_OPTIONS}
@@ -126,6 +121,18 @@ export default function NewMealFeedbackPage() {
               {...register('rating')}
             />
           </FormGrid>
+          <Controller
+            name="categories"
+            control={control}
+            render={({ field }) => (
+              <CategoryChipSelect
+                label="Categories"
+                value={field.value ?? []}
+                onChange={field.onChange}
+                error={errors.categories?.message}
+              />
+            )}
+          />
           <Textarea
             label="Comment"
             rows={3}

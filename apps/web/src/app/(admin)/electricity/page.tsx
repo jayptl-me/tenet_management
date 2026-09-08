@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Zap } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Zap, Download, IndianRupee, PlugZap, CalendarClock } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { StatCard } from '@/components/ui/StatCard';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
@@ -17,7 +19,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 
 interface RoomEntry {
-  roomId?: { roomNumber?: string };
+  roomId?: { roomNumber?: string; floorId?: { label?: string } | null };
   previousReading: number;
   currentReading: number;
   unitsConsumed: number;
@@ -65,8 +67,8 @@ export default function ElectricityPage() {
       }>();
       setBills(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load electricity bills');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +85,74 @@ export default function ElectricityPage() {
       await api.delete(`electricity/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchBills();
-    } catch {
-      setError('Failed to delete electricity bill');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const summary = useMemo(() => {
+    let billed = 0;
+    let units = 0;
+    let distributed = 0;
+    for (const bill of bills) {
+      billed += bill.totalBillAmount ?? 0;
+      if (bill.status === 'distributed') distributed += bill.totalBillAmount ?? 0;
+      for (const entry of bill.roomEntries ?? []) {
+        units += entry.unitsConsumed ?? 0;
+      }
+    }
+    return { billed, units, distributed, count: bills.length };
+  }, [bills]);
+
+  const handleExportCsv = async () => {
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '1000');
+      if (statusFilter) params.set('status', statusFilter);
+      if (monthFilter) params.set('month', monthFilter);
+      const res = await api.get(`electricity?${params.toString()}`).json<{
+        success: boolean;
+        data: ElectricityBillRow[];
+      }>();
+      const rows = res.data ?? [];
+      if (rows.length === 0) return;
+      const headers = ['Month', 'Total Amount', 'Rooms', 'Units', 'Status', 'Created At'];
+      const escapeCsv = (val: unknown) => {
+        let str = String(val ?? '');
+        if (/^[=+\-@\t\r]/.test(str)) {
+          str = `'${str}`;
+        }
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+      const lines = [
+        headers.join(','),
+        ...rows.map((row) =>
+          [
+            row.month,
+            row.totalBillAmount,
+            row.roomEntries?.length ?? 0,
+            (row.roomEntries ?? []).reduce((s, e) => s + (e.unitsConsumed ?? 0), 0),
+            row.status,
+            row.createdAt,
+          ]
+            .map(escapeCsv)
+            .join(','),
+        ),
+      ];
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `electricity-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     }
   };
 
@@ -110,6 +176,11 @@ export default function ElectricityPage() {
       accessor: (row) => `${row.roomEntries?.length ?? 0}`,
     },
     {
+      header: 'Units',
+      accessor: (row) =>
+        `${(row.roomEntries ?? []).reduce((s, e) => s + (e.unitsConsumed ?? 0), 0).toLocaleString()}`,
+    },
+    {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
@@ -131,7 +202,9 @@ export default function ElectricityPage() {
       accessor: (row) => (
         <TableActions
           onView={() => router.push(`/electricity/${row._id}`)}
+          showEdit={row.status === 'draft'}
           onEdit={() => router.push(`/electricity/${row._id}/edit`)}
+          showDelete={row.status !== 'distributed'}
           onDelete={() => setDeleteTarget(row)}
         />
       ),
@@ -145,25 +218,58 @@ export default function ElectricityPage() {
         title="Electricity Bills"
         description="Track electricity usage and billing by month"
         action={
-          <Button onClick={() => router.push('/electricity/new')}>
-            <Plus className="h-4 w-4" />
-            Record Bill
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportCsv} disabled={bills.length === 0}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => router.push('/electricity/new')}>
+              <Plus className="h-4 w-4" />
+              Record Bill
+            </Button>
+          </div>
         }
       />
 
       <ErrorBanner message={error} />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Billed (page)"
+          value={`₹${summary.billed.toLocaleString('en-IN')}`}
+          icon={<IndianRupee className="h-4 w-4" />}
+          variant="brand"
+        />
+        <StatCard
+          title="Units (page)"
+          value={summary.units.toLocaleString('en-IN')}
+          icon={<PlugZap className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Distributed (page)"
+          value={`₹${summary.distributed.toLocaleString('en-IN')}`}
+          icon={<Zap className="h-4 w-4" />}
+          variant="success"
+        />
+        <StatCard
+          title="Bills (page)"
+          value={summary.count}
+          icon={<CalendarClock className="h-4 w-4" />}
+          variant="default"
+        />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <DatePicker
           type="month"
-          label="Month"
+          aria-label="Filter by month"
           value={monthFilter}
-          onChange={(e) => {
-            setMonthFilter(e.target.value);
+          onChange={(val: string) => {
+            setMonthFilter(val);
             setPage(1);
           }}
-          className="max-w-[200px]"
+          className="w-full sm:w-[180px]"
         />
         <Select
           options={[
@@ -177,7 +283,8 @@ export default function ElectricityPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[180px]"
+          className="w-full sm:w-[180px]"
+          aria-label="Filter by status"
         />
       </div>
 
@@ -223,7 +330,9 @@ export default function ElectricityPage() {
             <div className="flex items-center gap-1 pt-1">
               <TableActions
                 onView={() => router.push(`/electricity/${row._id}`)}
+                showEdit={row.status === 'draft'}
                 onEdit={() => router.push(`/electricity/${row._id}/edit`)}
+                showDelete={row.status !== 'distributed'}
                 onDelete={() => setDeleteTarget(row)}
               />
             </div>

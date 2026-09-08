@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, ClipboardList, List, CalendarRange } from 'lucide-react';
+import { Plus, ClipboardList, List, CalendarRange, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -17,12 +18,22 @@ import { WeekMenuPlanner } from '@/components/ui/WeekMenuPlanner';
 import type { StatusVariant } from '@pg/types';
 import { useRouter } from 'next/navigation';
 
+interface MenuItem {
+  name?: string;
+}
+
 interface MenuRow {
   _id: string;
   date: string;
   dayOfWeek?: string;
   isActive: boolean;
   createdAt: string;
+  meals?: {
+    breakfast?: MenuItem[];
+    lunch?: MenuItem[];
+    snacks?: MenuItem[];
+    dinner?: MenuItem[];
+  };
 }
 
 /**
@@ -76,8 +87,8 @@ export default function MenusPage() {
       }>();
       setMenus(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load menus');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
@@ -94,11 +105,70 @@ export default function MenusPage() {
       await api.delete(`menus/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchMenus();
-    } catch {
-      setError('Failed to delete menu');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (menus.length === 0) return;
+    const headers = [
+      'Date',
+      'Day of Week',
+      'Status',
+      'Breakfast',
+      'Lunch',
+      'Snacks',
+      'Dinner',
+      'Total Items',
+    ];
+    const escapeCsv = (val: unknown) => {
+      let str = String(val ?? '');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const itemNames = (items?: Array<{ name?: string }>) =>
+      (items ?? [])
+        .map((i) => i.name ?? '')
+        .filter(Boolean)
+        .join('; ');
+    const rows = menus.map((m) => {
+      const statusInfo = getMenuStatusInfo(m.date);
+      const day = new Date(m.date).toLocaleDateString('en-IN', { weekday: 'long' });
+      const breakfast = itemNames(m.meals?.breakfast);
+      const lunch = itemNames(m.meals?.lunch);
+      const snacks = itemNames(m.meals?.snacks);
+      const dinner = itemNames(m.meals?.dinner);
+      const total =
+        (m.meals?.breakfast?.length ?? 0) +
+        (m.meals?.lunch?.length ?? 0) +
+        (m.meals?.snacks?.length ?? 0) +
+        (m.meals?.dinner?.length ?? 0);
+      return [
+        escapeCsv(m.date),
+        escapeCsv(day),
+        escapeCsv(statusInfo.label),
+        escapeCsv(breakfast),
+        escapeCsv(lunch),
+        escapeCsv(snacks),
+        escapeCsv(dinner),
+        escapeCsv(total),
+      ];
+    });
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `menus-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const columns: DataTableColumn<MenuRow>[] = [
@@ -175,6 +245,15 @@ export default function MenusPage() {
                 <CalendarRange className="h-3.5 w-3.5" /> Week
               </button>
             </div>
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handleExportCsv}
+              disabled={menus.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
             <Button onClick={() => router.push('/menus/new')}>
               <Plus className="h-4 w-4" /> Create Menu
             </Button>

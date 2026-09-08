@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -99,6 +100,70 @@ class _TenantNotificationsScreenState
     }
   }
 
+  void _showNotificationDialog(Map<String, dynamic> n) {
+    final title = n['title']?.toString() ?? 'Notification';
+    final body = n['body']?.toString() ?? '';
+    final isEmergency = n['type'] == 'emergency';
+    final dateStr = formatDate(n['createdAt'] ?? n['sentAt']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            if (isEmergency) ...[
+              const Icon(Icons.warning_amber_rounded, color: AppTheme.danger),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                dateStr,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SelectableText(
+                body,
+                style: const TextStyle(fontSize: 14, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (body.isNotEmpty)
+            TextButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: '$title\n\n$body'));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notification copied to clipboard')),
+                );
+              },
+              icon: const Icon(Icons.copy, size: 16),
+              label: const Text('Copy'),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleTap(Map<String, dynamic> n) async {
     final id = _notificationId(n);
     if (id != null && n['isRead'] != true) {
@@ -114,7 +179,9 @@ class _TenantNotificationsScreenState
     final invoiceId = data?['invoiceId']?.toString();
     final complaintId = data?['complaintId']?.toString();
 
-    if (type == 'payment_reminder' && invoiceId != null && invoiceId.isNotEmpty) {
+    if (type == 'emergency') {
+      _showNotificationDialog(n);
+    } else if (type == 'payment_reminder' && invoiceId != null && invoiceId.isNotEmpty) {
       context.go('/tenant/invoices/$invoiceId');
     } else if (type == 'payment_verified') {
       context.go('/tenant/payments');
@@ -132,6 +199,8 @@ class _TenantNotificationsScreenState
       context.go('/tenant/meals');
     } else if (type == 'welcome') {
       context.go('/tenant/profile');
+    } else {
+      _showNotificationDialog(n);
     }
   }
 
@@ -169,8 +238,18 @@ class _TenantNotificationsScreenState
                   else
                     ..._notifications.map((n) {
                       final isRead = n['isRead'] == true;
+                      final isEmergency = n['type'] == 'emergency';
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
+                        color: isEmergency ? AppTheme.danger.withValues(alpha: 0.04) : null,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isEmergency ? AppTheme.danger : cs.outlineVariant,
+                            width: isEmergency ? 1.5 : 0.5,
+                          ),
+                        ),
                         child: ListTile(
                           onTap: () => _handleTap(n),
                           trailing: const Icon(
@@ -185,11 +264,29 @@ class _TenantNotificationsScreenState
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: cs.primary,
+                                    color: isEmergency ? AppTheme.danger : cs.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                               if (!isRead) const SizedBox(width: 8),
+                              if (isEmergency) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(right: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.danger,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'ALERT',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               Expanded(
                                 child: Text(
                                   n['title']?.toString() ?? '--',
@@ -197,6 +294,7 @@ class _TenantNotificationsScreenState
                                     fontWeight: isRead
                                         ? FontWeight.w600
                                         : FontWeight.w800,
+                                    color: isEmergency ? AppTheme.danger : null,
                                   ),
                                 ),
                               ),
@@ -208,7 +306,11 @@ class _TenantNotificationsScreenState
                               if (n['body'] != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
-                                  child: Text(n['body'].toString()),
+                                  child: Text(
+                                    n['body'].toString(),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               const SizedBox(height: 4),
                               Text(

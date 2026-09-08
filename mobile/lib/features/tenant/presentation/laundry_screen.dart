@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
@@ -20,12 +21,21 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
   List<Map<String, dynamic>> _slots = [];
   DateTime _date = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
+  int _items = 5;
+  final _notesController = TextEditingController();
   bool _booking = false;
+  String? _cancellingId;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(_load);
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -76,7 +86,10 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
             tenantId: tenantId,
             slotDate: date,
             slotTime: time,
+            items: _items,
+            notes: _notesController.text.trim(),
           );
+      _notesController.clear();
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,6 +107,52 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _booking = false);
+    }
+  }
+
+  Future<void> _cancelSlot(String slotId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel laundry slot?'),
+        content: const Text('Are you sure you want to cancel this booking?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep slot'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            child: const Text('Cancel slot'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _cancellingId = slotId);
+    try {
+      await ref.read(tenantRepositoryProvider).cancelLaundrySlot(slotId);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Laundry slot cancelled')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancellingId = null);
     }
   }
 
@@ -159,6 +218,43 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
                                   }
                                 },
                               ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Estimated garments:'),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.remove_circle_outline),
+                                          onPressed: _items > 1
+                                              ? () => setState(() => _items--)
+                                              : null,
+                                        ),
+                                        Text('$_items',
+                                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        IconButton(
+                                          icon: const Icon(Icons.add_circle_outline),
+                                          onPressed: _items < 30
+                                              ? () => setState(() => _items++)
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextField(
+                                controller: _notesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Special instructions (optional)',
+                                  hintText: 'e.g. Ironing required, delicate wash',
+                                  isDense: true,
+                                ),
+                                maxLength: 300,
+                              ),
+                              const SizedBox(height: 8),
                               FilledButton(
                                 onPressed: _booking ? null : _book,
                                 child: Text(_booking ? 'Booking...' : 'Book laundry'),
@@ -171,14 +267,52 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
                       if (_slots.isEmpty)
                         const EmptyState(message: 'No laundry slots')
                       else
-                        ..._slots.map(
-                          (s) => ListCard(
+                        ..._slots.map((s) {
+                          final status = s['status']?.toString() ?? '--';
+                          final canCancel =
+                              status == 'booked' || status == 'confirmed';
+                          final slotId = s['_id']?.toString() ??
+                              s['id']?.toString() ??
+                              '';
+                          final isCancelling = _cancellingId == slotId;
+
+                          return ListCard(
                             title:
                                 '${s['slotDate'] ?? ''} · ${s['slotTime'] ?? ''}',
-                            trailing: StatusChip(
-                                label: s['status']?.toString() ?? '--'),
-                          ),
-                        ),
+                            subtitle: [
+                              if (s['items'] != null)
+                                '${s['items']} item${s['items'] == 1 ? '' : 's'}',
+                              if ((s['notes']?.toString() ?? '').isNotEmpty)
+                                s['notes'].toString(),
+                            ].join(' · '),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                StatusChip(label: status),
+                                if (canCancel) ...[
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    tooltip: 'Cancel slot',
+                                    iconSize: 20,
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: isCancelling
+                                        ? null
+                                        : () => _cancelSlot(slotId),
+                                    icon: isCancelling
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          )
+                                        : const Icon(Icons.close,
+                                            color: AppTheme.danger),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        }),
                     ],
                   ),
       ),

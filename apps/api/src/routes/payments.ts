@@ -8,6 +8,7 @@ import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../l
 import { Payment } from '../models/payment.js';
 import { Invoice } from '../models/invoice.js';
 import { Tenant } from '../models/tenant.js';
+import { Guardian } from '../models/guardian.js';
 import { generateUpiQr, generateTransactionRef, getPgUpiConfig } from '../lib/upi.js';
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { logger } from '../lib/logger.js';
@@ -86,7 +87,8 @@ const offlinePaymentSchema = z.strictObject({
   tenantId: z.string().min(1, 'Tenant ID is required'),
   invoiceId: z.string().min(1, 'Invoice ID is required'),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
-  method: z.enum(['cash', 'bank_transfer', 'other']),
+  method: z.enum(['cash', 'bank_transfer', 'other', 'upi']),
+  type: z.enum(['rent', 'electricity', 'deposit', 'laundry', 'other']).optional(),
   paidAt: z.string().datetime('Must be ISO 8601 date string'),
   notes: z.string().max(500).optional(),
 });
@@ -111,7 +113,9 @@ const updatePaymentSchema = z.strictObject({
   amount: z.number().min(0.01, 'Amount must be greater than 0').optional(),
   method: z.enum(['upi', 'cash', 'bank_transfer', 'other']).optional(),
   type: z.enum(['rent', 'electricity', 'deposit', 'laundry', 'other']).optional(),
-  status: z.enum(['pending', 'pending_verification', 'paid', 'overdue', 'cancelled']).optional(),
+  // NOTE: 'paid' is intentionally absent — marking paid must go through the
+  // verify flow (/:id/verify or UTR verify) so verifiedBy/paidAt stay truthful.
+  status: z.enum(['pending', 'pending_verification', 'overdue', 'cancelled']).optional(),
   notes: z.string().max(500).optional(),
 });
 
@@ -157,7 +161,11 @@ payments.get('/', authGuard, adminOnly, async (c) => {
         path: 'tenantId',
         populate: [
           { path: 'userId', select: 'name email phone' },
-          { path: 'roomId', select: 'roomNumber floorId' },
+          {
+            path: 'roomId',
+            select: 'roomNumber floor',
+            populate: { path: 'floor', select: 'label floorNumber' },
+          },
         ],
       })
       .populate('invoiceId')
@@ -173,13 +181,57 @@ payments.get('/', authGuard, adminOnly, async (c) => {
 });
 
 // ── GET /payments/summary ───────────────────────────────
+// Optional ?month=YYYY-MM (defaults to current month). Backwards compatible.
 payments.get('/summary', authGuard, adminOnly, async (c) => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const currentMonth = `${year}-${month}`;
+  const monthParam = c.req.query('month');
+  let currentMonth: string;
+  if (monthParam) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)) {
+      return badRequest(c, 'month must be YYYY-MM format', 'INVALID_MONTH');
+    }
+    currentMonth = monthParam;
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    currentMonth = `${year}-${month}`;
+  }
 
   const data = await getPaymentsMonthSummary(currentMonth);
+  return c.json({ success: true, data });
+});
+
+// ── GET /payments/trend?months=6 ────────────────────────
+// Collected vs expected per month for the last N months (default 6, max 12).
+payments.get('/trend', authGuard, adminOnly, async (c) => {
+  const monthsParam = Number(c.req.query('months')) || 6;
+  const months = Math.min(12, Math.max(1, Math.floor(monthsParam)));
+
+  const now = new Date();
+  const monthKeys: string[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const collectedAgg = (await paymentAggregate([
+    { $match: { status: 'paid', month: { $in: monthKeys } } },
+    { $group: { _id: '$month', total: { $sum: '$amount' } } },
+  ])) as Array<Record<string, unknown>>;
+  const expectedAgg = (await paymentAggregate([
+    { $match: { month: { $in: monthKeys }, status: { $ne: 'cancelled' } } },
+    { $group: { _id: '$month', total: { $sum: '$amount' } } },
+  ])) as Array<Record<string, unknown>>;
+
+  const collectedMap = new Map(collectedAgg.map((r) => [String(r._id), (r.total as number) ?? 0]));
+  const expectedMap = new Map(expectedAgg.map((r) => [String(r._id), (r.total as number) ?? 0]));
+
+  const data = monthKeys.map((month) => ({
+    month,
+    collected: collectedMap.get(month) ?? 0,
+    expected: expectedMap.get(month) ?? 0,
+  }));
+
   return c.json({ success: true, data });
 });
 
@@ -192,6 +244,17 @@ payments.get('/my', authGuard, tenantOnly, async (c) => {
   const tenant = tenantRaw as Record<string, unknown>;
   const data = await (Payment.find(safeFilter({ tenantId: tenant._id }))
     .sort({ createdAt: -1 } as Record<string, 1 | -1>)
+    .populate({
+      path: 'tenantId',
+      populate: [
+        { path: 'userId', select: 'name email phone' },
+        {
+          path: 'roomId',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
+      ],
+    })
     .populate('invoiceId')
     .lean() as unknown);
 
@@ -272,6 +335,7 @@ payments.post(
       _id: mongoose.Types.ObjectId;
       amount: number;
       method: string;
+      type?: string;
       status: string;
       paidAt: Date | null;
       verifiedBy: mongoose.Types.ObjectId | null;
@@ -281,11 +345,13 @@ payments.post(
     }>;
 
     let paymentResult: unknown;
+    const paymentType = body.type ?? 'rent';
 
     if (openPayments.length > 0) {
       const primary = openPayments[0]!;
       primary.amount = body.amount;
       primary.method = body.method;
+      if (body.type !== undefined) primary.type = body.type;
       primary.status = 'paid';
       primary.paidAt = paidAt;
       primary.verifiedBy = new mongoose.Types.ObjectId(adminId);
@@ -305,7 +371,7 @@ payments.post(
           tenantId: new mongoose.Types.ObjectId(body.tenantId),
           invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
           amount: remaining,
-          type: 'rent',
+          type: (primary.type as string | undefined) ?? paymentType,
           method: 'upi',
           status: 'pending',
           month: invoice.month,
@@ -317,7 +383,7 @@ payments.post(
         tenantId: new mongoose.Types.ObjectId(body.tenantId),
         invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
         amount: body.amount,
-        type: 'rent',
+        type: paymentType,
         method: body.method,
         status: 'paid',
         month: invoice.month,
@@ -326,6 +392,20 @@ payments.post(
         verifiedBy: new mongoose.Types.ObjectId(adminId),
         notes: body.notes,
       });
+
+      const remaining = Math.max(0, balance - body.amount);
+      if (remaining > 0.01) {
+        await paymentCreate({
+          tenantId: new mongoose.Types.ObjectId(body.tenantId),
+          invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+          amount: remaining,
+          type: paymentType,
+          method: 'upi',
+          status: 'pending',
+          month: invoice.month,
+          dueDate,
+        });
+      }
     }
 
     await updateInvoicePaymentStatus(body.invoiceId);
@@ -372,7 +452,7 @@ payments.get('/qr-code', authGuard, async (c) => {
   const invoice = invoiceRaw as Record<string, unknown>;
   const user = c.get('user');
 
-  // Tenants may only request QR for their own invoices.
+  // Tenants may only request QR for their own invoices; guardians for their active linked ward
   if (user.role === 'tenant') {
     const tenantRaw = await tenantFindOne(safeFilter({ userId: user.sub }));
     if (!tenantRaw) return notFound(c, 'Tenant profile');
@@ -382,6 +462,18 @@ payments.get('/qr-code', authGuard, async (c) => {
         403,
       );
     }
+  } else if (user.role === 'guardian') {
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: user.sub, tenantId: invoice.tenantId, isActive: true }),
+    ).lean();
+    if (!guardian) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+  } else if (user.role !== 'admin') {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
   if (invoice.status === 'paid' || invoice.status === 'cancelled') {
@@ -601,6 +693,20 @@ payments.post(
 
     logger.info({ paymentId, status: body.status, adminId }, 'UTR verification processed');
 
+    await writeAuditLog({
+      userId: adminId,
+      action: 'payment_verify',
+      resource: 'payment',
+      resourceId: paymentId,
+      details: {
+        invoiceId: payment.invoiceId,
+        tenantId: payment.tenantId,
+        status: body.status,
+        method: 'utr',
+        notes: body.notes,
+      },
+    });
+
     return c.json({ success: true, data: payment });
   },
 );
@@ -616,6 +722,7 @@ function mapPayment(doc: Record<string, unknown>) {
   const roomRaw = tenant?.roomId;
   const room =
     roomRaw && typeof roomRaw === 'object' ? (roomRaw as Record<string, unknown>) : undefined;
+  const roomFloor = room?.floor as Record<string, unknown> | undefined;
   const invRaw = doc.invoiceId;
   const inv =
     invRaw && typeof invRaw === 'object' ? (invRaw as Record<string, unknown>) : undefined;
@@ -625,6 +732,7 @@ function mapPayment(doc: Record<string, unknown>) {
     tenant: tenant
       ? {
           _id: String(tenant._id ?? ''),
+          bedId: (tenant.bedId as string | undefined) ?? null,
           user: user
             ? {
                 name: user.name,
@@ -632,7 +740,20 @@ function mapPayment(doc: Record<string, unknown>) {
                 phone: user.phone,
               }
             : undefined,
-          room: room ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber } : undefined,
+          room: room
+            ? {
+                _id: String(room._id ?? ''),
+                roomNumber: room.roomNumber,
+                floor:
+                  roomFloor && typeof roomFloor === 'object' && 'label' in roomFloor
+                    ? {
+                        _id: String(roomFloor._id ?? ''),
+                        label: roomFloor.label,
+                        floorNumber: roomFloor.floorNumber,
+                      }
+                    : null,
+              }
+            : undefined,
         }
       : undefined,
     invoiceId: inv ? String(inv._id ?? '') : invRaw ? String(invRaw) : undefined,
@@ -650,7 +771,14 @@ payments.get('/pending-verification', authGuard, adminOnly, async (c) => {
       .skip(skip)
       .limit(limit)
       .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-      .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+      .populate({
+        path: 'tenantId',
+        populate: {
+          path: 'roomId',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
+      })
       .populate('invoiceId')
       .lean() as unknown,
     paymentCountDocs(safeFilter({ status: 'pending_verification' })),
@@ -670,6 +798,14 @@ payments.get('/:id/receipt', authGuard, async (c) => {
 
   const paymentRaw = await (Payment.findById(id)
     .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
+    .populate({
+      path: 'tenantId',
+      populate: {
+        path: 'roomId',
+        select: 'roomNumber floor',
+        populate: { path: 'floor', select: 'label floorNumber' },
+      },
+    })
     .populate('invoiceId')
     .lean() as unknown);
 
@@ -687,6 +823,20 @@ payments.get('/:id/receipt', authGuard, async (c) => {
         403,
       );
     }
+  } else if (user.role === 'guardian') {
+    const tenantInfo = payment.tenantId as Record<string, unknown> | null;
+    const targetTenantId = tenantInfo?._id;
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: user.sub, tenantId: targetTenantId, isActive: true }),
+    ).lean();
+    if (!guardian) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+  } else if (user.role !== 'admin') {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
   return c.json({ success: true, data: payment });
@@ -699,7 +849,14 @@ payments.get('/:id', authGuard, async (c) => {
 
   const paymentRaw = await (Payment.findById(id)
     .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-    .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
+    .populate({
+      path: 'tenantId',
+      populate: {
+        path: 'roomId',
+        select: 'roomNumber floor',
+        populate: { path: 'floor', select: 'label floorNumber' },
+      },
+    })
     .populate('invoiceId')
     .lean() as unknown);
 
@@ -717,6 +874,20 @@ payments.get('/:id', authGuard, async (c) => {
         403,
       );
     }
+  } else if (user.role === 'guardian') {
+    const tenantInfo = payment.tenantId as Record<string, unknown> | null;
+    const targetTenantId = tenantInfo?._id;
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: user.sub, tenantId: targetTenantId, isActive: true }),
+    ).lean();
+    if (!guardian) {
+      return c.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      );
+    }
+  } else if (user.role !== 'admin') {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
   return c.json({ success: true, data: mapPayment(payment) });
@@ -754,11 +925,6 @@ payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchem
   if (body.status !== undefined) updateData.status = body.status;
   if (body.notes !== undefined) updateData.notes = body.notes;
 
-  // Setting status to paid via PUT must stamp paidAt (prefer dedicated verify).
-  if (body.status === 'paid' && !existing.paidAt) {
-    updateData.paidAt = new Date();
-  }
-
   const paymentRaw = await (Payment.findByIdAndUpdate(id, updateData, {
     returnDocument: 'after',
   }).lean() as unknown);
@@ -766,6 +932,15 @@ payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchem
 
   const payment = paymentRaw as Record<string, unknown>;
   await updateInvoicePaymentStatus(String(payment.invoiceId));
+
+  const user = c.get('user');
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'payment',
+    resourceId: id,
+    details: updateData,
+  });
 
   logger.info({ paymentId: id, fields: Object.keys(updateData) }, 'Payment updated');
 
@@ -823,6 +998,70 @@ payments.post(
 
     logger.info({ paymentId: id, approved: body.approved, adminId }, 'Payment verified');
 
+    await writeAuditLog({
+      userId: adminId,
+      action: 'payment_verify',
+      resource: 'payment',
+      resourceId: id,
+      details: {
+        invoiceId: payment.invoiceId,
+        tenantId: payment.tenantId,
+        approved: body.approved,
+        notes: body.notes,
+      },
+    });
+
+    return c.json({ success: true, data: payment });
+  },
+);
+
+// ── POST /payments/:id/void — void a paid payment (admin only) ──
+// Returns money to owed state: status -> cancelled + invoice re-sync.
+payments.post(
+  '/:id/void',
+  authGuard,
+  adminOnly,
+  zValidator('json', z.strictObject({ notes: z.string().max(500).optional() })),
+  async (c) => {
+    const id = parseId(c.req.param('id'));
+    if (!id) return badRequest(c, 'Invalid payment ID');
+
+    const body = c.req.valid('json');
+    const adminId = c.get('user').sub;
+
+    const payment = await Payment.findById(id);
+    if (!payment) return notFound(c, 'Payment');
+    if (payment.status !== 'paid') {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'PAYMENT_NOT_PAID',
+            message: `Only paid payments can be voided (current: ${payment.status}).`,
+          },
+        },
+        422,
+      );
+    }
+
+    payment.status = 'cancelled';
+    if (body.notes) {
+      const existingNotes = (payment.notes as string) ?? '';
+      payment.notes = existingNotes
+        ? `${existingNotes} | Void: ${body.notes}`
+        : `Void: ${body.notes}`;
+    }
+    await payment.save();
+    await updateInvoicePaymentStatus(String(payment.invoiceId));
+
+    await writeAuditLog({
+      userId: adminId,
+      action: 'update',
+      resource: 'payment',
+      resourceId: id,
+      details: { voided: true, invoiceId: String(payment.invoiceId), notes: body.notes },
+    });
+
     return c.json({ success: true, data: payment });
   },
 );
@@ -854,6 +1093,19 @@ payments.delete('/:id', authGuard, adminOnly, async (c) => {
 
   // Update invoice payment status after deletion
   await updateInvoicePaymentStatus(invoiceId);
+
+  const user = c.get('user');
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'payment',
+    resourceId: id,
+    details: {
+      invoiceId,
+      amount: payment.amount,
+      status: payment.status,
+    },
+  });
 
   return c.json({ success: true, data: { message: 'Payment deleted' } });
 });

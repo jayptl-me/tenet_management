@@ -4,14 +4,59 @@ import { z } from 'zod';
 import type { PipelineStage } from 'mongoose';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly, tenantOnly } from '../middleware/roles.js';
-import { notFound, badRequest, parsePagination, safeFilter } from '../lib/routeUtils.js';
+import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { MealFeedback } from '../models/mealFeedback.js';
 import { Tenant } from '../models/tenant.js';
 import { User } from '../models/user.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+import { publishEvent } from '../lib/eventBus.js';
 
 const meals = new Hono();
 meals.use('*', requireFeature('messFeedbackEnabled'));
+
+/**
+ * Normalize the two populate shapes (list uses virtual tenant->user/room,
+ * detail uses tenantId->userId/roomId) into one host stay chain so admin
+ * list/detail/edit render identically.
+ */
+function mapMealFeedback(doc: Record<string, unknown>) {
+  const t = (doc.tenant ?? doc.tenantId) as Record<string, unknown> | undefined;
+  const user = (t?.user ?? t?.userId) as Record<string, unknown> | undefined;
+  const room = (t?.room ?? t?.roomId) as Record<string, unknown> | undefined;
+  const floor = room?.floor as Record<string, unknown> | undefined;
+  return {
+    ...doc,
+    tenant: t
+      ? {
+          _id: String(t._id ?? ''),
+          bedId: (t.bedId as string | undefined) ?? null,
+          user: user
+            ? {
+                _id: String(user._id ?? ''),
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+              }
+            : null,
+          room: room
+            ? {
+                _id: String(room._id ?? ''),
+                roomNumber: room.roomNumber,
+                floor:
+                  floor && typeof floor === 'object' && 'label' in floor
+                    ? {
+                        _id: String(floor._id ?? ''),
+                        label: floor.label,
+                        floorNumber: floor.floorNumber,
+                      }
+                    : null,
+              }
+            : null,
+        }
+      : null,
+  };
+}
 
 // ── Schemas ─────────────────────────────────────────────
 const createFeedbackSchema = z.strictObject({
@@ -29,12 +74,20 @@ const adminCreateFeedbackSchema = z.strictObject({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   mealType: z.enum(['breakfast', 'lunch', 'dinner']),
   rating: z.number().int().min(1, 'Rating must be at least 1').max(5, 'Rating cannot exceed 5'),
+  categories: z
+    .array(z.enum(['taste', 'variety', 'quantity', 'cleanliness', 'service']))
+    .optional(),
   comment: z.string().max(500, 'Comment cannot exceed 500 characters').optional(),
 });
 
 // ── POST /meals — admin records feedback for a tenant ─────
 meals.post('/', authGuard, adminOnly, zValidator('json', adminCreateFeedbackSchema), async (c) => {
   const body = c.req.valid('json');
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (body.date > todayStr) {
+    return badRequest(c, 'Cannot submit feedback for a future date', 'FUTURE_DATE_INVALID');
+  }
 
   const tenant = await Tenant.findById(body.tenantId).lean();
   if (!tenant) return notFound(c, 'Tenant profile');
@@ -50,10 +103,29 @@ meals.post('/', authGuard, adminOnly, zValidator('json', adminCreateFeedbackSche
     {
       ...filter,
       rating: body.rating,
+      categories: body.categories ?? ['taste'],
       comment: body.comment ?? '',
+      // Re-recorded feedback re-enters triage like tenant resubmits do.
+      status: 'submitted',
     },
     { upsert: true, returnDocument: 'after', runValidators: true },
   ).lean();
+
+  const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
+  await writeAuditLog({
+    userId: adminUserId,
+    action: 'create',
+    resource: 'meal_feedback',
+    resourceId: String((feedback as { _id: unknown })._id),
+    details: {
+      tenantId: body.tenantId,
+      date: body.date,
+      mealType: body.mealType,
+      rating: body.rating,
+    },
+    ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+    userAgent: c.req.header('user-agent'),
+  });
 
   return c.json({ success: true, data: feedback }, 201);
 });
@@ -66,6 +138,12 @@ meals.post(
   zValidator('json', createFeedbackSchema),
   async (c) => {
     const body = c.req.valid('json');
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (body.date > todayStr) {
+      return badRequest(c, 'Cannot submit feedback for a future date', 'FUTURE_DATE_INVALID');
+    }
+
     const userId = c.get('user').sub;
 
     const tenant = await Tenant.findOne(safeFilter({ userId })).lean();
@@ -91,6 +169,14 @@ meals.post(
       },
       { upsert: true, returnDocument: 'after', runValidators: true },
     ).lean();
+
+    publishEvent('meal_feedback_submitted', {
+      feedbackId: (feedback as { _id: unknown })?._id,
+      tenantId: tenant._id,
+      date: body.date,
+      mealType: body.mealType,
+      rating: body.rating,
+    });
 
     return c.json({ success: true, data: feedback }, 201);
   },
@@ -147,12 +233,29 @@ meals.get('/feedback/my', authGuard, tenantOnly, async (c) => {
     return notFound(c, 'Tenant profile');
   }
 
-  const data = await MealFeedback.find({ tenantId: tenant._id } as Record<string, unknown>)
-    .sort({ date: -1 })
-    .limit(30)
-    .lean();
+  const page = Math.max(1, Number(c.req.query('page') ?? 1));
+  const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') ?? 30)));
+  const skip = (page - 1) * limit;
 
-  return c.json({ success: true, data });
+  const [data, total] = await Promise.all([
+    MealFeedback.find({ tenantId: tenant._id } as Record<string, unknown>)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    MealFeedback.countDocuments({ tenantId: tenant._id } as Record<string, unknown>),
+  ]);
+
+  return c.json({
+    success: true,
+    data,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 });
 
 // ── GET /meals/feedback ─────────────────────────────────
@@ -163,7 +266,20 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
   if (date) filter.date = date;
 
   const mealType = c.req.query('mealType');
-  if (mealType) filter.mealType = mealType;
+  if (mealType) {
+    if (!['breakfast', 'lunch', 'dinner'].includes(mealType)) {
+      return badRequest(c, 'Invalid mealType filter', 'INVALID_MEAL_TYPE');
+    }
+    filter.mealType = mealType;
+  }
+
+  const status = c.req.query('status');
+  if (status) {
+    if (!['submitted', 'acknowledged', 'actioned'].includes(status)) {
+      return badRequest(c, 'Invalid status filter', 'INVALID_STATUS');
+    }
+    filter.status = status;
+  }
 
   const rating = c.req.query('rating');
   if (rating) filter.rating = Number(rating);
@@ -203,8 +319,12 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
       .populate({
         path: 'tenant',
         populate: [
-          { path: 'user', select: 'name' },
-          { path: 'room', select: 'roomNumber' },
+          { path: 'user', select: 'name email phone' },
+          {
+            path: 'room',
+            select: 'roomNumber floor',
+            populate: { path: 'floor', select: 'label floorNumber' },
+          },
         ],
       })
       .lean(),
@@ -213,7 +333,7 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
 
   return c.json({
     success: true,
-    data,
+    data: (data as unknown as Record<string, unknown>[]).map(mapMealFeedback),
     meta: {
       total,
       page,
@@ -225,22 +345,29 @@ meals.get('/feedback', authGuard, adminOnly, async (c) => {
 
 // ── GET /meals/:id ──────────────────────────────────────
 meals.get('/:id', authGuard, adminOnly, async (c) => {
-  const id = c.req.param('id');
-  if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid meal feedback ID');
 
   const feedback = await MealFeedback.findById(id)
     .populate({
       path: 'tenantId',
       populate: [
         { path: 'userId', select: 'name email phone' },
-        { path: 'roomId', select: 'roomNumber' },
+        {
+          path: 'roomId',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
       ],
     })
     .lean();
 
   if (!feedback) return notFound(c, 'Meal feedback');
 
-  return c.json({ success: true, data: feedback });
+  return c.json({
+    success: true,
+    data: mapMealFeedback(feedback as unknown as Record<string, unknown>),
+  });
 });
 
 // ── PUT /meals/:id ──────────────────────────────────────
@@ -270,6 +397,18 @@ meals.put(
         runValidators: true,
       }).lean();
       if (!feedback) return notFound(c, 'Meal feedback');
+
+      const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
+      await writeAuditLog({
+        userId: adminUserId,
+        action: 'update',
+        resource: 'meal_feedback',
+        resourceId: id,
+        details: body,
+        ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+        userAgent: c.req.header('user-agent'),
+      });
+
       return c.json({ success: true, data: feedback });
     } catch (err: unknown) {
       // Unique compound tenantId+date+mealType — e.g. changing mealType collides
@@ -296,6 +435,22 @@ meals.delete('/:id', authGuard, adminOnly, async (c) => {
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
   const feedback = await MealFeedback.findByIdAndDelete(id);
   if (!feedback) return notFound(c, 'Meal feedback');
+
+  const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
+  await writeAuditLog({
+    userId: adminUserId,
+    action: 'delete',
+    resource: 'meal_feedback',
+    resourceId: id,
+    details: {
+      date: (feedback as { date?: string }).date,
+      mealType: (feedback as { mealType?: string }).mealType,
+      rating: (feedback as { rating?: number }).rating,
+    },
+    ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+    userAgent: c.req.header('user-agent'),
+  });
+
   return c.json({ success: true, data: { message: 'Meal feedback deleted' } });
 });
 

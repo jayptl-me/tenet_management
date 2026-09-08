@@ -2,8 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { clsx } from 'clsx';
-import { motion } from 'motion/react';
-import { staggerContainerFast, fadeScaleIn } from '@/lib/animations';
 import { HeadingSkeleton, ShimmerBlock, FormFieldSkeleton } from '@/components/ui/Skeleton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -22,7 +20,7 @@ export interface FormPageProps {
   children?: ReactNode;
   className?: string;
   /** Max width of the form content column. Default 2xl for edit forms; use 4xl/full for detail views. */
-  maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'full';
+  maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
 }
 
 const maxWidthMap: Record<NonNullable<FormPageProps['maxWidth']>, string> = {
@@ -32,6 +30,7 @@ const maxWidthMap: Record<NonNullable<FormPageProps['maxWidth']>, string> = {
   '2xl': 'max-w-2xl',
   '3xl': 'max-w-3xl',
   '4xl': 'max-w-4xl',
+  '5xl': 'max-w-5xl',
   full: 'max-w-none',
 };
 
@@ -91,29 +90,19 @@ export function FormPage({
   }
 
   return (
-    <motion.div
-      variants={staggerContainerFast}
-      initial="hidden"
-      animate="visible"
-      className={clsx(pageStackClass, 'pb-4 sm:pb-6', className)}
-    >
+    <div className={clsx(pageStackClass, 'pb-4 sm:pb-6', className)}>
       <PageHeader
         title={title}
         description={description}
-        backHref={backHref ?? ''}
+        backHref={backHref || undefined}
         action={actions}
         badge={badge}
       />
 
-      {error && (
-        <motion.div variants={fadeScaleIn}>
-          <ErrorBanner message={error} />
-        </motion.div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {children != null && children !== false && (
-        <motion.div
-          variants={fadeScaleIn}
+        <div
           className={clsx(
             'w-full min-w-0',
             maxWidthMap[maxWidth],
@@ -121,8 +110,8 @@ export function FormPage({
           )}
         >
           {children}
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }

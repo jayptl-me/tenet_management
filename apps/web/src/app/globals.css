@@ -1,5 +1,5 @@
 /* ── Fonts (all 8 families, display:swap for all themes) ──── */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 @import 'tailwindcss';
 
@@ -8,6 +8,7 @@
 @import '../themes/neumorphic.css';
 @import '../themes/soft-ui.css';
 @import '../themes/saas.css';
+@import '../themes/custom.css';
 
 /* ═════════════════════════════════════════════════════════
    DEFAULT TOKEN VALUES (fallback — SaaS light mode)
@@ -600,6 +601,53 @@ textarea:focus {
   outline: none;
   border-color: var(--color-brand-500);
   box-shadow: 0 0 0 var(--bw-default) var(--color-brand-500);
+}
+
+/* ── Visitor gate pass print isolation ──────────────────── */
+/* Moved from VisitorGatePassCard inline <style> so print rules live in one
+   global place. .visitor-pass-print-area marks the printable slip;
+   .visitor-pass-no-print hides screen-only actions (copy/print buttons). */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .visitor-pass-print-area,
+  .visitor-pass-print-area * {
+    visibility: visible !important;
+  }
+  .visitor-pass-print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .visitor-pass-no-print {
+    display: none !important;
+  }
+}
+
+/* ── Receipt / invoice document print isolation ─────────── */
+/* Same pattern as the gate pass: only the .receipt-print-area subtree
+   prints; screen-only controls use .receipt-print-no-print. */
+@media print {
+  .receipt-print-no-print,
+  .receipt-print-no-print * {
+    display: none !important;
+  }
+  .receipt-print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .receipt-print-area * {
+    color: #000 !important;
+  }
 }
 
 /* Range inputs */

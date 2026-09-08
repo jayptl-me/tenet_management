@@ -27,6 +27,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   List<Map<String, dynamic>> _invoices = [];
   String? _invoiceId;
   final _utr = TextEditingController();
+  final _screenshot = TextEditingController();
   bool _submitting = false;
 
   Map<String, dynamic>? _qr;
@@ -64,6 +65,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   @override
   void dispose() {
     _utr.dispose();
+    _screenshot.dispose();
     super.dispose();
   }
 
@@ -164,8 +166,11 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
       await ref.read(tenantRepositoryProvider).submitUtr(
             invoiceId: _invoiceId!,
             utrNumber: _utr.text,
+            screenshotUrl:
+                _screenshot.text.trim().isEmpty ? null : _screenshot.text.trim(),
           );
       _utr.clear();
+      _screenshot.clear();
       setState(() => _success = 'UTR submitted for verification.');
       await _load();
     } catch (e) {
@@ -273,13 +278,20 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       decoration: const InputDecoration(labelText: 'Invoice'),
                       items: _invoices
                           .map(
-                            (i) => DropdownMenuItem(
-                              value: i['_id']?.toString(),
-                              child: Text(
-                                '${i['invoiceNumber'] ?? i['_id']} · ${formatMoney(i['totalAmount'] as num?)}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
+                            (i) {
+                              final total =
+                                  (i['totalAmount'] as num?)?.toDouble() ?? 0;
+                              final paid =
+                                  (i['paidAmount'] as num?)?.toDouble() ?? 0;
+                              final due = total - paid;
+                              return DropdownMenuItem(
+                                value: i['_id']?.toString(),
+                                child: Text(
+                                  '${i['invoiceNumber'] ?? i['_id']} · ${formatMoney(due > 0 ? due : 0)} due',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            },
                           )
                           .toList(),
                       onChanged: (v) => _onInvoiceChanged(v),
@@ -370,6 +382,16 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       controller: _utr,
                       decoration: const InputDecoration(labelText: 'UTR / reference'),
                       textCapitalization: TextCapitalization.characters,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _screenshot,
+                      decoration: const InputDecoration(
+                        labelText: 'Screenshot URL (optional)',
+                        hintText: 'https://...',
+                        prefixIcon: Icon(Icons.link, size: 18),
+                      ),
+                      keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 12),
                     FilledButton(

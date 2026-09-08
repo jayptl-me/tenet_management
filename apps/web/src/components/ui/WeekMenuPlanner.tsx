@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, CalendarDays, Sun, Sunset, Moon, Loader2 } from 'lucide-react';
+import { Copy, CalendarDays, Sun, Sunset, Moon, Cookie, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { api } from '@/lib/api';
 import { surfaceCardClass } from '@/lib/field-styles';
@@ -18,6 +18,7 @@ interface MenuDay {
   meals: {
     breakfast: MenuMealItem[];
     lunch: MenuMealItem[];
+    snacks?: MenuMealItem[];
     dinner: MenuMealItem[];
   };
   isActive: boolean;
@@ -34,6 +35,7 @@ const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MEAL_SLOTS = [
   { key: 'breakfast' as const, icon: Sun },
   { key: 'lunch' as const, icon: Sunset },
+  { key: 'snacks' as const, icon: Cookie },
   { key: 'dinner' as const, icon: Moon },
 ];
 
@@ -142,7 +144,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-          <h3 className="text-base font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="text-base font-display font-bold text-[color:var(--color-text-primary)]">
             Week of {formatDayLabel(monday)}
           </h3>
         </div>
@@ -176,7 +178,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                 isCopySource
                   ? 'border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-50)]'
                   : isToday
-                    ? 'border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)]'
+                    ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
                     : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]',
               )}
             >
@@ -185,7 +187,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                   <p className="text-[11px] font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
                     {DAY_NAMES[idx]}
                   </p>
-                  <p className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
+                  <p className="text-sm font-display font-bold text-[color:var(--color-text-primary)]">
                     {formatDayLabel(date)}
                   </p>
                 </div>

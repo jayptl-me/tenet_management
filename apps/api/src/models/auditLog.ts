@@ -35,6 +35,7 @@ const auditLogSchema = new Schema<IAuditLogDocument>(
         'notification_send',
         'visitor_approve',
         'export',
+        'reconcile',
       ],
       required: [true, 'Action is required'],
     },

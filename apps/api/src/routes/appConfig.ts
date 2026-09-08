@@ -194,6 +194,25 @@ appConfig.put('/', authGuard, adminOnly, zValidator('json', appConfigUpdateSchem
   const { invalidateFeatureFlagCache } = await import('../middleware/featureFlags.js');
   invalidateFeatureFlagCache();
 
+  // Audit trail for configuration and feature flag adjustments
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    const adminId = c.get('user').sub;
+    await writeAuditLog({
+      userId: adminId,
+      action: 'settings_change',
+      resource: 'settings',
+      resourceId: 'singleton',
+      details: {
+        updatedFields: Object.keys(body),
+        themePreset: body.theme?.preset,
+        features: body.features,
+      },
+    });
+  } catch {
+    // Non-fatal
+  }
+
   return c.json({ success: true, data: config });
 });
 

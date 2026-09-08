@@ -5,9 +5,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CalendarDays, Clock, Shirt, UserRound, Hash } from 'lucide-react';
+import { Clock, Shirt, UserRound, Hash } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormPage } from '@/components/ui/FormPage';
@@ -86,8 +88,8 @@ export default function EditLaundrySlotPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load laundry slot');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -97,8 +99,8 @@ export default function EditLaundrySlotPage() {
     try {
       await api.put(`laundry-slots/${id}`, { json: data }).json();
       router.push('/laundry');
-    } catch {
-      setSubmitError('Failed to update laundry slot');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -149,11 +151,9 @@ export default function EditLaundrySlotPage() {
             description="When the laundry slot is booked and how many items"
           >
             <FormGrid>
-              <Input
+              <DatePicker
                 label="Slot date"
-                type="date"
                 error={err.slotDate?.message}
-                leftIcon={<CalendarDays className="h-4 w-4" />}
                 {...register('slotDate')}
               />
               <Input

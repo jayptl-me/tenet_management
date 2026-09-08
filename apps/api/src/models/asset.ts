@@ -5,6 +5,8 @@ export interface IAssetDocument extends Document {
   name: string;
   category: string;
   location: string;
+  floorId?: Schema.Types.ObjectId | null;
+  roomId?: Schema.Types.ObjectId | null;
   quantity: number;
   lowStockThreshold: number;
   status: string;
@@ -34,6 +36,16 @@ const assetSchema = new Schema<IAssetDocument>(
       required: [true, 'Location is required'],
       trim: true,
       maxlength: [160, 'Location cannot exceed 160 characters'],
+    },
+    floorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Floor',
+      default: null,
+    },
+    roomId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Room',
+      default: null,
     },
     quantity: {
       type: Number,

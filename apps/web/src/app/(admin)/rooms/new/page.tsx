@@ -6,6 +6,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
+import { findInvalidPhotoLine, parsePhotoUrls } from '@/lib/photo-urls';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -38,28 +40,13 @@ function NewRoomForm() {
   const prefillFloorId = searchParams.get('floorId') ?? '';
   const [submitError, setSubmitError] = useState('');
   const [roomAmenityDefs, setRoomAmenityDefs] = useState<RoomAmenityDef[]>([]);
+  const [roomPricing, setRoomPricing] = useState<{
+    sharing2: number;
+    sharing3: number;
+    sharing4: number;
+  } | null>(null);
+  const [rentTouched, setRentTouched] = useState(false);
   const [loadingDefs, setLoadingDefs] = useState(true);
-
-  useEffect(() => {
-    api
-      .get('app-config')
-      .json<{ success: boolean; data: IAppConfig }>()
-      .then((res) => {
-        const defs = (res.data.amenityDefinitions ?? [])
-          .filter((d) => !d.isPerFloor)
-          .map((d) => ({ key: d.key, label: d.label, icon: d.icon, category: d.category }));
-        setRoomAmenityDefs(defs);
-      })
-      .catch(() => {
-        setRoomAmenityDefs([
-          { key: 'fan', label: 'Fan', icon: 'fan', category: 'furnishing' },
-          { key: 'bed', label: 'Bed', icon: 'bed-single', category: 'furnishing' },
-          { key: 'bedsheet', label: 'Bedsheet', icon: 'scroll-text', category: 'furnishing' },
-          { key: 'pillow', label: 'Pillow', icon: 'moon-star', category: 'furnishing' },
-        ]);
-      })
-      .finally(() => setLoadingDefs(false));
-  }, []);
 
   const schema = z.object({
     roomNumber: z.string().min(1, 'Room number is required').max(20, 'Room number max 20 chars'),
@@ -79,38 +66,96 @@ function NewRoomForm() {
     ),
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type FormValues = Record<string, any>;
+  type FormValues = {
+    roomNumber: string;
+    floorId: string;
+    sharingType: number;
+    monthlyRent: number;
+    description?: string;
+    photoUrls?: string;
+    [key: string]: string | number | undefined;
+  };
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       floorId: prefillFloorId,
       sharingType: 2,
-      monthlyRent: 0,
+      monthlyRent: 7000,
       description: '',
       photoUrls: '',
       ...Object.fromEntries(roomAmenityDefs.map((a) => [`amenity_${a.key}`, 'operational'])),
     },
   });
 
+  const watchedSharing = Number(watch('sharingType'));
+
+  useEffect(() => {
+    api
+      .get('app-config')
+      .json<{ success: boolean; data: IAppConfig }>()
+      .then((res) => {
+        const defs = (res.data.amenityDefinitions ?? [])
+          .filter((d) => !d.isPerFloor)
+          .map((d) => ({ key: d.key, label: d.label, icon: d.icon, category: d.category }));
+        setRoomAmenityDefs(defs);
+        if (res.data.roomPricing) {
+          setRoomPricing(res.data.roomPricing);
+          if (!rentTouched) {
+            const defaultRent = res.data.roomPricing.sharing2 ?? 7000;
+            setValue('monthlyRent', defaultRent);
+          }
+        }
+      })
+      .catch(() => {
+        setRoomAmenityDefs([
+          { key: 'fan', label: 'Fan', icon: 'fan', category: 'furnishing' },
+          { key: 'bed', label: 'Bed', icon: 'bed-single', category: 'furnishing' },
+          { key: 'bedsheet', label: 'Bedsheet', icon: 'scroll-text', category: 'furnishing' },
+          { key: 'pillow', label: 'Pillow', icon: 'moon-star', category: 'furnishing' },
+        ]);
+      })
+      .finally(() => setLoadingDefs(false));
+  }, [rentTouched, setValue]);
+
+  useEffect(() => {
+    if (!rentTouched && roomPricing) {
+      const key = `sharing${watchedSharing}` as keyof typeof roomPricing;
+      const defaultRent = roomPricing[key];
+      if (defaultRent) {
+        setValue('monthlyRent', defaultRent);
+      }
+    }
+  }, [watchedSharing, roomPricing, rentTouched, setValue]);
+
   const onSubmit = async (data: FormValues) => {
     setSubmitError('');
+    const badLine = findInvalidPhotoLine(
+      typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
+    );
+    if (badLine > 0) {
+      setSubmitError(`Photo URLs line ${badLine} is not a valid http(s) URL.`);
+      return;
+    }
     try {
       const roomAmenities = roomAmenityDefs.map((a) => ({
         amenityKey: a.key,
-        status: data[`amenity_${a.key}`] ?? 'operational',
+        status:
+          typeof data[`amenity_${a.key}`] === 'string'
+            ? (data[`amenity_${a.key}`] as string)
+            : 'operational',
       }));
 
-      const photos = (data.photoUrls ?? '')
-        .split('\n')
-        .map((s: string) => s.trim())
-        .filter((s: string) => s.length > 0);
+      const photos = parsePhotoUrls(
+        typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
+      );
 
       await api
         .post('rooms', {
@@ -119,7 +164,10 @@ function NewRoomForm() {
             floorId: data.floorId,
             sharingType: Number(data.sharingType),
             monthlyRent: Number(data.monthlyRent),
-            description: data.description || undefined,
+            description:
+              typeof data.description === 'string' && data.description.trim() !== ''
+                ? data.description
+                : undefined,
             ...(photos.length > 0 ? { photos } : {}),
             roomAmenities,
           },
@@ -127,8 +175,8 @@ function NewRoomForm() {
         .json<{ success: boolean }>();
 
       router.push('/rooms');
-    } catch {
-      setSubmitError('Failed to create room. Please try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -180,16 +228,20 @@ function NewRoomForm() {
             />
             <Select
               label="Sharing type"
+              aria-label="Sharing type"
               options={SHARING_OPTIONS}
               error={err.sharingType?.message}
               {...register('sharingType')}
             />
             <Input
               label="Monthly rent (₹)"
+              aria-label="Monthly rent in Rupees"
               type="number"
               error={err.monthlyRent?.message}
               leftIcon={<Banknote className="h-4 w-4" />}
-              {...register('monthlyRent')}
+              {...register('monthlyRent', {
+                onChange: () => setRentTouched(true),
+              })}
             />
           </FormGrid>
           <div className="mt-4">

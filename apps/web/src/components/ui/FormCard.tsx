@@ -41,9 +41,9 @@ export function FormCard({
   const body = (
     <>
       {(title || description) && (
-        <div className="border-b border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-4 sm:px-6">
+        <div className="border-b border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-5 py-4 sm:px-6">
           {title && (
-            <h2 className="text-base font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-lg">
+            <h2 className="text-base font-display font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-lg">
               {title}
             </h2>
           )}

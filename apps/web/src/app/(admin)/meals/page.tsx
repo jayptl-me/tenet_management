@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Utensils } from 'lucide-react';
+import { Plus, Utensils, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -37,6 +39,7 @@ export default function MealsPage() {
   const [perPage, setPerPage] = useState(25);
   const [mealFilter, setMealFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
@@ -53,6 +56,7 @@ export default function MealsPage() {
       if (search) params.set('search', search);
       if (mealFilter) params.set('mealType', mealFilter);
       if (ratingFilter) params.set('rating', ratingFilter);
+      if (statusFilter) params.set('status', statusFilter);
       if (dateFilter) params.set('date', dateFilter);
 
       const res = await api.get(`meals/feedback?${params.toString()}`).json<{
@@ -62,12 +66,12 @@ export default function MealsPage() {
       }>();
       setFeedbacks(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load meal feedback');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, mealFilter, ratingFilter, dateFilter]);
+  }, [page, perPage, search, mealFilter, ratingFilter, dateFilter, statusFilter]);
 
   useEffect(() => {
     fetchFeedbacks();
@@ -80,11 +84,50 @@ export default function MealsPage() {
       await api.delete(`meals/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchFeedbacks();
-    } catch {
-      setError('Failed to delete meal feedback');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (feedbacks.length === 0) return;
+    const headers = [
+      'Tenant Name',
+      'Room Number',
+      'Meal Type',
+      'Date',
+      'Rating',
+      'Status',
+      'Comment',
+    ];
+    const escapeCsv = (val: unknown) => {
+      let str = String(val ?? '');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const rows = feedbacks.map((f) => [
+      escapeCsv(f.tenant?.user?.name ?? 'N/A'),
+      escapeCsv(f.tenant?.room?.roomNumber ?? 'N/A'),
+      escapeCsv(f.mealType),
+      escapeCsv(f.date ?? f.createdAt?.slice(0, 10) ?? 'N/A'),
+      escapeCsv(f.rating),
+      escapeCsv(f.status),
+      escapeCsv(f.comment ?? ''),
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `meal-feedback-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const columns: DataTableColumn<MealFeedbackRow>[] = [
@@ -162,15 +205,26 @@ export default function MealsPage() {
         title="Meal Feedback"
         description="Track meal ratings and comments"
         action={
-          <Button onClick={() => router.push('/meals/new')}>
-            <Plus className="h-4 w-4" />
-            Add Feedback
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="md"
+              onClick={handleExportCsv}
+              disabled={feedbacks.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => router.push('/meals/new')}>
+              <Plus className="h-4 w-4" />
+              Add Feedback
+            </Button>
+          </div>
         }
       />
       <ErrorBanner message={error} />
       <FeedbackSummaryStrip />
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           placeholder="Search by tenant name..."
           value={search}
@@ -178,16 +232,17 @@ export default function MealsPage() {
             setSearch(e.target.value);
             setPage(1);
           }}
-          className="max-w-xs"
+          className="w-full sm:w-64"
         />
-        <Input
-          type="date"
+        <DatePicker
+          aria-label="Filter by date"
+          placeholder="Filter by date..."
           value={dateFilter}
-          onChange={(e) => {
-            setDateFilter(e.target.value);
+          onChange={(val: string) => {
+            setDateFilter(val);
             setPage(1);
           }}
-          className="max-w-[160px]"
+          className="w-full sm:w-[170px]"
         />
         <Select
           options={[
@@ -201,7 +256,21 @@ export default function MealsPage() {
             setMealFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[160px]"
+          className="w-full sm:w-[160px]"
+        />
+        <Select
+          options={[
+            { value: '', label: 'All Statuses' },
+            { value: 'submitted', label: 'Submitted' },
+            { value: 'acknowledged', label: 'Acknowledged' },
+            { value: 'actioned', label: 'Actioned' },
+          ]}
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="w-full sm:w-[180px]"
         />
         <Select
           options={[
@@ -217,7 +286,7 @@ export default function MealsPage() {
             setRatingFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[160px]"
+          className="w-full sm:w-[160px]"
         />
       </div>
       <DataTable

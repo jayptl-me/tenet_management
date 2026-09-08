@@ -22,7 +22,8 @@ export interface IForgotPasswordRequest {
 
 export interface IResetPasswordRequest {
   token: string;
-  newPassword: string;
+  password: string;
+  newPassword?: string;
 }
 
 export interface IRefreshTokenRequest {

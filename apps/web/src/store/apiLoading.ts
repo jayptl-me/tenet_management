@@ -1,9 +1,7 @@
 import { create } from 'zustand';
+import type { IHealthResponse } from '@pg/types';
 
-const API_BASE_URL =
-  typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
-    : 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1';
 
 interface ApiLoadingState {
   isSlowLoading: boolean;
@@ -27,11 +25,11 @@ async function checkServerHealth(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${API_BASE_URL}/api/v1/health`, { signal: controller.signal });
+    const res = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
     clearTimeout(timeout);
     if (!res.ok) return false;
-    const data = await res.json();
-    return data.mongodb === 'connected';
+    const data = (await res.json()) as IHealthResponse;
+    return data.mongodb === 'connected' && data.status === 'ok';
   } catch {
     return false;
   }

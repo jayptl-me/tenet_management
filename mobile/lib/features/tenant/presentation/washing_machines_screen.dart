@@ -52,32 +52,51 @@ class _TenantWashingMachinesScreenState
         _myTenantId = me['tenantId']?.toString();
       }
 
-      // 2. Resolve floor ID
-      final floorId = _myTenantId != null
-          ? await repo.myFloorId(_myTenantId!)
-          : null;
+      // 2. Tenant-scoped list (server resolves the caller's floor in one hop).
+      // Falls back to the floor route when the direct list is unavailable.
+      List<Map<String, dynamic>> machines = [];
+      try {
+        machines = await repo.myWashingMachines();
+      } catch (_) {
+        machines = [];
+      }
       if (!mounted) return;
-      if (floorId == null || floorId.isEmpty) {
+      if (machines.isEmpty) {
+        final floorId = _myTenantId != null
+            ? await repo.myFloorId(_myTenantId!)
+            : null;
+        if (!mounted) return;
+        if (floorId == null || floorId.isEmpty) {
+          setState(() {
+            _error = 'Could not determine your floor. Contact the PG manager.';
+            _loading = false;
+          });
+          return;
+        }
+
+        // 3. Fallback: fetch machines for this floor
+        final data = await repo.floorWashingMachines(floorId);
+        if (!mounted) return;
+
         setState(() {
-          _error = 'Could not determine your floor. Contact the PG manager.';
+          _floorInfo = data?['floor'] as Map<String, dynamic>?;
+          final rawMachines = data?['machines'];
+          if (rawMachines is List) {
+            _machines = rawMachines
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          }
           _loading = false;
         });
+
+        _startCountdown();
         return;
       }
 
-      // 3. Fetch machines for this floor
-      final data = await repo.floorWashingMachines(floorId);
-      if (!mounted) return;
-
       setState(() {
-        _floorInfo = data?['floor'] as Map<String, dynamic>?;
-        final rawMachines = data?['machines'];
-        if (rawMachines is List) {
-          _machines = rawMachines
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
-        }
+        _machines = machines;
+        _floorInfo = null;
         _loading = false;
       });
 

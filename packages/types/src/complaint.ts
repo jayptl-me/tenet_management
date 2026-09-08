@@ -32,6 +32,7 @@ export interface IComplaint {
 }
 
 export interface IComplaintCreate {
+  tenantId?: string;
   roomId: string;
   category: IComplaintCategory;
   title: string;
@@ -43,4 +44,14 @@ export interface IComplaintCreate {
 export interface IComplaintStatusUpdate {
   status: IComplaintStatus;
   adminNotes?: string;
+}
+
+export interface IComplaintUpdate {
+  title?: string;
+  description?: string;
+  category?: IComplaintCategory;
+  priority?: IComplaintPriority;
+  status?: IComplaintStatus;
+  adminNotes?: string;
+  photos?: string[];
 }

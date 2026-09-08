@@ -6,8 +6,12 @@ import { adminOnly } from '../middleware/roles.js';
 import { notFound, parsePagination, conflict } from '../lib/routeUtils.js';
 import { DailyMenu } from '../models/dailyMenu.js';
 import { todayInTZ } from '../lib/dates.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+import { requireFeature } from '../middleware/featureFlags.js';
 
 const menus = new Hono();
+// Menus are the mess surface: honor the mess feedback flag like meals routes do.
+menus.use('*', requireFeature('messFeedbackEnabled'));
 
 // ── Schemas ─────────────────────────────────────────────
 const menuMealItemSchema = z.object({
@@ -74,13 +78,23 @@ menus.get('/', authGuard, async (c) => {
       };
     }
   }
-  // Support partial date search from frontend
+  // Search matches an exact YYYY-MM-DD date or a dish name fragment
+  // across all four meal slots (breakfast/lunch/dinner/snacks).
   if (search) {
-    const parsed = Date.parse(search);
-    if (!Number.isNaN(parsed)) {
+    const trimmed = search.trim();
+    const parsed = Date.parse(trimmed);
+    if (!Number.isNaN(parsed) && /^\d{4}-\d{2}(-\d{2})?$/.test(trimmed)) {
       const d = new Date(parsed);
       const dateStr = d.toISOString().slice(0, 10);
       filter.date = dateStr;
+    } else {
+      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { 'meals.breakfast.name': { $regex: escaped, $options: 'i' } },
+        { 'meals.lunch.name': { $regex: escaped, $options: 'i' } },
+        { 'meals.dinner.name': { $regex: escaped, $options: 'i' } },
+        { 'meals.snacks.name': { $regex: escaped, $options: 'i' } },
+      ];
     }
   }
 
@@ -127,6 +141,16 @@ menus.post('/', authGuard, adminOnly, zValidator('json', menuDaySchema), async (
 
   try {
     const menu = await DailyMenu.create(body);
+    const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
+    await writeAuditLog({
+      userId: adminUserId,
+      action: 'create',
+      resource: 'daily_menu',
+      resourceId: String(menu._id),
+      details: { date: body.date },
+      ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+      userAgent: c.req.header('user-agent'),
+    });
     return c.json({ success: true, data: withMenuFlags(menu.toObject()) }, 201);
   } catch (err: unknown) {
     if (
@@ -171,6 +195,7 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
   }
 
   try {
+    const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
     // If param looks like a date (YYYY-MM-DD), upsert by date; otherwise find by ObjectId
     if (/^\d{4}-\d{2}-\d{2}$/.test(id)) {
       const menu = await DailyMenu.findOneAndUpdate(
@@ -178,6 +203,15 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
         { ...body, date: id },
         { upsert: true, returnDocument: 'after', runValidators: true },
       ).lean();
+      await writeAuditLog({
+        userId: adminUserId,
+        action: 'update',
+        resource: 'daily_menu',
+        resourceId: String((menu as { _id?: unknown })?._id ?? id),
+        details: { date: id },
+        ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+        userAgent: c.req.header('user-agent'),
+      });
       return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
     }
 
@@ -186,6 +220,15 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
       runValidators: true,
     }).lean();
     if (!menu) return notFound(c, 'Daily menu');
+    await writeAuditLog({
+      userId: adminUserId,
+      action: 'update',
+      resource: 'daily_menu',
+      resourceId: id,
+      details: { date: targetDate },
+      ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+      userAgent: c.req.header('user-agent'),
+    });
     return c.json({ success: true, data: withMenuFlags(menu as { date?: string }) });
   } catch (err: unknown) {
     if (
@@ -203,16 +246,35 @@ menus.put('/:id', authGuard, adminOnly, zValidator('json', menuDaySchema), async
 // ── DELETE /menus/:id ───────────────────────────────────
 menus.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = c.req.param('id');
+  const adminUserId = (c.get('user') as { sub?: string })?.sub ?? 'system';
 
   // If param looks like a date, delete by date; otherwise by ObjectId
   if (/^\d{4}-\d{2}-\d{2}$/.test(id)) {
     const menu = await DailyMenu.findOneAndDelete({ date: id });
     if (!menu) return notFound(c, 'Daily menu');
+    await writeAuditLog({
+      userId: adminUserId,
+      action: 'delete',
+      resource: 'daily_menu',
+      resourceId: id,
+      details: { date: id },
+      ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+      userAgent: c.req.header('user-agent'),
+    });
     return c.json({ success: true, data: { message: 'Daily menu deleted' } });
   }
 
   const menu = await DailyMenu.findByIdAndDelete(id);
   if (!menu) return notFound(c, 'Daily menu');
+  await writeAuditLog({
+    userId: adminUserId,
+    action: 'delete',
+    resource: 'daily_menu',
+    resourceId: id,
+    details: { date: (menu as { date?: string })?.date ?? id },
+    ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
+    userAgent: c.req.header('user-agent'),
+  });
   return c.json({ success: true, data: { message: 'Daily menu deleted' } });
 });
 

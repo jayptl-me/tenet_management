@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, AlertCircle, User, FileText, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -26,8 +27,9 @@ interface ComplaintDetail {
   _id: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { name: string; email?: string; phone?: string };
-    room?: { roomNumber: string; floor?: { name: string } };
+    room?: { roomNumber: string; floor?: { label?: string } | null };
   };
   title: string;
   description: string;
@@ -47,17 +49,6 @@ const STATUS_OPTIONS = [
   { value: 'resolved', label: 'Resolved' },
   { value: 'dismissed', label: 'Dismissed' },
 ];
-
-function getPriorityVariant(priority: string): 'danger' | 'warning' | 'info' {
-  switch (priority) {
-    case 'urgent':
-      return 'danger';
-    case 'high':
-      return 'warning';
-    default:
-      return 'info';
-  }
-}
 
 function formatDate(d: string | null | undefined): string {
   if (!d) return '—';
@@ -112,8 +103,8 @@ export default function ComplaintDetailPage() {
           status: (res.data.status as ComplaintUpdateForm['status']) ?? 'open',
           adminNotes: res.data.adminNotes ?? '',
         });
-      } catch {
-        setError('Failed to load complaint details');
+      } catch (err) {
+        setError((await parseApiError(err)).message);
       } finally {
         setIsLoading(false);
       }
@@ -135,8 +126,8 @@ export default function ComplaintDetailPage() {
       } else {
         toast.error('Failed to update complaint');
       }
-    } catch {
-      toast.error('Failed to update complaint');
+    } catch (err) {
+      toast.error((await parseApiError(err)).message);
     } finally {
       setIsSaving(false);
     }
@@ -154,7 +145,7 @@ export default function ComplaintDetailPage() {
     );
   }
 
-  const priorityVariant = complaint ? getPriorityVariant(complaint.priority) : 'info';
+  const priorityVariant = complaint ? statusToVariant(complaint.priority) : 'info';
   const statusVariant = complaint ? statusToVariant(complaint.status) : 'neutral';
 
   return (
@@ -264,14 +255,17 @@ export default function ComplaintDetailPage() {
               <DetailList>
                 <DetailRow label="Name" value={complaint.tenant?.user?.name ?? 'N/A'} />
                 <DetailRow label="Room" value={complaint.tenant?.room?.roomNumber ?? 'N/A'} />
+                {complaint.tenant?.bedId && (
+                  <DetailRow label="Bed" value={complaint.tenant.bedId} />
+                )}
+                {complaint.tenant?.room?.floor?.label && (
+                  <DetailRow label="Floor" value={complaint.tenant.room.floor.label} />
+                )}
                 {complaint.tenant?.user?.email && (
                   <DetailRow label="Email" value={complaint.tenant.user.email} />
                 )}
                 {complaint.tenant?.user?.phone && (
                   <DetailRow label="Phone" value={complaint.tenant.user.phone} />
-                )}
-                {complaint.tenant?.room?.floor?.name && (
-                  <DetailRow label="Floor" value={complaint.tenant.room.floor.name} />
                 )}
               </DetailList>
             </DetailCard>

@@ -55,11 +55,11 @@ const headerBorder: Record<DetailCardVariant, string> = {
 };
 
 const iconTone: Record<DetailCardVariant, string> = {
-  default: 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
-  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-  success: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
-  info: 'bg-[color:var(--color-info-100)] text-[color:var(--color-info-700)]',
+  default: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border border-[color:var(--border-color)]',
+  warning: 'bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)] border border-[color:var(--color-warning-200)]',
+  danger: 'bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)] border border-[color:var(--color-danger-200)]',
+  success: 'bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)] border border-[color:var(--color-success-200)]',
+  info: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border border-[color:var(--border-color)]',
 };
 
 // ── Component ──────────────────────────────────────────
@@ -85,13 +85,14 @@ export function DetailCard({
           'flex items-center justify-between gap-3 border-b',
           headerBorder[variant],
           compact ? 'px-4 py-3' : 'px-5 py-3.5',
+          variant === 'default' && 'bg-[color:var(--color-field-bg)]',
         )}
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {icon && (
             <span
               className={clsx(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] [&_svg]:h-4 [&_svg]:w-4',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] shadow-[var(--shadow-xs)] [&_svg]:h-4 [&_svg]:w-4',
                 iconTone[variant],
               )}
             >
@@ -105,7 +106,7 @@ export function DetailCard({
         {action && <div className="shrink-0">{action}</div>}
       </div>
 
-      <div className={clsx(compact ? 'px-4 py-3' : 'px-5 py-4')}>{children}</div>
+      <div className={clsx(compact ? 'px-4 py-3' : 'px-5 py-5')}>{children}</div>
     </motion.div>
   );
 }

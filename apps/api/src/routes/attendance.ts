@@ -3,12 +3,15 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Tenant } from '../models/tenant.js';
+import { Guardian } from '../models/guardian.js';
 import { User } from '../models/user.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { todayInTZ, currentHourInTZ } from '../lib/dates.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+import type mongoose from 'mongoose';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateOneFn = (doc: Record<string, unknown>) => Promise<unknown>;
@@ -25,12 +28,17 @@ const checkOutSchema = z.strictObject({
   tenantId: z.string().min(1, 'Tenant ID is required'),
 });
 
+const timeString = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be HH:mm (24-hour)')
+  .optional();
+
 const manualSchema = z.strictObject({
   tenantId: z.string().min(1, 'Tenant ID is required'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
   status: z.enum(['present', 'absent', 'on_leave', 'not_returned']),
-  checkIn: z.string().optional(),
-  checkOut: z.string().optional(),
+  checkIn: timeString,
+  checkOut: timeString,
   method: z.enum(['manual', 'qr', 'app']).default('manual'),
   notes: z.string().max(500).optional(),
 });
@@ -82,7 +90,8 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
   const tenant = await Tenant.findById(body.tenantId).lean();
   if (!tenant) return badRequest(c, 'Tenant not found', 'TENANT_NOT_FOUND');
 
-  // If tenant self, enforce they can only check-in themselves
+  // If tenant self, enforce they can only check-in themselves.
+  // Admins may check-in any tenant; every other role is rejected.
   if (authUser?.role === 'tenant') {
     const tenantUserId = (
       tenant as unknown as { userId: { toString: () => string } }
@@ -96,6 +105,14 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
         403,
       );
     }
+  } else if (authUser?.role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can check-in.' },
+      },
+      403,
+    );
   }
 
   const date = today();
@@ -152,6 +169,36 @@ attendance.post('/check-in', authGuard, zValidator('json', checkInSchema), async
 // ── POST /attendance/check-out — tenant self check-out ──
 attendance.post('/check-out', authGuard, zValidator('json', checkOutSchema), async (c) => {
   const body = c.req.valid('json');
+  const authUser = c.get('user');
+
+  const tenant = await Tenant.findById(body.tenantId).lean();
+  if (!tenant) return badRequest(c, 'Tenant not found', 'TENANT_NOT_FOUND');
+
+  // If tenant self, enforce they can only check-out themselves.
+  // Admins may check-out any tenant; every other role is rejected.
+  if (authUser?.role === 'tenant') {
+    const tenantUserId = (
+      tenant as unknown as { userId: { toString: () => string } }
+    ).userId.toString();
+    if (tenantUserId !== authUser.sub) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only check-out yourself.' },
+        },
+        403,
+      );
+    }
+  } else if (authUser?.role !== 'admin') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only admins or tenants can check-out.' },
+      },
+      403,
+    );
+  }
+
   const date = today();
 
   const record = await AttendanceRecord.findOne(safeFilter({ tenantId: body.tenantId, date }));
@@ -209,6 +256,19 @@ attendance.post('/manual', authGuard, adminOnly, zValidator('json', manualSchema
       recordedBy: authUser.sub,
     });
 
+    writeAuditLog({
+      userId: authUser.sub,
+      action: 'create',
+      resource: 'attendance',
+      resourceId: (record as { _id: mongoose.Types.ObjectId })._id.toString(),
+      details: {
+        tenantId: body.tenantId,
+        date: body.date,
+        status: body.status,
+        method: body.method,
+      },
+    });
+
     return c.json(
       { success: true, data: mapRecord(record as unknown as Record<string, unknown>) },
       201,
@@ -230,17 +290,49 @@ attendance.post('/manual', authGuard, adminOnly, zValidator('json', manualSchema
   }
 });
 
+const ymdRegex = /^\d{4}-\d{2}-\d{2}$/;
+
 // ── GET /attendance — admin paginated list ──────────────
 attendance.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit } = parsePagination(c);
   const status = c.req.query('status');
   const date = c.req.query('date');
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
+  const method = c.req.query('method');
   const tenantId = c.req.query('tenantId');
   const search = c.req.query('search')?.trim();
 
+  if (fromDate !== undefined && !ymdRegex.test(fromDate)) {
+    return badRequest(c, 'fromDate must be YYYY-MM-DD');
+  }
+  if (toDate !== undefined && !ymdRegex.test(toDate)) {
+    return badRequest(c, 'toDate must be YYYY-MM-DD');
+  }
+
   const filter: Record<string, unknown> = {};
-  if (status) filter.status = status;
-  if (date) filter.date = date;
+  if (status) {
+    if (!['present', 'absent', 'on_leave', 'not_returned'].includes(status)) {
+      return badRequest(c, 'Invalid status filter', 'INVALID_STATUS');
+    }
+    filter.status = status;
+  }
+  if (method) {
+    if (!['manual', 'qr', 'app'].includes(method)) {
+      return badRequest(c, 'Invalid method filter', 'INVALID_METHOD');
+    }
+    filter.method = method;
+  }
+  if (date) {
+    if (!ymdRegex.test(date)) return badRequest(c, 'date must be YYYY-MM-DD');
+    filter.date = date;
+  }
+  if (!date && (fromDate !== undefined || toDate !== undefined)) {
+    const range: Record<string, string> = {};
+    if (fromDate !== undefined) range.$gte = fromDate;
+    if (toDate !== undefined) range.$lte = toDate;
+    filter.date = range;
+  }
   if (tenantId) filter.tenantId = tenantId;
 
   // Resolve search by tenant name (same pattern as meals feedback / tenants)
@@ -347,6 +439,16 @@ attendance.get('/today', authGuard, adminOnly, async (c) => {
 attendance.get('/my', authGuard, async (c) => {
   const authUser = c.get('user');
   const { page, limit } = parsePagination(c);
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
+  const status = c.req.query('status');
+
+  if (fromDate !== undefined && !ymdRegex.test(fromDate)) {
+    return badRequest(c, 'fromDate must be YYYY-MM-DD');
+  }
+  if (toDate !== undefined && !ymdRegex.test(toDate)) {
+    return badRequest(c, 'toDate must be YYYY-MM-DD');
+  }
 
   const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
   if (!tenant) {
@@ -356,7 +458,15 @@ attendance.get('/my', authGuard, async (c) => {
   const tenantId = (tenant as unknown as Record<string, unknown>)._id?.toString();
   const skip = (page - 1) * limit;
 
-  const filter = safeFilter({ tenantId });
+  const filterBase: Record<string, unknown> = { tenantId };
+  if (status) filterBase.status = status;
+  if (fromDate !== undefined || toDate !== undefined) {
+    const range: Record<string, string> = {};
+    if (fromDate !== undefined) range.$gte = fromDate;
+    if (toDate !== undefined) range.$lte = toDate;
+    filterBase.date = range;
+  }
+  const filter = safeFilter(filterBase);
 
   const [data, total] = await Promise.all([
     AttendanceRecord.find(filter)
@@ -379,6 +489,77 @@ attendance.get('/my', authGuard, async (c) => {
   });
 });
 
+// ── GET /attendance/summary — per-day status counts for calendar ─
+attendance.get('/summary', authGuard, async (c) => {
+  const authUser = c.get('user');
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
+  const tenantIdQuery = c.req.query('tenantId');
+
+  if (!fromDate || !ymdRegex.test(fromDate)) {
+    return badRequest(c, 'fromDate must be YYYY-MM-DD');
+  }
+  if (!toDate || !ymdRegex.test(toDate)) {
+    return badRequest(c, 'toDate must be YYYY-MM-DD');
+  }
+  if (fromDate > toDate) {
+    return badRequest(c, 'fromDate must be on or before toDate');
+  }
+
+  let tenantId: string | undefined;
+  if (authUser?.role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
+    if (!tenant) return c.json({ success: true, data: { days: {} } });
+    tenantId = (tenant as unknown as Record<string, unknown>)._id?.toString();
+  } else if (authUser?.role === 'guardian') {
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: authUser.sub, isActive: true }),
+    ).lean();
+    if (!guardian) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Guardian record not found.' },
+        },
+        403,
+      );
+    }
+    tenantId = (guardian as unknown as Record<string, unknown>).tenantId?.toString();
+  } else {
+    tenantId = tenantIdQuery;
+  }
+
+  const filterBase: Record<string, unknown> = {
+    date: { $gte: fromDate, $lte: toDate },
+  };
+  if (tenantId) filterBase.tenantId = tenantId;
+  const rows = await AttendanceRecord.find(safeFilter(filterBase))
+    .select('date status tenantId')
+    .lean();
+
+  const days: Record<
+    string,
+    { present: number; absent: number; on_leave: number; not_returned: number; total: number }
+  > = {};
+  for (const row of rows as unknown as Array<{ date: string; status: string }>) {
+    const entry = days[row.date] ?? {
+      present: 0,
+      absent: 0,
+      on_leave: 0,
+      not_returned: 0,
+      total: 0,
+    };
+    if (row.status === 'present') entry.present += 1;
+    else if (row.status === 'absent') entry.absent += 1;
+    else if (row.status === 'on_leave') entry.on_leave += 1;
+    else if (row.status === 'not_returned') entry.not_returned += 1;
+    entry.total += 1;
+    days[row.date] = entry;
+  }
+
+  return c.json({ success: true, data: { fromDate, toDate, tenantId: tenantId ?? null, days } });
+});
+
 // ── GET /attendance/:id — single record ─────────────────
 attendance.get('/:id', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
@@ -391,6 +572,44 @@ attendance.get('/:id', authGuard, async (c) => {
     .lean();
 
   if (!record) return notFound(c, 'Attendance record');
+
+  const authUser = c.get('user');
+  if (authUser.role === 'tenant') {
+    const recTenant = record.tenantId as unknown as {
+      userId?: { _id?: unknown; id?: unknown } | string;
+    } | null;
+    const recUserId =
+      typeof recTenant?.userId === 'object' && recTenant?.userId !== null
+        ? ((recTenant.userId._id ?? recTenant.userId.id)?.toString() ?? '')
+        : (recTenant?.userId?.toString() ?? '');
+    if (!recUserId || recUserId !== authUser.sub) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only view your own attendance records.' },
+        },
+        403,
+      );
+    }
+  } else if (authUser.role === 'guardian') {
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: authUser.sub, isActive: true }),
+    ).lean();
+    const wardTenantId = (guardian as unknown as Record<string, unknown>)?.tenantId?.toString();
+    const recTenantId =
+      (record.tenantId as unknown as { _id?: unknown })?._id?.toString() ??
+      record.tenantId?.toString() ??
+      '';
+    if (!wardTenantId || wardTenantId !== recTenantId) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only view your ward attendance records.' },
+        },
+        403,
+      );
+    }
+  }
 
   return c.json({ success: true, data: mapRecord(record as unknown as Record<string, unknown>) });
 });
@@ -459,6 +678,19 @@ attendance.put(
 
     await existing.save();
 
+    const authUser = c.get('user');
+    writeAuditLog({
+      userId: authUser.sub,
+      action: 'update',
+      resource: 'attendance',
+      resourceId: id,
+      details: {
+        tenantId: existing.tenantId.toString(),
+        date: dateStr,
+        status: existing.status,
+      },
+    });
+
     const populated = await AttendanceRecord.findById(id)
       .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
       .populate({ path: 'tenantId', populate: { path: 'roomId', select: 'roomNumber' } })
@@ -476,11 +708,23 @@ attendance.put(
 attendance.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid attendance ID');
+  const authUser = c.get('user');
 
   const record = await AttendanceRecord.findById(id);
   if (!record) return notFound(c, 'Attendance record');
 
   await AttendanceRecord.findByIdAndDelete(id);
+
+  writeAuditLog({
+    userId: authUser.sub,
+    action: 'delete',
+    resource: 'attendance',
+    resourceId: id,
+    details: {
+      tenantId: record.tenantId.toString(),
+      date: record.date,
+    },
+  });
 
   return c.json({ success: true, data: { message: 'Attendance record deleted' } });
 });

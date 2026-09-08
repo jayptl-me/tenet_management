@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { ScrollText, Eye, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ScrollText, Eye, X, Download, Loader2, Search, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -39,6 +42,36 @@ const DEFAULT_ACTIONS = [
   'notification_send',
   'visitor_approve',
   'export',
+  'reconcile',
+];
+
+const RESOURCE_OPTIONS = [
+  { value: '', label: 'All Resources' },
+  { value: 'tenant', label: 'Tenant' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'invoice', label: 'Invoice' },
+  { value: 'complaint', label: 'Complaint' },
+  { value: 'service', label: 'Service' },
+  { value: 'washing_machine', label: 'Washing Machine' },
+  { value: 'notice', label: 'Notice' },
+  { value: 'notification', label: 'Notification' },
+  { value: 'visitor', label: 'Visitor' },
+  { value: 'asset', label: 'Asset' },
+  { value: 'guardian', label: 'Guardian' },
+  { value: 'room', label: 'Room' },
+  { value: 'floor', label: 'Floor' },
+  { value: 'user', label: 'User' },
+  { value: 'settings', label: 'Settings' },
+  { value: 'export', label: 'Export' },
+  { value: 'attendance', label: 'Attendance' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'leave_application', label: 'Leave' },
+  { value: 'leave', label: 'Leave' },
+  { value: 'laundry_slot', label: 'Laundry' },
+  { value: 'meal_feedback', label: 'Meals' },
+  { value: 'menu', label: 'Menu' },
+  { value: 'auth', label: 'Auth' },
+  { value: 'enquiry', label: 'Enquiry' },
 ];
 
 const ACTION_LABELS: Record<
@@ -58,16 +91,20 @@ const ACTION_LABELS: Record<
   notification_send: { label: 'Notification', variant: 'info' },
   visitor_approve: { label: 'Visitor Approved', variant: 'success' },
   export: { label: 'Export', variant: 'neutral' },
+  reconcile: { label: 'Reconciled', variant: 'info' },
 };
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [actionFilter, setActionFilter] = useState('');
   const [resourceFilter, setResourceFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userIdFilter, setUserIdFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
@@ -96,6 +133,7 @@ export default function AuditLogsPage() {
       params.set('limit', String(perPage));
       if (actionFilter) params.set('action', actionFilter);
       if (resourceFilter) params.set('resource', resourceFilter);
+      if (userIdFilter.trim()) params.set('userId', userIdFilter.trim());
       if (fromDate) params.set('fromDate', fromDate);
       if (toDate) params.set('toDate', toDate);
 
@@ -106,16 +144,92 @@ export default function AuditLogsPage() {
       }>();
       setLogs(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load audit logs');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, actionFilter, resourceFilter, fromDate, toDate]);
+  }, [page, perPage, actionFilter, resourceFilter, userIdFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', '1000');
+      if (actionFilter) params.set('action', actionFilter);
+      if (resourceFilter) params.set('resource', resourceFilter);
+      if (userIdFilter.trim()) params.set('userId', userIdFilter.trim());
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
+
+      const res = await api.get(`audit-logs?${params.toString()}`).json<{
+        success: boolean;
+        data: AuditLogRow[];
+      }>();
+
+      const headers = [
+        'Timestamp',
+        'Action',
+        'Resource',
+        'Resource ID',
+        'User Name',
+        'User Email',
+        'Role',
+        'IP Address',
+        'Details JSON',
+      ];
+      const rows = (res.data || []).map((row) => [
+        new Date(row.timestamp).toISOString(),
+        row.action,
+        row.resource,
+        row.resourceId || '',
+        row.userId?.name || 'System',
+        row.userId?.email || '',
+        row.userId?.role || '',
+        row.ip || '',
+        JSON.stringify(row.details || {}),
+      ]);
+
+      // Formula-injection guard (CWE-1236): prefix =, +, -, @, tab, CR cells.
+      const sanitizeCell = (val: unknown) => {
+        let str = String(val ?? '');
+        if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((r) => r.map(sanitizeCell).join(',')),
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // Best-effort audit log write for the export action
+      api.post('audit-logs/log-export', { json: { resource: 'audit_logs' } }).catch(() => {});
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleClearDates = () => {
+    setFromDate('');
+    setToDate('');
+    setPage(1);
+  };
 
   const formatAction = (action: string) => {
     return (
@@ -129,6 +243,28 @@ export default function AuditLogsPage() {
   ): 'info' | 'success' | 'danger' | 'warning' | 'neutral' => {
     return ACTION_LABELS[action]?.variant ?? 'neutral';
   };
+
+  // Client-side quick filter on current page
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery.trim()) return logs;
+    const q = searchQuery.toLowerCase().trim();
+    return logs.filter((row) => {
+      const resourceMatch = row.resource?.toLowerCase().includes(q);
+      const resourceIdMatch = row.resourceId?.toLowerCase().includes(q);
+      const userNameMatch = row.userId?.name?.toLowerCase().includes(q);
+      const userEmailMatch = row.userId?.email?.toLowerCase().includes(q);
+      const ipMatch = row.ip?.toLowerCase().includes(q);
+      const actionMatch = row.action?.toLowerCase().includes(q);
+      return (
+        resourceMatch ||
+        resourceIdMatch ||
+        userNameMatch ||
+        userEmailMatch ||
+        ipMatch ||
+        actionMatch
+      );
+    });
+  }, [logs, searchQuery]);
 
   const columns: DataTableColumn<AuditLogRow>[] = [
     {
@@ -214,11 +350,39 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Audit Logs" description="Track all admin actions across the system" />
+      <PageHeader
+        title="Audit Logs"
+        description="Track all admin actions across the system"
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={isExporting}
+            className="flex items-center gap-2"
+          >
+            {isExporting ? (
+              <Loader2 className="h-4 w-4 animate-spin text-[color:var(--color-brand-600)]" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
+          </Button>
+        }
+      />
 
       <ErrorBanner message={error} />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search IP, user, ID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftIcon={<Search className="h-4 w-4" />}
+          aria-label="Search audit logs"
+          className="w-full sm:w-[220px]"
+        />
+
         <Select
           options={[
             { value: '', label: 'All Actions' },
@@ -232,56 +396,67 @@ export default function AuditLogsPage() {
             setActionFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[200px]"
+          className="w-full sm:w-[190px]"
+          aria-label="Filter by action"
         />
         <Select
-          options={[
-            { value: '', label: 'All Resources' },
-            { value: 'tenant', label: 'Tenant' },
-            { value: 'payment', label: 'Payment' },
-            { value: 'invoice', label: 'Invoice' },
-            { value: 'complaint', label: 'Complaint' },
-            { value: 'room', label: 'Room' },
-            { value: 'floor', label: 'Floor' },
-            { value: 'user', label: 'User' },
-            { value: 'settings', label: 'Settings' },
-            { value: 'notification', label: 'Notification' },
-            { value: 'visitor', label: 'Visitor' },
-            { value: 'asset', label: 'Asset' },
-            { value: 'guardian', label: 'Guardian' },
-          ]}
+          options={RESOURCE_OPTIONS}
           value={resourceFilter}
           onChange={(e) => {
             setResourceFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[200px]"
+          className="w-full sm:w-[190px]"
+          aria-label="Filter by resource"
         />
-        <input
-          type="date"
-          value={fromDate}
+        <Input
+          placeholder="Filter by user ID..."
+          value={userIdFilter}
           onChange={(e) => {
-            setFromDate(e.target.value);
+            setUserIdFilter(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by user ID"
+          className="w-full font-mono text-xs sm:w-[200px]"
+        />
+        <DatePicker
+          value={fromDate}
+          onChange={(val: string) => {
+            setFromDate(val);
             setPage(1);
           }}
           aria-label="From date"
-          className="max-w-[160px] rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] outline-none focus:border-[color:var(--color-brand-500)]"
+          placeholder="From date..."
+          className="w-full sm:w-[150px]"
         />
-        <input
-          type="date"
+        <DatePicker
           value={toDate}
-          onChange={(e) => {
-            setToDate(e.target.value);
+          onChange={(val: string) => {
+            setToDate(val);
             setPage(1);
           }}
           aria-label="To date"
-          className="max-w-[160px] rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] outline-none focus:border-[color:var(--color-brand-500)]"
+          placeholder="To date..."
+          className="w-full sm:w-[150px]"
         />
+
+        {(fromDate || toDate) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearDates}
+            className="flex items-center gap-1 text-xs text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
+            title="Reset date bounds"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>Clear Dates</span>
+          </Button>
+        )}
       </div>
 
       <DataTable
         columns={columns}
-        data={logs}
+        data={filteredLogs}
         keyExtractor={(row: AuditLogRow) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => setSelectedLog(row)}
@@ -303,10 +478,7 @@ export default function AuditLogsPage() {
           />
         }
         mobileCardRenderer={(row) => (
-          <div
-            className="space-y-2 cursor-pointer"
-            onClick={() => setSelectedLog(row)}
-          >
+          <div className="cursor-pointer space-y-2" onClick={() => setSelectedLog(row)}>
             <div className="flex items-center justify-between">
               <StatusBadge
                 variant={formatActionVariant(row.action)}
@@ -352,7 +524,7 @@ export default function AuditLogsPage() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-0)] p-6 shadow-[var(--shadow-modal)]"
+              className="relative w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
             >
               <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] pb-4">
                 <div className="flex items-center gap-2">
@@ -426,8 +598,10 @@ export default function AuditLogsPage() {
 
                 {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">Action Details</span>
-                    <pre className="mt-1 max-h-48 overflow-auto rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-3 text-xs font-mono text-[color:var(--color-text-primary)]">
+                    <span className="text-xs text-[color:var(--color-text-muted)]">
+                      Action Details
+                    </span>
+                    <pre className="mt-1 max-h-48 overflow-auto rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-3 font-mono text-xs text-[color:var(--color-text-primary)]">
                       {JSON.stringify(selectedLog.details, null, 2)}
                     </pre>
                   </div>

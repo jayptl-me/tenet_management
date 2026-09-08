@@ -7,8 +7,10 @@ import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, conflict, parseId, safeFilter } from '../lib/routeUtils.js';
 import { Floor } from '../models/floor.js';
 import { Room } from '../models/room.js';
+import { WashingMachine } from '../models/washingMachine.js';
 import { AppConfig } from '../models/appConfig.js';
 import { ServiceStatus } from '../models/serviceStatus.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const floors = new Hono();
 
@@ -110,6 +112,19 @@ floors.post('/', authGuard, adminOnly, zValidator('json', createFloorSchema), as
     } catch {
       // Non-fatal: floor exists; admin can still add services manually
     }
+
+    writeAuditLog({
+      userId: user.sub,
+      action: 'create',
+      resource: 'floor',
+      resourceId: (floor as { _id: mongoose.Types.ObjectId })._id.toString(),
+      details: {
+        floorNumber: floor.floorNumber,
+        label: floor.label,
+        totalRooms: floor.totalRooms,
+      },
+    });
+
     return c.json({ success: true, data: floor }, 201);
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
@@ -126,6 +141,7 @@ floors.put('/:id', authGuard, adminOnly, zValidator('json', updateFloorSchema), 
   if (!id) return badRequest(c, 'Invalid floor ID');
 
   const body = c.req.valid('json');
+  const user = c.get('user');
 
   // Strip totalRooms — auto-synced by Room.post('save') hook
   delete (body as Record<string, unknown>).totalRooms;
@@ -136,6 +152,17 @@ floors.put('/:id', authGuard, adminOnly, zValidator('json', updateFloorSchema), 
       runValidators: true,
     }).lean();
     if (!floor) return notFound(c, 'Floor');
+
+    writeAuditLog({
+      userId: user.sub,
+      action: 'update',
+      resource: 'floor',
+      resourceId: id,
+      details: {
+        updatedFields: Object.keys(body),
+      },
+    });
+
     return c.json({ success: true, data: floor });
   } catch (err: unknown) {
     const code = (err as { code?: number }).code;
@@ -150,6 +177,7 @@ floors.put('/:id', authGuard, adminOnly, zValidator('json', updateFloorSchema), 
 floors.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid floor ID');
+  const user = c.get('user');
 
   // Only active rooms block hard-delete. Soft-deleted rooms are ignored so
   // floors can be cleaned up after all rooms were deactivated.
@@ -165,13 +193,64 @@ floors.delete('/:id', authGuard, adminOnly, async (c) => {
     );
   }
 
+  // Active washing machines on this floor block hard-delete
+  const machineCount = await WashingMachine.countDocuments(
+    safeFilter({ floorId: new mongoose.Types.ObjectId(id) }),
+  );
+  if (machineCount > 0) {
+    return conflict(
+      c,
+      `Cannot delete floor with ${machineCount} washing machine(s). Remove or reassign machines first.`,
+      'FLOOR_HAS_MACHINES',
+    );
+  }
+
   const floor = await Floor.findByIdAndDelete(id);
   if (!floor) return notFound(c, 'Floor');
 
   // Cascade ServiceStatus rows for this floor (no rooms remain)
   await ServiceStatus.deleteMany(safeFilter({ floorId: new mongoose.Types.ObjectId(id) }));
 
+  writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'floor',
+    resourceId: id,
+    details: {
+      floorNumber: floor.floorNumber,
+      label: floor.label,
+    },
+  });
+
   return c.json({ success: true, data: { message: 'Floor deleted' } });
+});
+
+// ── POST /floors/reseed-services — backfill missing ServiceStatus rows ──
+// Covers new isPerFloor amenity keys added to AppConfig after floors existed.
+// Idempotent: only creates keys missing per floor.
+floors.post('/reseed-services', authGuard, adminOnly, async (c) => {
+  const user = c.get('user');
+  const allFloors = await Floor.find().select('_id label').lean();
+
+  let floorsTouched = 0;
+  let rowsCreated = 0;
+  for (const floor of allFloors) {
+    const created = await seedFloorServiceStatuses(String(floor._id), user.sub);
+    if (created > 0) {
+      floorsTouched += 1;
+      rowsCreated += created;
+    }
+  }
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'floor',
+    resourceId: 'all',
+    details: { reseededServices: true, floorsTouched, rowsCreated },
+  });
+
+  return c.json({ success: true, data: { floorsTouched, rowsCreated } });
 });
 
 export default floors;

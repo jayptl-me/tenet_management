@@ -25,7 +25,7 @@ export function StatusBadge({ variant, label, className }: StatusBadgeProps) {
   return (
     <span
       className={clsx(
-        'font-display inline-flex items-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] px-2.5 py-0.5 text-xs font-semibold shadow-[var(--shadow-xs)]',
+        'font-display inline-flex items-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] px-2.5 py-0.5 text-xs font-semibold',
         variantStyles[variant],
         className,
       )}

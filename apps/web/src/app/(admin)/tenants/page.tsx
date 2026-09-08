@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
@@ -36,6 +38,7 @@ export default function TenantsPage() {
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [floorFilter, setFloorFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -49,6 +52,7 @@ export default function TenantsPage() {
       params.set('limit', String(perPage));
       if (search) params.set('search', search);
       if (statusFilter) params.set('isActive', statusFilter);
+      if (floorFilter) params.set('floorId', floorFilter);
 
       const res = await api.get(`tenants?${params.toString()}`).json<{
         success: boolean;
@@ -57,12 +61,12 @@ export default function TenantsPage() {
       }>();
       setTenants(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load tenants');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, statusFilter]);
+  }, [page, perPage, search, statusFilter, floorFilter]);
 
   useEffect(() => {
     fetchTenants();
@@ -75,12 +79,55 @@ export default function TenantsPage() {
       await api.delete(`tenants/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchTenants();
-    } catch {
-      setError('Failed to delete tenant');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
       setDeleting(false);
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleExportCsv = () => {
+    if (tenants.length === 0) return;
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Room',
+      'Bed',
+      'Monthly Rent',
+      'Deposit Paid',
+      'Status',
+      'Move-in Date',
+    ];
+    const escapeCsv = (val: unknown) => {
+      let str = String(val ?? '');
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+    const rows = tenants.map((t) => [
+      escapeCsv(t.user?.name ?? '—'),
+      escapeCsv(t.user?.email ?? '—'),
+      escapeCsv(t.user?.phone ?? '—'),
+      escapeCsv(t.room?.roomNumber ?? '—'),
+      escapeCsv(t.bedId ?? '—'),
+      escapeCsv(t.monthlyRent),
+      escapeCsv(t.depositPaid),
+      escapeCsv(t.isActive ? 'Active' : 'Checked Out'),
+      escapeCsv(t.moveInDate ? new Date(t.moveInDate).toISOString().slice(0, 10) : '—'),
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tenants-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const columns: DataTableColumn<TenantRow>[] = [
@@ -168,6 +215,31 @@ export default function TenantsPage() {
           }}
           className="max-w-[180px]"
         />
+        <ResourceSelect
+          endpoint="floors"
+          value={floorFilter}
+          onChange={(val) => {
+            setFloorFilter(val);
+            setPage(1);
+          }}
+          placeholder="All Floors"
+          valueKey="_id"
+          labelKey={(item) => {
+            const f = item as unknown as { label: string; floorNumber?: number };
+            return f.label ?? `Floor ${f.floorNumber ?? ''}`;
+          }}
+          dataPath="data"
+          className="max-w-[200px]"
+        />
+        <Button
+          variant="outline"
+          onClick={handleExportCsv}
+          disabled={tenants.length === 0}
+          className="flex items-center gap-1.5"
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
       </div>
 
       <DataTable

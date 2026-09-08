@@ -9,7 +9,7 @@ export interface IMenuItem {
 export interface IDailyMenu {
   id: string;
   date: string;
-  meals: Record<MealType, IMenuItem[]>;
+  meals: Record<MealType, IMenuItem[]> & { snacks?: IMenuItem[] };
   /** Derived: date >= today in PG timezone. */
   isActive?: boolean;
   createdAt?: string;
@@ -22,5 +22,6 @@ export interface IDailyMenuCreate {
     breakfast?: IMenuItem[];
     lunch?: IMenuItem[];
     dinner?: IMenuItem[];
+    snacks?: IMenuItem[];
   };
 }

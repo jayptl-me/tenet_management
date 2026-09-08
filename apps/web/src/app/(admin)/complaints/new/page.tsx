@@ -2,18 +2,22 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { toast } from 'sonner';
+import { UserRound, DoorOpen, FileText, Camera, Tag } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
-import { FormGrid } from '@/components/ui/FormSection';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { tenantLabel, roomLabel, roomSublabel } from '@/lib/resource-select-presets';
 
 const complaintSchema = z.object({
   tenantId: z.string().min(1, 'Tenant is required'),
@@ -46,19 +50,6 @@ const complaintSchema = z.object({
 
 type ComplaintFormData = z.infer<typeof complaintSchema>;
 
-interface Tenant {
-  _id: string;
-  user?: { name: string };
-  name?: string;
-  roomId?: string | { _id: string; roomNumber: string };
-}
-
-interface Room {
-  _id: string;
-  roomNumber: string;
-  floorId?: string | { _id: string };
-}
-
 const CATEGORY_OPTIONS = [
   { value: 'wifi', label: 'Wi-Fi' },
   { value: 'water', label: 'Water' },
@@ -84,19 +75,16 @@ function ComplaintForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledCategory = searchParams.get('category') || '';
+  const prefilledFloorId = searchParams.get('floorId') || '';
 
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingTenants, setIsLoadingTenants] = useState(true);
-  const [isLoadingRooms, setIsLoadingRooms] = useState(true);
+  const [submitError, setSubmitError] = useState('');
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors },
     setValue,
+    formState: { errors, isSubmitting },
   } = useForm<ComplaintFormData>({
     resolver: zodResolver(complaintSchema),
     defaultValues: {
@@ -110,22 +98,10 @@ function ComplaintForm() {
     },
   });
 
-  // Set prefilled category from search params
+  // Set prefilled category from search params (e.g. floor service report flow)
   useEffect(() => {
     if (prefilledCategory) {
-      const validCategories = [
-        'wifi',
-        'water',
-        'electricity',
-        'food_quality',
-        'cleaning_room',
-        'cleaning_washroom',
-        'washing_machine',
-        'fridge',
-        'lights',
-        'noise',
-        'other',
-      ];
+      const validCategories = CATEGORY_OPTIONS.map((o) => o.value);
       if (validCategories.includes(prefilledCategory)) {
         setValue('category', prefilledCategory as ComplaintFormData['category']);
       }
@@ -134,51 +110,32 @@ function ComplaintForm() {
 
   const selectedTenantId = useWatch({ control, name: 'tenantId' });
 
+  // Default the room to the tenant's own room (server enforces it for tenants;
+  // admins may override for common-area filings).
   useEffect(() => {
+    if (!selectedTenantId) return;
+    let cancelled = false;
     api
-      .get('tenants')
-      .json<{ success: boolean; data: Tenant[] }>()
+      .get(`tenants/${selectedTenantId}`)
+      .json<{
+        success: boolean;
+        data: { room?: { _id?: string } | null; roomId?: string };
+      }>()
       .then((res) => {
-        setTenants(res.data);
+        if (cancelled) return;
+        const roomId = res.data.room?._id ?? res.data.roomId;
+        if (roomId) setValue('roomId', roomId, { shouldValidate: true });
       })
       .catch(() => {
-        toast.error('Failed to load tenants');
-      })
-      .finally(() => {
-        setIsLoadingTenants(false);
+        // Room stays manual when the lookup fails
       });
-  }, []);
-
-  useEffect(() => {
-    api
-      .get('rooms')
-      .json<{ success: boolean; data: Room[] }>()
-      .then((res) => {
-        setRooms(res.data);
-      })
-      .catch(() => {
-        toast.error('Failed to load rooms');
-      })
-      .finally(() => {
-        setIsLoadingRooms(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (selectedTenantId && tenants.length > 0) {
-      const selectedTenant = tenants.find((t) => t._id === selectedTenantId);
-      if (selectedTenant?.roomId) {
-        const roomId =
-          typeof selectedTenant.roomId === 'string'
-            ? selectedTenant.roomId
-            : selectedTenant.roomId._id;
-        setValue('roomId', roomId);
-      }
-    }
-  }, [selectedTenantId, tenants, setValue]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTenantId, setValue]);
 
   const onSubmit = async (data: ComplaintFormData) => {
-    setIsSubmitting(true);
+    setSubmitError('');
     try {
       const photos = (data.photoUrls ?? '')
         .split(/[\n,]+/)
@@ -186,42 +143,36 @@ function ComplaintForm() {
         .filter((s) => s.length > 0)
         .slice(0, 5);
       // Whitelist body to match API createComplaintSchema (tenantId required for admin)
-      await api
+      const res = await api
         .post('complaints', {
           json: {
             tenantId: data.tenantId,
             roomId: data.roomId,
-            title: data.title,
-            description: data.description,
+            title: data.title.trim(),
+            description: data.description.trim(),
             category: data.category,
             priority: data.priority,
             ...(photos.length > 0 ? { photos } : {}),
           },
         })
-        .json();
-      toast.success('Complaint submitted successfully');
-      router.push('/complaints');
-    } catch {
-      toast.error('Failed to submit complaint');
-    } finally {
-      setIsSubmitting(false);
+        .json<{ success: boolean; data?: { _id?: string } }>();
+      const createdId = res.data?._id;
+      router.push(createdId ? `/complaints/${createdId}` : '/complaints');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
-  const getTenantName = (t: Tenant) => t.name || t.user?.name || t._id;
-
-  const tenantOptions = tenants.map((t) => ({
-    value: t._id,
-    label: getTenantName(t),
-  }));
-
-  const roomOptions = rooms.map((r) => ({
-    value: r._id,
-    label: r.roomNumber,
-  }));
+  const err = errors as Record<string, { message?: string }>;
 
   return (
-    <FormPage title="New Complaint" description="Report an issue" backHref="/complaints">
+    <FormPage
+      title="New Complaint"
+      description="File an issue on behalf of a resident"
+      backHref="/complaints"
+      error={submitError}
+      maxWidth="3xl"
+    >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
         footer={
@@ -233,63 +184,122 @@ function ComplaintForm() {
           />
         }
       >
-        <div className="space-y-5">
-          <Select
-            label="Tenant"
-            options={isLoadingTenants ? [] : tenantOptions}
-            placeholder={isLoadingTenants ? 'Loading tenants...' : 'Select a tenant'}
-            error={errors.tenantId?.message}
-            disabled={isLoadingTenants}
-            {...register('tenantId')}
-          />
+        <FormSection
+          title="Reporter"
+          icon={<UserRound />}
+          description="Resident and room the issue belongs to"
+        >
+          <FormGrid>
+            <Controller
+              name="tenantId"
+              control={control}
+              render={({ field }) => (
+                <ResourceSelect
+                  label="Tenant"
+                  endpoint="tenants?isActive=true"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select tenant..."
+                  error={err.tenantId?.message}
+                  valueKey="_id"
+                  labelKey={tenantLabel}
+                  dataPath="data"
+                />
+              )}
+            />
+            <Controller
+              name="roomId"
+              control={control}
+              render={({ field }) => (
+                <ResourceSelect
+                  label="Room"
+                  endpoint="rooms?isActive=true"
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Select room..."
+                  error={err.roomId?.message}
+                  valueKey="_id"
+                  labelKey={roomLabel}
+                  sublabelFn={roomSublabel}
+                  dataPath="data"
+                  helperText={
+                    prefilledFloorId
+                      ? 'Prefilled from the floor service report flow'
+                      : 'Defaults to the tenant room; override for common areas'
+                  }
+                />
+              )}
+            />
+          </FormGrid>
+        </FormSection>
 
-          <Select
-            label="Room"
-            options={isLoadingRooms ? [] : roomOptions}
-            placeholder={isLoadingRooms ? 'Loading rooms...' : 'Select a room'}
-            error={errors.roomId?.message}
-            disabled={isLoadingRooms}
-            {...register('roomId')}
-          />
-
+        <FormSection
+          title="Issue details"
+          icon={<Tag />}
+          description="What is wrong and how urgent it is"
+          divided
+        >
           <FormGrid>
             <Select
               label="Category"
               options={CATEGORY_OPTIONS}
-              error={errors.category?.message}
+              error={err.category?.message}
               {...register('category')}
             />
-            <Select
-              label="Priority"
-              options={PRIORITY_OPTIONS}
-              error={errors.priority?.message}
-              {...register('priority')}
-            />
+            <div className="space-y-2">
+              <Select
+                label="Priority"
+                options={PRIORITY_OPTIONS}
+                error={err.priority?.message}
+                {...register('priority')}
+              />
+              <div className="flex flex-wrap gap-1" aria-label="Priority scale">
+                {PRIORITY_OPTIONS.map((opt) => (
+                  <StatusBadge
+                    key={opt.value}
+                    variant={statusToVariant(opt.value)}
+                    label={opt.label}
+                  />
+                ))}
+              </div>
+            </div>
           </FormGrid>
+          <div className="mt-4 space-y-4">
+            <Input
+              label="Title"
+              placeholder="Brief title for the complaint"
+              error={err.title?.message}
+              leftIcon={<DoorOpen className="h-4 w-4" />}
+              {...register('title')}
+            />
+            <Textarea
+              label="Description"
+              rows={4}
+              placeholder="Describe the issue in detail"
+              error={err.description?.message}
+              {...register('description')}
+            />
+          </div>
+        </FormSection>
 
-          <Input
-            label="Title"
-            placeholder="Brief title for the complaint"
-            error={errors.title?.message}
-            {...register('title')}
-          />
-
+        <FormSection
+          title="Evidence"
+          icon={<Camera />}
+          description="Optional photo URLs (max 5)"
+          divided
+        >
           <Textarea
-            label="Description"
-            rows={4}
-            placeholder="Describe the issue in detail"
-            error={errors.description?.message}
-            {...register('description')}
-          />
-
-          <Textarea
-            label="Photo URLs (optional)"
+            label="Photo URLs"
             rows={2}
             placeholder="One HTTPS image URL per line (max 5)"
-            error={errors.photoUrls?.message}
+            error={err.photoUrls?.message}
             {...register('photoUrls')}
           />
-        </div>
+          <p className="mt-1 flex items-center gap-1 text-xs text-[color:var(--color-text-muted)]">
+            <FileText className="h-3 w-3" />
+            More photos can be attached from the complaint detail page.
+          </p>
+        </FormSection>
       </FormCard>
     </FormPage>
   );

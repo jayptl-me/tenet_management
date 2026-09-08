@@ -11,7 +11,8 @@ export interface PopulatedUser {
 
 export interface PopulatedRoom {
   roomNumber?: string;
-  floorId?: string;
+  floorId?: string | { _id?: string; label?: string; floorNumber?: number } | null;
+  floor?: { _id?: string; label?: string; floorNumber?: number } | null;
   _id?: string;
   id?: string;
 }
@@ -19,6 +20,7 @@ export interface PopulatedRoom {
 export interface PopulatedTenantRef {
   _id?: string;
   id?: string;
+  bedId?: string | null;
   userId?: PopulatedUser;
   user?: PopulatedUser;
   roomId?: PopulatedRoom;
@@ -33,6 +35,21 @@ export function tenantDisplayName(tenant: PopulatedTenantRef | string | null | u
 export function tenantRoomNumber(tenant: PopulatedTenantRef | string | null | undefined): string {
   if (!tenant || typeof tenant === 'string') return 'N/A';
   return tenant.roomId?.roomNumber ?? tenant.room?.roomNumber ?? 'N/A';
+}
+
+export function tenantBedId(tenant: PopulatedTenantRef | string | null | undefined): string {
+  if (!tenant || typeof tenant === 'string') return '';
+  return tenant.bedId ?? '';
+}
+
+export function tenantFloorLabel(tenant: PopulatedTenantRef | string | null | undefined): string {
+  if (!tenant || typeof tenant === 'string') return '';
+  const floor =
+    tenant.roomId?.floor ??
+    (typeof tenant.roomId?.floorId === 'object' ? tenant.roomId.floorId : undefined) ??
+    tenant.room?.floor;
+  if (!floor || typeof floor === 'string') return '';
+  return floor.label ?? (floor.floorNumber != null ? `Floor ${floor.floorNumber}` : '');
 }
 
 export function tenantIdOf(tenant: PopulatedTenantRef | string | null | undefined): string {

@@ -12,7 +12,11 @@ export interface ITenantDocument extends Document {
   isActive: boolean;
   documents: {
     aadhaarUrl?: string;
+    aadhaarPublicId?: string;
     photoUrl?: string;
+    photoPublicId?: string;
+    isVerified?: boolean;
+    verifiedAt?: Date;
   };
   emergencyContact: {
     name?: string;
@@ -65,7 +69,11 @@ const tenantSchema = new Schema<ITenantDocument>(
     },
     documents: {
       aadhaarUrl: { type: String },
+      aadhaarPublicId: { type: String },
       photoUrl: { type: String },
+      photoPublicId: { type: String },
+      isVerified: { type: Boolean, default: false },
+      verifiedAt: { type: Date },
     },
     emergencyContact: {
       name: { type: String, trim: true },

@@ -6,9 +6,10 @@ import { User } from '../models/user.js';
 import { signAccessToken, signRefreshToken } from '../lib/jwt.js';
 import { createRefreshToken, rotateRefreshToken, revokeAllUserTokens } from '../lib/tokenStore.js';
 import { authGuard } from '../middleware/auth.js';
-import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, refreshLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js';
 import { logger } from '../lib/logger.js';
 import { sendPasswordResetEmail } from '../services/email.service.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 const auth = new Hono();
 
@@ -103,6 +104,22 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
 
   logger.info({ userId: user.id, role: user.role }, 'User logged in');
 
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+    c.req.header('x-real-ip') ??
+    undefined;
+  const userAgent = c.req.header('user-agent') ?? undefined;
+
+  void writeAuditLog({
+    userId: user.id,
+    action: 'login',
+    resource: 'auth',
+    resourceId: user.id,
+    details: { role: user.role, email: user.email },
+    ip,
+    userAgent,
+  });
+
   return c.json({
     success: true,
     data: {
@@ -115,7 +132,7 @@ auth.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
 
 // ── POST /auth/refresh ──────────────────────────────────
 
-auth.post('/refresh', authLimiter, zValidator('json', refreshSchema), async (c) => {
+auth.post('/refresh', refreshLimiter, zValidator('json', refreshSchema), async (c) => {
   const { refreshToken } = c.req.valid('json');
 
   let payload;
@@ -178,6 +195,22 @@ auth.post('/logout', authGuard, async (c) => {
   const user = c.get('user');
   const revoked = revokeAllUserTokens(user.sub);
   logger.info({ userId: user.sub, tokensRevoked: revoked }, 'User logged out');
+
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+    c.req.header('x-real-ip') ??
+    undefined;
+  const userAgent = c.req.header('user-agent') ?? undefined;
+
+  void writeAuditLog({
+    userId: user.sub,
+    action: 'logout',
+    resource: 'auth',
+    resourceId: user.sub,
+    details: { role: user.role, tokensRevoked: revoked },
+    ip,
+    userAgent,
+  });
   return c.json({ success: true, data: { message: 'Logged out successfully.' } });
 });
 
@@ -223,6 +256,29 @@ auth.get('/me', authGuard, async (c) => {
       }
     } catch {
       // Non-fatal — tenantId enrichment is best-effort
+    }
+  }
+
+  // Enrich guardians with their ward link so the portal can resolve the ward
+  // without an extra lookup round-trip (guardianId + ward tenantId).
+  if (user.role === 'guardian') {
+    try {
+      const { Guardian } = await import('../models/guardian.js');
+      const wardDoc = await (
+        Guardian as unknown as {
+          findOne: (filter: Record<string, unknown>) => {
+            lean: () => Promise<Record<string, unknown> | null>;
+          };
+        }
+      )
+        .findOne({ userId: String(user._id), isActive: true })
+        .lean();
+      if (wardDoc) {
+        publicData.guardianId = String(wardDoc._id ?? '');
+        publicData.wardTenantId = String(wardDoc.tenantId ?? '');
+      }
+    } catch {
+      // Non-fatal — ward enrichment is best-effort
     }
   }
 
@@ -307,6 +363,22 @@ auth.post('/reset-password', zValidator('json', resetPasswordSchema), async (c) 
   revokeAllUserTokens(user.id);
   logger.info({ userId: user.id }, 'Password reset — all tokens revoked');
 
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+    c.req.header('x-real-ip') ??
+    undefined;
+  const userAgent = c.req.header('user-agent') ?? undefined;
+
+  void writeAuditLog({
+    userId: user.id,
+    action: 'update',
+    resource: 'auth',
+    resourceId: user.id,
+    details: { operation: 'password_reset', email: user.email },
+    ip,
+    userAgent,
+  });
+
   return c.json({
     success: true,
     data: { message: 'Password reset successful. Please log in with your new password.' },
@@ -346,6 +418,22 @@ auth.put('/password', authGuard, zValidator('json', changePasswordSchema), async
 
   revokeAllUserTokens(user.id);
   logger.info({ userId: user.id }, 'Password changed — all tokens revoked');
+
+  const ip =
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
+    c.req.header('x-real-ip') ??
+    undefined;
+  const userAgent = c.req.header('user-agent') ?? undefined;
+
+  void writeAuditLog({
+    userId: user.id,
+    action: 'update',
+    resource: 'auth',
+    resourceId: user.id,
+    details: { operation: 'password_change', email: user.email },
+    ip,
+    userAgent,
+  });
 
   return c.json({
     success: true,

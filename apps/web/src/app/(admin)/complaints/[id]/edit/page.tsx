@@ -6,11 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { UserRound, Hash, Tag, MessageSquare } from 'lucide-react';
-import { clsx } from 'clsx';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
@@ -131,18 +132,15 @@ export default function EditComplaintPage() {
           title: res.data.title ?? '',
           description: res.data.description ?? '',
           category,
-          priority:
-            res.data.priority === 'critical'
-              ? 'urgent'
-              : ((res.data.priority as FormData['priority']) ?? 'medium'),
+          priority: (res.data.priority as FormData['priority']) ?? 'medium',
           status: (res.data.status as FormData['status']) ?? 'open',
           adminNotes: res.data.adminNotes ?? '',
           photoUrls: (res.data.photos ?? []).join('\n'),
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load complaint');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -170,21 +168,13 @@ export default function EditComplaintPage() {
         })
         .json();
       router.push('/complaints');
-    } catch {
-      setSubmitError('Failed to update complaint');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
   const tenant = resolveTenant(complaintData);
   const err = errors as Record<string, { message?: string }>;
-
-  const priorityColors: Record<string, string> = {
-    low: 'bg-[color:var(--color-neutral-100)] text-[color:var(--color-neutral-700)]',
-    medium: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-    high: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-    urgent:
-      'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)] ring-2 ring-[color:var(--color-danger-300)]',
-  };
 
   return (
     <FormPage
@@ -276,17 +266,13 @@ export default function EditComplaintPage() {
                   error={err.priority?.message}
                   {...register('priority')}
                 />
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1" aria-label="Priority scale">
                   {priorityOptions.map((opt) => (
-                    <span
+                    <StatusBadge
                       key={opt.value}
-                      className={clsx(
-                        'rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase',
-                        priorityColors[opt.value],
-                      )}
-                    >
-                      {opt.label}
-                    </span>
+                      variant={statusToVariant(opt.value)}
+                      label={opt.label}
+                    />
                   ))}
                 </div>
               </div>

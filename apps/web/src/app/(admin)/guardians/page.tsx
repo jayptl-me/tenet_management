@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -13,7 +14,8 @@ import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
 interface GuardianRow {
   _id: string;
@@ -27,8 +29,10 @@ interface GuardianRow {
   createdAt: string;
 }
 
-export default function GuardiansPage() {
+function GuardiansList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenantIdFilter = searchParams.get('tenantId') ?? '';
   const [guardians, setGuardians] = useState<GuardianRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -47,6 +51,7 @@ export default function GuardiansPage() {
       params.set('page', String(page));
       params.set('limit', String(perPage));
       if (search) params.set('search', search);
+      if (tenantIdFilter) params.set('tenantId', tenantIdFilter);
 
       const res = await api.get(`guardians?${params.toString()}`).json<{
         success: boolean;
@@ -55,12 +60,12 @@ export default function GuardiansPage() {
       }>();
       setGuardians(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load guardians');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search]);
+  }, [page, perPage, search, tenantIdFilter]);
 
   useEffect(() => {
     fetchGuardians();
@@ -73,8 +78,8 @@ export default function GuardiansPage() {
       await api.delete(`guardians/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchGuardians();
-    } catch {
-      setError('Failed to delete guardian');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
@@ -98,6 +103,16 @@ export default function GuardiansPage() {
     {
       header: 'Tenant',
       accessor: (row) => row.tenant?.user?.name ?? 'N/A',
+    },
+    {
+      header: 'Room',
+      accessor: (row) => row.tenant?.room?.roomNumber ?? 'N/A',
+    },
+    {
+      header: 'Email',
+      accessor: (row) => (
+        <span className="text-xs text-[color:var(--color-text-secondary)]">{row.email ?? '—'}</span>
+      ),
     },
     {
       header: 'Emergency',
@@ -133,13 +148,30 @@ export default function GuardiansPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Guardians"
-        description="Manage tenant guardians & emergency contacts"
+        title={tenantIdFilter ? 'Guardians (Filtered by Tenant)' : 'Guardians'}
+        description={
+          tenantIdFilter
+            ? `Showing guardians linked to tenant ${tenantIdFilter}`
+            : 'Manage tenant guardians & emergency contacts'
+        }
         action={
-          <Button onClick={() => router.push('/guardians/new')}>
-            <Plus className="h-4 w-4" />
-            Add Guardian
-          </Button>
+          <div className="flex items-center gap-2">
+            {tenantIdFilter && (
+              <Button variant="outline" onClick={() => router.push('/guardians')}>
+                Clear Filter
+              </Button>
+            )}
+            <Button
+              onClick={() =>
+                router.push(
+                  tenantIdFilter ? `/guardians/new?tenantId=${tenantIdFilter}` : '/guardians/new',
+                )
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add Guardian
+            </Button>
+          </div>
         }
       />
       <ErrorBanner message={error} />
@@ -213,5 +245,19 @@ export default function GuardiansPage() {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+  );
+}
+
+export default function GuardiansPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+        </div>
+      }
+    >
+      <GuardiansList />
+    </Suspense>
   );
 }

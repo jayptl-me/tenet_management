@@ -10,6 +10,7 @@ import { Room } from '../models/room.js';
 import { Guardian } from '../models/guardian.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
 
 const notices = new Hono();
 notices.use('*', requireFeature('noticeBoardEnabled'));
@@ -58,29 +59,52 @@ async function resolvePortalTargetContext(user: {
 }
 
 // ── Schemas ─────────────────────────────────────────────
-const createNoticeSchema = z.strictObject({
-  title: z
-    .string()
-    .min(5, 'Title must be at least 5 characters')
-    .max(200, 'Title cannot exceed 200 characters')
-    .trim(),
-  content: z
-    .string()
-    .min(10, 'Content must be at least 10 characters')
-    .max(5000, 'Content cannot exceed 5000 characters')
-    .trim(),
-  pinned: z.boolean().optional().default(false),
-  targetType: z.enum(['all', 'floor', 'room', 'individual']),
-  targetIds: z.array(z.string()).optional().default([]),
-});
+const createNoticeSchema = z
+  .strictObject({
+    title: z
+      .string()
+      .min(5, 'Title must be at least 5 characters')
+      .max(200, 'Title cannot exceed 200 characters')
+      .trim(),
+    content: z
+      .string()
+      .min(10, 'Content must be at least 10 characters')
+      .max(5000, 'Content cannot exceed 5000 characters')
+      .trim(),
+    pinned: z.boolean().optional().default(false),
+    targetType: z.enum(['all', 'floor', 'room', 'individual']),
+    targetIds: z.array(z.string()).optional().default([]),
+  })
+  .refine((d) => d.targetType === 'all' || (d.targetIds && d.targetIds.length > 0), {
+    message: 'At least one target ID is required when audience is not All',
+    path: ['targetIds'],
+  });
 
-const updateNoticeSchema = z.strictObject({
-  title: createNoticeSchema.shape.title.optional(),
-  content: createNoticeSchema.shape.content.optional(),
-  pinned: z.boolean().optional(),
-  targetType: z.enum(['all', 'floor', 'room', 'individual']).optional(),
-  targetIds: z.array(z.string()).optional(),
-});
+const updateNoticeSchema = z
+  .strictObject({
+    title: z
+      .string()
+      .min(5, 'Title must be at least 5 characters')
+      .max(200, 'Title cannot exceed 200 characters')
+      .trim()
+      .optional(),
+    content: z
+      .string()
+      .min(10, 'Content must be at least 10 characters')
+      .max(5000, 'Content cannot exceed 5000 characters')
+      .trim()
+      .optional(),
+    pinned: z.boolean().optional(),
+    targetType: z.enum(['all', 'floor', 'room', 'individual']).optional(),
+    targetIds: z.array(z.string()).optional(),
+  })
+  .refine(
+    (d) => !d.targetType || d.targetType === 'all' || (d.targetIds && d.targetIds.length > 0),
+    {
+      message: 'At least one target ID is required when audience is not All',
+      path: ['targetIds'],
+    },
+  );
 
 // ── GET /notices ────────────────────────────────────────
 notices.get('/', authGuard, async (c) => {
@@ -145,44 +169,21 @@ notices.get('/', authGuard, async (c) => {
     targetIds: ctx.userId,
   });
 
-  const data = await NoticePost.find({ $or: orConditions })
-    .sort({ pinned: -1, createdAt: -1 })
-    .limit(20)
-    .populate('author', 'name email')
-    .lean();
-
-  return c.json({ success: true, data });
-});
-
-// ── GET /notices/admin ─────────────────────────────────
-notices.get('/admin', authGuard, adminOnly, async (c) => {
-  const pagination = parsePagination(c);
-  const targetType = c.req.query('targetType');
-
-  const filter: Record<string, unknown> = {};
-  if (targetType && ['all', 'floor', 'room', 'individual'].includes(targetType)) {
-    filter.targetType = targetType;
-  }
-
+  const { page, limit, skip } = parsePagination(c);
   const [data, total] = await Promise.all([
-    NoticePost.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(pagination.skip)
-      .limit(pagination.limit)
+    NoticePost.find({ $or: orConditions })
+      .sort({ pinned: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate('author', 'name email')
       .lean(),
-    NoticePost.countDocuments(filter),
+    NoticePost.countDocuments({ $or: orConditions }),
   ]);
 
   return c.json({
     success: true,
     data,
-    meta: {
-      total,
-      page: pagination.page,
-      limit: pagination.limit,
-      totalPages: Math.ceil(total / pagination.limit),
-    },
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
 
@@ -193,6 +194,18 @@ notices.get('/:id', authGuard, async (c) => {
 
   const notice = await NoticePost.findById(id).populate('author', 'name email').lean();
   if (!notice) return notFound(c, 'Notice');
+
+  const user = c.get('user');
+  if (user.role !== 'admin') {
+    const ctx = await resolvePortalTargetContext({ sub: user.sub, role: user.role });
+    const targetIds = notice.targetIds ?? [];
+    const isAudience =
+      notice.targetType === 'all' ||
+      (notice.targetType === 'floor' && ctx.floorId && targetIds.includes(ctx.floorId)) ||
+      (notice.targetType === 'room' && ctx.roomId && targetIds.includes(ctx.roomId)) ||
+      (notice.targetType === 'individual' && targetIds.includes(ctx.userId));
+    if (!isAudience) return notFound(c, 'Notice');
+  }
 
   return c.json({ success: true, data: notice });
 });
@@ -217,6 +230,16 @@ notices.post('/', authGuard, adminOnly, zValidator('json', createNoticeSchema), 
     resourceId: noticeId,
     details: { title: body.title, targetType: body.targetType },
   });
+
+  void createNotification({
+    targetType: body.targetType,
+    targetIds: body.targetIds ?? [],
+    title: body.title,
+    body: body.content.length > 120 ? `${body.content.slice(0, 117)}...` : body.content,
+    type: 'announcement',
+    data: { noticeId },
+    sendPush: true,
+  }).catch(() => {});
 
   const populated = await NoticePost.findById(noticeId).populate('author', 'name email').lean();
 

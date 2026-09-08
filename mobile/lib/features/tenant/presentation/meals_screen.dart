@@ -102,6 +102,8 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
         return Icons.free_breakfast_outlined;
       case 'lunch':
         return Icons.lunch_dining_outlined;
+      case 'snacks':
+        return Icons.cookie_outlined;
       case 'dinner':
         return Icons.dinner_dining_outlined;
       default:
@@ -155,8 +157,6 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
   Widget build(BuildContext context) {
     final activeMenu = _activeMenu;
     final meals = activeMenu?['meals'] as Map?;
-    final isHoliday = activeMenu?['isHoliday'] == true;
-    final menuNotes = activeMenu?['notes']?.toString();
 
     return Scaffold(
       appBar: AppBar(
@@ -234,32 +234,8 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                     ),
                   ],
                 ),
-                if (isHoliday)
-                  const StatusChip(label: 'Mess Holiday'),
               ],
             ),
-            if (menuNotes != null && menuNotes.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, size: 16, color: AppTheme.muted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        menuNotes,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             const SizedBox(height: 12),
             if (_loading)
               const SkeletonList(cardCount: 3, height: 95)
@@ -271,20 +247,15 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                 icon: Icons.restaurant_menu_outlined,
               )
             else
-              ...['breakfast', 'lunch', 'dinner'].map((slot) {
+              ...['breakfast', 'lunch', 'snacks', 'dinner'].map((slot) {
                 final slotData = meals[slot];
-                List<String> itemsList = [];
-                String? specialItem;
-
-                if (slotData is Map) {
-                  final rawItems = slotData['items'];
-                  if (rawItems is List) {
-                    itemsList = rawItems.map((e) => e is Map ? e['name'].toString() : e.toString()).toList();
-                  }
-                  specialItem = slotData['special']?.toString();
-                } else if (slotData is List) {
-                  itemsList = slotData.map((e) => e is Map ? e['name'].toString() : e.toString()).toList();
-                }
+                // API shape: meals.<slot> is a List of {name, description?, category?}.
+                final List<String> itemsList = slotData is List
+                    ? slotData
+                        .map((e) => e is Map ? (e['name']?.toString() ?? '') : e.toString())
+                        .where((e) => e.trim().isNotEmpty)
+                        .toList()
+                    : <String>[];
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -317,29 +288,6 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                                 ),
                               ),
                             ),
-                            if (specialItem != null && specialItem.trim().isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.warningSoft,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.star, size: 12, color: AppTheme.warningText),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      specialItem,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppTheme.warningText,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 10),

@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Bell,
-  Check,
-  X,
   MessageSquare,
   Megaphone,
   Wrench,
@@ -16,28 +15,18 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
+import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import type { INotification } from '@pg/types';
 
 export function NotificationBell() {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const router = useRouter();
+  const liveBadges = useSidebarBadges();
+  const unreadCount = liveBadges.unreadNotifications;
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  const fetchUnreadCount = useCallback(async () => {
-    if (!isAuthenticated) return;
-    try {
-      const res = await api.get('notifications/unread-count').json<{
-        success: boolean;
-        data: { count: number };
-      }>();
-      setUnreadCount(res.data.count);
-    } catch {
-      // Silently fail — user might not be admin
-    }
-  }, [isAuthenticated]);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -53,25 +42,6 @@ export function NotificationBell() {
       setIsLoading(false);
     }
   }, [isAuthenticated]);
-
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) {
-        fetchUnreadCount();
-      }
-    });
-    // Poll every 30 seconds as fallback (SSE handles real-time updates)
-    const interval = setInterval(() => {
-      if (active) {
-        fetchUnreadCount();
-      }
-    }, 30_000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [fetchUnreadCount]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -91,31 +61,11 @@ export function NotificationBell() {
     }
   };
 
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await api.patch(`notifications/${id}/read`).json<{ success: boolean }>();
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unreadBy: [] } : n)));
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      // Silently fail
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await api.patch('notifications/read-all').json<{ success: boolean }>();
-      setNotifications((prev) => prev.map((n) => ({ ...n, unreadBy: [] })));
-      setUnreadCount(0);
-    } catch {
-      // Silently fail
-    }
-  };
-
   if (!isAuthenticated) return null;
 
   const typeIcons: Record<string, React.ReactNode> = {
     payment_reminder: <Bell className="h-4 w-4 text-[color:var(--color-warning-500)]" />,
-    payment_verified: <Check className="h-4 w-4 text-[color:var(--color-success-500)]" />,
+    payment_verified: <Bell className="h-4 w-4 text-[color:var(--color-success-500)]" />,
     complaint_update: <MessageSquare className="h-4 w-4 text-[color:var(--color-brand-500)]" />,
     announcement: <Megaphone className="h-4 w-4 text-[color:var(--color-brand-500)]" />,
     service_update: <Wrench className="h-4 w-4 text-[color:var(--color-warning-500)]" />,
@@ -136,12 +86,12 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={handleToggle}
-        className="relative rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-2 shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-field-bg)] active:scale-[var(--active-press-scale)]"
+        className="relative rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-2 transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-field-bg)] active:scale-[var(--active-press-scale)]"
         aria-label="Notifications"
       >
         <Bell className="h-5 w-5 text-[color:var(--color-surface-700)]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)]">
+          <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-text-inverted)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -151,18 +101,16 @@ export function NotificationBell() {
         <div className="absolute top-full right-0 z-50 mt-2 w-80 rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[color:var(--border-color)] p-3">
-            <h3 className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
-              Notifications
+            <h3 className="text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+              Notifications & Broadcasts
             </h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
-              >
-                <Check className="h-3 w-3" />
-                Mark all read
-              </button>
-            )}
+            <Link
+              href="/notifications?tab=history"
+              onClick={() => setIsOpen(false)}
+              className="text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:underline"
+            >
+              History
+            </Link>
           </div>
 
           {/* List */}
@@ -182,9 +130,14 @@ export function NotificationBell() {
               notifications.map((notif) => {
                 const isUnread = notif.unreadBy.length > 0;
                 return (
-                  <div
+                  <button
                     key={notif.id}
-                    className={`flex items-start gap-3 border-b border-[color:var(--border-color)] p-3 transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)] ${
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      router.push(`/notifications/${notif.id}`);
+                    }}
+                    className={`flex w-full items-start gap-3 border-b border-[color:var(--border-color)] p-3 text-left transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)] ${
                       isUnread ? 'bg-[color:var(--color-brand-50)]/50' : ''
                     }`}
                   >
@@ -194,12 +147,18 @@ export function NotificationBell() {
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
                           {notif.title}
                         </p>
-                        {isUnread && (
-                          <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[color:var(--color-brand-500)]" />
+                        {isUnread ? (
+                          <span className="flex-shrink-0 rounded-full bg-[color:var(--color-warning-100)] px-1.5 py-0.5 text-[9px] font-bold text-[color:var(--color-warning-800)]">
+                            {notif.unreadBy.length} unread
+                          </span>
+                        ) : (
+                          <span className="flex-shrink-0 rounded-full bg-[color:var(--color-success-100)] px-1.5 py-0.5 text-[9px] font-bold text-[color:var(--color-success-800)]">
+                            All read
+                          </span>
                         )}
                       </div>
                       <p className="mt-0.5 line-clamp-2 text-xs text-[color:var(--color-text-secondary)]">
@@ -215,21 +174,14 @@ export function NotificationBell() {
                           {notif.type.replace(/_/g, ' ')}
                         </span>
                         <span className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
-                          {new Date(notif.sentAt).toLocaleString()}
+                          {new Date(notif.sentAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
                         </span>
                       </div>
                     </div>
-                    {isUnread && (
-                      <button
-                        onClick={() => handleMarkAsRead(notif.id)}
-                        className="flex-shrink-0 rounded-md p-1 text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-secondary)]"
-                        title="Mark as read"
-                        aria-label="Mark as read"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -239,9 +191,10 @@ export function NotificationBell() {
           <div className="border-t border-[color:var(--border-color)] p-2">
             <Link
               href="/notifications"
+              onClick={() => setIsOpen(false)}
               className="block rounded-md px-3 py-2 text-center text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
             >
-              View all notifications
+              Compose & Manage Broadcasts
             </Link>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { forwardRef, useState, useId, type ReactNode } from 'react';
 import { clsx } from 'clsx';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 import {
   fieldControlBase,
   fieldControlBorderError,
@@ -22,18 +22,54 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   hint?: string;
+  /** Show an X button that clears the field (non-password fields only). */
+  clearable?: boolean;
 }
 
 // ── Component ──────────────────────────────────────────
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, leftIcon, rightIcon, hint, className, id, type, ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      helperText,
+      leftIcon,
+      rightIcon,
+      hint,
+      className,
+      id,
+      type,
+      clearable = false,
+      value,
+      onChange,
+      ...props
+    },
+    ref,
+  ) => {
     const generatedId = useId();
     const inputId =
       id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : `input-${generatedId}`);
     const [showPassword, setShowPassword] = useState(false);
     const isPassword = type === 'password';
     const resolvedType = isPassword ? (showPassword ? 'text' : 'password') : type;
+    const hasValue = typeof value === 'string' ? value.length > 0 : value != null;
+    const showClear = clearable && !isPassword && hasValue && !props.disabled;
+
+    const handleClear = () => {
+      const el = (ref as { current?: HTMLInputElement | null })?.current ?? null;
+      if (el) {
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(el, '');
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      if (onChange) {
+        onChange({ target: { value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      }
+    };
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -84,7 +120,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             </button>
           )}
 
-          {rightIcon && !isPassword && (
+          {showClear && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-0.5 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+              tabIndex={-1}
+              aria-label="Clear field"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          {rightIcon && !isPassword && !showClear && (
             <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
               {rightIcon}
             </span>

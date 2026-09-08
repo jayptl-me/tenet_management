@@ -15,7 +15,8 @@ export type AuditAction =
   | 'settings_change'
   | 'notification_send'
   | 'visitor_approve'
-  | 'export';
+  | 'export'
+  | 'reconcile';
 
 export interface WriteAuditLogParams {
   userId: string;

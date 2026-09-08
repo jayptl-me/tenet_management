@@ -37,7 +37,7 @@ const floorSchema = new Schema<IFloorDocument>(
     totalRooms: {
       type: Number,
       required: [true, 'Total rooms is required'],
-      min: [1, 'Must have at least 1 room'],
+      min: [0, 'Total rooms cannot be negative'],
       max: [50, 'Cannot exceed 50 rooms per floor'],
     },
     amenityCounts: {

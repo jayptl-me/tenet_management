@@ -284,7 +284,7 @@ export function FloorServiceGrid({
       {/* Header with health summary */}
       {floorLabel && (
         <div className="flex items-center gap-2">
-          <h4 className="text-sm font-[family:var(--font-display)] font-bold text-[color:var(--color-text-primary)]">
+          <h4 className="text-sm font-display font-bold text-[color:var(--color-text-primary)]">
             {floorLabel}
           </h4>
           {anyDown ? (

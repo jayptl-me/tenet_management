@@ -44,7 +44,7 @@ export function PageShell({
         <div className="flex min-w-0 items-start gap-3">
           {backButton && <div className="shrink-0 pt-0.5">{backButton}</div>}
           <div className="min-w-0">
-            <h1 className="text-2xl font-[family:var(--font-display)] font-bold tracking-tight text-balance text-[color:var(--color-text-primary)]">
+            <h1 className="text-2xl font-display font-bold tracking-tight text-balance text-[color:var(--color-text-primary)]">
               {title}
             </h1>
             {description && (

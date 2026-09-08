@@ -7,6 +7,8 @@ import { api } from '@/lib/api';
 import { StatCard } from '@/components/ui/StatCard';
 import { surfaceCardClass } from '@/lib/field-styles';
 import { StarRating } from '@/components/ui/StarRating';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface SummaryEntry {
   date: string;
@@ -61,8 +63,9 @@ export function FeedbackSummaryStrip() {
     };
   }, []);
 
-  // Silent on error — do not render the strip.
-  if (failed) return null;
+  if (failed) {
+    return <ErrorBanner message="Failed to load meal feedback summary." />;
+  }
 
   if (isLoading) {
     return (
@@ -98,6 +101,16 @@ export function FeedbackSummaryStrip() {
   const overallAvg = totalCount > 0 ? Math.round((weightedSum / totalCount) * 100) / 100 : 0;
 
   const round = (n: number) => Math.round(n * 100) / 100;
+
+  if (entries.length === 0) {
+    return (
+      <EmptyState
+        icon={<MessageSquare className="h-8 w-8" />}
+        title="No meal feedback yet"
+        description="Feedback submitted by residents will appear here."
+      />
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

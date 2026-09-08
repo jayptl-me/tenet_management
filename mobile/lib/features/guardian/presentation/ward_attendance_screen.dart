@@ -21,6 +21,50 @@ class _GuardianAttendanceScreenState
   String? _error;
   bool _featureDisabled = false;
   List<Map<String, dynamic>> _rows = [];
+  String? _statusFilter;
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
+  String? _fmt(DateTime? d) => d == null
+      ? null
+      : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  static const List<String> _statusOptions = [
+    'present',
+    'absent',
+    'on_leave',
+    'not_returned',
+  ];
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_statusFilter == null || _statusFilter!.isEmpty) return _rows;
+    return _rows.where((r) => r['status']?.toString() == _statusFilter).toList();
+  }
+
+  Map<String, List<Map<String, dynamic>>> get _groupedByMonth {
+    final map = <String, List<Map<String, dynamic>>>{};
+    for (final r in _filtered) {
+      final d = r['date']?.toString() ?? '';
+      final key = d.length >= 7 ? d.substring(0, 7) : 'unknown';
+      map.putIfAbsent(key, () => []).add(r);
+    }
+    final sortedKeys = map.keys.toList()..sort((a, b) => b.compareTo(a));
+    return {for (final k in sortedKeys) k: map[k]!};
+  }
+
+  String _monthLabel(String key) {
+    try {
+      final parts = key.split('-');
+      final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return '${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return key;
+    }
+  }
 
   @override
   void initState() {
@@ -35,7 +79,11 @@ class _GuardianAttendanceScreenState
       _featureDisabled = false;
     });
     try {
-      final rows = await ref.read(guardianRepositoryProvider).wardAttendance();
+      final rows = await ref.read(guardianRepositoryProvider).wardAttendance(
+            limit: 100,
+            fromDate: _fmt(_fromDate),
+            toDate: _fmt(_toDate),
+          );
       if (!mounted) return;
       setState(() {
         _rows = rows;
@@ -120,19 +168,98 @@ class _GuardianAttendanceScreenState
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (_error != null) ErrorBanner(message: _error!),
-                      if (_rows.isEmpty)
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('All'),
+                            selected: _statusFilter == null,
+                            onSelected: (_) => setState(() => _statusFilter = null),
+                          ),
+                          ..._statusOptions.map((s) => ChoiceChip(
+                                label: Text(s.replaceAll('_', ' ')),
+                                selected: _statusFilter == s,
+                                onSelected: (_) => setState(
+                                    () => _statusFilter = _statusFilter == s ? null : s),
+                              )),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final d = await showDatePicker(
+                                  context: context,
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                  initialDate: _fromDate ?? DateTime.now(),
+                                );
+                                if (d == null) return;
+                                setState(() => _fromDate = d);
+                                _load();
+                              },
+                              icon: const Icon(Icons.date_range, size: 16),
+                              label: Text(_fromDate == null
+                                  ? 'From'
+                                  : _fmt(_fromDate)!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final d = await showDatePicker(
+                                  context: context,
+                                  firstDate: _fromDate ?? DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                  initialDate: _toDate ?? DateTime.now(),
+                                );
+                                if (d == null) return;
+                                setState(() => _toDate = d);
+                                _load();
+                              },
+                              icon: const Icon(Icons.date_range, size: 16),
+                              label: Text(
+                                  _toDate == null ? 'To' : _fmt(_toDate)!),
+                            ),
+                          ),
+                          if (_fromDate != null || _toDate != null)
+                            IconButton(
+                              tooltip: 'Clear dates',
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                setState(() {
+                                  _fromDate = null;
+                                  _toDate = null;
+                                });
+                                _load();
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_filtered.isEmpty)
                         const EmptyState(message: 'No attendance records')
                       else
-                        ..._rows.map((r) {
-                          return ListCard(
-                            title: formatDate(r['date']),
-                            subtitle:
-                                'In: ${r['checkInTime'] ?? r['checkIn'] ?? '--'} · Out: ${r['checkOutTime'] ?? r['checkOut'] ?? '--'}',
-                            trailing: StatusChip(
-                              label: r['status']?.toString() ?? '--',
-                            ),
-                          );
-                        }),
+                        ..._groupedByMonth.entries.expand((entry) => [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                                child: Text(_monthLabel(entry.key),
+                                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                              ),
+                              ...entry.value.map((r) {
+                                return ListCard(
+                                  title: formatDate(r['date']),
+                                  subtitle:
+                                      'In: ${formatTime(r['checkInTime'] ?? r['checkIn'])} · Out: ${formatTime(r['checkOutTime'] ?? r['checkOut'])}',
+                                  trailing: StatusChip(
+                                    label: r['status']?.toString() ?? '--',
+                                  ),
+                                );
+                              }),
+                            ]),
                     ],
                   ),
       ),

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Phone, Mail, User, Pencil, FileText, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { Phone, Mail, User, Pencil, Shield, Home, BedDouble, Building2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -17,13 +19,12 @@ interface GuardianDetail {
   relation: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { _id: string; name: string; email: string; phone: string };
-    room?: { _id: string; roomNumber: string };
+    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
   };
   isEmergencyContact: boolean;
   isActive: boolean;
-  address?: string;
-  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,7 +60,9 @@ export default function GuardianDetailPage() {
       .get(`guardians/${id}`)
       .json<{ success: boolean; data: GuardianDetail }>()
       .then((res) => setGuardian(res.data))
-      .catch(() => setError('Failed to load guardian details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -179,10 +182,29 @@ export default function GuardianDetailPage() {
                     label="Linked Tenant"
                     value={
                       <span className="flex flex-col items-end gap-0.5">
-                        <span>{guardian.tenant.user?.name ?? 'N/A'}</span>
+                        <Link
+                          href={`/tenants/${guardian.tenant._id}`}
+                          className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        >
+                          {guardian.tenant.user?.name ?? 'View tenant'}
+                        </Link>
                         {guardian.tenant.room && (
-                          <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                            <Home className="h-3 w-3" />
                             Room {guardian.tenant.room.roomNumber}
+                            {guardian.tenant.bedId ? ` · Bed ${guardian.tenant.bedId}` : ''}
+                          </span>
+                        )}
+                        {guardian.tenant.room?.floor?.label && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                            <Building2 className="h-3 w-3" />
+                            {guardian.tenant.room.floor.label}
+                          </span>
+                        )}
+                        {guardian.tenant.bedId && !guardian.tenant.room && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                            <BedDouble className="h-3 w-3" />
+                            Bed {guardian.tenant.bedId}
                           </span>
                         )}
                       </span>
@@ -192,14 +214,6 @@ export default function GuardianDetailPage() {
               </DetailList>
             </DetailCard>
           </div>
-
-          {guardian.notes && (
-            <DetailCard title="Notes" icon={<FileText />}>
-              <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
-                {guardian.notes}
-              </p>
-            </DetailCard>
-          )}
 
           <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
             Created {formatDateTime(guardian.createdAt)} · Updated{' '}

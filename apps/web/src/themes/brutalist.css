@@ -101,10 +101,10 @@
   --border-color: #000000;
 
   /* Radii — Sharp (neo-brutalism rejects rounding) */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
   --radius-full: 9999px;
 
   /* Shadows — Hard offset, ZERO blur */
@@ -115,6 +115,35 @@
   --shadow-dropdown: 3px 3px 0 0 #000000;
   --shadow-modal: 6px 6px 0 0 rgba(0, 0, 0, 0.5);
 
+  /* Shadows — Full scale (hard offset idiom, zero blur) */
+  --shadow-xs: 1px 1px 0 0 #000000;
+  --shadow-sm: 2px 2px 0 0 #000000;
+  --shadow-md: 3px 3px 0 0 #000000;
+  --shadow-lg: 5px 5px 0 0 #000000;
+  --shadow-xl: 6px 6px 0 0 #000000;
+  --shadow-2xl: 8px 8px 0 0 #000000;
+  --shadow-tooltip: 2px 2px 0 0 #000000;
+
+  /* Borders — Aliases */
+  --border-color-default: var(--border-color);
+  --border-color-strong: #000000;
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-900);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* Glass — Brutalism rejects translucency: solid surfaces, no blur */
+  --glass-bg: var(--color-surface-100);
+  --glass-bg-strong: var(--color-card-bg);
+  --glass-blur: none;
+  --glass-blur-strong: none;
+  --glass-border: var(--border-color);
+
   /* Typography — Bold, chunky, uppercase monospace labels */
   --font-display: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
@@ -122,11 +151,26 @@
 
   /* Transition — Fast, snappy */
   --transition-duration: 150ms;
+  --transition-duration-slow: 200ms;
   --transition-easing: ease-out;
+  --transition-easing-out: ease-out;
+  --transition-easing-in: ease-out;
 
   /* Layout */
   --sidebar-width: 256px;
+  --sidebar-collapsed-width: 64px;
   --header-height: 60px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   /* Behaviors — Press-down effect */
   --hover-lift: translateX(1px) translateY(1px);
@@ -150,6 +194,8 @@
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
   --disabled-opacity: 0.5;
   --disabled-bg: var(--color-surface-300);
   /* Chart / data-viz */
@@ -307,6 +353,63 @@
   --shadow-dropdown: 3px 3px 0 0 #ffffff;
   --shadow-modal: 6px 6px 0 0 rgba(255, 255, 255, 0.5);
 
+  /* Shadows — Full scale (hard offset idiom, zero blur) */
+  --shadow-xs: 1px 1px 0 0 #ffffff;
+  --shadow-sm: 2px 2px 0 0 #ffffff;
+  --shadow-md: 3px 3px 0 0 #ffffff;
+  --shadow-lg: 5px 5px 0 0 #ffffff;
+  --shadow-xl: 6px 6px 0 0 #ffffff;
+  --shadow-2xl: 8px 8px 0 0 #ffffff;
+  --shadow-tooltip: 2px 2px 0 0 #ffffff;
+
+  /* Borders — Aliases */
+  --border-color-default: var(--border-color);
+  --border-color-strong: #ffffff;
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Glass — Brutalism rejects translucency: solid surfaces, no blur */
+  --glass-bg: var(--color-surface-100);
+  --glass-bg-strong: var(--color-card-bg);
+  --glass-blur: none;
+  --glass-blur-strong: none;
+  --glass-border: var(--border-color);
+
+  /* Typography — Same as light (dark mode does not inherit light block) */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Transition — Same as light */
+  --transition-duration: 150ms;
+  --transition-duration-slow: 200ms;
+  --transition-easing: ease-out;
+  --transition-easing-out: ease-out;
+  --transition-easing-in: ease-out;
+
+  /* Layout — Same as light */
+  --sidebar-width: 256px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 60px;
+
+  /* Spacing scale — Same as light */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Behaviors — Same as light */
+  --hover-lift: translateX(1px) translateY(1px);
+  --active-press-scale: 0.97;
+  --active-press-x: 1px;
+  --active-press-y: 1px;
+
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
@@ -323,6 +426,8 @@
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
   --disabled-opacity: 0.5;
   --disabled-bg: var(--color-surface-300);
 

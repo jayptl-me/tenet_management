@@ -1,45 +1,16 @@
-# Menus (DailyMenu) -- Feature Audit
+# Menus Module - Feature Listing
 
-**Last verified:** 2026-07-16 (goal pass reconcile)  
-**Admin grade:** A  
-**Priority:** P2 polish
+Module: menus
+Scope: admin web + API + DB + Flutter tenant (read-only)
+Source verified: 2026-09-08 UTC
+Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes
+Pass 1 record: docs/audit/features/menus_audit_pass1_20260908-003801.md
 
-## Open gaps
+## Feature Listing
 
-### P0
-
-None.
-
-### P1
-
-_None open._
-
-### Deferred (product)
-
-- **FLAG-menus:** Menus remain **always-on** (no feature flag); only meal feedback uses `messFeedbackEnabled`. Documented product split -- not a bug.
-
-### P2
-
-- [ ] Shared MenuMealItemsEditor extract (new/edit still duplicated field arrays)
-- [ ] Client min-date=today to avoid PAST_DATE before submit
-- [ ] Flutter optional week browse (`GET menus?fromDate&toDate`)
-- [ ] Align `IDailyMenu` with derived `isActive` + timestamps if clients need it
-- [ ] Route tests for PAST_DATE + date upsert residual
-
-## Closed
-
-- [x] POST menus exists; past-date guards via `todayInTZ()`
-- [x] isActive list filter uses `todayInTZ()` (not UTC ISO)
-- [x] WeekMenuPlanner + Past/Active/Scheduled badges
-- [x] category on menu items
-- [x] Past menus hide Edit on list
-- [x] Menus usable when messFeedbackEnabled is false (by design)
-
-## Acceptance checklist
-
-- [x] Create today/future menu 201
-- [x] Past create/edit 422 PAST_DATE
-- [x] List badges Past / Active / Scheduled
-- [x] Week view loads Mon-Sun grid
-- [x] GET menus/today matches portal day (PG TZ)
-- [x] Menus remain usable when messFeedbackEnabled is false
+| Surface            | Capability                       | Status  |
+| ------------------ | -------------------------------- | ------- |
+| List               | planner + dish search + item CSV | WORKING |
+| Create/Edit/Detail | 4 meal slots incl. snacks        | WORKING |
+| API                | mess flag gate + dish $or search | WORKING |
+| Flutter            | snacks slot + icon               | WORKING |

@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { AlertTriangle, Send, X, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAppConfigPublic } from '@/hooks/useAppConfig';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 
 export function EmergencyAlertButton() {
   const { data: appConfig } = useAppConfigPublic();
@@ -67,7 +70,7 @@ export function EmergencyAlertButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
+        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-text-inverted)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
         title="Send Emergency Alert"
         aria-label="Send Emergency Alert"
       >
@@ -123,61 +126,41 @@ export function EmergencyAlertButton() {
             {sent ? (
               <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] p-4 text-center text-[color:var(--color-success-800)]">
                 <p className="font-display text-lg font-bold">Alert Sent!</p>
-                <p className="text-sm">All tenants and guardians have been notified.</p>
+                <p className="text-sm">All active tenants have been notified immediately.</p>
               </div>
             ) : (
               <div className="mt-4 space-y-4">
-                <div>
-                  <label
-                    htmlFor="emergency-alert-title-input"
-                    className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]"
-                  >
-                    Alert Title
-                  </label>
-                  <input
-                    id="emergency-alert-title-input"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Fire Drill -- Exit Immediately"
-                    className="font-body w-full rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:border-[color:var(--color-danger-500)] focus:outline-none"
-                    maxLength={150}
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="emergency-alert-body-input"
-                    className="font-body mb-1 block text-sm font-semibold text-[color:var(--color-surface-700)]"
-                  >
-                    Message
-                  </label>
-                  <textarea
-                    id="emergency-alert-body-input"
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder="Describe the emergency and what tenants should do..."
-                    rows={3}
-                    className="font-body w-full resize-none rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] px-4 py-2.5 text-sm focus:border-[color:var(--color-danger-500)] focus:outline-none"
-                    maxLength={500}
-                  />
-                </div>
+                <Input
+                  id="emergency-alert-title-input"
+                  label="Alert Title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Fire Drill -- Exit Immediately"
+                  maxLength={150}
+                  autoFocus
+                />
+                <Textarea
+                  id="emergency-alert-body-input"
+                  label="Message"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Describe the emergency and what tenants should do..."
+                  rows={3}
+                  maxLength={500}
+                />
               </div>
             )}
 
             {!sent && (
               <div className="mt-6 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="font-body rounded-[var(--radius-md)] px-4 py-2 text-sm font-semibold text-[color:var(--color-surface-600)] transition-colors hover:text-[color:var(--color-surface-800)]"
-                  disabled={sending}
-                >
+                <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={sending}>
                   Cancel
-                </button>
-                <button
-                  onClick={handleSend}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => void handleSend()}
                   disabled={sending || !title.trim() || !body.trim()}
-                  className="font-display inline-flex items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-5 py-2.5 text-sm font-bold text-[color:var(--color-text-inverted)] shadow-[var(--shadow-button)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sending ? (
                     <>
@@ -190,7 +173,7 @@ export function EmergencyAlertButton() {
                       Send Emergency Alert
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             )}
           </div>

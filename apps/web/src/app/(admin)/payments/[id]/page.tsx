@@ -10,33 +10,39 @@ import {
   Calendar,
   FileText,
   Receipt,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   MessageCircle,
   History,
   Hash,
-  Download,
-  X,
   Pencil,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { Timeline } from '@/components/ui/Timeline';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { Modal } from '@/components/ui/Modal';
+import { ReceiptDocument } from '@/components/admin/ReceiptDocument';
+import { VerifyPaymentModal, type VerifyPaymentTarget } from '@/components/admin/VerifyPaymentModal';
+import { KpiHeader } from '@/components/ui/KpiHeader';
+import { surfaceCardClass, surfaceNestedClass } from '@/lib/field-styles';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
+import { clsx } from 'clsx';
 
 interface PaymentDetail {
   _id: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { name: string; phone?: string };
-    room?: { _id: string; roomNumber: string };
+    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
   };
   amount: number;
   method: string;
@@ -45,10 +51,12 @@ interface PaymentDetail {
   notes?: string;
   paidAt?: string;
   createdAt: string;
+  dueDate?: string;
   invoiceId?: string;
   invoiceNumber?: string;
   screenshotUrl?: string;
   utrNumber?: string;
+  verifiedBy?: { name?: string } | string;
 }
 
 interface ReceiptData {
@@ -74,6 +82,14 @@ interface ReceiptData {
     userId?: { name?: string; phone?: string; email?: string };
     roomId?: { roomNumber?: string };
   };
+}
+
+interface AuditEvent {
+  id: string;
+  action: string;
+  userId?: { name?: string } | string;
+  timestamp: string;
+  details?: Record<string, unknown>;
 }
 
 function formatCurrency(amount: number | null | undefined): string {
@@ -131,12 +147,36 @@ function receiptInvoiceNumber(receipt: ReceiptData): string {
   return receipt.invoiceId.invoiceNumber ?? receipt.invoiceId._id ?? 'N/A';
 }
 
-function receiptTenantName(receipt: ReceiptData): string {
-  return receipt.tenantId?.userId?.name ?? 'N/A';
+function auditTitle(event: AuditEvent): string {
+  switch (event.action) {
+    case 'payment_verify':
+      return event.details?.approved === true || event.details?.status === 'paid'
+        ? 'Payment verified'
+        : event.details?.source === 'offline'
+          ? 'Offline payment recorded'
+          : 'Verification updated';
+    case 'update':
+      return 'Payment updated';
+    case 'delete':
+      return 'Payment deleted';
+    case 'create':
+      return 'Payment created';
+    default:
+      return formatStatusLabel(event.action);
+  }
 }
 
-function receiptRoomNumber(receipt: ReceiptData): string {
-  return receipt.tenantId?.roomId?.roomNumber ?? 'N/A';
+function auditDescription(event: AuditEvent): string | undefined {
+  const d = event.details;
+  if (!d) return undefined;
+  const parts: string[] = [];
+  if (typeof d.amount === 'number') parts.push(formatCurrency(d.amount));
+  if (typeof d.method === 'string') parts.push(String(d.method).replace(/_/g, ' '));
+  if (typeof d.status === 'string') parts.push(String(d.status).replace(/_/g, ' '));
+  if (typeof d.approved === 'boolean') parts.push(d.approved ? 'approved' : 'rejected');
+  if (typeof d.notes === 'string' && d.notes) parts.push(`"${d.notes}"`);
+  if (d.source) parts.push(`via ${String(d.source)}`);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 export default function PaymentDetailPage() {
@@ -150,8 +190,12 @@ export default function PaymentDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
-  const [receiptError, setReceiptError] = useState('');
   const [receiptLoading, setReceiptLoading] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [copiedUtr, setCopiedUtr] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -163,18 +207,31 @@ export default function PaymentDetailPage() {
       .then((res) => {
         setPayment(res.data);
       })
-      .catch(() => {
-        setError('Failed to load payment details');
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
       })
       .finally(() => {
         setIsLoading(false);
       });
   }, [id]);
 
+  // Real activity trail from audit logs (falls back silently)
+  useEffect(() => {
+    if (!id) return;
+    setEventsLoading(true);
+    api
+      .get(`audit-logs?resource=payment&resourceId=${id}&limit=25`)
+      .json<{ success: boolean; data: AuditEvent[] }>()
+      .then((res) => {
+        setEvents(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => setEvents([]))
+      .finally(() => setEventsLoading(false));
+  }, [id]);
+
   const loadReceipt = async () => {
     if (!payment) return;
     setReceiptLoading(true);
-    setReceiptError('');
     try {
       const res = await api.get(`payments/${payment._id}/receipt`).json<{
         success: boolean;
@@ -182,8 +239,8 @@ export default function PaymentDetailPage() {
       }>();
       setReceipt(res.data);
       setReceiptOpen(true);
-    } catch {
-      setReceiptError('Failed to load receipt');
+    } catch (err) {
+      toast.error((await parseApiError(err)).message);
     } finally {
       setReceiptLoading(false);
     }
@@ -191,6 +248,33 @@ export default function PaymentDetailPage() {
 
   const printReceipt = () => {
     window.print();
+  };
+
+  const copyUtr = async () => {
+    if (!payment?.utrNumber) return;
+    try {
+      await navigator.clipboard.writeText(payment.utrNumber);
+      setCopiedUtr(true);
+      window.setTimeout(() => setCopiedUtr(false), 1500);
+    } catch {
+      // Clipboard unavailable
+    }
+  };
+
+  const handleVerify = async (approved: boolean, notes: string) => {
+    if (!payment) return;
+    setVerifying(true);
+    try {
+      await api
+        .post(`payments/${payment._id}/verify`, { json: { approved, notes: notes || undefined } })
+        .json();
+      toast.success(approved ? 'Payment approved' : 'Payment rejected');
+      setVerifyOpen(false);
+      window.location.reload();
+    } catch (err) {
+      toast.error((await parseApiError(err)).message);
+      setVerifying(false);
+    }
   };
 
   if (!isLoading && (error || !payment)) {
@@ -207,12 +291,33 @@ export default function PaymentDetailPage() {
 
   const formattedDate = payment?.paidAt || payment?.createdAt;
   const statusVariant = payment ? statusToVariant(payment.status) : 'neutral';
+  const isPaid =
+    payment &&
+    (payment.status === 'paid' ||
+      payment.status === 'approved' ||
+      payment.status === 'completed');
   const canShowReceipt =
     payment &&
     (payment.status === 'paid' ||
       payment.status === 'approved' ||
       payment.status === 'completed' ||
       payment.status === 'pending_verification');
+
+  const verifyTarget: VerifyPaymentTarget | null =
+    payment
+      ? {
+          _id: payment._id,
+          tenantName: payment.tenant?.user?.name,
+          roomNumber: payment.tenant?.room?.roomNumber,
+          amount: payment.amount,
+          utrNumber: payment.utrNumber,
+          screenshotUrl: payment.screenshotUrl,
+          paidAt: payment.paidAt,
+          createdAt: payment.createdAt,
+          status: payment.status,
+          invoiceNumber: payment.invoiceNumber,
+        }
+      : null;
 
   return (
     <FormPage
@@ -237,53 +342,74 @@ export default function PaymentDetailPage() {
     >
       {payment && (
         <div className="space-y-6">
-          <DetailCard title="Amount" icon={<CreditCard />}>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-[color:var(--color-text-primary)]">
-                {formatCurrency(payment.amount)}
-              </p>
-              {payment.type && (
-                <p className="mt-1 text-sm font-semibold text-[color:var(--color-text-secondary)] capitalize">
-                  {formatType(payment.type)}
-                </p>
-              )}
-            </div>
-          </DetailCard>
+          {/* Ledger KPI header */}
+          <KpiHeader
+            items={[
+              {
+                label: 'Amount',
+                value: formatCurrency(payment.amount),
+                sub: formatType(payment.type ?? ''),
+                tone: isPaid ? 'success' : statusVariant === 'danger' ? 'danger' : 'warning',
+              },
+              {
+                label: 'Method',
+                value: formatMethod(payment.method),
+                sub: payment.utrNumber ? 'UTR submitted' : 'no UTR',
+                tone: 'default',
+              },
+              {
+                label: 'Due date',
+                value: formatDate(payment.dueDate),
+                sub: payment.paidAt ? `paid ${formatDate(payment.paidAt)}` : 'unpaid',
+                tone: 'default',
+              },
+              {
+                label: 'Verified by',
+                value:
+                  typeof payment.verifiedBy === 'object' && payment.verifiedBy?.name
+                    ? payment.verifiedBy.name
+                    : payment.verifiedBy
+                      ? 'Admin'
+                      : '—',
+                sub: isPaid ? 'settled' : 'not settled',
+                tone: isPaid ? 'success' : 'default',
+              },
+            ]}
+          />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <StatCard
-              title="Amount"
-              value={formatCurrency(payment.amount)}
-              icon={<CreditCard className="h-4 w-4" />}
-              variant={
-                payment.status === 'paid' ||
-                payment.status === 'approved' ||
-                payment.status === 'completed'
-                  ? 'success'
-                  : 'default'
-              }
-            />
-            <StatCard
-              title="Method"
-              value={formatMethod(payment.method)}
-              icon={<Receipt className="h-4 w-4" />}
-              variant="default"
-            />
-            <StatCard
-              title="Status"
-              value={formatStatusLabel(payment.status)}
-              icon={<CheckCircle className="h-4 w-4" />}
-              variant={
-                payment.status === 'paid' ||
-                payment.status === 'approved' ||
-                payment.status === 'completed'
-                  ? 'success'
-                  : statusVariant === 'danger'
-                    ? 'danger'
-                    : 'warning'
-              }
-            />
-          </div>
+          {/* UTR evidence */}
+          {payment.utrNumber && (
+            <div className={clsx(surfaceCardClass, 'flex flex-wrap items-center justify-between gap-3 p-4')}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]">
+                  <Hash className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold tracking-[0.08em] text-[color:var(--color-text-muted)] uppercase">
+                    UTR reference
+                  </p>
+                  <p className="font-mono text-sm font-bold tracking-wide text-[color:var(--color-brand-700)]">
+                    {payment.utrNumber}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={copyUtr}>
+                  {copiedUtr ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedUtr ? 'Copied' : 'Copy UTR'}
+                </Button>
+                {payment.invoiceId && (
+                  <Link
+                    href={`/invoices/${payment.invoiceId}`}
+                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-3 py-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)] transition-colors hover:bg-[color:var(--color-field-bg)]"
+                  >
+                    Invoice {payment.invoiceNumber}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <DetailCard title="Payment Information" icon={<CreditCard />}>
@@ -302,17 +428,6 @@ export default function PaymentDetailPage() {
                     />
                   }
                 />
-                {payment.utrNumber && (
-                  <DetailRow
-                    label="UTR Number"
-                    value={
-                      <span className="inline-flex items-center gap-1.5 font-mono text-sm font-bold tracking-wide text-[color:var(--color-text-primary)]">
-                        <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                        {payment.utrNumber}
-                      </span>
-                    }
-                  />
-                )}
                 <DetailRow
                   label="Transaction Date"
                   value={
@@ -322,6 +437,7 @@ export default function PaymentDetailPage() {
                     </span>
                   }
                 />
+                <DetailRow label="Recorded" value={formatDateTime(payment.createdAt)} />
               </DetailList>
             </DetailCard>
 
@@ -337,55 +453,16 @@ export default function PaymentDetailPage() {
                     </span>
                   }
                 />
-                <DetailRow
-                  label="Created"
-                  value={
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                      {formatDateTime(payment.createdAt)}
-                    </span>
-                  }
-                />
+                {payment.tenant?.bedId && <DetailRow label="Bed" value={payment.tenant.bedId} />}
+                {payment.tenant?.room?.floor?.label && (
+                  <DetailRow label="Floor" value={payment.tenant.room.floor.label} />
+                )}
+                {payment.tenant?.user?.phone && (
+                  <DetailRow label="Phone" value={payment.tenant.user.phone} />
+                )}
               </DetailList>
             </DetailCard>
           </div>
-
-          {(payment.invoiceId || payment.invoiceNumber) && (
-            <DetailCard title="Invoice Reference" icon={<Receipt />}>
-              <DetailList>
-                {payment.invoiceNumber && (
-                  <DetailRow
-                    label="Invoice Number"
-                    value={
-                      payment.invoiceId ? (
-                        <Link
-                          href={`/invoices/${payment.invoiceId}`}
-                          className="font-semibold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
-                        >
-                          {payment.invoiceNumber}
-                        </Link>
-                      ) : (
-                        payment.invoiceNumber
-                      )
-                    }
-                  />
-                )}
-                {payment.invoiceId && (
-                  <DetailRow
-                    label="Invoice ID"
-                    value={
-                      <Link
-                        href={`/invoices/${payment.invoiceId}`}
-                        className="font-mono text-xs break-all text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
-                      >
-                        {payment.invoiceId}
-                      </Link>
-                    }
-                  />
-                )}
-              </DetailList>
-            </DetailCard>
-          )}
 
           {payment.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
@@ -423,59 +500,44 @@ export default function PaymentDetailPage() {
             </DetailCard>
           )}
 
-          <DetailCard title="Actions" icon={<CheckCircle />}>
+          <DetailCard title="Actions" icon={<CheckCircle2 />}>
             <div className="flex flex-wrap gap-3">
               {payment.status === 'pending_verification' && (
                 <>
-                  <Button
-                    variant="primary"
-                    disabled={actionLoading === 'approve'}
-                    loading={actionLoading === 'approve'}
-                    onClick={async () => {
-                      setActionLoading('approve');
-                      try {
-                        await api
-                          .post(`payments/${payment._id}/verify`, {
-                            json: { approved: true },
-                          })
-                          .json();
-                        toast.success('Payment verified successfully');
-                        window.location.reload();
-                      } catch {
-                        toast.error('Failed to verify payment');
-                      } finally {
-                        setActionLoading(null);
-                      }
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Approve Payment
-                  </Button>
-                  <Button
-                    variant="danger"
-                    disabled={actionLoading === 'reject'}
-                    loading={actionLoading === 'reject'}
-                    onClick={async () => {
-                      setActionLoading('reject');
-                      try {
-                        await api
-                          .post(`payments/${payment._id}/verify`, {
-                            json: { approved: false },
-                          })
-                          .json();
-                        toast.success('Payment rejected');
-                        window.location.reload();
-                      } catch {
-                        toast.error('Failed to reject payment');
-                      } finally {
-                        setActionLoading(null);
-                      }
-                    }}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Reject Payment
+                  <Button variant="primary" onClick={() => setVerifyOpen(true)}>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Verify payment
                   </Button>
                 </>
+              )}
+              {isPaid && (
+                <Button
+                  variant="danger"
+                  disabled={actionLoading === 'void'}
+                  loading={actionLoading === 'void'}
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        'Void this paid payment? The amount returns to owed and the invoice balance is re-synced.',
+                      )
+                    ) {
+                      return;
+                    }
+                    setActionLoading('void');
+                    try {
+                      await api.post(`payments/${payment._id}/void`, { json: {} }).json();
+                      toast.success('Payment voided');
+                      window.location.reload();
+                    } catch (err) {
+                      toast.error((await parseApiError(err)).message);
+                    } finally {
+                      setActionLoading(null);
+                    }
+                  }}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Void payment
+                </Button>
               )}
               {canShowReceipt && (
                 <Button
@@ -502,43 +564,34 @@ export default function PaymentDetailPage() {
                 Share via WhatsApp
               </Button>
             </div>
-            {receiptError && (
-              <p className="mt-3 text-sm font-semibold text-[color:var(--color-danger-600)]">
-                {receiptError}
-              </p>
-            )}
           </DetailCard>
 
-          <DetailCard title="Recent Activity" icon={<History />}>
-            {payment.createdAt ? (
+          <DetailCard title="Activity" icon={<History />}>
+            {eventsLoading ? (
+              <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+                Loading activity...
+              </p>
+            ) : events.length > 0 ? (
               <Timeline
-                events={[
-                  {
-                    id: `${payment._id}-created`,
-                    date: payment.createdAt,
-                    title: 'Payment Recorded',
-                    description: `${formatCurrency(payment.amount)} via ${formatMethod(payment.method)}`,
-                    status: 'info',
-                  },
-                  {
-                    id: `${payment._id}-status`,
-                    date: payment.paidAt ?? payment.createdAt,
-                    title: `Status: ${formatStatusLabel(payment.status)}`,
-                    description: payment.notes ?? undefined,
-                    status: (payment.status === 'paid' ||
-                    payment.status === 'approved' ||
-                    payment.status === 'completed'
-                      ? 'success'
-                      : payment.status === 'rejected' || payment.status === 'cancelled'
-                        ? 'danger'
-                        : 'warning') as 'success' | 'warning' | 'danger',
-                  },
-                ]}
+                events={events.map((e) => ({
+                  id: e.id,
+                  date: e.timestamp,
+                  title: auditTitle(e),
+                  description: auditDescription(e),
+                  status:
+                    (e.action === 'payment_verify' &&
+                      (e.details?.approved === true || e.details?.status === 'paid')) ||
+                    e.action === 'create'
+                      ? ('success' as const)
+                      : e.action === 'delete'
+                        ? ('danger' as const)
+                        : ('info' as const),
+                }))}
               />
             ) : (
-              <p className="text-center text-sm font-semibold text-[color:var(--color-text-muted)]">
-                No activity recorded yet.
-              </p>
+              <div className={clsx(surfaceNestedClass, 'p-4 text-sm font-medium text-[color:var(--color-text-muted)]')}>
+                No audit events recorded for this payment yet.
+              </div>
             )}
           </DetailCard>
 
@@ -548,127 +601,50 @@ export default function PaymentDetailPage() {
         </div>
       )}
 
-      <AnimatePresence>
-        {receiptOpen && receipt && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center print:static print:block">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 backdrop-blur-sm print:hidden"
-              onClick={() => setReceiptOpen(false)}
-            />
-            <motion.div
-              variants={modalContent}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              className="relative z-10 mx-4 w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)] print:max-w-none print:border-0 print:shadow-none"
-            >
-              <div className="mb-4 flex items-start justify-between gap-4 print:hidden">
-                <div>
-                  <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
-                    Payment Receipt
-                  </h3>
-                  <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
-                    Reference {receipt._id}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setReceiptOpen(false)}
-                  className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)]"
-                  aria-label="Close receipt"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between gap-4 border-b border-[color:var(--border-color)] pb-2">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Amount</span>
-                  <span className="font-bold text-[color:var(--color-text-primary)]">
-                    {formatCurrency(receipt.amount)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Status</span>
-                  <span className="text-[color:var(--color-text-primary)] capitalize">
-                    {formatStatusLabel(receipt.status ?? 'N/A')}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Method</span>
-                  <span className="text-[color:var(--color-text-primary)] capitalize">
-                    {receipt.method ? formatMethod(receipt.method) : 'N/A'}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Type</span>
-                  <span className="text-[color:var(--color-text-primary)] capitalize">
-                    {receipt.type ? formatType(receipt.type) : 'N/A'}
-                  </span>
-                </div>
-                {receipt.utrNumber && (
-                  <div className="flex justify-between gap-4">
-                    <span className="font-semibold text-[color:var(--color-text-muted)]">UTR</span>
-                    <span className="font-mono font-bold text-[color:var(--color-text-primary)]">
-                      {receipt.utrNumber}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Tenant</span>
-                  <span className="text-[color:var(--color-text-primary)]">
-                    {receiptTenantName(receipt)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">Room</span>
-                  <span className="text-[color:var(--color-text-primary)]">
-                    {receiptRoomNumber(receipt)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">
-                    Invoice
-                  </span>
-                  <span className="text-[color:var(--color-text-primary)]">
-                    {receiptInvoiceNumber(receipt)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="font-semibold text-[color:var(--color-text-muted)]">
-                    Paid at
-                  </span>
-                  <span className="text-[color:var(--color-text-primary)]">
-                    {formatDateTime(receipt.paidAt ?? receipt.createdAt)}
-                  </span>
-                </div>
-                {receipt.notes && (
-                  <div className="border-t border-[color:var(--border-color)] pt-2">
-                    <p className="font-semibold text-[color:var(--color-text-muted)]">Notes</p>
-                    <p className="mt-1 whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
-                      {receipt.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex flex-wrap justify-end gap-2 print:hidden">
-                <Button variant="outline" onClick={() => setReceiptOpen(false)}>
-                  Close
-                </Button>
-                <Button variant="primary" onClick={printReceipt}>
-                  <Download className="h-4 w-4" />
-                  Print / Download
-                </Button>
-              </div>
-            </motion.div>
-          </div>
+      {/* Receipt modal — print-isolated */}
+      <Modal
+        open={receiptOpen && !!receipt}
+        onClose={() => setReceiptOpen(false)}
+        title="Payment receipt"
+        size="sm"
+        loading={false}
+      >
+        {receipt && (
+          <ReceiptDocument
+            title="Payment Receipt"
+            reference={`Ref ${receipt._id}`}
+            statusLabel={formatStatusLabel(receipt.status ?? 'N/A')}
+            amount={formatCurrency(receipt.amount)}
+            lines={[
+              { label: 'Tenant', value: receipt.tenantId?.userId?.name ?? 'N/A' },
+              { label: 'Room', value: receipt.tenantId?.roomId?.roomNumber ?? 'N/A' },
+              { label: 'Invoice', value: receiptInvoiceNumber(receipt) },
+              { label: 'Method', value: receipt.method ? formatMethod(receipt.method) : 'N/A' },
+              { label: 'Type', value: receipt.type ? formatType(receipt.type) : 'N/A' },
+              ...(receipt.utrNumber
+                ? [{ label: 'UTR', value: receipt.utrNumber, mono: true }]
+                : []),
+              {
+                label: 'Paid at',
+                value: formatDateTime(receipt.paidAt ?? receipt.createdAt),
+              },
+            ]}
+            notes={receipt.notes || undefined}
+            footerNote="This receipt was generated by the PG management system."
+            showActions
+            onPrint={printReceipt}
+            onClose={() => setReceiptOpen(false)}
+          />
         )}
-      </AnimatePresence>
+      </Modal>
+
+      {/* Verify modal (shared) */}
+      <VerifyPaymentModal
+        target={verifyOpen ? verifyTarget : null}
+        loading={verifying}
+        onDecide={handleVerify}
+        onClose={() => setVerifyOpen(false)}
+      />
     </FormPage>
   );
 }

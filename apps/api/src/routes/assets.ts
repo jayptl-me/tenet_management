@@ -5,8 +5,14 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
 import { Asset } from '../models/asset.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
+import mongoose from 'mongoose';
 
 const assets = new Hono();
+
+// ── Cast helper for Mongoose 9 ──────────────────────────
+type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
+const assetCreate = Asset.create.bind(Asset) as unknown as CreateFn;
 
 // ── Schemas ─────────────────────────────────────────────
 /** Accept ISO datetime or YYYY-MM-DD; store as Date. */
@@ -34,6 +40,8 @@ const createAssetSchema = z.strictObject({
   lastServicedDate: optionalDateString,
   nextServiceDate: optionalDateString,
   notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
+  floorId: z.string().min(1).optional().or(z.literal('')),
+  roomId: z.string().min(1).optional().or(z.literal('')),
 });
 
 const updateAssetSchema = createAssetSchema.partial();
@@ -53,13 +61,26 @@ assets.get('/', authGuard, adminOnly, async (c) => {
 
   const filter: Record<string, unknown> = {};
   if (category) {
+    if (!['furniture', 'appliance', 'electronics', 'cleaning', 'other'].includes(category)) {
+      return badRequest(c, 'Invalid category filter', 'INVALID_CATEGORY');
+    }
     filter.category = category;
   }
   if (status) {
+    if (!['available', 'in_use', 'under_maintenance', 'damaged', 'retired'].includes(status)) {
+      return badRequest(c, 'Invalid status filter', 'INVALID_STATUS');
+    }
     filter.status = status;
   }
   if (search) {
-    filter.name = { $regex: search, $options: 'i' };
+    const escaped = String(search)
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.$or = [
+      { name: { $regex: escaped, $options: 'i' } },
+      { location: { $regex: escaped, $options: 'i' } },
+      { notes: { $regex: escaped, $options: 'i' } },
+    ];
   }
 
   const [data, total] = await Promise.all([
@@ -67,6 +88,8 @@ assets.get('/', authGuard, adminOnly, async (c) => {
       .sort({ category: 1, name: 1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
+      .populate('floorId', 'label floorNumber')
+      .populate('roomId', 'roomNumber')
       .lean(),
     Asset.countDocuments(filter as Record<string, unknown>),
   ]);
@@ -115,7 +138,10 @@ assets.get('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid asset ID');
 
-  const asset = await Asset.findById(id).lean();
+  const asset = await Asset.findById(id)
+    .populate('floorId', 'label floorNumber')
+    .populate('roomId', 'roomNumber')
+    .lean();
   if (!asset) return notFound(c, 'Asset');
 
   return c.json({ success: true, data: asset });
@@ -124,11 +150,14 @@ assets.get('/:id', authGuard, adminOnly, async (c) => {
 // ── POST /assets ────────────────────────────────────────
 assets.post('/', authGuard, adminOnly, zValidator('json', createAssetSchema), async (c) => {
   const body = c.req.valid('json');
+  const user = c.get('user');
 
-  const asset = await Asset.create({
+  const created = await assetCreate({
     name: body.name,
     category: body.category,
     location: body.location,
+    floorId: body.floorId ? new mongoose.Types.ObjectId(body.floorId) : null,
+    roomId: body.roomId ? new mongoose.Types.ObjectId(body.roomId) : null,
     quantity: body.quantity,
     lowStockThreshold: body.lowStockThreshold,
     status: body.status,
@@ -137,6 +166,24 @@ assets.post('/', authGuard, adminOnly, zValidator('json', createAssetSchema), as
     nextServiceDate: toDateOrUndefined(body.nextServiceDate) ?? null,
     notes: body.notes ?? '',
   });
+  const asset = created as unknown as Record<string, unknown> & {
+    name: string;
+    category: string;
+    quantity: number;
+  };
+
+  void writeAuditLog({
+    userId: user.sub,
+    action: 'create',
+    resource: 'asset',
+    resourceId: String((created as unknown as Record<string, unknown>)._id),
+    details: {
+      name: asset.name,
+      category: asset.category,
+      quantity: asset.quantity,
+    },
+  });
+
   return c.json({ success: true, data: asset }, 201);
 });
 
@@ -146,7 +193,14 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
   if (!id) return badRequest(c, 'Invalid asset ID');
 
   const body = c.req.valid('json');
+  const user = c.get('user');
   const update: Record<string, unknown> = { ...body };
+  if (body.floorId !== undefined) {
+    update.floorId = body.floorId ? new mongoose.Types.ObjectId(body.floorId) : null;
+  }
+  if (body.roomId !== undefined) {
+    update.roomId = body.roomId ? new mongoose.Types.ObjectId(body.roomId) : null;
+  }
   if (body.purchasedDate !== undefined) {
     update.purchasedDate = toDateOrUndefined(body.purchasedDate) ?? null;
   }
@@ -164,6 +218,16 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
 
   if (!asset) return notFound(c, 'Asset');
 
+  void writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'asset',
+    resourceId: id,
+    details: {
+      updatedFields: Object.keys(body),
+    },
+  });
+
   return c.json({ success: true, data: asset });
 });
 
@@ -171,6 +235,7 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
 assets.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid asset ID');
+  const user = c.get('user');
 
   const asset = await Asset.findByIdAndUpdate(
     id,
@@ -179,6 +244,19 @@ assets.delete('/:id', authGuard, adminOnly, async (c) => {
   ).lean();
 
   if (!asset) return notFound(c, 'Asset');
+
+  void writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'asset',
+    resourceId: id,
+    details: {
+      name: asset.name,
+      retired: true,
+      previousStatus: 'active',
+      status: 'retired',
+    },
+  });
 
   return c.json({ success: true, data: { message: 'Asset retired' } });
 });

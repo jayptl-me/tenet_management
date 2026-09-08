@@ -141,4 +141,5 @@ export interface IAppConfigUpdate {
   features?: IFeatureFlags;
   theme?: ThemeSettings;
   brandTokens?: IBrandTokens;
+  amenityDefinitions?: AmenityDefinition[];
 }

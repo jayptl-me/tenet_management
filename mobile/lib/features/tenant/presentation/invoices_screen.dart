@@ -16,6 +16,7 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _rows = [];
+  String _statusFilter = '';
 
   @override
   void initState() {
@@ -44,8 +45,20 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
     }
   }
 
+  double _remaining(Map<String, dynamic> inv) {
+    final total = (inv['totalAmount'] as num?)?.toDouble() ?? 0;
+    final paid = (inv['paidAmount'] as num?)?.toDouble() ?? 0;
+    final balance = (inv['balance'] as num?)?.toDouble();
+    return balance ?? (total - paid);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visible = _statusFilter.isEmpty
+        ? _rows
+        : _rows
+            .where((inv) => inv['status']?.toString() == _statusFilter)
+            .toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Invoices')),
       body: RefreshIndicator(
@@ -54,18 +67,45 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             if (_error != null) ErrorBanner(message: _error!),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final s in [
+                    '',
+                    'draft',
+                    'sent',
+                    'partial',
+                    'paid',
+                    'overdue',
+                    'cancelled'
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(s.isEmpty ? 'All' : s.replaceAll('_', ' ')),
+                        selected: _statusFilter == s,
+                        onSelected: (_) =>
+                            setState(() => _statusFilter = s),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             if (_loading)
               const SkeletonList(count: 5)
-            else if (_rows.isEmpty)
+            else if (visible.isEmpty)
               const EmptyState(message: 'No invoices found')
                   else
-                    ..._rows.map(
+                    ...visible.map(
                       (inv) {
                         final id = inv['_id']?.toString() ?? inv['id']?.toString() ?? '';
+                        final due = _remaining(inv);
                         return ListCard(
                           title: inv['invoiceNumber']?.toString() ?? 'Invoice',
                           subtitle:
-                              '${inv['month'] ?? ''} · ${formatMoney(inv['totalAmount'] as num?)}',
+                              '${inv['month'] ?? ''} · ${formatMoney(inv['totalAmount'] as num?)}${due > 0.001 ? ' · due ${formatMoney(due)}' : ' · settled'}',
                           trailing: StatusChip(label: inv['status']?.toString() ?? '--'),
                           onTap: id.isNotEmpty
                               ? () => context.go('/tenant/invoices/$id')

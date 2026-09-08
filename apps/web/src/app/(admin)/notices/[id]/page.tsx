@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Megaphone, Calendar, Target, MessageCircle, Info, Copy, Pencil } from 'lucide-react';
+import { Megaphone, Calendar, Target, MessageCircle, Info, Copy, Pencil, User } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+import { floorLabel, roomLabel, tenantLabel } from '@/lib/resource-select-presets';
 import { toast } from 'sonner';
 
 interface NoticeDetail {
@@ -18,6 +20,7 @@ interface NoticeDetail {
   pinned?: boolean;
   targetType?: string;
   targetIds?: string[];
+  author?: { _id: string; name: string; email: string };
   createdAt: string;
 }
 
@@ -42,6 +45,7 @@ export default function NoticeDetailPage() {
   const [notice, setNotice] = useState<NoticeDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [targetNames, setTargetNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -50,10 +54,66 @@ export default function NoticeDetailPage() {
     api
       .get(`notices/${id}`)
       .json<{ success: boolean; data: NoticeDetail }>()
-      .then((res) => setNotice(res.data))
-      .catch(() => setError('Failed to load notice'))
+      .then((res) => {
+        setNotice(res.data);
+        void resolveTargetNames(res.data);
+      })
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  async function resolveTargetNames(data: NoticeDetail) {
+    const ids = data.targetIds ?? [];
+    if (ids.length === 0 || !data.targetType || data.targetType === 'all') return;
+    try {
+      const names: Record<string, string> = {};
+      if (data.targetType === 'floor') {
+        const res = await api.get('floors').json<{
+          success: boolean;
+          data: Array<{ _id: string; label?: string; floorNumber?: number }>;
+        }>();
+        for (const f of res.data ?? []) {
+          if (ids.includes(f._id)) names[f._id] = floorLabel(f);
+        }
+      } else if (data.targetType === 'room') {
+        const res = await api.get('rooms?limit=100').json<{
+          success: boolean;
+          data: Array<{
+            _id: string;
+            roomNumber?: string;
+            sharingType?: number;
+            monthlyRent?: number;
+          }>;
+        }>();
+        for (const r of res.data ?? []) {
+          if (ids.includes(r._id)) names[r._id] = roomLabel(r);
+        }
+      } else if (data.targetType === 'individual') {
+        // Individual targets are user IDs; resolve via tenant user links.
+        const res = await api.get('tenants?limit=100').json<{
+          success: boolean;
+          data: Array<{
+            _id: string;
+            user?: { _id?: string; name?: string };
+            userId?: { _id?: string; name?: string } | string;
+            room?: { roomNumber?: string };
+          }>;
+        }>();
+        for (const t of res.data ?? []) {
+          const userDoc = t.user ?? (typeof t.userId === 'object' ? t.userId : undefined);
+          const userDocId = userDoc?._id ? String(userDoc._id) : '';
+          if (userDocId && ids.includes(userDocId)) {
+            names[userDocId] = tenantLabel(t as Parameters<typeof tenantLabel>[0]);
+          }
+        }
+      }
+      setTargetNames(names);
+    } catch {
+      // Names stay unresolved; raw IDs still render below
+    }
+  }
 
   if (!isLoading && (error || !notice)) {
     return (
@@ -124,6 +184,17 @@ export default function NoticeDetailPage() {
                   </span>
                 }
               />
+              {notice.author && (
+                <DetailRow
+                  label="Author"
+                  value={
+                    <span className="inline-flex items-center gap-1 font-medium text-[color:var(--color-text-primary)]">
+                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {notice.author.name} {notice.author.email ? `(${notice.author.email})` : ''}
+                    </span>
+                  }
+                />
+              )}
               {notice.targetType && (
                 <DetailRow
                   label="Target Type"
@@ -137,16 +208,17 @@ export default function NoticeDetailPage() {
               )}
               {notice.targetIds && notice.targetIds.length > 0 && (
                 <DetailRow
-                  label="Target IDs"
+                  label="Targets"
                   value={
                     <div className="flex flex-wrap justify-end gap-1">
                       {notice.targetIds.map((tid) => (
-                        <code
+                        <span
                           key={tid}
-                          className="rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2 py-0.5 font-mono text-xs font-semibold text-[color:var(--color-text-secondary)]"
+                          title={tid}
+                          className="rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-text-secondary)]"
                         >
-                          {tid}
-                        </code>
+                          {targetNames[tid] ?? tid}
+                        </span>
                       ))}
                     </div>
                   }

@@ -153,7 +153,7 @@ export default function EditNotificationPage() {
     };
     try {
       await api.put(`notifications/${id}`, { json: payload }).json();
-      router.push('/notifications');
+      router.push('/notifications?tab=history');
     } catch (err) {
       const parsed = await parseApiError(err);
       setSubmitError(parsed.message || 'Failed to update notification');
@@ -166,7 +166,7 @@ export default function EditNotificationPage() {
     <FormPage
       title="Edit Notification"
       description="Update message content and audience targeting"
-      backHref="/notifications"
+      backHref="/notifications?tab=history"
       error={submitError}
       isLoading={isLoading}
       maxWidth="3xl"
@@ -176,7 +176,7 @@ export default function EditNotificationPage() {
         footer={
           <FormActions
             loading={isSubmitting}
-            cancelHref="/notifications"
+            cancelHref="/notifications?tab=history"
             submitLabel="Save Changes"
             divided={false}
           />
@@ -288,7 +288,7 @@ export default function EditNotificationPage() {
                           className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
                           title="Remove"
                         >
-                          <span className="max-w-[12rem] truncate font-[family:var(--font-mono)]">
+                          <span className="max-w-[12rem] truncate font-mono">
                             {tid}
                           </span>
                           <span aria-hidden="true">x</span>
@@ -304,9 +304,9 @@ export default function EditNotificationPage() {
           <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] px-3 py-2">
             <p className="text-xs font-medium text-[color:var(--color-brand-700)]">
               <Send className="mr-1 inline h-3 w-3" />
-              This notification will be sent to{' '}
-              {currentTarget === 'all' ? 'all tenants' : `selected ${currentTarget}s`}.
-              {currentType === 'emergency' && ' Emergency notifications bypass quiet hours.'}
+              Notice: Editing updates notification content and classification in system history. It
+              does not retract or re-dispatch push notifications.
+              {currentType === 'emergency' && ' Emergency alerts bypass quiet hours.'}
             </p>
           </div>
         </FormSection>

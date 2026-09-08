@@ -226,7 +226,7 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                           ListTile(
                             leading: const Icon(Icons.calendar_month_outlined, color: AppTheme.brand),
                             title: const Text('Ward Attendance', style: TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: const Text('View daily and monthly attendance calendar'),
+                            subtitle: const Text('View ward attendance history grouped by month'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => context.go('/guardian/attendance'),
                           ),

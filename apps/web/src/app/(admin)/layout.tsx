@@ -101,9 +101,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [toggleMode]);
 
   const handleLogout = useCallback(() => {
+    api
+      .post('auth/logout')
+      .json()
+      .catch(() => {});
     logout();
     setCommandOpen(false);
-  }, [logout]);
+    router.replace('/login');
+  }, [logout, router]);
 
   return (
     <div className="flex min-h-screen bg-[color:var(--color-page-bg)]">

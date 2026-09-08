@@ -13,7 +13,7 @@ export interface TableAction {
   label: string;
   onClick: () => void;
   icon?: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'glass';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   disabled?: boolean;
 }
 

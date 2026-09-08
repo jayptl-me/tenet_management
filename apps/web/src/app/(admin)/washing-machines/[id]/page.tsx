@@ -13,9 +13,10 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 
@@ -68,7 +69,9 @@ export default function WashingMachineDetailPage() {
       .get(`washing-machines/${id}`)
       .json<{ success: boolean; data: WashingMachineDetail }>()
       .then((res) => setMachine(res.data))
-      .catch(() => setError('Failed to load washing machine details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -97,15 +100,7 @@ export default function WashingMachineDetailPage() {
     );
   }
 
-  const statusVariant = machine
-    ? machine.status === 'available'
-      ? 'success'
-      : machine.status === 'in_use'
-        ? 'info'
-        : machine.status === 'under_maintenance'
-          ? 'warning'
-          : 'danger'
-    : 'neutral';
+  const statusVariant = machine ? statusToVariant(machine.status) : 'neutral';
 
   const machineName =
     machine?.label || (machine ? `Machine ${machine.machineNumber}` : 'Washing Machine');

@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Phone, Mail, UserRound, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -60,6 +61,8 @@ export default function EditEnquiryPage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
+  const [originalStatus, setOriginalStatus] = useState('');
+  const [hasTenant, setHasTenant] = useState(false);
 
   const {
     register,
@@ -79,10 +82,17 @@ export default function EditEnquiryPage() {
       .get(`enquiries/${id}`)
       .json<{
         success: boolean;
-        data: FormData & { _id: string; notes?: string; preferredSharing?: string };
+        data: FormData & {
+          _id: string;
+          notes?: string;
+          preferredSharing?: string;
+          convertedTenantId?: string | { _id?: string } | null;
+        };
       }>()
       .then((res) => {
         const d = res.data;
+        setOriginalStatus(d.status ?? 'new');
+        setHasTenant(Boolean(d.convertedTenantId));
         reset({
           name: d.name ?? '',
           phone: d.phone ?? '',
@@ -95,14 +105,21 @@ export default function EditEnquiryPage() {
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load enquiry');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
+    // converted is pinned to the tenant-creation flow server-side (409 otherwise).
+    if (data.status === 'converted' && !hasTenant) {
+      setSubmitError(
+        'Mark converted only via Convert to Tenant on the enquiry detail page, which creates and links the tenant.',
+      );
+      return;
+    }
     try {
       await api
         .put(`enquiries/${id}`, {
@@ -119,21 +136,27 @@ export default function EditEnquiryPage() {
         })
         .json();
       router.push('/enquiries');
-    } catch {
-      setSubmitError('Failed to update enquiry. Check phone format (+91...).');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
   const err = errors as Record<string, { message?: string }>;
+  const isConverted = originalStatus === 'converted';
+  // converted is API-pinned to its tenant: hide it as a manual target.
+  const visibleStatusOptions = hasTenant
+    ? statusOptions
+    : statusOptions.filter((o) => o.value !== 'converted');
 
   const nextStatusHint = (() => {
+    if (isConverted) return 'Converted enquiries are pinned to their tenant';
     switch (currentStatus) {
       case 'new':
         return 'Mark as contacted once you have reached out';
       case 'contacted':
-        return 'Move to converted if the enquiry becomes a tenant';
+        return 'Use Convert to Tenant on the detail page to convert';
       case 'converted':
-        return 'Enquiry has been successfully converted';
+        return 'Converted requires a linked tenant (use the detail page flow)';
       case 'lost':
         return 'Enquiry marked as lost — no further action needed';
       default:
@@ -209,8 +232,12 @@ export default function EditEnquiryPage() {
             <div className="space-y-3">
               <Select
                 label="Pipeline status"
-                options={statusOptions}
+                options={visibleStatusOptions}
                 error={err.status?.message}
+                disabled={isConverted}
+                helperText={
+                  isConverted ? 'Pinned to the converted tenant; status cannot change' : undefined
+                }
                 {...register('status')}
               />
               <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-info-200)] bg-[color:var(--color-info-50)] px-3 py-2">

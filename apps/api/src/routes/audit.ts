@@ -56,17 +56,19 @@ audit.get('/actions', authGuard, adminOnly, async (_c) => {
 // ── POST /audit-logs/log-export — log client-side export action
 const logExportSchema = z.strictObject({
   resource: z.string().min(1),
+  recordCount: z.number().int().min(0).optional(),
+  format: z.enum(['csv', 'json']).optional(),
 });
 
 audit.post('/log-export', authGuard, adminOnly, zValidator('json', logExportSchema), async (c) => {
-  const { resource } = c.req.valid('json');
+  const { resource, recordCount, format } = c.req.valid('json');
   const user = c.get('user');
 
   await writeAuditLog({
     userId: user.sub,
     action: 'export',
     resource,
-    details: { resource },
+    details: { resource, recordCount: recordCount ?? 0, format: format ?? 'csv' },
   });
 
   return c.json({ success: true, message: 'Export logged successfully' });

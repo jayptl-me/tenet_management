@@ -19,6 +19,7 @@ import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { OccupancyBedPicker } from '@/components/ui/OccupancyBedPicker';
@@ -343,9 +344,8 @@ export default function EditTenantPage() {
               leftIcon={<Banknote className="h-4 w-4" />}
               {...register('depositPaid')}
             />
-            <Input
+            <DatePicker
               label="Move-in date"
-              type="date"
               error={err.moveInDate?.message}
               leftIcon={<CalendarDays className="h-4 w-4" />}
               {...register('moveInDate')}

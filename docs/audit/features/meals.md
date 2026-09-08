@@ -1,48 +1,16 @@
-# Meals (MealFeedback) -- Gap Analysis
+# Meals Feedback Module - Feature Listing
 
-**Last verified:** 2026-07-16 (goal pass reconcile)  
-**Admin grade:** A  
-**Priority:** P2 polish  
-**Theme:** SaaS list + FeedbackSummaryStrip + StarRating + CategoryChipSelect
+Module: meals
+Scope: admin web + API + DB + Flutter tenant (read-only)
+Source verified: 2026-09-08 UTC
+Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes
+Pass 1 record: docs/audit/features/meals_audit_pass1_20260908-003801.md
 
-Feature flag: **`messFeedbackEnabled`** (default true) -- not `mealsEnabled`.
+## Feature Listing
 
-## Open gaps
-
-### P0
-
-None.
-
-### P1
-
-_None open._
-
-### Deferred (product)
-
-- Menus nav always-on vs messFeedbackEnabled pairing -- documented; menus independent of feedback flag.
-
-### P2
-
-- [ ] Admin create categories optional field for parity with tenant
-- [ ] SSE `meal_feedback_submitted` emit if dashboard expects real-time
-- [ ] Route tests for upsert + flag residual
-
-## Closed
-
-- [x] FeedbackSummaryStrip wired to GET summary
-- [x] Date column + filters; categories on admin edit
-- [x] Flutter category multi-select + feedback/my history
-- [x] PUT mealType 11000 -> 409 `DUPLICATE_FEEDBACK`
-- [x] Tenant re-submit resets `status: submitted`
-- [x] `packages/types` status + IMealFeedbackSummaryRow aligned
-- [x] Detail page Edit action
-- [x] Past/menus list edit hardening related (menus module)
-
-## Acceptance checklist
-
-- [x] Admin records feedback 201 (upsert)
-- [x] Edit status/rating/comment/categories saves 200
-- [x] mealType change either succeeds or clear 409 on conflict
-- [x] Summary strip shows averages
-- [x] Flutter submit with categories; history lists past feedback
-- [x] Flag off -> 403 + Meals nav hidden
+| Surface            | Capability                                               | Status  |
+| ------------------ | -------------------------------------------------------- | ------- |
+| List               | summary strip + search + meal/rating/date/status filters | WORKING |
+| Create/Edit/Detail | preset picker + unified tenant shape + bed/floor         | WORKING |
+| API                | unified mapper + upsert reset + status filter + parseId  | WORKING |
+| Flutter            | 4-slot menu parse, dead branches removed                 | WORKING |

@@ -70,5 +70,6 @@ export async function publishToNtfy(options: NtfyPublishOptions): Promise<boolea
  * @param path - The relative path to navigate to (e.g., '/complaints/123')
  */
 export function buildClickUrl(path: string): string {
-  return `${env.FRONTEND_URL}${path}`;
+  const base = env.PORTAL_URL || env.FRONTEND_URL;
+  return `${base}${path}`;
 }

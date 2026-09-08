@@ -352,7 +352,8 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                       style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                     ),
                     StatusChip(
-                      label: (docs?['aadhaarUrl'] != null && docs?['photoUrl'] != null)
+                      label: (docs?['isVerified'] == true ||
+                              (docs?['aadhaarUrl'] != null && docs?['photoUrl'] != null))
                           ? 'Verified'
                           : 'Pending KYC',
                     ),
@@ -385,7 +386,7 @@ class _TenantProfileScreenState extends ConsumerState<TenantProfileScreen> {
                   subtitle: p['moveInDate'] != null
                       ? 'Active occupancy agreement'
                       : 'Standard PG terms apply',
-                  isUploaded: true,
+                  isUploaded: p['moveInDate'] != null,
                   icon: Icons.description_outlined,
                 ),
               ],

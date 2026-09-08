@@ -341,3 +341,24 @@ String formatDate(dynamic value) {
     return value.toString();
   }
 }
+
+String formatTime(dynamic value) {
+  if (value == null) return '—';
+  try {
+    final str = value.toString().trim();
+    if (str.isEmpty || str == '--') return '—';
+    final hhmm = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(str);
+    if (!str.contains('T') && hhmm != null) {
+      final h = int.parse(hhmm.group(1)!);
+      final m = int.parse(hhmm.group(2)!);
+      final now = DateTime.now();
+      final dt = DateTime(now.year, now.month, now.day, h, m);
+      return DateFormat('hh:mm a').format(dt);
+    }
+    final d = value is DateTime ? value : DateTime.parse(str).toLocal();
+    return DateFormat('hh:mm a').format(d);
+  } catch (_) {
+    return value.toString();
+  }
+}
+

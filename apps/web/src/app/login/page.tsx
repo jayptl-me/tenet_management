@@ -5,8 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock, KeyRound, AlertTriangle, ArrowRight, Building2, Zap } from 'lucide-react';
-import { motion } from 'motion/react';
+import {
+  Lock,
+  KeyRound,
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  Zap,
+  X,
+  CheckCircle2,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -50,14 +59,45 @@ export default function AdminLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Forgot password modal state
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
   // Theme-aware: read current theme preset for login page styling
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail || !forgotEmail.includes('@')) {
+      setForgotError('Please enter a valid email address');
+      return;
+    }
+    setForgotError(null);
+    setForgotSubmitting(true);
+    try {
+      await api
+        .post('auth/forgot-password', {
+          json: { email: forgotEmail.trim().toLowerCase() },
+        })
+        .json();
+      setForgotSuccess(true);
+    } catch (err: unknown) {
+      const parsed = await parseApiError(err);
+      setForgotError(parsed.message || 'Failed to request password reset link');
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -125,7 +165,7 @@ export default function AdminLoginPage() {
 
           {/* Header */}
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-[family:var(--font-display)] font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <h1 className="text-2xl font-display font-bold tracking-tight text-[color:var(--color-text-primary)]">
               Admin Login
             </h1>
             <p className="mt-1.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
@@ -204,9 +244,12 @@ export default function AdminLoginPage() {
             >
               <button
                 type="button"
-                onClick={() =>
-                  setError('Please contact your system administrator to reset your password.')
-                }
+                onClick={() => {
+                  setForgotError(null);
+                  setForgotSuccess(false);
+                  setForgotEmail('');
+                  setForgotOpen(true);
+                }}
                 className="text-[11px] font-semibold text-[color:var(--color-brand-600)] underline-offset-2 transition-colors hover:text-[color:var(--color-brand-700)] hover:underline"
               >
                 Forgot password?
@@ -252,26 +295,13 @@ export default function AdminLoginPage() {
               type="button"
               variant="outline"
               onClick={() => {
-                // Fill form fields and submit programmatically
-                const emailInput = document.getElementById('email') as HTMLInputElement;
-                const passwordInput = document.getElementById('password') as HTMLInputElement;
-                if (emailInput && passwordInput) {
-                  emailInput.value = 'admin@pgmanagement.local';
-                  passwordInput.value = 'Admin@123456';
-                  // Trigger React controlled input change
-                  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                    window.HTMLInputElement.prototype,
-                    'value',
-                  )?.set;
-                  nativeInputValueSetter?.call(emailInput, 'admin@pgmanagement.local');
-                  nativeInputValueSetter?.call(passwordInput, 'Admin@123456');
-                  emailInput.dispatchEvent(new Event('input', { bubbles: true }));
-                  passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
-                  // Submit the form
-                  handleSubmit(onSubmit)();
-                }
+                // Fill via react-hook-form state (not DOM hacks) so validation
+                // sees the values on first click, then submit programmatically.
+                setValue('email', 'admin@pgmanagement.local', { shouldValidate: true });
+                setValue('password', 'Admin@123456', { shouldValidate: true });
+                handleSubmit(onSubmit)();
               }}
-              className="w-full text-[12px] font-semibold flex items-center justify-center gap-1.5"
+              className="flex w-full items-center justify-center gap-1.5 text-[12px] font-semibold"
               size="sm"
             >
               <Zap className="h-3.5 w-3.5" />
@@ -287,6 +317,119 @@ export default function AdminLoginPage() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {forgotOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setForgotOpen(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full max-w-md rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-lg)]"
+            >
+              <div className="flex items-start justify-between pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]">
+                    <KeyRound className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[color:var(--color-text-primary)]">
+                      Reset Password
+                    </h2>
+                    <p className="text-xs text-[color:var(--color-text-muted)]">
+                      Receive recovery instructions via email
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(false)}
+                  className="rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {forgotSuccess ? (
+                <div className="space-y-4 py-2 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-success-100)] text-[color:var(--color-success-600)]">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                      Reset Link Dispatched
+                    </h3>
+                    <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                      If an account exists with this email address, a password reset link has been
+                      sent. The link expires in 1 hour.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setForgotOpen(false)}
+                    className="w-full text-xs font-semibold"
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotSubmit} className="space-y-4 pt-2">
+                  <p className="text-xs text-[color:var(--color-text-secondary)]">
+                    Enter the email address registered with your administrator account.
+                  </p>
+
+                  {forgotError && (
+                    <div className="flex items-start gap-2 rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-3 text-xs text-[color:var(--color-danger-700)]">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-danger-500)]" />
+                      <span>{forgotError}</span>
+                    </div>
+                  )}
+
+                  <Input
+                    label="Administrator Email"
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="admin@pg.com"
+                    autoFocus
+                    required
+                  />
+
+                  <div className="flex gap-2.5 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setForgotOpen(false)}
+                      className="flex-1 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      loading={forgotSubmitting}
+                      className="flex-1 text-xs"
+                    >
+                      Send Reset Link
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

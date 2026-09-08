@@ -2,21 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
-import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
+import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
 
 const schema = z.object({
-  floorId: z.string().min(1, 'Floor is required'),
   serviceType: z.string().min(1, 'Service type is required'),
   status: z.enum(['operational', 'degraded', 'down']),
   note: z.string().max(500, 'Note cannot exceed 500 characters').optional(),
@@ -54,10 +54,10 @@ export default function EditServicePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [serviceTypeOptions, setServiceTypeOptions] = useState(FALLBACK_SERVICE_TYPES);
+  const [floorView, setFloorView] = useState('');
 
   const {
     register,
-    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -85,8 +85,11 @@ export default function EditServicePage() {
           typeof rawFloor === 'object' && rawFloor
             ? String(rawFloor._id ?? '')
             : String(rawFloor ?? '');
+        setFloorView(floorId);
+        // Strict isPerFloor === true mirror of the API guard: room-only
+        // amenities (fan/bed/…) are rejected server-side with INVALID_SERVICE_TYPE.
         const defs = (cfgRes.data.amenityDefinitions ?? []).filter(
-          (a: AmenityDef) => a.isPerFloor !== false,
+          (a: AmenityDef) => a.isPerFloor === true,
         );
         if (defs.length > 0) {
           const opts = defs.map((a: AmenityDef) => ({ value: a.key, label: a.label }));
@@ -97,15 +100,14 @@ export default function EditServicePage() {
           setServiceTypeOptions(opts);
         }
         reset({
-          floorId,
           serviceType: d.serviceType ?? '',
           status: (d.status as FormData['status']) ?? 'operational',
           note: d.note ?? '',
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load service');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -124,8 +126,8 @@ export default function EditServicePage() {
         })
         .json();
       router.push('/services');
-    } catch {
-      setSubmitError('Failed to update service');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -153,23 +155,17 @@ export default function EditServicePage() {
           description="Floor, service type, and current operational status"
         >
           <FormGrid>
-            <Controller
-              name="floorId"
-              control={control}
-              render={({ field }) => (
-                <ResourceSelect
-                  label="Floor"
-                  endpoint="floors"
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Select floor..."
-                  error={errors.floorId?.message}
-                  valueKey="_id"
-                  labelKey={floorLabel}
-                  dataPath="data"
-                  disabled
-                />
-              )}
+            <ResourceSelect
+              label="Floor"
+              endpoint="floors"
+              value={floorView}
+              onChange={() => {}}
+              placeholder="Select floor..."
+              valueKey="_id"
+              labelKey={floorLabel}
+              dataPath="data"
+              helperText="Floor assignment is immutable"
+              disabled
             />
             <Select
               label="Service type"
@@ -187,17 +183,13 @@ export default function EditServicePage() {
         </FormSection>
 
         <FormSection title="Notes" description="Optional context for staff" divided>
-          <FormGrid cols={1}>
-            <FormFullWidth>
-              <Textarea
-                label="Note"
-                rows={3}
-                placeholder="Optional note..."
-                error={errors.note?.message}
-                {...register('note')}
-              />
-            </FormFullWidth>
-          </FormGrid>
+          <Textarea
+            label="Note"
+            rows={3}
+            placeholder="Optional note..."
+            error={errors.note?.message}
+            {...register('note')}
+          />
         </FormSection>
       </FormCard>
     </FormPage>

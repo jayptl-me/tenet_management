@@ -15,7 +15,7 @@ export { Counter, nextInvoiceNumber } from './counter.js';
 export { AuditLog } from './auditLog.js';
 export { DailyMenu } from './dailyMenu.js';
 export { Visitor } from './visitor.js';
-export { LaundrySlot, generateLaundrySlots } from './laundrySlot.js';
+export { LaundrySlot } from './laundrySlot.js';
 export { NoticePost } from './noticePost.js';
 export { AttendanceRecord } from './attendanceRecord.js';
 export { LeaveApplication } from './leaveApplication.js';

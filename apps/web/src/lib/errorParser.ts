@@ -69,6 +69,15 @@ const CODE_MESSAGES: Record<string, string> = {
   FLOOR_NOT_FOUND: 'The floor could not be found. It may have been deleted.',
   VALIDATION_ERROR: 'Please check the highlighted fields and correct any errors.',
   INVALID_INPUT: 'The value you entered is not valid. Please check and try again.',
+  BILL_LOCKED: 'This electricity bill is locked (finalized or distributed) and cannot be edited.',
+  BILL_NOT_FINALIZED: 'This bill must be finalized before charges can be distributed to invoices.',
+  INVALID_BILL_STATUS:
+    'Only draft bills can be finalized. Someone may have already changed this bill.',
+  BILL_ALREADY_DISTRIBUTED:
+    'Distributed bills cannot be deleted. Contact support if a correction is needed.',
+  DUPLICATE_BILL:
+    'A bill for this month already exists. Each month can only have one electricity bill.',
+  UPLOAD_FAILED: 'The upload could not be completed. Please try again.',
 };
 
 /**

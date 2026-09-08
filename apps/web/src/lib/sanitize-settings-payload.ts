@@ -97,6 +97,7 @@ export function sanitizeSettingsPayload(config: SettingsFormLike): Record<string
     roomPricing: config.roomPricing,
     primaryColor: config.primaryColor || undefined,
     primaryColorDark: config.primaryColorDark || undefined,
+    primaryColorLight: (config as { primaryColorLight?: string }).primaryColorLight || undefined,
     landingHeroHeadline: emptyToUndef(config.landingHeroHeadline)?.slice(0, 200),
     landingHeroSubline: emptyToUndef(config.landingHeroSubline)?.slice(0, 500),
     testimonials,

@@ -10,11 +10,14 @@ import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../l
 import { Invoice } from '../models/invoice.js';
 import { Payment } from '../models/payment.js';
 import { Tenant } from '../models/tenant.js';
+import { Guardian } from '../models/guardian.js';
 import { generateSingleInvoice, generateMonthlyInvoices } from '../services/invoice.service.js';
+import { getInvoiceBalance } from '../services/payment-status.service.js';
 import { InvoicePdf } from '../templates/InvoicePdf.js';
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { getPgUpiConfig } from '../lib/upi.js';
 import { logger } from '../lib/logger.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 // ── Cast helpers ────────────────────────────────────────
 type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
@@ -43,7 +46,12 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
 
   const filter: Record<string, unknown> = {};
   if (month) filter.month = month;
-  if (status) filter.status = status;
+  if (status) {
+    if (!['draft', 'sent', 'paid', 'partial', 'overdue', 'cancelled'].includes(status)) {
+      return badRequest(c, 'Invalid status filter', 'INVALID_STATUS');
+    }
+    filter.status = status;
+  }
   if (tenantId) {
     const parsed = parseId(tenantId);
     if (!parsed) return badRequest(c, 'Invalid tenantId');
@@ -59,7 +67,11 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
         path: 'tenantId',
         populate: [
           { path: 'userId', select: 'name email phone' },
-          { path: 'roomId', select: 'roomNumber floorId' },
+          {
+            path: 'roomId',
+            select: 'roomNumber floorId',
+            populate: { path: 'floorId', select: 'label floorNumber' },
+          },
         ],
       })
       .lean() as unknown,
@@ -88,6 +100,38 @@ invoices.get('/my', authGuard, tenantOnly, async (c) => {
   return c.json({ success: true, data });
 });
 
+/** Check role-based access to an invoice. Admin can access all; tenant can access own; guardian can access ward. */
+async function canAccessInvoice(
+  user: { sub: string; role: string },
+  invoice: Record<string, unknown>,
+): Promise<boolean> {
+  if (user.role === 'admin') return true;
+
+  const tenantInfo = invoice.tenantId as Record<string, unknown> | null;
+  if (!tenantInfo) return false;
+
+  if (user.role === 'tenant') {
+    const tenantUserId = tenantInfo.userId as Record<string, unknown> | null;
+    const uid = tenantUserId?._id ? String(tenantUserId._id) : String(tenantUserId ?? '');
+    return uid === user.sub;
+  }
+
+  if (user.role === 'guardian') {
+    const tenantId = tenantInfo._id ? String(tenantInfo._id) : '';
+    if (!tenantId) return false;
+    const guardian = await Guardian.findOne(
+      safeFilter({
+        userId: new mongoose.Types.ObjectId(user.sub),
+        tenantId: new mongoose.Types.ObjectId(tenantId),
+        isActive: true,
+      }),
+    ).lean();
+    return !!guardian;
+  }
+
+  return false;
+}
+
 // ── POST /invoices/generate-bulk ────────────────────────
 invoices.post(
   '/generate-bulk',
@@ -96,13 +140,96 @@ invoices.post(
   zValidator('json', generateBulkSchema),
   async (c) => {
     const { month } = c.req.valid('json');
+    const user = c.get('user');
     const result = await generateMonthlyInvoices(month);
+
+    writeAuditLog({
+      userId: user.sub,
+      action: 'create',
+      resource: 'invoice',
+      resourceId: `bulk:${month}`,
+      details: {
+        month,
+        generated: result.generated,
+        skipped: result.skipped,
+      },
+    });
+
     return c.json({
       success: true,
       data: { month, generated: result.generated, skipped: result.skipped, errors: result.errors },
     });
   },
 );
+
+// ── GET /invoices/aging — AR aging buckets (admin) ──────
+// Outstanding (unpaid, non-cancelled) invoices bucketed by days past due:
+// current, 1-30, 31-60, 61-90, 90+ with counts and outstanding totals.
+invoices.get('/aging', authGuard, adminOnly, async (c) => {
+  const outstanding = (await Invoice.find(
+    safeFilter({ status: { $in: ['sent', 'partial', 'overdue'] } }),
+  )
+    .select('totalAmount dueDate status month invoiceNumber tenantId')
+    .lean()) as unknown as Array<Record<string, unknown>>;
+
+  const paidAgg = (await Payment.aggregate([
+    { $match: { status: 'paid' } },
+    { $group: { _id: '$invoiceId', total: { $sum: '$amount' } } },
+  ])) as Array<Record<string, unknown>>;
+  const paidMap = new Map(
+    paidAgg.map((r) => [String(r._id), (r.total as number) ?? 0]),
+  );
+
+  const buckets = {
+    current: { count: 0, amount: 0 },
+    days1_30: { count: 0, amount: 0 },
+    days31_60: { count: 0, amount: 0 },
+    days61_90: { count: 0, amount: 0 },
+    days90Plus: { count: 0, amount: 0 },
+  };
+
+  const nowMs = Date.now();
+  for (const inv of outstanding) {
+    const total = (inv.totalAmount as number) ?? 0;
+    const paid = paidMap.get(String(inv._id)) ?? 0;
+    const balance = Math.max(0, total - paid);
+    if (balance <= 0.001) continue;
+
+    const due = inv.dueDate ? new Date(inv.dueDate as string | Date) : null;
+    const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null;
+    const daysPastDue =
+      dueMs != null ? Math.floor((nowMs - dueMs) / (24 * 60 * 60 * 1000)) : 0;
+
+    if (daysPastDue <= 0) {
+      buckets.current.count += 1;
+      buckets.current.amount += balance;
+    } else if (daysPastDue <= 30) {
+      buckets.days1_30.count += 1;
+      buckets.days1_30.amount += balance;
+    } else if (daysPastDue <= 60) {
+      buckets.days31_60.count += 1;
+      buckets.days31_60.amount += balance;
+    } else if (daysPastDue <= 90) {
+      buckets.days61_90.count += 1;
+      buckets.days61_90.amount += balance;
+    } else {
+      buckets.days90Plus.count += 1;
+      buckets.days90Plus.amount += balance;
+    }
+  }
+
+  const data = {
+    buckets,
+    totalOutstanding:
+      buckets.current.amount +
+      buckets.days1_30.amount +
+      buckets.days31_60.amount +
+      buckets.days61_90.amount +
+      buckets.days90Plus.amount,
+  };
+
+  return c.json({ success: true, data });
+});
 
 // ── POST /invoices/generate-single ──────────────────────
 invoices.post(
@@ -112,8 +239,23 @@ invoices.post(
   zValidator('json', generateSingleSchema),
   async (c) => {
     const { tenantId, month } = c.req.valid('json');
+    const user = c.get('user');
     try {
       const invoice = await generateSingleInvoice({ tenantId, month });
+
+      writeAuditLog({
+        userId: user.sub,
+        action: 'create',
+        resource: 'invoice',
+        resourceId: String((invoice as unknown as Record<string, unknown>)._id ?? ''),
+        details: {
+          tenantId,
+          month,
+          invoiceNumber: (invoice as unknown as Record<string, unknown>).invoiceNumber,
+          totalAmount: (invoice as unknown as Record<string, unknown>).totalAmount,
+        },
+      });
+
       return c.json({ success: true, data: invoice }, 201);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to generate invoice';
@@ -132,7 +274,11 @@ invoices.get('/:id', authGuard, async (c) => {
       path: 'tenantId',
       populate: [
         { path: 'userId', select: 'name email phone' },
-        { path: 'roomId', select: 'roomNumber floorId' },
+        {
+          path: 'roomId',
+          select: 'roomNumber floorId',
+          populate: { path: 'floorId', select: 'label floorNumber' },
+        },
       ],
     })
     .lean() as unknown);
@@ -142,15 +288,8 @@ invoices.get('/:id', authGuard, async (c) => {
   const invoice = invoiceRaw as Record<string, unknown>;
   const user = c.get('user');
 
-  if (user.role === 'tenant') {
-    const tenantInfo = invoice.tenantId as Record<string, unknown> | null;
-    const tenantUserId = tenantInfo?.userId as Record<string, unknown> | null;
-    if (tenantUserId?._id?.toString() !== user.sub) {
-      return c.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-        403,
-      );
-    }
+  if (!(await canAccessInvoice(user, invoice))) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
   // All non-cancelled payment rows for history (pending UTR, partial residual, paid).
@@ -242,6 +381,24 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
     currentStatus !== 'overdue'
   ) {
     return badRequest(c, `Cannot edit invoice with status "${currentStatus}"`, 'INVOICE_LOCKED');
+  }
+
+  // Cancelling an invoice that still carries a remaining balance would
+  // silently erase dues — collect payment first or adjust amounts instead.
+  if (body.status === 'cancelled' && currentStatus !== 'cancelled') {
+    const remaining = await getInvoiceBalance(id, invoice.totalAmount ?? 0);
+    if (remaining > 0.001) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'INVOICE_HAS_BALANCE',
+            message: `Cannot cancel: invoice still has ₹${remaining.toLocaleString('en-IN')} outstanding.`,
+          },
+        },
+        409,
+      );
+    }
   }
 
   // ── Duplicate check: month + tenantId ──
@@ -360,7 +517,11 @@ invoices.get('/:id/pdf', authGuard, async (c) => {
       path: 'tenantId',
       populate: [
         { path: 'userId', select: 'name email phone' },
-        { path: 'roomId', select: 'roomNumber floorId' },
+        {
+          path: 'roomId',
+          select: 'roomNumber floorId',
+          populate: { path: 'floorId', select: 'label floorNumber' },
+        },
       ],
     })
     .lean() as unknown);
@@ -370,15 +531,8 @@ invoices.get('/:id/pdf', authGuard, async (c) => {
   const invoice = invoiceRaw as Record<string, unknown>;
   const user = c.get('user');
 
-  if (user.role === 'tenant') {
-    const tenantInfo = invoice.tenantId as Record<string, unknown> | null;
-    const tenantUserId = tenantInfo?.userId as Record<string, unknown> | null;
-    if (tenantUserId?._id?.toString() !== user.sub) {
-      return c.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
-        403,
-      );
-    }
+  if (!(await canAccessInvoice(user, invoice))) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
   try {
@@ -418,12 +572,15 @@ invoices.get('/:id/pdf', authGuard, async (c) => {
 invoices.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid invoice ID');
+  const user = c.get('user');
 
   const invoice = await Invoice.findById(id).lean();
   if (!invoice) return notFound(c, 'Invoice');
 
+  const invoiceRecord = invoice as unknown as Record<string, unknown>;
+
   // Prevent deletion of paid invoices
-  if ((invoice as unknown as Record<string, unknown>).status === 'paid') {
+  if (invoiceRecord.status === 'paid') {
     return c.json(
       {
         success: false,
@@ -433,11 +590,40 @@ invoices.delete('/:id', authGuard, adminOnly, async (c) => {
     );
   }
 
+  // Prevent deletion of invoices with any paid payment records (ledger integrity)
+  const paidPayments = await Payment.countDocuments(
+    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id), status: 'paid' }),
+  );
+  if (paidPayments > 0) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVOICE_HAS_PAID_PAYMENTS',
+          message: `Cannot delete invoice with ${paidPayments} paid payment(s). Accounting records cannot be purged.`,
+        },
+      },
+      409,
+    );
+  }
+
   // Delete all linked payments first
   await Payment.deleteMany(
     safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) } as Record<string, unknown>),
   );
   await Invoice.findByIdAndDelete(id);
+
+  writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'invoice',
+    resourceId: id,
+    details: {
+      invoiceNumber: invoiceRecord.invoiceNumber,
+      month: invoiceRecord.month,
+      totalAmount: invoiceRecord.totalAmount,
+    },
+  });
 
   return c.json({ success: true, data: { message: 'Invoice deleted' } });
 });
@@ -447,10 +633,19 @@ invoices.get('/:id/payment-status', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid invoice ID');
 
-  const invoiceRaw = await (Invoice.findById(id).lean() as unknown);
+  const invoiceRaw = await (Invoice.findById(id)
+    .populate({
+      path: 'tenantId',
+      populate: [{ path: 'userId', select: 'name email phone' }],
+    })
+    .lean() as unknown);
   if (!invoiceRaw) return notFound(c, 'Invoice');
 
   const invoice = invoiceRaw as Record<string, unknown>;
+  const user = c.get('user');
+  if (!(await canAccessInvoice(user, invoice))) {
+    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
+  }
 
   const payments = (await (Invoice.db
     ?.model('Payment')

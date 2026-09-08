@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_features.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import '../data/tenant_repository.dart';
@@ -21,6 +22,7 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
   List<Map<String, dynamic>> _invoices = [];
   List<Map<String, dynamic>> _complaints = [];
   int _unreadCount = 0;
+  Map<String, dynamic>? _profile;
 
   @override
   void initState() {
@@ -35,10 +37,19 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
     });
     try {
       final repo = ref.read(tenantRepositoryProvider);
+      final tenantId = await ref.read(authProvider.notifier).ensureTenantId();
+      Future<Map<String, dynamic>?> profileFuture;
+      if (tenantId != null && tenantId.isNotEmpty) {
+        profileFuture = repo.tenantProfile(tenantId).catchError((_) => null);
+      } else {
+        profileFuture = Future.value(null);
+      }
+
       final results = await Future.wait([
         repo.myInvoices(),
         repo.myComplaints(),
         repo.unreadNotificationCount().catchError((_) => 0),
+        profileFuture,
       ]);
       if (!mounted) return;
       setState(() {
@@ -46,6 +57,7 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
         _complaints =
             (results[1] as List<Map<String, dynamic>>).take(5).toList();
         _unreadCount = results[2] as int;
+        _profile = results[3] as Map<String, dynamic>?;
         _loading = false;
       });
     } catch (e) {
@@ -60,6 +72,8 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
+    final features =
+        ref.watch(appFeaturesProvider).valueOrNull ?? const AppFeatures();
 
     return Scaffold(
       appBar: AppBar(
@@ -89,19 +103,71 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text(
-              'Welcome${user != null ? ', ${user.name}' : ''}',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome${user != null ? ', ${user.name}' : ''}',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Invoices, payments, visitors, and more.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Invoices, payments, visitors, and more.',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
+                ),
+                if (_profile != null && _profile!['room'] != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => context.go('/tenant/profile'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bed_outlined,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Room ${(_profile!['room'] as Map?)?['roomNumber'] ?? '--'} · Bed ${_profile!['bedId'] ?? '--'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 16),
             if (_error != null) ...[
@@ -144,6 +210,33 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                       style: TextStyle(fontWeight: FontWeight.w700)),
                   onPressed: () => context.go('/tenant/electricity'),
                 ),
+                if (features.attendanceEnabled)
+                  ActionChip(
+                    avatar: const Icon(Icons.how_to_reg_outlined, size: 16),
+                    label: const Text('Attendance',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    onPressed: () => context.go('/tenant/attendance'),
+                  ),
+                ActionChip(
+                  avatar: const Icon(Icons.restaurant_outlined, size: 16),
+                  label: const Text('Meals',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  onPressed: () => context.go('/tenant/meals'),
+                ),
+                if (features.noticeBoardEnabled)
+                  ActionChip(
+                    avatar: const Icon(Icons.campaign_outlined, size: 16),
+                    label: const Text('Notices',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    onPressed: () => context.go('/tenant/notices'),
+                  ),
+                if (features.laundryEnabled)
+                  ActionChip(
+                    avatar: const Icon(Icons.local_laundry_service_outlined, size: 16),
+                    label: const Text('Laundry',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    onPressed: () => context.go('/tenant/laundry'),
+                  ),
               ],
             ),
             const SizedBox(height: 24),

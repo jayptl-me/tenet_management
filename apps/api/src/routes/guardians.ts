@@ -19,6 +19,7 @@ import {
   AppError,
 } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateArrFn = (
@@ -56,6 +57,13 @@ const updateGuardianSchema = z.strictObject({
 });
 
 // ── Helper: map lean doc to frontend-friendly shape ─────
+function floorOfRoom(room: Record<string, unknown>) {
+  const f = room?.floor as Record<string, unknown> | undefined;
+  return f && typeof f === 'object' && 'label' in f
+    ? { _id: String(f._id ?? ''), label: f.label, floorNumber: f.floorNumber }
+    : null;
+}
+
 function mapGuardian(doc: Record<string, unknown>) {
   const tenantRaw = doc.tenantId;
   const tenant =
@@ -71,6 +79,8 @@ function mapGuardian(doc: Record<string, unknown>) {
     tenant: tenant
       ? {
           _id: tenantIdStr,
+          bedId: (tenant.bedId as string | undefined) ?? null,
+          isActive: (tenant.isActive as boolean | undefined) ?? null,
           user: tenantUser
             ? {
                 _id: String(tenantUser._id ?? ''),
@@ -79,7 +89,13 @@ function mapGuardian(doc: Record<string, unknown>) {
                 phone: tenantUser.phone,
               }
             : null,
-          room: room ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber } : null,
+          room: room
+            ? {
+                _id: String(room._id ?? ''),
+                roomNumber: room.roomNumber,
+                floor: floorOfRoom(room),
+              }
+            : null,
         }
       : null,
     isEmergencyContact: doc.relation === 'father' || doc.relation === 'mother',
@@ -89,7 +105,7 @@ function mapGuardian(doc: Record<string, unknown>) {
 // ── Router ───────────────────────────────────────────────
 
 const guardians = new Hono();
-guardians.use('*', requireFeature('guardianPortalEnabled'));
+guardians.use('/me/*', requireFeature('guardianPortalEnabled'));
 
 // ── POST /guardians — create guardian (admin only) ──────
 guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchema), async (c) => {
@@ -161,9 +177,26 @@ guardians.post('/', authGuard, adminOnly, zValidator('json', createGuardianSchem
       })
       .populate({
         path: 'tenantId',
-        populate: { path: 'roomId', select: 'roomNumber' },
+        populate: {
+          path: 'roomId',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
       })
       .lean();
+
+    const authUser = c.get('user');
+    writeAuditLog({
+      userId: authUser.sub,
+      action: 'create',
+      resource: 'guardian',
+      resourceId: String(guardian._id),
+      details: {
+        name: body.name,
+        tenantId: body.tenantId,
+        relation: body.relation,
+      },
+    });
 
     return c.json(
       {
@@ -232,7 +265,11 @@ guardians.get('/', authGuard, adminOnly, async (c) => {
       })
       .populate({
         path: 'tenantId',
-        populate: { path: 'roomId', select: 'roomNumber' },
+        populate: {
+          path: 'roomId',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
       })
       .lean(),
     Guardian.countDocuments(safeFilter(filter)),
@@ -269,7 +306,11 @@ guardians.get('/me/ward', authGuard, async (c) => {
     })
     .populate({
       path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
+      populate: {
+        path: 'roomId',
+        select: 'roomNumber floor',
+        populate: { path: 'floor', select: 'label floorNumber' },
+      },
     })
     .lean();
 
@@ -316,7 +357,7 @@ guardians.get('/me/ward', authGuard, async (c) => {
 });
 
 // ── GET /guardians/me/ward/attendance ───────────────────
-guardians.get('/me/ward/attendance', authGuard, async (c) => {
+guardians.get('/me/ward/attendance', authGuard, requireFeature('attendanceEnabled'), async (c) => {
   const authUser = c.get('user');
   const { page, limit } = parsePagination(c);
 
@@ -337,8 +378,24 @@ guardians.get('/me/ward/attendance', authGuard, async (c) => {
 
   const tenantId = (guardian as unknown as Record<string, unknown>).tenantId?.toString();
   const skip = (page - 1) * limit;
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
+  const ymd = /^\d{4}-\d{2}-\d{2}$/;
+  if (fromDate !== undefined && !ymd.test(fromDate)) {
+    return badRequest(c, 'fromDate must be YYYY-MM-DD');
+  }
+  if (toDate !== undefined && !ymd.test(toDate)) {
+    return badRequest(c, 'toDate must be YYYY-MM-DD');
+  }
 
-  const filter = safeFilter({ tenantId });
+  const filterBase: Record<string, unknown> = { tenantId };
+  if (fromDate !== undefined || toDate !== undefined) {
+    const range: Record<string, string> = {};
+    if (fromDate !== undefined) range.$gte = fromDate;
+    if (toDate !== undefined) range.$lte = toDate;
+    filterBase.date = range;
+  }
+  const filter = safeFilter(filterBase);
 
   const [data, total] = await Promise.all([
     AttendanceRecord.find(filter)
@@ -373,7 +430,11 @@ guardians.get('/:id', authGuard, adminOnly, async (c) => {
     })
     .populate({
       path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
+      populate: {
+        path: 'roomId',
+        select: 'roomNumber floor',
+        populate: { path: 'floor', select: 'label floorNumber' },
+      },
     })
     .lean();
 
@@ -402,7 +463,11 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
     })
     .populate({
       path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
+      populate: {
+        path: 'roomId',
+        select: 'roomNumber floor',
+        populate: { path: 'floor', select: 'label floorNumber' },
+      },
     })
     .lean();
 
@@ -423,6 +488,17 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
     await User.findByIdAndUpdate(userId, userUpdate);
   }
 
+  const authUser = c.get('user');
+  writeAuditLog({
+    userId: authUser.sub,
+    action: 'update',
+    resource: 'guardian',
+    resourceId: id,
+    details: {
+      updatedFields: Object.keys(body),
+    },
+  });
+
   return c.json({
     success: true,
     data: mapGuardian(guardian as unknown as Record<string, unknown>),
@@ -433,6 +509,7 @@ guardians.put('/:id', authGuard, adminOnly, zValidator('json', updateGuardianSch
 guardians.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid guardian ID');
+  const authUser = c.get('user');
 
   const guardian = await Guardian.findById(id);
   if (!guardian) return notFound(c, 'Guardian');
@@ -445,6 +522,17 @@ guardians.delete('/:id', authGuard, adminOnly, async (c) => {
     { isActive: false },
     { returnDocument: 'after' },
   );
+
+  writeAuditLog({
+    userId: authUser.sub,
+    action: 'delete',
+    resource: 'guardian',
+    resourceId: id,
+    details: {
+      name: guardian.name,
+      tenantId: guardian.tenantId.toString(),
+    },
+  });
 
   return c.json({
     success: true,

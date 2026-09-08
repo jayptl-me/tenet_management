@@ -13,7 +13,12 @@ export interface IElectricityBillDocument extends Document {
   id: string;
   month: string;
   totalBillAmount: number;
+  computedRoomTotal: number;
+  variance: number;
+  varianceReason: string;
   billImageUrl?: string;
+  /** Cloudinary public id for the uploaded bill image (null when URL-only). */
+  billImagePublicId?: string | null;
   roomEntries: IRoomReadingSubdoc[];
   status: 'draft' | 'finalized' | 'distributed';
   notes?: string;
@@ -70,7 +75,26 @@ const electricityBillSchema = new Schema<IElectricityBillDocument>(
       required: [true, 'Total bill amount is required'],
       min: [0, 'Total bill amount cannot be negative'],
     },
+    computedRoomTotal: {
+      type: Number,
+      default: 0,
+      min: [0, 'Computed room total cannot be negative'],
+    },
+    variance: {
+      type: Number,
+      default: 0,
+    },
+    varianceReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Variance reason cannot exceed 500 characters'],
+      default: '',
+    },
     billImageUrl: {
+      type: String,
+      default: null,
+    },
+    billImagePublicId: {
       type: String,
       default: null,
     },
@@ -112,11 +136,19 @@ const electricityBillSchema = new Schema<IElectricityBillDocument>(
 
 // ── Pre-save: derive unitsConsumed and amount ──────────
 electricityBillSchema.pre('save', function (this: IElectricityBillDocument) {
+  let roomTotal = 0;
   for (const entry of this.roomEntries) {
     entry.unitsConsumed = Math.max(0, entry.currentReading - entry.previousReading);
-    entry.amount = entry.unitsConsumed * entry.ratePerUnit;
+    entry.amount = Math.round(entry.unitsConsumed * entry.ratePerUnit * 100) / 100;
+    roomTotal += entry.amount;
   }
+  roomTotal = Math.round(roomTotal * 100) / 100;
+  this.computedRoomTotal = roomTotal;
+  this.variance = Math.round(((this.totalBillAmount ?? 0) - roomTotal) * 100) / 100;
 });
+
+electricityBillSchema.index({ status: 1 }, { background: true });
+electricityBillSchema.index({ 'roomEntries.roomId': 1 }, { background: true });
 
 export const ElectricityBill: Model<IElectricityBillDocument> = model<IElectricityBillDocument>(
   'ElectricityBill',

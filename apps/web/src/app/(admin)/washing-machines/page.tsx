@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, WashingMachine, Timer, User, Building2 } from 'lucide-react';
+import { Plus, WashingMachine, Timer, User, Building2, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -39,6 +40,66 @@ export default function WashingMachinesPage() {
   const [deleteTarget, setDeleteTarget] = useState<MachineRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const handleExport = async () => {
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '100');
+      if (statusFilter) params.set('status', statusFilter);
+      const res = await api.get(`washing-machines?${params.toString()}`).json<{
+        success: boolean;
+        data: MachineRow[];
+      }>();
+      const exportRows = res.data ?? [];
+      if (exportRows.length === 0) return;
+      const sanitize = (val: string | number | undefined | null) => {
+        if (val === null || val === undefined) return '""';
+        let str = String(val).replace(/"/g, '""');
+        if (/^[=+\-@\t\r]/.test(str)) {
+          str = `'${str}`;
+        }
+        return `"${str}"`;
+      };
+
+      const headers = [
+        'Machine Number',
+        'Label',
+        'Floor',
+        'Status',
+        'Claimed By',
+        'Claimant Room',
+        'Timer Ends At',
+        'Notes',
+      ];
+      const rows = exportRows.map((m) => [
+        sanitize(m.machineNumber),
+        sanitize(m.label || `Machine ${m.machineNumber}`),
+        sanitize(m.floorLabel ?? (m.floorNumber !== undefined ? `Floor ${m.floorNumber}` : 'N/A')),
+        sanitize(m.status),
+        sanitize(m.currentUser?.name ?? 'Unclaimed'),
+        sanitize(m.currentUser?.room ?? ''),
+        sanitize(m.timerEndsAt ?? ''),
+        sanitize(m.notes ?? ''),
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `washing_machines_export_${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+    }
+  };
+
   const fetchMachines = useCallback(async () => {
     setIsLoading(true);
     setError('');
@@ -55,8 +116,8 @@ export default function WashingMachinesPage() {
       }>();
       setMachines(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load washing machines');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +131,8 @@ export default function WashingMachinesPage() {
     try {
       await api.post(`washing-machines/${id}/release`).json();
       fetchMachines();
-    } catch {
-      setError('Failed to release machine');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     }
   };
 
@@ -82,8 +143,8 @@ export default function WashingMachinesPage() {
       await api.delete(`washing-machines/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       fetchMachines();
-    } catch {
-      setError('Failed to delete washing machine');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
@@ -152,17 +213,19 @@ export default function WashingMachinesPage() {
       accessor: (row) => (
         <div className="flex items-center gap-1">
           {row.status === 'in_use' && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                handleRelease(row._id);
+                void handleRelease(row._id);
               }}
-              className="inline-flex items-center gap-1 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] px-2 py-1 text-xs font-semibold text-[color:var(--color-brand-600)] transition-colors hover:bg-[color:var(--color-brand-50)]"
               title="Release machine"
+              className="h-7 px-2 text-xs"
             >
               <Timer className="h-3 w-3" />
               Release
-            </button>
+            </Button>
           )}
           <TableActions
             onView={() => router.push(`/washing-machines/${row._id}`)}
@@ -181,16 +244,22 @@ export default function WashingMachinesPage() {
         title="Washing Machines"
         description="Manage per-floor washing machines"
         action={
-          <Button onClick={() => router.push('/washing-machines/new')}>
-            <Plus className="h-4 w-4" />
-            Add Machine
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={machines.length === 0}>
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => router.push('/washing-machines/new')}>
+              <Plus className="h-4 w-4" />
+              Add Machine
+            </Button>
+          </div>
         }
       />
 
       <ErrorBanner message={error} />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           options={[
             { value: '', label: 'All Statuses' },

@@ -18,19 +18,23 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { TableActions } from '@/components/ui/TableActions';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
+import { floorLabel } from '@/lib/resource-select-presets';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import type { AmenityDefinition } from '@pg/types';
@@ -72,19 +76,6 @@ interface ServiceSummary {
   down: number;
 }
 
-function statusVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
-  switch (status) {
-    case 'operational':
-      return 'success';
-    case 'degraded':
-      return 'warning';
-    case 'down':
-      return 'danger';
-    default:
-      return 'neutral';
-  }
-}
-
 export default function ServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState<ServiceStatusRow[]>([]);
@@ -94,6 +85,7 @@ export default function ServicesPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
+  const [floorFilter, setFloorFilter] = useState('');
   const [error, setError] = useState('');
   const [summary, setSummary] = useState<ServiceSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
@@ -130,8 +122,8 @@ export default function ServicesPage() {
       setDeleteTarget(null);
       fetchServices();
       fetchSummary();
-    } catch {
-      setError('Failed to delete service');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
     }
@@ -145,6 +137,7 @@ export default function ServicesPage() {
       params.set('page', String(page));
       params.set('limit', String(perPage));
       if (statusFilter) params.set('status', statusFilter);
+      if (floorFilter) params.set('floorId', floorFilter);
 
       const res = await api.get(`services?${params.toString()}`).json<{
         success: boolean;
@@ -153,12 +146,12 @@ export default function ServicesPage() {
       }>();
       setServices(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load services');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, statusFilter]);
+  }, [page, perPage, statusFilter, floorFilter]);
 
   useEffect(() => {
     fetchServices();
@@ -175,6 +168,50 @@ export default function ServicesPage() {
     const def = definitions.find((d) => d.key === serviceType);
     if (def) return resolveIcon(def.icon);
     return Wrench;
+  };
+
+  const handleExportCsv = async () => {
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '100');
+      if (statusFilter) params.set('status', statusFilter);
+      if (floorFilter) params.set('floorId', floorFilter);
+      const res = await api.get(`services?${params.toString()}`).json<{
+        success: boolean;
+        data: ServiceStatusRow[];
+      }>();
+      const exportRows = res.data ?? [];
+      if (exportRows.length === 0) return;
+      const headers = ['Service', 'Floor', 'Status', 'Open Complaints', 'Last Updated', 'Note'];
+      const escapeCsv = (val: unknown) => {
+        let str = String(val ?? '');
+        if (/^[=+\-@\t\r]/.test(str)) {
+          str = `'${str}`;
+        }
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+      const rows = exportRows.map((s) => [
+        escapeCsv(getLabel(s.serviceType)),
+        escapeCsv(s.floor?.label ?? '—'),
+        escapeCsv(s.status),
+        escapeCsv(s.openComplaintCount ?? 0),
+        escapeCsv(s.lastUpdatedAt ? new Date(s.lastUpdatedAt).toISOString().slice(0, 10) : '—'),
+        escapeCsv(s.note ?? ''),
+      ]);
+      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `services-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+    }
   };
 
   const columns: DataTableColumn<ServiceStatusRow>[] = [
@@ -208,7 +245,7 @@ export default function ServicesPage() {
     {
       header: 'Status',
       accessor: (row) => (
-        <StatusBadge variant={statusVariant(row.status)} label={row.status.replace(/_/g, ' ')} />
+        <StatusBadge variant={statusToVariant(row.status)} label={row.status.replace(/_/g, ' ')} />
       ),
     },
     {
@@ -301,7 +338,7 @@ export default function ServicesPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           options={[
             { value: '', label: 'All Statuses' },
@@ -316,6 +353,27 @@ export default function ServicesPage() {
           }}
           className="max-w-[200px]"
         />
+        <ResourceSelect
+          endpoint="floors"
+          value={floorFilter}
+          onChange={(val) => {
+            setFloorFilter(val);
+            setPage(1);
+          }}
+          placeholder="All Floors"
+          labelKey={floorLabel}
+          dataPath="data"
+          className="max-w-[200px]"
+        />
+        <Button
+          variant="outline"
+          onClick={handleExportCsv}
+          disabled={services.length === 0}
+          className="flex items-center gap-1.5"
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
       </div>
 
       <DataTable
@@ -354,7 +412,7 @@ export default function ServicesPage() {
                   </span>
                 </div>
                 <StatusBadge
-                  variant={statusVariant(row.status)}
+                  variant={statusToVariant(row.status)}
                   label={row.status.replace(/_/g, ' ')}
                 />
               </div>
