@@ -63,12 +63,15 @@ class TenantRepository {
   Future<void> submitUtr({
     required String invoiceId,
     required String utrNumber,
+    String? screenshotUrl,
   }) async {
     await _api.postJson(
       'payments/submit-utr',
       body: {
         'invoiceId': invoiceId,
         'utrNumber': utrNumber.trim().toUpperCase(),
+        if (screenshotUrl != null && screenshotUrl.trim().isNotEmpty)
+          'screenshotUrl': screenshotUrl.trim(),
       },
       parse: (_) => null,
     );
@@ -146,19 +149,32 @@ class TenantRepository {
   }
 
   Future<void> bookLaundry({
-    required String tenantId,
+    String? tenantId,
     required String slotDate,
     required String slotTime,
     int? items,
+    String? notes,
   }) async {
+    // Server forces the caller's own tenant for role==tenant; only send an
+    // explicit tenantId when provided (admin flows).
     await _api.postJson(
       'laundry-slots',
       body: {
-        'tenantId': tenantId,
+        if (tenantId != null && tenantId.isNotEmpty) 'tenantId': tenantId,
         'slotDate': slotDate,
         'slotTime': slotTime,
         if (items != null) 'items': items,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
+      parse: (_) => null,
+    );
+  }
+
+  /// Cancel a booked laundry slot (`POST laundry-slots/:id/cancel`).
+  Future<void> cancelLaundrySlot(String slotId) async {
+    await _api.postJson(
+      'laundry-slots/$slotId/cancel',
+      body: {},
       parse: (_) => null,
     );
   }
@@ -275,9 +291,36 @@ class TenantRepository {
   }
 
   // ── Attendance ──────────────────────────────────────────
-  Future<List<Map<String, dynamic>>> myAttendance() async {
-    final data = await _api.getJson('attendance/my', parse: (d) => d);
+  Future<List<Map<String, dynamic>>> myAttendance({
+    String? fromDate,
+    String? toDate,
+    String? status,
+    int limit = 100,
+  }) async {
+    final data = await _api.getJson(
+      'attendance/my',
+      query: {
+        'limit': limit,
+        if (fromDate != null && fromDate.isNotEmpty) 'fromDate': fromDate,
+        if (toDate != null && toDate.isNotEmpty) 'toDate': toDate,
+        if (status != null && status.isNotEmpty) 'status': status,
+      },
+      parse: (d) => d,
+    );
     return _asMapList(data);
+  }
+
+  Future<Map<String, dynamic>> attendanceSummary({
+    required String fromDate,
+    required String toDate,
+  }) async {
+    final data = await _api.getJson(
+      'attendance/summary',
+      query: {'fromDate': fromDate, 'toDate': toDate},
+      parse: (d) => d,
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return const {};
   }
 
   Future<Map<String, dynamic>?> checkIn(String tenantId) async {
@@ -369,6 +412,19 @@ class TenantRepository {
     return null;
   }
 
+  /// Tenant-scoped machine list. The API auto-scopes to the caller's floor,
+  /// so this is a single round trip (no auth/me -> tenant -> room hops).
+  Future<List<Map<String, dynamic>>> myWashingMachines() async {
+    final data = await _api.getJson(
+      'washing-machines',
+      parse: (d) => d,
+    );
+    if (data is Map && data['data'] is List) {
+      return _asMapList(data['data']);
+    }
+    return _asMapList(data);
+  }
+
   /// Claim a washing machine (sets timer).
   Future<void> claimWashingMachine(String machineId, {int? timerDuration}) async {
     await _api.postJson(
@@ -391,11 +447,15 @@ class TenantRepository {
 
   // -- Facility / Services Health --------------------------
   /// Fetch health of services/amenities (Wi-Fi, water, lift, etc.) on a floor.
+  /// API returns { services: [...], totalRooms } — unwrap the list.
   Future<List<Map<String, dynamic>>> floorServices(String floorId) async {
     final data = await _api.getJson(
       'services/floor/$floorId/with-complaints',
       parse: (d) => d,
     );
+    if (data is Map && data['services'] is List) {
+      return _asMapList(data['services']);
+    }
     return _asMapList(data);
   }
 

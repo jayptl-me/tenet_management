@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Calendar, Sun, Sunset, Moon, MessageCircle, Pencil } from 'lucide-react';
+import { Calendar, Sun, Sunset, Moon, Cookie, MessageCircle, Pencil } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -22,6 +22,7 @@ interface MenuDetail {
   meals: {
     breakfast: MenuMealItem[];
     lunch: MenuMealItem[];
+    snacks?: MenuMealItem[];
     dinner: MenuMealItem[];
   };
   isActive: boolean;
@@ -128,6 +129,7 @@ export default function MenuDetailPage() {
               [
                 { key: 'breakfast' as const, icon: <Sun /> },
                 { key: 'lunch' as const, icon: <Sunset /> },
+                { key: 'snacks' as const, icon: <Cookie /> },
                 { key: 'dinner' as const, icon: <Moon /> },
               ] as const
             ).map(({ key, icon }) => {
@@ -173,6 +175,7 @@ export default function MenuDetailPage() {
                     `Menu for ${dateDisplay}:`,
                     `Breakfast: ${formatItems(menu.meals?.breakfast ?? [])}`,
                     `Lunch: ${formatItems(menu.meals?.lunch ?? [])}`,
+                    `Snacks: ${formatItems(menu.meals?.snacks ?? [])}`,
                     `Dinner: ${formatItems(menu.meals?.dinner ?? [])}`,
                   ].join('\n');
                   const url = generateWhatsAppUrl(phone, text);

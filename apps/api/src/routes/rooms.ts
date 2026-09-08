@@ -1,11 +1,14 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import mongoose from 'mongoose';
 import { Room } from '../models/room.js';
 import { Floor } from '../models/floor.js';
 import { Tenant } from '../models/tenant.js';
+import { reconcileOccupancy } from '../services/occupancy-reconcile.service.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
+import { writeAuditLog } from '../lib/write-audit-log.js';
 import {
   parsePagination,
   parseId,
@@ -148,9 +151,49 @@ router.get('/', authGuard, async (c) => {
     Room.countDocuments(filter as Record<string, unknown>),
   ]);
 
+  // Enrich occupied beds with tenant names so the Bed Matrix can display
+  // tenant associations without per-room detail fetches (tenant assignment flow).
+  const tenantIds = Array.from(
+    new Set(
+      (data as unknown as Array<{ beds?: Array<{ tenantId?: unknown }> }>)
+        .flatMap((r) => r.beds ?? [])
+        .map((b) => (b.tenantId ? String(b.tenantId) : ''))
+        .filter((id) => id !== ''),
+    ),
+  );
+  const tenantNameMap = new Map<string, string>();
+  if (tenantIds.length > 0) {
+    const tenants = await (
+      Tenant as unknown as {
+        find: (filter: Record<string, unknown>) => {
+          populate: (opts: unknown) => { lean: () => Promise<unknown[]> };
+        };
+      }
+    )
+      .find(safeFilter({ _id: { $in: tenantIds } }))
+      .populate({ path: 'userId', select: 'name' })
+      .lean();
+    for (const t of tenants) {
+      const doc = t as unknown as { _id: unknown; userId?: { name?: string } | null };
+      const name =
+        doc?.userId && typeof doc.userId === 'object' ? (doc.userId.name ?? 'Unknown') : 'Unknown';
+      tenantNameMap.set(String(doc._id), name);
+    }
+  }
+  const enriched = (data as unknown as Array<Record<string, unknown>>).map((room) => {
+    const beds = (room.beds as Array<Record<string, unknown>> | undefined) ?? [];
+    return {
+      ...room,
+      beds: beds.map((bed) => {
+        const tid = bed.tenantId ? String(bed.tenantId) : null;
+        return { ...bed, tenantName: tid ? (tenantNameMap.get(tid) ?? null) : null };
+      }),
+    };
+  });
+
   return c.json({
     success: true,
-    data,
+    data: enriched,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
@@ -165,6 +208,36 @@ router.get('/available', authGuard, async (c) => {
     .lean();
 
   return c.json({ success: true, data: rooms });
+});
+
+// GET /reconcile-occupancy — dry-run drift report (admin only)
+// NOTE: mounted before /:id so the static segment is not treated as a room id.
+router.get('/reconcile-occupancy', authGuard, adminOnly, async (c) => {
+  const report = await reconcileOccupancy(true);
+  return c.json({ success: true, data: report });
+});
+
+// POST /reconcile-occupancy — rebuild beds[] from active tenants (admin only)
+router.post('/reconcile-occupancy', authGuard, adminOnly, async (c) => {
+  const user = c.get('user');
+  const report = await reconcileOccupancy(false);
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'reconcile',
+    resource: 'room',
+    resourceId: 'all',
+    details: {
+      fixedRooms: report.fixedRooms,
+      freedBeds: report.freedBeds,
+      occupiedBeds: report.occupiedBeds,
+      conflicts: report.conflicts.length,
+      orphans: report.orphans.length,
+      invalidRooms: report.invalidRooms.length,
+    },
+  });
+
+  return c.json({ success: true, data: report });
 });
 
 // GET /:id — single room with populated bed tenant names
@@ -220,6 +293,7 @@ router.get('/:id', authGuard, async (c) => {
 // POST / — create room (admin only)
 router.post('/', authGuard, adminOnly, zValidator('json', createRoomSchema), async (c) => {
   const body = c.req.valid('json');
+  const user = c.get('user');
 
   // Validate floor exists
   const floor = await Floor.findById(body.floorId).lean();
@@ -236,6 +310,25 @@ router.post('/', authGuard, adminOnly, zValidator('json', createRoomSchema), asy
     ).create({
       ...body,
       beds,
+    });
+
+    const created = room as {
+      _id: { toString: () => string };
+      roomNumber: string;
+      sharingType: number;
+      floorId: unknown;
+    };
+    await writeAuditLog({
+      userId: user.sub,
+      action: 'create',
+      resource: 'room',
+      resourceId: created._id.toString(),
+      details: {
+        roomNumber: created.roomNumber,
+        sharingType: created.sharingType,
+        floorId: String(created.floorId ?? ''),
+        monthlyRent: body.monthlyRent,
+      },
     });
 
     return c.json({ success: true, data: room }, 201);
@@ -259,6 +352,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
   if (!id) return badRequest(c, 'Invalid room ID');
 
   const body = c.req.valid('json');
+  const user = c.get('user');
 
   // If floorId is being updated, validate it exists
   if (body.floorId) {
@@ -287,11 +381,8 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
           newSharingType,
         );
 
-        // Apply all changes atomically via findOneAndUpdate
+        // Apply all changes atomically via findOneAndUpdate inside transaction
         // to prevent race conditions on concurrent sharingType changes.
-        // We must first validate via rebuildBedsForSharingType above
-        // (which throws on occupied downsize), then apply the update
-        // in a single atomic operation keyed on the current sharingType.
         const updateData: Record<string, unknown> = {
           sharingType: newSharingType,
           beds: rebuiltBeds,
@@ -306,29 +397,57 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
         if (body.roomAmenities !== undefined) updateData.roomAmenities = body.roomAmenities;
 
         const previousFloorId = existingRoom.floorId;
-        const updated = await Room.findOneAndUpdate(
-          { _id: id, sharingType: oldSharingType },
-          updateData,
-          { returnDocument: 'after', runValidators: true },
-        );
-        if (!updated) {
-          return conflict(
-            c,
-            'Room sharing type was changed by another admin. Please reload and try again.',
-            'CONCURRENT_MODIFICATION',
-          );
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let updated: any = null;
 
-        // Keep Tenant.bedId in sync when packing moved occupants (e.g. C→A).
-        if (remaps.length > 0) {
-          await Promise.all(
-            remaps.map((r) => Tenant.findByIdAndUpdate(r.tenantId, { bedId: r.toBedId }).exec()),
-          );
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            updated = await Room.findOneAndUpdate(
+              { _id: id, sharingType: oldSharingType },
+              updateData,
+              { returnDocument: 'after', runValidators: true, session },
+            );
+            if (!updated) {
+              throw Object.assign(
+                new Error(
+                  'Room sharing type was changed by another admin. Please reload and try again.',
+                ),
+                { code: 'CONCURRENT_MODIFICATION' },
+              );
+            }
+
+            // Keep Tenant.bedId in sync when packing moved occupants (e.g. C→A).
+            if (remaps.length > 0) {
+              for (const r of remaps) {
+                await Tenant.findByIdAndUpdate(
+                  r.tenantId,
+                  { bedId: r.toBedId },
+                  { session },
+                ).exec();
+              }
+            }
+          });
+        } finally {
+          await session.endSession();
         }
 
         await recomputeFloorTotalRooms(previousFloorId, updated.floorId);
 
         await updated.populate('floor');
+
+        await writeAuditLog({
+          userId: user.sub,
+          action: 'update',
+          resource: 'room',
+          resourceId: id,
+          details: {
+            oldSharingType,
+            newSharingType,
+            remapsCount: remaps.length,
+            updatedFields: Object.keys(body),
+          },
+        });
 
         return c.json({ success: true, data: updated });
       } catch (err: unknown) {
@@ -338,6 +457,13 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
             c,
             e.message ?? 'Cannot reduce sharing type while beds are occupied',
             'BEDS_OCCUPIED_ON_DOWNSIZE',
+          );
+        }
+        if (e?.code === 'CONCURRENT_MODIFICATION') {
+          return conflict(
+            c,
+            'Room sharing type was changed by another admin. Please reload and try again.',
+            'CONCURRENT_MODIFICATION',
           );
         }
         throw err;
@@ -366,6 +492,16 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
     );
   }
 
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'room',
+    resourceId: id,
+    details: {
+      updatedFields: Object.keys(body),
+    },
+  });
+
   return c.json({ success: true, data: room });
 });
 
@@ -373,6 +509,8 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
 router.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid room ID');
+
+  const user = c.get('user');
 
   // Only block if active tenants still occupy this room
   const activeCount = await Tenant.countDocuments({
@@ -398,6 +536,16 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
 
   // Soft-delete skips document middleware; recompute Floor.totalRooms explicitly
   await recomputeFloorTotalRooms((room as { floorId?: unknown }).floorId);
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'room',
+    resourceId: id,
+    details: {
+      roomNumber: (room as { roomNumber?: string }).roomNumber,
+    },
+  });
 
   return c.json({ success: true, data: room });
 });

@@ -4,9 +4,10 @@ import { z } from 'zod';
 import { LeaveApplication } from '../models/leaveApplication.js';
 import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Tenant } from '../models/tenant.js';
+import { Guardian } from '../models/guardian.js';
 import { User } from '../models/user.js';
 import { authGuard } from '../middleware/auth.js';
-import { adminOnly } from '../middleware/roles.js';
+import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 
@@ -93,10 +94,13 @@ const createLeaveSchema = z.strictObject({
 });
 
 // ── Helper: map lean doc to frontend-friendly shape ─────
+// Exposes the full host stay chain (tenant -> user + room -> floor + bedId)
+// so admin list/detail/review render occupancy without extra fetches.
 function mapLeave(doc: Record<string, unknown>) {
   const tenant = doc.tenantId as Record<string, unknown> | undefined;
   const tenantUser = tenant?.userId as Record<string, unknown> | undefined;
   const room = tenant?.roomId as Record<string, unknown> | undefined;
+  const roomFloor = room?.floor as Record<string, unknown> | undefined;
   const approver = doc.approvedBy as Record<string, unknown> | undefined;
 
   return {
@@ -104,6 +108,7 @@ function mapLeave(doc: Record<string, unknown>) {
     tenant: tenant
       ? {
           _id: String(tenant._id ?? ''),
+          bedId: (tenant.bedId as string | undefined) ?? null,
           user: tenantUser
             ? {
                 _id: String(tenantUser._id ?? ''),
@@ -112,7 +117,20 @@ function mapLeave(doc: Record<string, unknown>) {
                 phone: tenantUser.phone,
               }
             : null,
-          room: room ? { _id: String(room._id ?? ''), roomNumber: room.roomNumber } : null,
+          room: room
+            ? {
+                _id: String(room._id ?? ''),
+                roomNumber: room.roomNumber,
+                floor:
+                  roomFloor && typeof roomFloor === 'object' && 'label' in roomFloor
+                    ? {
+                        _id: String(roomFloor._id ?? ''),
+                        label: roomFloor.label,
+                        floorNumber: roomFloor.floorNumber,
+                      }
+                    : null,
+              }
+            : null,
         }
       : null,
     startDate: doc.fromDate,
@@ -121,16 +139,58 @@ function mapLeave(doc: Record<string, unknown>) {
   };
 }
 
+// Shared host-tenancy populate for list, detail, and decision refetches.
+const leaveTenantPopulate = [
+  {
+    path: 'tenantId',
+    populate: { path: 'userId', select: 'name email phone' },
+  },
+  {
+    path: 'tenantId',
+    populate: {
+      path: 'roomId',
+      select: 'roomNumber floor',
+      populate: { path: 'floor', select: 'label floorNumber' },
+    },
+  },
+];
+
 // ── Router ───────────────────────────────────────────────
 // FLAG-leaves: nav couples Leaves to attendanceEnabled; gate API the same way.
 
 const leaves = new Hono();
 leaves.use('*', requireFeature('attendanceEnabled'));
 
-// ── POST /leaves — create leave application ─────────────
+// ── POST /leaves — create leave application (admin or tenant only) ─────
 leaves.post('/', authGuard, zValidator('json', createLeaveSchema), async (c) => {
   const body = c.req.valid('json');
   const authUser = c.get('user');
+
+  if (authUser?.role !== 'admin' && authUser?.role !== 'tenant') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only admins or tenants can create leave applications.',
+        },
+      },
+      403,
+    );
+  }
+
+  if (body.fromDate > body.toDate) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'LEAVE_INVALID_RANGE',
+          message: 'From date must be on or before To date.',
+        },
+      },
+      400,
+    );
+  }
 
   // Validate tenant exists and is active
   const tenant = await Tenant.findById(body.tenantId).lean();
@@ -183,6 +243,21 @@ leaves.post('/', authGuard, zValidator('json', createLeaveSchema), async (c) => 
     ...body,
     status: 'pending',
   });
+
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: authUser.sub,
+      action: 'create',
+      resource: 'leave_application',
+      resourceId: String((leave as unknown as Record<string, unknown>)._id),
+      details: { fromDate: body.fromDate, toDate: body.toDate, reason: body.reason },
+      ip: c.req.header('x-forwarded-for') || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+  } catch {
+    // Non-blocking audit log
+  }
 
   return c.json({ success: true, data: leave }, 201);
 });
@@ -247,14 +322,7 @@ leaves.get('/', authGuard, adminOnly, async (c) => {
       .sort({ createdAt: -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({
-        path: 'tenantId',
-        populate: { path: 'userId', select: 'name email phone' },
-      })
-      .populate({
-        path: 'tenantId',
-        populate: { path: 'roomId', select: 'roomNumber' },
-      })
+      .populate(leaveTenantPopulate)
       .populate('approvedBy', 'name')
       .lean(),
     LeaveApplication.countDocuments(safeFilter(filter)),
@@ -270,7 +338,7 @@ leaves.get('/', authGuard, adminOnly, async (c) => {
 });
 
 // ── GET /leaves/my — tenant's own applications ──────────
-leaves.get('/my', authGuard, async (c) => {
+leaves.get('/my', authGuard, tenantOnly, async (c) => {
   const authUser = c.get('user');
   const { page, limit } = parsePagination(c);
 
@@ -311,18 +379,43 @@ leaves.get('/:id', authGuard, async (c) => {
   if (!id) return badRequest(c, 'Invalid leave ID');
 
   const leave = await LeaveApplication.findById(id)
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'userId', select: 'name email phone' },
-    })
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
-    })
+    .populate(leaveTenantPopulate)
     .populate('approvedBy', 'name')
     .lean();
 
   if (!leave) return notFound(c, 'Leave application');
+
+  const authUser = c.get('user');
+  if (authUser.role === 'tenant') {
+    const tenant = await Tenant.findOne(safeFilter({ userId: authUser.sub })).lean();
+    const leaveTenantId = (leave.tenantId as { _id?: unknown })?._id ?? leave.tenantId;
+    if (!tenant || String((tenant as { _id: unknown })._id) !== String(leaveTenantId)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'You can only view your own leave applications.' },
+        },
+        403,
+      );
+    }
+  } else if (authUser.role === 'guardian') {
+    const leaveTenantId = (leave.tenantId as { _id?: unknown })?._id ?? leave.tenantId;
+    const guardian = await Guardian.findOne(
+      safeFilter({ userId: authUser.sub, tenantId: leaveTenantId }),
+    ).lean();
+    if (!guardian) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: "You can only view your ward's leave applications.",
+          },
+        },
+        403,
+      );
+    }
+  }
 
   return c.json({ success: true, data: mapLeave(leave as unknown as Record<string, unknown>) });
 });
@@ -369,15 +462,24 @@ leaves.post('/:id/cancel', authGuard, async (c) => {
   leave.status = 'cancelled';
   await leave.save();
 
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: authUser.sub,
+      action: 'update',
+      resource: 'leave_application',
+      resourceId: String(leave._id),
+      details: { status: 'cancelled', cancelledBy: authUser.role },
+      ip: c.req.header('x-forwarded-for') || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+  } catch {
+    // Non-blocking audit log
+  }
+
   const updated = await LeaveApplication.findById(id)
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'userId', select: 'name email phone' },
-    })
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
-    })
+    .populate(leaveTenantPopulate)
+    .populate('approvedBy', 'name')
     .lean();
 
   return c.json({
@@ -399,6 +501,21 @@ leaves.delete('/:id', authGuard, adminOnly, async (c) => {
 
   await LeaveApplication.findByIdAndDelete(id);
 
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+      action: 'delete',
+      resource: 'leave_application',
+      resourceId: String(leave._id),
+      details: { fromDate: leave.fromDate, toDate: leave.toDate, status: leave.status },
+      ip: c.req.header('x-forwarded-for') || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+  } catch {
+    // Non-blocking audit log
+  }
+
   return c.json({ success: true, data: { message: 'Leave application deleted' } });
 });
 
@@ -415,6 +532,30 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
     return badRequest(c, `Leave is already ${leave.status}`, 'LEAVE_NOT_PENDING');
   }
 
+  // Re-check overlap at decision time: a sibling pending leave may have been
+  // approved since this one was created (create-time guard is not enough).
+  const clash = await LeaveApplication.findOne(
+    safeFilter({
+      _id: { $ne: leave._id },
+      tenantId: String(leave.tenantId),
+      status: 'approved',
+      $or: [{ fromDate: { $lte: leave.toDate }, toDate: { $gte: leave.fromDate } }],
+    }),
+  ).lean();
+  if (clash) {
+    const clashDoc = clash as unknown as { fromDate?: string; toDate?: string };
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'OVERLAPPING_LEAVE',
+          message: `Tenant already has an approved leave from ${clashDoc.fromDate} to ${clashDoc.toDate}. Reject or cancel one of them first.`,
+        },
+      },
+      409,
+    );
+  }
+
   leave.status = 'approved';
   (leave as unknown as Record<string, unknown>).approvedBy = authUser.sub;
   leave.approvedAt = new Date();
@@ -423,15 +564,23 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
   // Side-effect: mark each leave day as on_leave on the attendance board
   await markAttendanceOnLeave(String(leave.tenantId), leave.fromDate, leave.toDate, authUser.sub);
 
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: authUser.sub,
+      action: 'update',
+      resource: 'leave_application',
+      resourceId: String(leave._id),
+      details: { status: 'approved', fromDate: leave.fromDate, toDate: leave.toDate },
+      ip: c.req.header('x-forwarded-for') || undefined,
+      userAgent: c.req.header('user-agent') || undefined,
+    });
+  } catch {
+    // Non-blocking audit log
+  }
+
   const updated = await LeaveApplication.findById(id)
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'userId', select: 'name email phone' },
-    })
-    .populate({
-      path: 'tenantId',
-      populate: { path: 'roomId', select: 'roomNumber' },
-    })
+    .populate(leaveTenantPopulate)
     .populate('approvedBy', 'name')
     .lean();
 
@@ -472,15 +621,23 @@ leaves.put(
 
     await leave.save();
 
+    try {
+      const { writeAuditLog } = await import('../lib/write-audit-log.js');
+      await writeAuditLog({
+        userId: authUser.sub,
+        action: 'update',
+        resource: 'leave_application',
+        resourceId: String(leave._id),
+        details: { status: 'rejected', adminNotes: body.adminNotes },
+        ip: c.req.header('x-forwarded-for') || undefined,
+        userAgent: c.req.header('user-agent') || undefined,
+      });
+    } catch {
+      // Non-blocking audit log
+    }
+
     const updated = await LeaveApplication.findById(id)
-      .populate({
-        path: 'tenantId',
-        populate: { path: 'userId', select: 'name email phone' },
-      })
-      .populate({
-        path: 'tenantId',
-        populate: { path: 'roomId', select: 'roomNumber' },
-      })
+      .populate(leaveTenantPopulate)
       .populate('approvedBy', 'name')
       .lean();
 

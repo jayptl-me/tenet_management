@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, CalendarClock } from 'lucide-react';
+import { Plus, CalendarClock, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -10,15 +10,22 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useRouter } from 'next/navigation';
 import { parseApiError } from '@/lib/errorParser';
+import { tenantLabel } from '@/lib/resource-select-presets';
 
 interface LeaveRow {
   _id: string;
-  tenant?: { user?: { name: string }; room?: { roomNumber: string } };
+  tenant?: {
+    _id?: string;
+    bedId?: string | null;
+    user?: { name: string };
+    room?: { roomNumber: string; floor?: { label?: string } | null };
+  };
   startDate: string;
   endDate: string;
   reason?: string;
@@ -26,15 +33,36 @@ interface LeaveRow {
   createdAt: string;
 }
 
+function durationDays(startDate: string, endDate: string): number {
+  try {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  } catch {
+    return 0;
+  }
+}
+
+function sanitizeCSVValue(val: unknown): string {
+  if (val === null || val === undefined) return '""';
+  let str = String(val);
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 export default function LeavesPage() {
   const router = useRouter();
   const [leaves, setLeaves] = useState<LeaveRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [tenantFilter, setTenantFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<LeaveRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -48,6 +76,7 @@ export default function LeavesPage() {
       params.set('limit', String(perPage));
       if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
+      if (tenantFilter) params.set('tenantId', tenantFilter);
 
       const res = await api.get(`leaves?${params.toString()}`).json<{
         success: boolean;
@@ -61,7 +90,7 @@ export default function LeavesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, statusFilter]);
+  }, [page, perPage, search, statusFilter, tenantFilter]);
 
   useEffect(() => {
     fetchLeaves();
@@ -78,6 +107,74 @@ export default function LeavesPage() {
       setError((await parseApiError(err)).message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '1000');
+      if (search.trim()) params.set('search', search.trim());
+      if (statusFilter) params.set('status', statusFilter);
+      if (tenantFilter) params.set('tenantId', tenantFilter);
+
+      const res = await api.get(`leaves?${params.toString()}`).json<{
+        success: boolean;
+        data: LeaveRow[];
+      }>();
+
+      const rows = res.data ?? [];
+      const headers = [
+        'ID',
+        'Tenant',
+        'Room',
+        'Bed',
+        'Floor',
+        'Start Date',
+        'End Date',
+        'Duration (days)',
+        'Reason',
+        'Status',
+        'Created At',
+      ];
+
+      const csvLines = [
+        headers.map(sanitizeCSVValue).join(','),
+        ...rows.map((row) =>
+          [
+            row._id,
+            row.tenant?.user?.name ?? '',
+            row.tenant?.room?.roomNumber ?? '',
+            row.tenant?.bedId ?? '',
+            row.tenant?.room?.floor?.label ?? '',
+            row.startDate,
+            row.endDate,
+            durationDays(row.startDate, row.endDate),
+            row.reason ?? '',
+            row.status,
+            row.createdAt,
+          ]
+            .map(sanitizeCSVValue)
+            .join(','),
+        ),
+      ];
+
+      const csvContent = csvLines.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `leaves-export-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to export leave applications');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -104,6 +201,13 @@ export default function LeavesPage() {
       },
     },
     {
+      header: 'Days',
+      accessor: (row) => {
+        const n = durationDays(row.startDate, row.endDate);
+        return `${n} day${n !== 1 ? 's' : ''}`;
+      },
+    },
+    {
       header: 'Reason',
       accessor: (row) => (
         <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
@@ -126,7 +230,6 @@ export default function LeavesPage() {
         <TableActions
           onView={() => router.push(`/leaves/${row._id}`)}
           onEdit={() => router.push(`/leaves/${row._id}/edit`)}
-          showEdit
           showDelete={row.status === 'pending'}
           onDelete={row.status === 'pending' ? () => setDeleteTarget(row) : undefined}
         />
@@ -141,10 +244,21 @@ export default function LeavesPage() {
         title="Leave Applications"
         description="Approve or reject tenant leave requests"
         action={
-          <Button onClick={() => router.push('/leaves/new')}>
-            <Plus className="h-4 w-4" />
-            New Leave
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              loading={isExporting}
+              disabled={isExporting}
+              onClick={handleExportCsv}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+            <Button onClick={() => router.push('/leaves/new')}>
+              <Plus className="h-4 w-4" />
+              New Leave
+            </Button>
+          </div>
         }
       />
       <ErrorBanner message={error} />
@@ -157,6 +271,19 @@ export default function LeavesPage() {
             setPage(1);
           }}
           className="max-w-xs"
+        />
+        <ResourceSelect
+          endpoint="tenants"
+          value={tenantFilter}
+          onChange={(val) => {
+            setTenantFilter(val);
+            setPage(1);
+          }}
+          placeholder="All Tenants"
+          valueKey="_id"
+          labelKey={tenantLabel}
+          dataPath="data"
+          className="max-w-[240px]"
         />
         <Select
           options={[
@@ -223,6 +350,9 @@ export default function LeavesPage() {
                   month: 'short',
                   year: 'numeric',
                 })}
+              </span>
+              <span>
+                {row.tenant?.room?.roomNumber ? `Room ${row.tenant.room.roomNumber}` : ''}
               </span>
             </div>
             <div className="flex items-center gap-1 pt-1">

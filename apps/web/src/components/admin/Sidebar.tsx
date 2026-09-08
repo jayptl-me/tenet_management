@@ -2,7 +2,8 @@
 
 import { clsx } from 'clsx';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -233,6 +234,7 @@ function BadgePill({ count }: { count: number }) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { data: appConfig } = useAppConfigPublic();
@@ -363,8 +365,14 @@ export function Sidebar() {
       .filter((section) => section.items.length > 0);
   }, [searchQuery, features, liveBadges]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post('auth/logout').json();
+    } catch {
+      // Best-effort server token revocation
+    }
     logout();
+    router.push('/login');
   };
 
   // ── Render a single nav item ─────────────────────────
@@ -374,11 +382,6 @@ export function Sidebar() {
 
     const linkContent = (
       <>
-        {/* Active indicator bar */}
-        {isActive && (
-          <span className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[color:var(--color-brand-500)]" />
-        )}
-
         <span
           className={clsx(
             'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
@@ -444,7 +447,7 @@ export function Sidebar() {
       )}
     >
       {/* Brand */}
-      <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-5 py-4 backdrop-blur-[var(--glass-blur)]">
+      <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4">
         <Link href="/dashboard" className="group flex items-center gap-2.5">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
             <span className="text-sm font-semibold tracking-tight text-white">A</span>
@@ -564,7 +567,7 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-3 py-3 backdrop-blur-[var(--glass-blur)]">
+      <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-3 py-3">
         {/* Collapse toggle */}
         <button
           onClick={toggleCollapsed}

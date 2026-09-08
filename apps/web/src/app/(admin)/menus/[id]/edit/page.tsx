@@ -5,10 +5,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Sun, Moon, Sunset } from 'lucide-react';
+import { Plus, Trash2, Sun, Moon, Sunset, Cookie } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
@@ -27,6 +28,7 @@ const mealItemSchema = z.object({
 const mealCollectionSchema = z.object({
   breakfast: z.array(mealItemSchema),
   lunch: z.array(mealItemSchema),
+  snacks: z.array(mealItemSchema).optional().default([]),
   dinner: z.array(mealItemSchema),
 });
 
@@ -42,6 +44,7 @@ type FormData = z.infer<typeof formSchema>;
 const MEAL_SECTIONS = [
   { key: 'breakfast' as const, label: 'Breakfast', description: 'Morning meal items', icon: Sun },
   { key: 'lunch' as const, label: 'Lunch', description: 'Midday meal items', icon: Sunset },
+  { key: 'snacks' as const, label: 'Snacks', description: 'Evening snack items', icon: Cookie },
   { key: 'dinner' as const, label: 'Dinner', description: 'Evening meal items', icon: Moon },
 ];
 
@@ -53,7 +56,7 @@ export default function EditMenuPage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [itemCounts, setItemCounts] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
+  const [itemCounts, setItemCounts] = useState({ breakfast: 0, lunch: 0, snacks: 0, dinner: 0 });
 
   const {
     register,
@@ -68,6 +71,7 @@ export default function EditMenuPage() {
       meals: {
         breakfast: [{ name: '', description: '', category: '' }],
         lunch: [{ name: '', description: '', category: '' }],
+        snacks: [{ name: '', description: '', category: '' }],
         dinner: [{ name: '', description: '', category: '' }],
       },
     },
@@ -75,17 +79,20 @@ export default function EditMenuPage() {
 
   const breakfastArray = useFieldArray({ control, name: 'meals.breakfast' });
   const lunchArray = useFieldArray({ control, name: 'meals.lunch' });
+  const snacksArray = useFieldArray({ control, name: 'meals.snacks' });
   const dinnerArray = useFieldArray({ control, name: 'meals.dinner' });
 
   const fieldArrays = {
     breakfast: breakfastArray,
     lunch: lunchArray,
+    snacks: snacksArray,
     dinner: dinnerArray,
   };
 
   // Watch meal names for dynamic summary count
   const breakfastItems = useWatch({ control, name: 'meals.breakfast' });
   const lunchItems = useWatch({ control, name: 'meals.lunch' });
+  const snacksItems = useWatch({ control, name: 'meals.snacks' });
   const dinnerItems = useWatch({ control, name: 'meals.dinner' });
 
   // Update item counts when meals change
@@ -93,9 +100,10 @@ export default function EditMenuPage() {
     setItemCounts({
       breakfast: breakfastItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
       lunch: lunchItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
+      snacks: snacksItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
       dinner: dinnerItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
     });
-  }, [breakfastItems, lunchItems, dinnerItems]);
+  }, [breakfastItems, lunchItems, snacksItems, dinnerItems]);
 
   useEffect(() => {
     if (!id) return;
@@ -108,6 +116,7 @@ export default function EditMenuPage() {
           meals: {
             breakfast: { name: string; description?: string }[];
             lunch: { name: string; description?: string }[];
+            snacks?: { name: string; description?: string }[];
             dinner: { name: string; description?: string }[];
           };
         };
@@ -121,13 +130,14 @@ export default function EditMenuPage() {
               ? d.meals.breakfast
               : [{ name: '', description: '' }],
             lunch: d.meals?.lunch?.length ? d.meals.lunch : [{ name: '', description: '' }],
+            snacks: d.meals?.snacks?.length ? d.meals.snacks : [{ name: '', description: '' }],
             dinner: d.meals?.dinner?.length ? d.meals.dinner : [{ name: '', description: '' }],
           },
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load menu');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -136,7 +146,12 @@ export default function EditMenuPage() {
     setSubmitError('');
 
     // Validate all items have names
-    const allItems = [...data.meals.breakfast, ...data.meals.lunch, ...data.meals.dinner];
+    const allItems = [
+      ...data.meals.breakfast,
+      ...data.meals.lunch,
+      ...(data.meals.snacks ?? []),
+      ...data.meals.dinner,
+    ];
 
     if (allItems.every((item) => !item.name.trim())) {
       setSubmitError('At least one meal item with a name is required.');
@@ -168,17 +183,25 @@ export default function EditMenuPage() {
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
               ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
+          snacks: (data.meals.snacks ?? [])
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
+            })),
         },
       };
 
       await api.put(`menus/${id}`, { json: payload }).json();
       router.push('/menus');
-    } catch {
-      setSubmitError('Failed to update menu');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
-  const totalItems = itemCounts.breakfast + itemCounts.lunch + itemCounts.dinner;
+  const totalItems =
+    itemCounts.breakfast + itemCounts.lunch + itemCounts.snacks + itemCounts.dinner;
 
   return (
     <FormPage
@@ -202,9 +225,8 @@ export default function EditMenuPage() {
       >
         <FormSection title="Date" description="Day this menu applies to">
           <FormGrid cols={1}>
-            <Input
+            <DatePicker
               label="Date"
-              type="date"
               error={(errors as Record<string, { message?: string }>).date?.message}
               {...register('date')}
               required
@@ -296,6 +318,10 @@ export default function EditMenuPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
               <Sunset className="h-3.5 w-3.5 text-[color:var(--color-brand-500)]" />
               {itemCounts.lunch} lunch items
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
+              <Cookie className="h-3.5 w-3.5 text-[color:var(--color-warning-600)]" />
+              {itemCounts.snacks} snacks items
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
               <Moon className="h-3.5 w-3.5 text-[color:var(--color-info-500)]" />

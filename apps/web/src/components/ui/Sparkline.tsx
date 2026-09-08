@@ -15,18 +15,22 @@ export function Sparkline({
   showFill = true,
   fillOpacity = 0.15,
   className,
+  trend = 'auto',
 }: {
   data: number[];
-  width?: number;
+  width?: number | string;
   height?: number;
   color?: string;
   strokeWidth?: number;
   showFill?: boolean;
   fillOpacity?: number;
   className?: string;
+  /** Explicit trend override. Defaults to auto (downtrend renders danger). */
+  trend?: 'up' | 'down' | 'auto';
 }) {
   const reactId = useId();
   const gradientId = `sparkline-grad-${reactId.replace(/:/g, '-')}`;
+  const baseW = typeof width === 'number' ? width : 120;
 
   if (data.length < 2) {
     return (
@@ -48,7 +52,7 @@ export function Sparkline({
   const max = Math.max(...data);
   const range = max - min || 1;
   const padX = 1;
-  const usableW = width - padX * 2;
+  const usableW = baseW - padX * 2;
   const usableH = height - 4;
   const stepX = usableW / (data.length - 1);
 
@@ -59,9 +63,12 @@ export function Sparkline({
 
   const lastPoint = data[data.length - 1];
   const firstPoint = data[0];
-  const trend = lastPoint >= firstPoint ? color : 'var(--color-danger-500)';
-  const lineColor = color === 'var(--color-brand-500)' ? trend : color;
-  const fillColor = color === 'var(--color-brand-500)' ? trend : color;
+  const isDown = lastPoint < firstPoint;
+  const autoTrendColor = isDown ? 'var(--color-danger-500)' : color;
+  const resolvedTrendColor =
+    trend === 'down' ? 'var(--color-danger-500)' : trend === 'up' ? color : autoTrendColor;
+  const lineColor = color === 'var(--color-brand-500)' ? resolvedTrendColor : color;
+  const fillColor = color === 'var(--color-brand-500)' ? resolvedTrendColor : color;
 
   // Fill area: line from leftmost point through all data points → bottom-right → bottom-left → close
   const fillPathD = [
@@ -76,7 +83,7 @@ export function Sparkline({
     <svg
       width={width}
       height={height}
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`0 0 ${baseW} ${height}`}
       className={className}
       preserveAspectRatio="none"
       role="img"

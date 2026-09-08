@@ -1,5 +1,5 @@
 // ── Notice Board ───────────────────────────────────────
-export type NoticeTargetType = 'all' | 'floor' | 'room';
+export type NoticeTargetType = 'all' | 'floor' | 'room' | 'individual';
 
 export interface INoticePost {
   id: string;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -271,6 +272,23 @@ class _LeaveCreateSheetState extends ConsumerState<_LeaveCreateSheet> {
                   );
                   if (d != null) setState(() => _to = d);
                 },
+              ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  (() {
+                    final days = _to.difference(_from).inDays + 1;
+                    return days <= 0
+                        ? 'End date must be on or after start date'
+                        : '$days day${days == 1 ? '' : 's'} inclusive';
+                  })(),
+                  style: const TextStyle(
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextFormField(

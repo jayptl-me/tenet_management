@@ -6,6 +6,7 @@ import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -107,8 +108,8 @@ export default function NewNoticePage() {
     try {
       await api.post('notices', { json: payload }).json<{ success: boolean }>();
       router.push('/notices');
-    } catch {
-      setSubmitError('Failed to post notice. Please try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -219,7 +220,7 @@ export default function NewNoticePage() {
                         className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
                         title="Remove"
                       >
-                        <span className="max-w-[12rem] truncate font-[family:var(--font-mono)]">
+                        <span className="max-w-[12rem] truncate font-mono">
                           {id}
                         </span>
                         <span aria-hidden="true">x</span>

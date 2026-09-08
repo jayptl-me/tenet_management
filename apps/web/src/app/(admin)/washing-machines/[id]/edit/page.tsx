@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -25,7 +26,10 @@ const schema = z.object({
     (v) => (v === '' || v === null || v === undefined ? undefined : v),
     z.coerce.number().int().min(10).max(180).optional(),
   ),
-  status: z.enum(['available', 'under_maintenance', 'down']).optional(),
+  status: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? undefined : v),
+    z.enum(['available', 'under_maintenance', 'down']).optional(),
+  ),
   notes: z.string().max(500).optional(),
 });
 
@@ -35,6 +39,13 @@ const STATUS_OPTIONS = [
   { value: 'available', label: 'Available' },
   { value: 'under_maintenance', label: 'Under Maintenance' },
   { value: 'down', label: 'Down' },
+];
+
+const STATUS_OPTIONS_IN_USE = [
+  { value: '', label: 'Keep current status (in use)' },
+  { value: 'available', label: 'Available (releases claim)' },
+  { value: 'under_maintenance', label: 'Under Maintenance (releases claim)' },
+  { value: 'down', label: 'Down (releases claim)' },
 ];
 
 interface MachineDetail {
@@ -79,13 +90,16 @@ export default function EditWashingMachinePage() {
           label: res.data.label || '',
           machineNumber: res.data.machineNumber,
           timerDuration: res.data.timerDuration,
-          status: res.data.status as FormData['status'],
+          // in_use is claim state, not an editable status: leave unset so the
+          // admin consciously picks a status (which releases the claim).
+          status:
+            res.data.status === 'in_use' ? undefined : (res.data.status as FormData['status']),
           notes: res.data.notes || '',
         });
         setIsLoading(false);
       })
-      .catch(() => {
-        setSubmitError('Failed to load washing machine');
+      .catch(async (err) => {
+        setSubmitError((await parseApiError(err)).message);
         setIsLoading(false);
       });
   }, [id, reset]);
@@ -93,10 +107,13 @@ export default function EditWashingMachinePage() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      await api.put(`washing-machines/${id}`, { json: data }).json();
+      const payload: Record<string, unknown> = { ...data };
+      // Untouched status while in use must not be sent (API rejects in_use).
+      if (payload.status === undefined) delete payload.status;
+      await api.put(`washing-machines/${id}`, { json: payload }).json();
       router.push('/washing-machines');
-    } catch {
-      setSubmitError('Failed to update washing machine');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
@@ -145,8 +162,8 @@ export default function EditWashingMachinePage() {
 
         {isInUse && (
           <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] px-4 py-3 text-sm font-medium text-[color:var(--color-warning-700)]">
-            Machine is currently in use. Changing status to available/under_maintenance/down will
-            release the current claim.
+            Machine is currently in use. Leave status untouched to keep the claim, or pick a status
+            below to release it.
           </div>
         )}
 
@@ -188,8 +205,9 @@ export default function EditWashingMachinePage() {
               />
               <Select
                 label="Status"
-                options={STATUS_OPTIONS}
+                options={isInUse ? STATUS_OPTIONS_IN_USE : STATUS_OPTIONS}
                 error={err.status?.message}
+                helperText={isInUse ? 'Leave as-is to keep the current claim.' : undefined}
                 {...register('status')}
               />
             </FormGrid>

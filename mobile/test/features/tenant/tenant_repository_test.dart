@@ -223,4 +223,73 @@ void main() {
       expect(menus.first['specialItem'], 'Gulab Jamun');
     });
   });
+
+  group('TenantRepository Notifications Flow', () {
+    test('unreadNotificationCount fetches count from unread-count endpoint', () async {
+      dioAdapter.onGet(
+        '/notifications/unread-count',
+        (server) => server.reply(200, {
+          'success': true,
+          'data': {'count': 4},
+        }),
+      );
+
+      final count = await repository.unreadNotificationCount();
+      expect(count, 4);
+    });
+
+    test('myNotifications fetches notification list and derives isRead', () async {
+      dioAdapter.onGet(
+        '/notifications',
+        (server) => server.reply(200, {
+          'success': true,
+          'data': [
+            {
+              'id': 'notif-1',
+              'title': 'Emergency Fire Drill',
+              'body': 'Evacuate via stairs at 4 PM',
+              'type': 'emergency',
+              'unreadBy': ['user-123'],
+              'isRead': false,
+            },
+            {
+              'id': 'notif-2',
+              'title': 'Maintenance update',
+              'body': 'Water pipeline repair complete',
+              'type': 'service_update',
+              'unreadBy': [],
+              'isRead': true,
+            }
+          ],
+        }),
+      );
+
+      final list = await repository.myNotifications(userId: 'user-123');
+      expect(list.length, 2);
+      expect(list[0]['id'], 'notif-1');
+      expect(list[0]['isRead'], false);
+      expect(list[1]['id'], 'notif-2');
+      expect(list[1]['isRead'], true);
+    });
+
+    test('markNotificationRead sends PATCH to read endpoint', () async {
+      dioAdapter.onPatch(
+        '/notifications/notif-1/read',
+        (server) => server.reply(200, {'success': true}),
+        data: {},
+      );
+
+      await expectLater(repository.markNotificationRead('notif-1'), completes);
+    });
+
+    test('markAllNotificationsRead sends PATCH to read-all endpoint', () async {
+      dioAdapter.onPatch(
+        '/notifications/read-all',
+        (server) => server.reply(200, {'success': true}),
+        data: {},
+      );
+
+      await expectLater(repository.markAllNotificationsRead(), completes);
+    });
+  });
 }

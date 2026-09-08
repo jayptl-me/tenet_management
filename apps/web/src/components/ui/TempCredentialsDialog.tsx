@@ -57,7 +57,7 @@ export function TempCredentialsDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
           />
 

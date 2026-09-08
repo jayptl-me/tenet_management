@@ -6,6 +6,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
@@ -41,12 +42,11 @@ export default function NewServicePage() {
       .get('app-config')
       .json<{ success: boolean; data: IAppConfig }>()
       .then((res) => {
-        const defs = (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor !== false);
-        // Prefer per-floor amenities; if none flagged, use all definitions
-        const floorDefs = (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor) ?? [];
-        const source = floorDefs.length > 0 ? floorDefs : defs;
+        // Strict isPerFloor === true mirror of the API guard: room-only
+        // amenities are rejected server-side with INVALID_SERVICE_TYPE.
+        const floorDefs = (res.data.amenityDefinitions ?? []).filter((d) => d.isPerFloor === true);
         setTypeOptions(
-          source.map((d) => ({
+          floorDefs.map((d) => ({
             value: d.key,
             label: d.label || d.key.replace(/_/g, ' '),
           })),
@@ -77,10 +77,8 @@ export default function NewServicePage() {
     try {
       await api.post('services', { json: data }).json<{ success: boolean }>();
       router.push('/services');
-    } catch {
-      setSubmitError(
-        'Failed to create service. Type must match an amenity definition and floor must be unique per type.',
-      );
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 

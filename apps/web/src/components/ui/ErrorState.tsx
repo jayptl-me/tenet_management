@@ -25,7 +25,7 @@ export function ErrorState({ title, description, errorCode, onRetry, className }
       initial="hidden"
       animate="visible"
       className={clsx(
-        'rounded-xl border border-l-[4px] border-[color:var(--color-danger-200)] border-l-[color:var(--color-danger-500)] bg-[color:var(--color-danger-50)] px-6 py-8 shadow-[var(--shadow-card)]',
+        'rounded-xl border border-[color:var(--color-danger-400)] bg-[color:var(--color-danger-50)] px-6 py-8 shadow-[var(--shadow-card)]',
         className,
       )}
     >

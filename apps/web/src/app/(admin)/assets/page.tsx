@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Wrench } from 'lucide-react';
+import { Plus, Wrench, Boxes, AlertTriangle, CalendarClock, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -14,19 +15,42 @@ import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { StatCard } from '@/components/ui/StatCard';
 import { LowStockBanner } from '@/components/ui/LowStockBanner';
 import { ServiceDueBanner } from '@/components/ui/ServiceDueBanner';
+import {
+  AssetCategoryIcon,
+  AssetStockMeter,
+  assetCategoryLabel,
+  isLowStock,
+} from '@/components/ui/AssetVisuals';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
+
+interface PopulatedRef {
+  _id?: string;
+  label?: string;
+  floorNumber?: number;
+  roomNumber?: string;
+}
 
 interface AssetRow {
   _id: string;
   name: string;
   category: string;
   location?: string;
+  floorId?: PopulatedRef | string | null;
+  roomId?: PopulatedRef | string | null;
   quantity?: number;
+  lowStockThreshold?: number;
+  nextServiceDate?: string;
   status: string;
   createdAt: string;
+}
+
+function floorText(floor: AssetRow['floorId']): string | null {
+  if (!floor || typeof floor === 'string') return null;
+  return floor.label ?? (floor.floorNumber != null ? `Floor ${floor.floorNumber}` : null);
 }
 
 export default function AssetsPage() {
@@ -38,21 +62,74 @@ export default function AssetsPage() {
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AssetRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [lowStockIds, setLowStockIds] = useState<Set<string> | null>(null);
-  const [serviceDueIds, setServiceDueIds] = useState<Set<string> | null>(null);
+  // Alert modes fetch the dedicated server endpoints (full sets) instead of
+  // intersecting IDs with the current page, so counts and pagination are exact.
+  const [alertMode, setAlertMode] = useState<'all' | 'low' | 'due'>('all');
+  // Cached full alert sets double as StatCard counts (single fetch each).
+  const [lowStockRows, setLowStockRows] = useState<AssetRow[] | null>(null);
+  const [serviceDueRows, setServiceDueRows] = useState<AssetRow[] | null>(null);
+  const [retiredTotal, setRetiredTotal] = useState(0);
+
+  const matchesFilters = useCallback(
+    (row: AssetRow) => {
+      if (
+        search &&
+        !`${row.name ?? ''} ${row.location ?? ''}`.toLowerCase().includes(search.toLowerCase())
+      ) {
+        return false;
+      }
+      if (statusFilter && row.status !== statusFilter) return false;
+      if (categoryFilter && row.category !== categoryFilter) return false;
+      return true;
+    },
+    [search, statusFilter, categoryFilter],
+  );
+
+  const fetchAlertSets = useCallback(async () => {
+    try {
+      const [low, due, retired] = await Promise.all([
+        api.get('assets/low-stock').json<{ success: boolean; data: AssetRow[] }>(),
+        api.get('assets/service-due').json<{ success: boolean; data: AssetRow[] }>(),
+        api
+          .get('assets?status=retired&limit=1')
+          .json<{ success: boolean; meta: { total: number } }>(),
+      ]);
+      setLowStockRows(low.data ?? []);
+      setServiceDueRows(due.data ?? []);
+      setRetiredTotal(retired.meta?.total ?? 0);
+    } catch {
+      // StatCards fall back to dashes; banners still fetch on their own.
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlertSets();
+  }, [fetchAlertSets]);
 
   const fetchAssets = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
+      if (alertMode !== 'all') {
+        const endpoint = alertMode === 'low' ? 'assets/low-stock' : 'assets/service-due';
+        const res = await api.get(endpoint).json<{ success: boolean; data: AssetRow[] }>();
+        if (alertMode === 'low') setLowStockRows(res.data ?? []);
+        else setServiceDueRows(res.data ?? []);
+        const filtered = (res.data ?? []).filter(matchesFilters);
+        setAssets(filtered);
+        setTotal(filtered.length);
+        return;
+      }
       const params = new URLSearchParams();
       params.set('page', String(page));
       params.set('limit', String(perPage));
       if (search) params.set('search', search);
       if (statusFilter) params.set('status', statusFilter);
+      if (categoryFilter) params.set('category', categoryFilter);
 
       const res = await api.get(`assets?${params.toString()}`).json<{
         success: boolean;
@@ -61,59 +138,31 @@ export default function AssetsPage() {
       }>();
       setAssets(res.data);
       setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load assets');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, statusFilter]);
+  }, [page, perPage, search, statusFilter, categoryFilter, alertMode, matchesFilters]);
 
   useEffect(() => {
     fetchAssets();
   }, [fetchAssets]);
 
   const handleFilterLowStock = useCallback(async () => {
-    if (lowStockIds) {
-      setLowStockIds(null);
-      return;
-    }
-    try {
-      const res = await api.get('assets/low-stock').json<{
-        success: boolean;
-        data: { _id: string }[];
-      }>();
-      setLowStockIds(new Set((res.data ?? []).map((item) => item._id)));
-    } catch {
-      toast.error('Failed to load low-stock assets');
-    }
-  }, [lowStockIds]);
+    setAlertMode((mode) => (mode === 'low' ? 'all' : 'low'));
+    setPage(1);
+  }, []);
 
   const handleFilterServiceDue = useCallback(async () => {
-    if (serviceDueIds) {
-      setServiceDueIds(null);
-      return;
-    }
-    try {
-      const res = await api.get('assets/service-due').json<{
-        success: boolean;
-        data: { _id: string }[];
-      }>();
-      setServiceDueIds(new Set((res.data ?? []).map((item) => item._id)));
-    } catch {
-      toast.error('Failed to load assets due for service');
-    }
-  }, [serviceDueIds]);
+    setAlertMode((mode) => (mode === 'due' ? 'all' : 'due'));
+    setPage(1);
+  }, []);
 
   const displayedAssets = useMemo(() => {
-    let filtered = assets;
-    if (lowStockIds) {
-      filtered = filtered.filter((a) => lowStockIds.has(a._id));
-    }
-    if (serviceDueIds) {
-      filtered = filtered.filter((a) => serviceDueIds.has(a._id));
-    }
-    return filtered;
-  }, [assets, lowStockIds, serviceDueIds]);
+    if (alertMode === 'all') return assets;
+    return assets.slice((page - 1) * perPage, page * perPage);
+  }, [assets, alertMode, page, perPage]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -123,9 +172,11 @@ export default function AssetsPage() {
       setDeleteTarget(null);
       toast.success('Asset retired');
       fetchAssets();
-    } catch {
-      setError('Failed to retire asset');
-      toast.error('Failed to retire asset');
+      fetchAlertSets();
+    } catch (err) {
+      const message = (await parseApiError(err)).message;
+      setError(message);
+      toast.error(message);
     } finally {
       setDeleting(false);
     }
@@ -133,22 +184,57 @@ export default function AssetsPage() {
 
   const columns: DataTableColumn<AssetRow>[] = [
     {
-      header: 'Name',
+      header: 'Asset',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.name}</span>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] [&_svg]:h-4 [&_svg]:w-4">
+            <AssetCategoryIcon category={row.category} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-[color:var(--color-text-primary)]">
+              {row.name}
+            </span>
+            <span className="block text-xs font-medium text-[color:var(--color-text-muted)]">
+              {assetCategoryLabel(row.category)}
+            </span>
+          </span>
+        </span>
       ),
     },
     {
-      header: 'Category',
-      accessor: (row) => <span className="capitalize">{row.category}</span>,
+      header: 'Placement',
+      accessor: (row) => {
+        const floor = floorText(row.floorId);
+        const room =
+          row.roomId && typeof row.roomId === 'object' ? (row.roomId.roomNumber ?? null) : null;
+        if (!floor && !room) return <span className="text-[color:var(--color-text-muted)]">—</span>;
+        return (
+          <span className="text-[13px] font-medium text-[color:var(--color-text-secondary)]">
+            {[floor, room ? `Room ${room}` : null].filter(Boolean).join(' · ')}
+          </span>
+        );
+      },
     },
     {
       header: 'Location',
       accessor: (row) => row.location ?? '—',
     },
     {
-      header: 'Qty',
-      accessor: (row) => row.quantity ?? '—',
+      header: 'Stock',
+      accessor: (row) => {
+        const low = isLowStock(row.quantity, row.lowStockThreshold);
+        return (
+          <div className="flex min-w-[140px] items-center gap-2">
+            <span className="font-semibold tabular-nums">{row.quantity ?? '—'}</span>
+            {low && <StatusBadge variant="warning" label="Low" />}
+            <AssetStockMeter
+              quantity={row.quantity}
+              threshold={row.lowStockThreshold}
+              className="hidden w-24 xl:block"
+            />
+          </div>
+        );
+      },
     },
     {
       header: 'Status',
@@ -185,31 +271,51 @@ export default function AssetsPage() {
         }
       />
       <ErrorBanner message={error} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total assets"
+          value={total}
+          icon={<Boxes className="h-4 w-4" />}
+          variant="default"
+        />
+        <StatCard
+          title="Low stock"
+          value={lowStockRows ? lowStockRows.length : '—'}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          variant="warning"
+          onClick={handleFilterLowStock}
+        />
+        <StatCard
+          title="Service due (30d)"
+          value={serviceDueRows ? serviceDueRows.length : '—'}
+          icon={<CalendarClock className="h-4 w-4" />}
+          variant="brand"
+          onClick={handleFilterServiceDue}
+        />
+        <StatCard
+          title="Retired"
+          value={lowStockRows && serviceDueRows ? retiredTotal : '—'}
+          icon={<Archive className="h-4 w-4" />}
+          variant="default"
+        />
+      </div>
       <LowStockBanner onFilterLowStock={handleFilterLowStock} />
       <ServiceDueBanner onFilterServiceDue={handleFilterServiceDue} />
-      {lowStockIds && (
+      {alertMode !== 'all' && (
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
           <span className="font-semibold text-[color:var(--color-text-secondary)]">
-            Showing low-stock assets only ({displayedAssets.length} on this page)
+            {alertMode === 'low'
+              ? `Showing low-stock assets only (${total} total)`
+              : `Showing assets due for service (${total} total)`}
           </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setLowStockIds(null)}>
-            Clear filter
-          </Button>
-        </div>
-      )}
-      {serviceDueIds && (
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
-          <span className="font-semibold text-[color:var(--color-text-secondary)]">
-            Showing assets due for service ({displayedAssets.length} on this page)
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setServiceDueIds(null)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setAlertMode('all')}>
             Clear filter
           </Button>
         </div>
       )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
-          placeholder="Search by name..."
+          placeholder="Search by name, location, or notes..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -231,7 +337,23 @@ export default function AssetsPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[180px]"
+          className="w-full sm:w-[210px]"
+        />
+        <Select
+          options={[
+            { value: '', label: 'All Categories' },
+            { value: 'furniture', label: 'Furniture' },
+            { value: 'appliance', label: 'Appliance' },
+            { value: 'electronics', label: 'Electronics' },
+            { value: 'cleaning', label: 'Cleaning' },
+            { value: 'other', label: 'Other' },
+          ]}
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+          className="w-full sm:w-[190px]"
         />
       </div>
       <DataTable
@@ -243,7 +365,7 @@ export default function AssetsPage() {
         pagination={{
           page,
           perPage,
-          total: lowStockIds || serviceDueIds ? displayedAssets.length : total,
+          total,
           onPageChange: setPage,
           onPerPageChange: (pp) => {
             setPerPage(pp);
@@ -253,19 +375,18 @@ export default function AssetsPage() {
         emptyState={
           <EmptyState
             icon={<Wrench className="h-12 w-12" />}
-            title={lowStockIds || serviceDueIds ? 'No matching assets on this page' : 'No assets yet'}
+            title={alertMode !== 'all' ? 'No matching assets' : 'No assets yet'}
             description={
-              lowStockIds || serviceDueIds
-                ? 'Try another page or clear active filters'
+              alertMode !== 'all'
+                ? 'Try clearing the active filter'
                 : 'Add your first asset to start tracking equipment'
             }
             action={
-              lowStockIds || serviceDueIds
+              alertMode !== 'all'
                 ? {
                     label: 'Clear filter',
                     onClick: () => {
-                      setLowStockIds(null);
-                      setServiceDueIds(null);
+                      setAlertMode('all');
                     },
                   }
                 : { label: 'Add Asset', onClick: () => router.push('/assets/new') }
@@ -274,17 +395,22 @@ export default function AssetsPage() {
         }
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-                {row.name}
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[color:var(--color-text-primary)]">
+                <AssetCategoryIcon
+                  category={row.category}
+                  className="h-4 w-4 shrink-0 text-[color:var(--color-text-muted)]"
+                />
+                <span className="truncate">{row.name}</span>
               </span>
               <StatusBadge
                 variant={statusToVariant(row.status)}
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
+            <AssetStockMeter quantity={row.quantity} threshold={row.lowStockThreshold} />
             <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span className="capitalize">{row.category}</span>
+              <span>{assetCategoryLabel(row.category)}</span>
               <span>{row.location ?? '—'}</span>
               <span>Qty {row.quantity ?? '—'}</span>
             </div>

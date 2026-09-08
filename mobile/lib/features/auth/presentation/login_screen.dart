@@ -51,6 +51,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _fillDemo(String email) {
+    setState(() {
+      _email.text = email;
+      _password.text = 'password123';
+      _obscure = true;
+    });
+  }
+
   Future<void> _showForgotPassword() async {
     final emailCtrl = TextEditingController(text: _email.text.trim());
     final formKey = GlobalKey<FormState>();
@@ -304,6 +312,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Sign in'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _submitting
+                              ? null
+                              : () => _fillDemo(
+                                  'rahul@example.com',
+                                ),
+                          icon: const Icon(Icons.person_outline, size: 16),
+                          label: const Text('Demo tenant'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _submitting
+                              ? null
+                              : () => _fillDemo(
+                                  'rajesh.sharma@example.com',
+                                ),
+                          icon: const Icon(Icons.family_restroom, size: 16),
+                          label: const Text('Demo guardian'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Demo accounts are seeded via: bun run seed:sample',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.mutedSoft,
+                        ),
                   ),
                   const SizedBox(height: 16),
                   Text(

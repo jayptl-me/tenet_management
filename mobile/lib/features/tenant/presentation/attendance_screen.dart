@@ -22,6 +22,44 @@ class _TenantAttendanceScreenState
   bool _featureDisabled = false;
   bool _actionLoading = false;
   String? _todayStatus;
+  String? _statusFilter;
+
+  static const List<String> _statusOptions = [
+    'present',
+    'absent',
+    'on_leave',
+    'not_returned',
+  ];
+
+  List<Map<String, dynamic>> get _filtered {
+    if (_statusFilter == null || _statusFilter!.isEmpty) return _records;
+    return _records.where((r) => r['status']?.toString() == _statusFilter).toList();
+  }
+
+  Map<String, List<Map<String, dynamic>>> get _groupedByMonth {
+    final map = <String, List<Map<String, dynamic>>>{};
+    for (final r in _filtered) {
+      final d = r['date']?.toString() ?? '';
+      final key = d.length >= 7 ? d.substring(0, 7) : 'unknown';
+      map.putIfAbsent(key, () => []).add(r);
+    }
+    final sortedKeys = map.keys.toList()..sort((a, b) => b.compareTo(a));
+    return {for (final k in sortedKeys) k: map[k]!};
+  }
+
+  String _monthLabel(String key) {
+    try {
+      final parts = key.split('-');
+      final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return '${months[dt.month - 1]} ${dt.year}';
+    } catch (_) {
+      return key;
+    }
+  }
 
   @override
   void initState() {
@@ -36,7 +74,7 @@ class _TenantAttendanceScreenState
       _featureDisabled = false;
     });
     try {
-      final rows = await ref.read(tenantRepositoryProvider).myAttendance();
+      final rows = await ref.read(tenantRepositoryProvider).myAttendance(limit: 100);
       if (!mounted) return;
       _updateTodayStatus(rows);
       setState(() {
@@ -229,22 +267,49 @@ class _TenantAttendanceScreenState
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text('Recent History',
+                      Text('History',
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
                               ?.copyWith(fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
-                      if (_records.isEmpty)
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('All'),
+                            selected: _statusFilter == null,
+                            onSelected: (_) => setState(() => _statusFilter = null),
+                          ),
+                          ..._statusOptions.map((s) => ChoiceChip(
+                                label: Text(s.replaceAll('_', ' ')),
+                                selected: _statusFilter == s,
+                                onSelected: (_) => setState(
+                                    () => _statusFilter = _statusFilter == s ? null : s),
+                              )),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_filtered.isEmpty)
                         const EmptyState(message: 'No attendance records')
                       else
-                        ..._records.take(20).map((r) => ListCard(
-                              title: formatDate(r['date']),
-                              subtitle:
-                                  'In: ${r['checkIn'] != null ? formatDate(r['checkIn']) : '--'} - Out: ${r['checkOut'] != null ? formatDate(r['checkOut']) : '--'}',
-                              trailing: StatusChip(
-                                  label: r['status']?.toString() ?? '--'),
-                            )),
+                        ..._groupedByMonth.entries.expand((entry) => [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                                child: Text(_monthLabel(entry.key),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w800)),
+                              ),
+                              ...entry.value.map((r) => ListCard(
+                                    title: formatDate(r['date']),
+                                    subtitle:
+                                        'In: ${r['checkIn'] != null ? formatTime(r['checkIn']) : '--'} · Out: ${r['checkOut'] != null ? formatTime(r['checkOut']) : '--'}',
+                                    trailing: StatusChip(
+                                        label: r['status']?.toString() ?? '--'),
+                                  )),
+                            ]),
                     ],
                   ),
       ),

@@ -68,6 +68,18 @@ visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c)
     }
     const tenant = await Tenant.findById(body.tenantId).lean();
     if (!tenant) return notFound(c, 'Tenant');
+    if (tenant.isActive === false) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'TENANT_INACTIVE',
+            message: 'Cannot register a visitor for a checked-out tenant. Reinstate them first.',
+          },
+        },
+        409,
+      );
+    }
   } else {
     return c.json(
       {
@@ -88,9 +100,20 @@ visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c)
   });
   await doc.save();
 
-  const populated = await Visitor.findById(doc._id)
-    .populate({ path: 'tenant', populate: { path: 'user', select: 'name email phone' } })
-    .lean();
+  const populated = await Visitor.findById(doc._id).populate(visitorTenantPopulate).lean();
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'create',
+    resource: 'visitor',
+    resourceId: String(doc._id),
+    details: {
+      visitorName: body.visitorName,
+      visitorPhone: body.visitorPhone,
+      purpose: body.purpose,
+      tenantId,
+    },
+  });
 
   return c.json(
     { success: true, data: mapVisitor(populated as unknown as Record<string, unknown>) },
@@ -99,11 +122,37 @@ visitors.post('/', authGuard, zValidator('json', createVisitorSchema), async (c)
 });
 
 // ── GET /visitors ───────────────────────────────────────
+// Populates host tenant identity + room/bed/floor context so admin list, CSV
+// export, and detail views render the full tenant -> room -> bed -> tenant
+// chain without per-row fetches. bedId rides on the tenant document itself.
+const visitorTenantPopulate = {
+  path: 'tenant',
+  populate: [
+    { path: 'user', select: 'name email phone' },
+    {
+      path: 'room',
+      select: 'roomNumber floor',
+      populate: { path: 'floor', select: 'label floorNumber' },
+    },
+  ],
+};
+
 visitors.get('/', authGuard, adminOnly, async (c) => {
   const filter: Record<string, unknown> = {};
 
   const status = c.req.query('status');
   if (status) filter.status = status;
+
+  const tenantId = c.req.query('tenantId');
+  if (tenantId && mongoose.Types.ObjectId.isValid(tenantId)) filter.tenantId = tenantId;
+
+  const search = c.req.query('search')?.trim();
+  if (search) {
+    filter.$or = [
+      { visitorName: { $regex: search, $options: 'i' } },
+      { visitorPhone: { $regex: search, $options: 'i' } },
+    ];
+  }
 
   const pagination = parsePagination(c);
   const { sort, order, skip, limit, page } = pagination;
@@ -113,7 +162,7 @@ visitors.get('/', authGuard, adminOnly, async (c) => {
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
-      .populate({ path: 'tenant', populate: { path: 'user', select: 'name email phone' } })
+      .populate(visitorTenantPopulate)
       .lean(),
     Visitor.countDocuments(safeFilter(filter)),
   ]);
@@ -160,7 +209,11 @@ visitors.get('/:id', authGuard, async (c) => {
       path: 'tenant',
       populate: [
         { path: 'user', select: 'name email phone' },
-        { path: 'room', select: 'roomNumber' },
+        {
+          path: 'room',
+          select: 'roomNumber floor',
+          populate: { path: 'floor', select: 'label floorNumber' },
+        },
       ],
     })
     .lean();
@@ -465,6 +518,15 @@ visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchem
   }).lean();
   if (!visitor) return notFound(c, 'Visitor');
 
+  const user = c.get('user');
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'visitor',
+    resourceId: id,
+    details: updateData,
+  });
+
   return c.json({
     success: true,
     data: mapVisitor(visitor as unknown as Record<string, unknown>),
@@ -475,8 +537,18 @@ visitors.put('/:id', authGuard, adminOnly, zValidator('json', updateVisitorSchem
 visitors.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = c.req.param('id');
   if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid visitor ID');
+  const user = c.get('user');
   const visitor = await Visitor.findByIdAndDelete(id);
   if (!visitor) return notFound(c, 'Visitor');
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'visitor',
+    resourceId: id,
+    details: { visitorName: visitor.visitorName, phone: visitor.visitorPhone },
+  });
+
   return c.json({ success: true, data: { message: 'Visitor deleted' } });
 });
 

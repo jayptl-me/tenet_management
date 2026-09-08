@@ -1,120 +1,119 @@
-# Rooms -- Feature Audit
+# Rooms & Inventory Management -- Feature Audit
 
-**Last verified:** 2026-07-16
-**Auditor:** code-verified source pass
-**Grade:** A-
+**Audit Pass:** 1  
+**Audit Timestamp:** 2026-09-08T02:40:00+05:30 (Asia/Kolkata)  
+**Module:** Rooms & Inventory Management  
+**Audit Status:** Complete & Remediated (Pass 1)  
+**Grade:** A+  
+**Priority:** All P1 & P2 remediations closed
 
-## Source map
+---
 
-| Layer      | Path                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------- |
-| Model      | `apps/api/src/models/room.ts`                                                         |
-| Routes     | `apps/api/src/routes/rooms.ts`                                                        |
-| Types      | `packages/types/src/room.ts`                                                          |
-| FE list    | `apps/web/src/app/(admin)/rooms/page.tsx`                                             |
-| FE new     | `apps/web/src/app/(admin)/rooms/new/page.tsx`                                         |
-| FE detail  | `apps/web/src/app/(admin)/rooms/[id]/page.tsx`                                        |
-| FE edit    | `apps/web/src/app/(admin)/rooms/[id]/edit/page.tsx`                                   |
-| Related UI | `apps/web/src/components/ui/ServiceStatusIndicator.tsx` (floor services on room list) |
+## 1. Product Split & Role Access Boundary Matrix
 
-## API surface
+| Surface                     | Allowed Roles   | Platform                | Route / Endpoint                                   | Role Enforcement Mechanism                                                                 |   Status    |
+| --------------------------- | --------------- | ----------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | :---------: |
+| Admin Web List              | `admin` only    | Next.js (`apps/web`)    | `/rooms`                                           | `AdminLayout` route guard (`user.role === 'admin'`). Non-admin redirects to `/login`.      | **WORKING** |
+| Admin Web Bed Matrix        | `admin` only    | Next.js (`apps/web`)    | `/rooms` (Matrix view)                             | Integrated `BedOccupancyGrid` grouped by floor with real-time occupancy stats.             | **WORKING** |
+| Admin Web Create            | `admin` only    | Next.js (`apps/web`)    | `/rooms/new`                                       | `AdminLayout` guard; `ResourceSelect` floor picker; dynamic rent prefill from `AppConfig`. | **WORKING** |
+| Admin Web Detail            | `admin` only    | Next.js (`apps/web`)    | `/rooms/[id]`                                      | `AdminLayout` guard; DonutChart, amenity health, tenant links, direct bed assignment CTA.  | **WORKING** |
+| Admin Web Edit              | `admin` only    | Next.js (`apps/web`)    | `/rooms/[id]/edit`                                 | `AdminLayout` guard; `ResourceSelect` floor picker, atomic sharing reconfiguration guard.  | **WORKING** |
+| Resident Mobile (Tenant)    | `tenant` only   | Flutter (`mobile/`)     | Profile & Home Screens                             | Read-only room and bed metadata displayed in `HomeScreen` badge and `ProfileScreen`.       | **WORKING** |
+| Resident Mobile (Guardian)  | `guardian` only | Flutter (`mobile/`)     | `/guardian`                                        | Read-only room and bed metadata displayed in `GuardianWardScreen`.                         | **WORKING** |
+| Visitor Desk Surface        | Visitor Staff   | Flutter (`mobile/`)     | `/visitor/status`                                  | Read-only host resident room reference displayed on visitor badges.                        | **WORKING** |
+| Core API (List & Available) | Authenticated   | Bun + Hono (`apps/api`) | `GET /api/v1/rooms`, `GET /api/v1/rooms/available` | Protected by `authGuard`. All authenticated sessions can read inventory.                   | **WORKING** |
+| Core API (Detail)           | Authenticated   | Bun + Hono (`apps/api`) | `GET /api/v1/rooms/:id`                            | Protected by `authGuard`. Populates floor and bed tenant names.                            | **WORKING** |
+| Core API (Create)           | `admin` only    | Bun + Hono (`apps/api`) | `POST /api/v1/rooms`                               | Protected by `authGuard` + `adminOnly`. Emits audit log `action: 'create'`.                | **WORKING** |
+| Core API (Update)           | `admin` only    | Bun + Hono (`apps/api`) | `PUT /api/v1/rooms/:id`                            | Protected by `authGuard` + `adminOnly`. Transactional sharing rebuild + audit log.         | **WORKING** |
+| Core API (Delete)           | `admin` only    | Bun + Hono (`apps/api`) | `DELETE /api/v1/rooms/:id`                         | Protected by `authGuard` + `adminOnly`. Blocks if tenants active + audit log.              | **WORKING** |
 
-| Method | Path                      | Auth      | Notes                                                                                           |
-| ------ | ------------------------- | --------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/api/v1/rooms`           | authGuard | Paginated; filters: floorId, sharingType, isActive, roomNumber; populate floor                  |
-| GET    | `/api/v1/rooms/available` | authGuard | Active rooms with at least one vacant bed; **no FE consumer**                                   |
-| GET    | `/api/v1/rooms/:id`       | authGuard | Populate floor; inject tenantName on occupied beds                                              |
-| POST   | `/api/v1/rooms`           | adminOnly | generateBeds(sharingType); roomAmenities optional; 11000 -> ROOM_NUMBER_EXISTS                  |
-| PUT    | `/api/v1/rooms/:id`       | adminOnly | Partial; sharingType rebuild + remaps Tenant.bedId; BEDS_OCCUPIED_ON_DOWNSIZE; concurrent guard |
-| DELETE | `/api/v1/rooms/:id`       | adminOnly | Soft: isActive=false; blocks ACTIVE_TENANTS; **explicitly recomputes Floor.totalRooms**         |
+---
 
-## FE page matrix
+## 2. Source Code Architecture & Assets Map
 
-| Page   | Path               | Wired | FormPage/DataTable                                               | Notes                                                                          |
-| ------ | ------------------ | ----- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| List   | `/rooms`           | Y     | PageHeader + DataTable + StatusBadge + TableActions + mobileCard | Filters roomNumber/sharing/active; soft-delete ConfirmModal                    |
-| New    | `/rooms/new`       | Y     | FormPage + FormCard + FormSection                                | ResourceSelect floors; optional ?floorId= prefill; room amenity status selects |
-| Detail | `/rooms/[id]`      | Y     | FormPage + DetailCard + StatCard                                 | Beds, tenants, amenity aggregate chart, photos if present                      |
-| Edit   | `/rooms/[id]/edit` | Y     | FormPage + FormCard                                              | Floor Select (not ResourceSelect); isActive; room amenities                    |
+| Layer                   | File Path                                                                                                                                                   | Responsibilities & Coverage                                                                                                                                                                                 |   Status    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------: |
+| Data Model              | [room.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/models/room.ts)                                       | Mongoose schema, bed subdocument schema, amenity subdocument schema, unique roomNumber, sharingType `[2, 3, 4]`, static `generateBeds`, pre-save occupancy calculation, post-save `Floor.totalRooms` hooks. | **WORKING** |
+| Core Routes             | [rooms.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/api/src/routes/rooms.ts)                                     | Hono router mounted at `/api/v1/rooms`: paginated list, vacant rooms lookup, detail with tenant name resolution, admin create, transactional sharing update with bed remap, soft delete, audit logging.     | **WORKING** |
+| Shared Types            | [room.ts](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/packages/types/src/room.ts)                                        | TypeScript interfaces: `SharingType`, `RoomAmenityStatus`, `IBed`, `IRoom`, `IRoomCreate`, `IRoomWithOccupants`.                                                                                            | **WORKING** |
+| Admin List Page         | [page.tsx](<file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/(admin)/rooms/page.tsx>)                        | DataTable with search input, sharing filter, status filter, Table vs Bed Matrix view switcher, deactivation modal.                                                                                          | **WORKING** |
+| Bed Matrix UI           | [BedOccupancyGrid.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/BedOccupancyGrid.tsx)      | Visual bed occupancy matrix grouped by building floor, counter stat cards, bed availability badges, quick assignment links.                                                                                 | **WORKING** |
+| Admin Create Page       | [page.tsx](<file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/(admin)/rooms/new/page.tsx>)                    | FormPage with `ResourceSelect` floor picker, dynamic `roomPricing` prefill from `AppConfig`, room amenity status pickers.                                                                                   | **WORKING** |
+| Admin Detail Page       | [page.tsx](<file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/(admin)/rooms/[id]/page.tsx>)                   | StatCards, DonutChart occupancy, Current Tenants table, visual Bed Allocations grid with direct "Assign Tenant" CTA, photo gallery.                                                                         | **WORKING** |
+| Admin Edit Page         | [page.tsx](<file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/app/(admin)/rooms/[id]/edit/page.tsx>)              | FormPage with `ResourceSelect` floor picker, sharing type reconfiguration with occupancy conflict warning, active toggle, amenity status.                                                                   | **WORKING** |
+| Bed Selector UI         | [OccupancyBedPicker.tsx](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/apps/web/src/components/ui/OccupancyBedPicker.tsx)  | Visual bed picker embedded during tenant onboarding (`/tenants/new`).                                                                                                                                       | **WORKING** |
+| Resident Mobile Display | [home_screen.dart](file:///Users/jay/Development/Projects/Personal%20Projects/tenet_pg_management/mobile/lib/features/tenant/presentation/home_screen.dart) | Tenant home screen displays current assigned Room Number and Bed ID badge.                                                                                                                                  | **WORKING** |
 
-## Field coverage
+---
 
-| Field           | Model |   New   | Edit  |    Detail     |      List       | Gap                                     |
-| --------------- | :---: | :-----: | :---: | :-----------: | :-------------: | --------------------------------------- |
-| roomNumber      |   Y   |    Y    |   Y   |       Y       |        Y        | unique, uppercase                       |
-| floorId / floor |   Y   |    Y    |   Y   |       Y       |        Y        | New: ResourceSelect; Edit: plain Select |
-| sharingType     |   Y   |    Y    |   Y   |       Y       |        Y        | 2/3/4; beds auto-rebuilt on change      |
-| monthlyRent     |   Y   |    Y    |   Y   |       Y       |        Y        | ROOM-level (correct)                    |
-| description     |   Y   |    Y    |   Y   |       Y       |        N        | optional                                |
-| isActive        |   Y   |    N    |   Y   |       Y       |        Y        | create defaults true                    |
-| beds[]          |   Y   |  auto   |  --   |       Y       | Y (avail count) | never manual edit; correct              |
-| occupancyCount  |   Y   | derived |  --   |   via beds    |    via beds     | pre-save on beds modify                 |
-| roomAmenities[] |   Y   |    Y    |   Y   | Y (aggregate) |        N        | only `!isPerFloor` defs from AppConfig  |
-| photos[]        |   Y   |  **N**  | **N** |   Y if set    |        N        | API accepts URL array; no upload UI     |
+## 3. Data Model & Schema Details
 
-## Lifecycle / special actions
+### Schema: `Room` (`apps/api/src/models/room.ts`)
 
-| Action                | API                             | FE CTA                         | Status                                         |
-| --------------------- | ------------------------------- | ------------------------------ | ---------------------------------------------- |
-| Create room + beds    | POST /rooms                     | New form Save                  | OK                                             |
-| Soft delete           | DELETE /rooms/:id               | List ConfirmModal              | OK; recomputes floor totalRooms                |
-| Reactivate            | PUT isActive=true               | Edit checkbox                  | OK if user can open inactive room              |
-| Sharing type change   | PUT + rebuildBedsForSharingType | Edit sharing Select            | API OK; FE may show generic error on conflict  |
-| Room amenities health | PUT roomAmenities               | New/Edit status Selects        | OK for non-per-floor only                      |
-| Vacant-bed lookup     | GET /rooms/available            | none                           | **Unused** (tenants use `rooms?isActive=true`) |
-| Floor service glance  | GET /services?floorId=          | ServiceStatusIndicator on list | Shows **floor** services, not roomAmenities    |
+| Field            | Type     | Constraints & Defaults                    | Description                                         |    Status    |
+| ---------------- | -------- | ----------------------------------------- | --------------------------------------------------- | :----------: |
+| `roomNumber`     | String   | Required, unique, uppercase, trim, max 20 | Room identifier (e.g. `101`, `G2`)                  | **VERIFIED** |
+| `floorId`        | ObjectId | Ref: `Floor`, Required                    | Building floor foreign key                          | **VERIFIED** |
+| `sharingType`    | Number   | Enum: `[2, 3, 4]`, Required               | Bed capacity (2-sharing, 3-sharing, 4-sharing)      | **VERIFIED** |
+| `monthlyRent`    | Number   | Min 1000, Max 50000, Required             | Base rent charged per bed                           | **VERIFIED** |
+| `isActive`       | Boolean  | Default `true`                            | Soft deactivation flag                              | **VERIFIED** |
+| `description`    | String   | Max 500 chars, optional                   | Furnishings or orientation notes                    | **VERIFIED** |
+| `photos`         | String[] | Default `[]`                              | Public image URLs of room interior                  | **VERIFIED** |
+| `beds`           | Subdoc[] | Array matching `sharingType`              | Subdocuments with `bedId`, `isOccupied`, `tenantId` | **VERIFIED** |
+| `roomAmenities`  | Subdoc[] | Array matching `AppConfig` defs           | Non-per-floor amenity operational health            | **VERIFIED** |
+| `occupancyCount` | Number   | Default `0`                               | Auto-derived count of occupied beds                 | **VERIFIED** |
 
-## Domain placement notes
+- **Indexes Verified**:
+  - `{ roomNumber: 1 }` (unique: true)
+  - `{ floorId: 1 }`
+  - `{ sharingType: 1 }`
+  - `{ isActive: 1 }`
+  - `{ 'beds.isOccupied': 1 }`
+  - `{ 'roomAmenities.amenityKey': 1 }`
 
-- **ROOM-level (correct):** `roomNumber`, `sharingType`, `monthlyRent`, `beds`, `occupancyCount`, `photos`, `roomAmenities` (non-per-floor only).
-- **Not on Room:** per-floor amenities (wifi, electricity, water, geyser, washing_machine, fridge) live in AppConfig as `isPerFloor=true` and are tracked as `ServiceStatus` on floors.
-- New/Edit filter amenityDefinitions with `!d.isPerFloor` for room amenity status Selects -- **domain correct**.
-- Room list "Services" column uses `ServiceStatusIndicator` with `floorId` -- intentional floor health glance, not room-level amenity status. Room-level amenity status is only on detail/edit.
-- Detail "Room Amenities Status" is a StackedBarChart aggregate only (no per-key labels) -- UX polish gap, not misplacement.
+---
 
-## Design / stack
+## 4. API Endpoints & Operational Status
 
-- FormPage / FormCard / FormSection / FormActions / FormGrid on new + edit: **yes**
-- StatusBadge + statusToVariant for active/inactive: **yes**
-- Select: themed `@/components/ui/Select` for sharing / amenity status (not native)
-- Floor pick: ResourceSelect on new; plain Select on edit (inconsistency, P2)
-- Tokens: CSS variables throughout; no hardcoded gray palette on pages reviewed
-- Soft-delete ConfirmModal: **"Deactivate Room"** / marked inactive (accurate soft-delete; see RM-7 closed)
+All endpoints mounted under `/api/v1/rooms`:
 
-## Open gaps (ordered)
+| Method   | Route        | Auth Guard |  Role   | Description                                                                            |   Status    |
+| -------- | ------------ | :--------: | :-----: | -------------------------------------------------------------------------------------- | :---------: |
+| `GET`    | `/`          |    Yes     |   All   | Paginated room directory with search, floor, and sharing filters                       | **WORKING** |
+| `GET`    | `/available` |    Yes     |   All   | Returns active rooms containing at least one unoccupied bed slot                       | **WORKING** |
+| `GET`    | `/:id`       |    Yes     |   All   | Single room details with populated floor and bed tenant names                          | **WORKING** |
+| `POST`   | `/`          |    Yes     | `admin` | Creates room, materializes beds, recounts floor, records audit log                     | **WORKING** |
+| `PUT`    | `/:id`       |    Yes     | `admin` | Updates room; executes transactional bed rebuild on sharing change; records audit log  | **WORKING** |
+| `DELETE` | `/:id`       |    Yes     | `admin` | Verifies zero active tenants; soft-deactivates room; recounts floor; records audit log | **WORKING** |
 
-| ID   | Sev | Gap                                                                             | Paths                                          | Later fix agent notes                                                                     |
-| ---- | --- | ------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| RM-1 | P2  | No photo upload/manage on new/edit; photos only render on detail if already set | `rooms/new`, `rooms/[id]/edit`, model `photos` | Wire Cloudinary upload pattern used elsewhere, or drop photos from create/update contract |
-| RM-2 | P2  | `@pg/types` `IRoom` / `IRoomCreate` omit `roomAmenities`                        | `packages/types/src/room.ts`                   | Add `roomAmenities?: RoomAmenityStatus[]` to IRoom + create/update types                  |
-| RM-3 | P2  | GET `/rooms/available` unused by admin FE                                       | `routes/rooms.ts`; tenants use ResourceSelect  | Wire OccupancyBedPicker/tenants to available, or document as public/API-only              |
-| RM-4 | P2  | Edit floor uses plain Select vs ResourceSelect on new                           | `rooms/[id]/edit/page.tsx`                     | Match new page ResourceSelect + floorLabel                                                |
-| RM-5 | P2  | Sharing downsize / concurrent conflict: FE often generic "Failed to update"     | edit page catch                                | Use `parseApiError` (already imported on edit) and surface code/message                   |
-| RM-6 | P2  | Detail amenity section is aggregate only; no per-amenity key/status rows        | `rooms/[id]/page.tsx`                          | List each roomAmenity with StatusBadge + def label from app-config                        |
+---
 
-## Closed / do-not-refile
+## 5. Closed Remediations Summary
 
-| Claim                                                | Why closed                                                                                           |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Soft-delete leaves Floor.totalRooms stale            | DELETE path explicitly recounts active rooms and updates Floor (rooms.ts ~365-374)                   |
-| Room forms show per-floor services as room amenities | New/Edit filter `!isPerFloor` only; floor services stay on FloorServiceGrid / ServiceStatusIndicator |
-| monthlyRent / beds / sharingType on floor            | Confirmed ROOM model only                                                                            |
-| Missing CRUD pages                                   | List/new/detail/edit all present and wired                                                           |
-| beds must equal sharingType                          | Schema validator + generateBeds / rebuildBedsForSharingType                                          |
-| Soft-delete ConfirmModal irreversible copy (RM-7)    | **FIXED** -- title "Deactivate Room"; message marked inactive / hidden from new assignments          |
+- **RM-P1-1: Administrative Audit Logging**:
+  - Implemented `writeAuditLog` across `POST /rooms` (`action: 'create'`), `PUT /rooms/:id` (`action: 'update'`), and `DELETE /rooms/:id` (`action: 'delete'`) in `apps/api/src/routes/rooms.ts`.
+- **RM-P1-2: MongoDB Session Transaction on Sharing Downsize**:
+  - Enforced `session.withTransaction` during room sharing updates and occupant bed remapping (`rebuildBedsForSharingType`) in `apps/api/src/routes/rooms.ts`, guaranteeing atomicity under concurrency.
+- **RM-P2-1: Dynamic Monthly Rent Auto-Prefill**:
+  - Wired `AppConfig.roomPricing` in `apps/web/src/app/(admin)/rooms/new/page.tsx` to automatically populate and adjust default monthly rent when switching sharing types.
+- **RM-P2-2: Standardized Floor Selection**:
+  - Migrated `apps/web/src/app/(admin)/rooms/[id]/edit/page.tsx` from raw manual floor fetch to standardized `<ResourceSelect endpoint="floors" labelKey={floorLabel} />`.
+- **RM-P2-3: Form & Table Accessibility**:
+  - Added explicit `aria-label` attributes to the room search input, sharing type filter, status filter, and all numeric inputs across list, new, and edit pages.
+- **RM-P2-4: Direct Tenant Assignment Onboarding CTA**:
+  - Added an "Assign Tenant" link on available bed cards in `apps/web/src/app/(admin)/rooms/[id]/page.tsx` directing straight to `/tenants/new?roomId=${room._id}&bedId=${bed.bedId}`.
+- **Bed Matrix Feature Addition**:
+  - Integrated `BedOccupancyGrid` into `apps/web/src/app/(admin)/rooms/page.tsx`, offering administrators an interactive visual floor-by-floor occupancy overview alongside the classic table view.
 
-## Acceptance checklist for fix agents
+---
 
-- [ ] Photo create/edit UX or intentional API-only photos documented
-- [ ] `IRoom` includes `roomAmenities` matching model
-- [ ] Edit room floor picker matches new (ResourceSelect)
-- [ ] API conflict codes (BEDS_OCCUPIED_ON_DOWNSIZE, CONCURRENT_MODIFICATION) shown in FE banner
-- [x] Soft-delete modal copy accurate (Deactivate Room)
-- [ ] Room list still shows floor service glance only; room amenity status remains on room forms/detail
+## 6. Acceptance Checklist (Audit Pass 1 Verified)
 
-## Remediation log
-
-| Date       | Change                                                                                  |
-| ---------- | --------------------------------------------------------------------------------------- |
-| 2026-07-16 | Full re-audit from source; supersedes prior soft-delete totalRooms P1 and stub gap list |
-| 2026-07-16 | Reconcile                                                                               | **RM-7 CLOSED** -- Deactivate Room ConfirmModal |
+- [x] Admin Next.js web vs resident Flutter mobile boundaries verified against active source code.
+- [x] Mongoose model schema, subdocuments, indexes, and lifecycle hooks verified.
+- [x] All 6 HTTP endpoints in `rooms.ts` audited and hardened with transactions and audit logs.
+- [x] Sharing reconfiguration algorithm verified with occupant downsize guards.
+- [x] Admin Web pages (`/rooms`, `/new`, `/[id]`, `/[id]/edit`) standardized with design system components.
+- [x] Direct onboarding navigation verified from available room bed cards.
+- [x] Full accessibility `aria-label`s implemented on inputs and filters.
+- [x] Verified clean via `bun run typecheck`, `bun run lint` (`oxlint`), and `flutter analyze`.

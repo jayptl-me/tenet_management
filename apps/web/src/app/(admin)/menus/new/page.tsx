@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Sun, Moon, Sunset } from 'lucide-react';
+import { Plus, Trash2, Sun, Moon, Sunset, Cookie } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
@@ -41,6 +42,7 @@ const formSchema = z.object({
   breakfast: z.array(mealItemSchema),
   lunch: z.array(mealItemSchema),
   dinner: z.array(mealItemSchema),
+  snacks: z.array(mealItemSchema),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,6 +52,7 @@ type FormData = z.infer<typeof formSchema>;
 const MEAL_SECTIONS = [
   { key: 'breakfast' as const, label: 'Breakfast', description: 'Morning meal items', icon: Sun },
   { key: 'lunch' as const, label: 'Lunch', description: 'Midday meal items', icon: Sunset },
+  { key: 'snacks' as const, label: 'Snacks', description: 'Evening snack items', icon: Cookie },
   { key: 'dinner' as const, label: 'Dinner', description: 'Evening meal items', icon: Moon },
 ];
 
@@ -73,36 +76,42 @@ function MenuForm() {
       date: defaultDate,
       breakfast: [{ name: '', description: '', category: '' }],
       lunch: [{ name: '', description: '', category: '' }],
+      snacks: [{ name: '', description: '', category: '' }],
       dinner: [{ name: '', description: '', category: '' }],
     },
   });
 
   const breakfastArray = useFieldArray({ control, name: 'breakfast' });
   const lunchArray = useFieldArray({ control, name: 'lunch' });
+  const snacksArray = useFieldArray({ control, name: 'snacks' });
   const dinnerArray = useFieldArray({ control, name: 'dinner' });
 
   const fieldArrays = {
     breakfast: breakfastArray,
     lunch: lunchArray,
+    snacks: snacksArray,
     dinner: dinnerArray,
   };
 
   const breakfastItems = useWatch({ control, name: 'breakfast' });
   const lunchItems = useWatch({ control, name: 'lunch' });
+  const snacksItems = useWatch({ control, name: 'snacks' });
   const dinnerItems = useWatch({ control, name: 'dinner' });
 
   const itemCounts = {
     breakfast: breakfastItems?.filter((i) => i.name?.trim()).length ?? 0,
     lunch: lunchItems?.filter((i) => i.name?.trim()).length ?? 0,
+    snacks: snacksItems?.filter((i) => i.name?.trim()).length ?? 0,
     dinner: dinnerItems?.filter((i) => i.name?.trim()).length ?? 0,
   };
 
-  const totalItems = itemCounts.breakfast + itemCounts.lunch + itemCounts.dinner;
+  const totalItems =
+    itemCounts.breakfast + itemCounts.lunch + itemCounts.snacks + itemCounts.dinner;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
 
-    const allItems = [...data.breakfast, ...data.lunch, ...data.dinner];
+    const allItems = [...data.breakfast, ...data.lunch, ...data.snacks, ...data.dinner];
     if (allItems.every((item) => !item.name.trim())) {
       setSubmitError('At least one meal item with a name is required.');
       return;
@@ -133,20 +142,27 @@ function MenuForm() {
               ...(i.description?.trim() ? { description: i.description.trim() } : {}),
               ...(i.category?.trim() ? { category: i.category.trim() } : {}),
             })),
+          snacks: data.snacks
+            .filter((i) => i.name.trim())
+            .map((i) => ({
+              name: i.name.trim(),
+              ...(i.description?.trim() ? { description: i.description.trim() } : {}),
+              ...(i.category?.trim() ? { category: i.category.trim() } : {}),
+            })),
         },
       };
 
       await api.post('menus', { json: payload }).json<{ success: boolean }>();
       router.push('/menus');
-    } catch {
-      setSubmitError('Failed to create menu. Please try again.');
+    } catch (err) {
+      setSubmitError((await parseApiError(err)).message);
     }
   };
 
   return (
     <FormPage
       title="New Daily Menu"
-      description="Create a new daily menu with breakfast, lunch, and dinner items"
+      description="Create a new daily menu with breakfast, lunch, snacks, and dinner items"
       backHref="/menus"
       error={submitError}
       maxWidth="3xl"
@@ -164,9 +180,9 @@ function MenuForm() {
       >
         <FormSection title="Date" description="Day this menu applies to">
           <FormGrid cols={1}>
-            <Input
+            <DatePicker
               label="Date"
-              type="date"
+              min={localTodayYmd()}
               error={(errors as Record<string, { message?: string }>).date?.message}
               {...register('date')}
               required
@@ -258,6 +274,10 @@ function MenuForm() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
               <Sunset className="h-3.5 w-3.5 text-[color:var(--color-brand-500)]" />
               {itemCounts.lunch} lunch items
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
+              <Cookie className="h-3.5 w-3.5 text-[color:var(--color-warning-600)]" />
+              {itemCounts.snacks} snacks items
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
               <Moon className="h-3.5 w-3.5 text-[color:var(--color-info-500)]" />

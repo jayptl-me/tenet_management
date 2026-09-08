@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { User, Home, Star, FileText, Tag, UtensilsCrossed, Pencil } from 'lucide-react';
+import {
+  User,
+  Home,
+  Star,
+  FileText,
+  Tag,
+  UtensilsCrossed,
+  Pencil,
+  Check,
+  Clock,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -13,10 +24,12 @@ import { StarRating } from '@/components/ui/StarRating';
 
 interface MealFeedbackDetail {
   _id: string;
-  tenantId?: {
-    _id: string;
-    userId?: { name: string; email?: string; phone?: string };
-    roomId?: { roomNumber: string };
+  tenantId?: unknown;
+  tenant?: {
+    _id?: string;
+    bedId?: string | null;
+    user?: { name?: string; email?: string; phone?: string };
+    room?: { roomNumber?: string; floor?: { label?: string } | null };
   };
   mealType: string;
   date: string;
@@ -48,6 +61,7 @@ export default function MealFeedbackDetailPage() {
   const [feedback, setFeedback] = useState<MealFeedbackDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -61,6 +75,23 @@ export default function MealFeedbackDetailPage() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  const handleUpdateStatus = async (newStatus: 'acknowledged' | 'actioned') => {
+    if (!id) return;
+    setStatusUpdating(newStatus);
+    try {
+      const res = await api
+        .put(`meals/${id}`, { json: { status: newStatus } })
+        .json<{ success: boolean; data: MealFeedbackDetail }>();
+      if (res.success) {
+        setFeedback(res.data);
+      }
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
+
   if (!isLoading && (error || !feedback)) {
     return (
       <FormPage
@@ -73,8 +104,11 @@ export default function MealFeedbackDetailPage() {
     );
   }
 
-  const tenantName = feedback?.tenantId?.userId?.name ?? 'N/A';
-  const roomNumber = feedback?.tenantId?.roomId?.roomNumber ?? 'N/A';
+  const tenant = feedback?.tenant;
+  const tenantName = tenant?.user?.name ?? 'N/A';
+  const roomNumber = tenant?.room?.roomNumber ?? 'N/A';
+  const bedId = tenant?.bedId ?? null;
+  const floorLabel = tenant?.room?.floor?.label ?? null;
 
   return (
     <FormPage
@@ -93,14 +127,38 @@ export default function MealFeedbackDetailPage() {
       }
       actions={
         feedback ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/meals/${feedback._id}/edit`)}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-2">
+            {feedback.status === 'submitted' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleUpdateStatus('acknowledged')}
+                loading={statusUpdating === 'acknowledged'}
+              >
+                <Clock className="h-4 w-4" />
+                Acknowledge
+              </Button>
+            )}
+            {feedback.status !== 'actioned' && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleUpdateStatus('actioned')}
+                loading={statusUpdating === 'actioned'}
+              >
+                <Check className="h-4 w-4" />
+                Mark Actioned
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/meals/${feedback._id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -159,6 +217,8 @@ export default function MealFeedbackDetailPage() {
                     </span>
                   }
                 />
+                {bedId && <DetailRow label="Bed" value={bedId} />}
+                {floorLabel && <DetailRow label="Floor" value={floorLabel} />}
                 <DetailRow
                   label="Meal Type"
                   value={<span className="capitalize">{feedback.mealType}</span>}

@@ -10,6 +10,7 @@ import {
   markAllAsRead,
   listNotifications,
   deleteNotification,
+  serializeNotification,
 } from '../services/notification.service.js';
 import { Notification } from '../models/notification.js';
 import { parsePagination, parseId, notFound, badRequest } from '../lib/routeUtils.js';
@@ -89,6 +90,27 @@ notifRoutes.post('/', adminOnly, zValidator('json', createSchema), async (c) => 
   const user = c.get('user');
   const body = c.req.valid('json');
 
+  // Emergency broadcasts honor the emergency alerts flag; other types flow always.
+  if (body.type === 'emergency') {
+    const { AppConfig } = await import('../models/appConfig.js');
+    const config = await AppConfig.findOne().select('features').lean();
+    const enabled =
+      (config as { features?: Record<string, boolean> } | null)?.features?.emergencyAlertsEnabled ??
+      true;
+    if (!enabled) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'FEATURE_DISABLED',
+            message: 'Feature "emergencyAlertsEnabled" is disabled in app configuration.',
+          },
+        },
+        403,
+      );
+    }
+  }
+
   const notification = await createNotification({
     ...body,
     senderId: user.sub,
@@ -159,18 +181,39 @@ const updateSchema = z.strictObject({
 
 // ── GET /api/v1/notifications/:id ────────────────────────
 notifRoutes.get('/:id', async (c) => {
+  const user = c.get('user');
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid notification ID');
 
-  const notification = await Notification.findById(id).lean();
+  const notification = await Notification.findById(id);
   if (!notification) return notFound(c, 'Notification');
 
-  return c.json({ success: true, data: notification });
+  // IDOR protection: non-admin must be a designated recipient or in unreadBy
+  if (user.role !== 'admin') {
+    const isRecipient =
+      notification.recipientUserIds.some((uid) => String(uid) === user.sub) ||
+      notification.unreadBy.some((uid) => String(uid) === user.sub);
+    if (!isRecipient) {
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You are not authorized to view this notification',
+          },
+        },
+        403,
+      );
+    }
+  }
+
+  return c.json({ success: true, data: serializeNotification(notification, user.sub) });
 });
 
 // ── PUT /api/v1/notifications/:id ────────────────────────
 // Admin metadata edit (does not re-broadcast)
 notifRoutes.put('/:id', adminOnly, zValidator('json', updateSchema), async (c) => {
+  const user = c.get('user');
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid notification ID');
 
@@ -178,11 +221,19 @@ notifRoutes.put('/:id', adminOnly, zValidator('json', updateSchema), async (c) =
   const notification = await Notification.findByIdAndUpdate(id, body, {
     returnDocument: 'after',
     runValidators: true,
-  }).lean();
+  });
 
   if (!notification) return notFound(c, 'Notification');
 
-  return c.json({ success: true, data: notification });
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'notification',
+    resourceId: id,
+    details: body,
+  });
+
+  return c.json({ success: true, data: serializeNotification(notification, user.sub) });
 });
 
 // ── PATCH /api/v1/notifications/:id/read ─────────────────
@@ -213,6 +264,7 @@ notifRoutes.patch('/:id/read', async (c) => {
 
 // ── DELETE /api/v1/notifications/:id ─────────────────────
 notifRoutes.delete('/:id', adminOnly, async (c) => {
+  const user = c.get('user');
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid notification ID');
 
@@ -221,6 +273,13 @@ notifRoutes.delete('/:id', adminOnly, async (c) => {
   if (result.deletedCount === 0) {
     return notFound(c, 'Notification');
   }
+
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'delete',
+    resource: 'notification',
+    resourceId: id,
+  });
 
   return c.json({
     success: true,

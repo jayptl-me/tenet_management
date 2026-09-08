@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { generateMonthlyInvoices, getCurrentMonth } from '../services/invoice.service.js';
+import { createNotification } from '../services/notification.service.js';
 import { Payment } from '../models/payment.js';
 import { Invoice } from '../models/invoice.js';
 import { Tenant } from '../models/tenant.js';
@@ -46,10 +47,31 @@ export function startScheduler(): void {
         })
         .lean() as unknown as Array<Record<string, unknown>>);
 
-      logger.info({ count: overduePayments.length, month }, 'Payment reminders would be sent');
+      logger.info({ count: overduePayments.length, month }, 'Dispatching payment reminders');
 
-      // TODO: Phase 5 — integrate with ntfy.sh push notifications
-      // For now, just logs the count. In Phase 5, send actual push + in-app notifications.
+      const userIds = new Set<string>();
+      for (const payment of overduePayments) {
+        const t = payment.tenantId as { userId?: { _id?: unknown } } | null;
+        if (t?.userId?._id) {
+          userIds.add(String(t.userId._id));
+        }
+      }
+
+      for (const userId of userIds) {
+        try {
+          await createNotification({
+            targetType: 'individual',
+            targetIds: [userId],
+            title: 'Payment Reminder',
+            body: `You have pending or overdue dues for ${month}. Please settle your payment to avoid late penalties.`,
+            type: 'payment_reminder',
+            data: { month },
+            sendPush: true,
+          });
+        } catch (err) {
+          logger.error({ err, userId }, 'Failed to dispatch scheduled payment reminder');
+        }
+      }
 
       // Mark pending as overdue if past due date
       const now = new Date();
@@ -99,9 +121,17 @@ export function startScheduler(): void {
         .populate('userId', 'name')
         .lean() as unknown as Array<Record<string, unknown>>);
 
-      logger.info({ count: activeTenants.length }, 'Meal feedback prompts would be sent');
+      logger.info({ count: activeTenants.length }, 'Dispatching meal feedback prompt');
 
-      // TODO: Phase 5 — send ntfy.sh push to each tenant
+      if (activeTenants.length > 0) {
+        await createNotification({
+          targetType: 'all',
+          title: 'Meal Feedback Prompt',
+          body: 'How was your recent meal? Please share your rating and feedback in the meal menu.',
+          type: 'meal_feedback',
+          sendPush: true,
+        });
+      }
     } catch (err) {
       logger.error({ err }, 'Meal feedback prompt job failed');
     }

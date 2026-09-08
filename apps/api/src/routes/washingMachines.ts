@@ -418,6 +418,14 @@ washingMachines.post('/:id/claim', authGuard, zValidator('json', claimSchema), a
     );
   }
 
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'washing_machine',
+    resourceId: id,
+    details: { action: 'claim', tenantId, duration, timerEndsAt: timerEnds.toISOString() },
+  });
+
   return c.json({
     success: true,
     data: mapMachine(machine as unknown as Record<string, unknown>),
@@ -455,6 +463,14 @@ washingMachines.post('/:id/release', authGuard, async (c) => {
   machine.timerEndsAt = null;
   await machine.save();
 
+  await writeAuditLog({
+    userId: user.sub,
+    action: 'update',
+    resource: 'washing_machine',
+    resourceId: id,
+    details: { action: 'release', previousStatus: 'in_use', status: 'available' },
+  });
+
   const populated = await WashingMachine.findById(machine._id)
     .populate({ path: 'floor', select: 'label floorNumber' })
     .populate({
@@ -477,8 +493,22 @@ washingMachines.delete('/:id', authGuard, adminOnly, async (c) => {
   const id = parseId(c.req.param('id'));
   if (!id) return badRequest(c, 'Invalid machine ID');
 
-  const machine = await WashingMachine.findByIdAndDelete(id);
+  const machine = await WashingMachine.findById(id);
   if (!machine) return notFound(c, 'Washing machine');
+  if (machine.status === 'in_use') {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'MACHINE_IN_USE',
+          message: 'Cannot delete a machine with an active claim. Release it first.',
+        },
+      },
+      409,
+    );
+  }
+
+  await WashingMachine.findByIdAndDelete(id);
 
   await writeAuditLog({
     userId: c.get('user').sub,

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2, Zap, Calculator, Lock, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -35,13 +36,14 @@ const roomEntrySchema = z.object({
 const formSchema = z
   .object({
     month: z.string().regex(/^\d{4}-\d{2}$/, 'Must be YYYY-MM format'),
-    totalBillAmount: z.coerce.number().min(0.01, 'Total bill amount must be > 0'),
+    totalBillAmount: z.coerce.number().min(0, 'Total bill amount cannot be negative'),
     billImageUrl: z
       .string()
       .optional()
       .or(z.literal(''))
       .refine((v) => !v || /^https?:\/\//i.test(v), 'Must be a valid http(s) URL'),
     notes: z.string().optional(),
+    varianceReason: z.string().max(500).optional(),
     roomEntries: z.array(roomEntrySchema).min(1, 'At least one room entry is required'),
   })
   .refine((data) => data.roomEntries.every((e) => e.currentReading >= e.previousReading), {
@@ -81,6 +83,7 @@ export default function EditElectricityPage() {
       totalBillAmount: 0,
       billImageUrl: '',
       notes: '',
+      varianceReason: '',
       roomEntries: [{ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 }],
     },
   });
@@ -115,6 +118,7 @@ export default function EditElectricityPage() {
           month: string;
           totalBillAmount: number;
           billImageUrl?: string;
+          varianceReason?: string;
           notes?: string;
           status: string;
           roomEntries: Array<{
@@ -133,6 +137,7 @@ export default function EditElectricityPage() {
           month: b.month ?? '',
           totalBillAmount: b.totalBillAmount ?? 0,
           billImageUrl: b.billImageUrl ?? '',
+          varianceReason: b.varianceReason ?? '',
           notes: b.notes ?? '',
           roomEntries: (b.roomEntries ?? []).map((e) => ({
             roomId:
@@ -178,6 +183,7 @@ export default function EditElectricityPage() {
             month: data.month,
             totalBillAmount: data.totalBillAmount,
             billImageUrl: data.billImageUrl?.trim() || undefined,
+            varianceReason: data.varianceReason?.trim() || undefined,
             notes: data.notes || undefined,
             roomEntries: data.roomEntries.map((en) => ({
               roomId: en.roomId,
@@ -189,8 +195,9 @@ export default function EditElectricityPage() {
         })
         .json();
       router.push(`/electricity/${id}`);
-    } catch {
-      setSubmitError('Failed to update electricity bill');
+    } catch (err) {
+      const parsed = await parseApiError(err);
+      setSubmitError(parsed.message);
     }
   };
 
@@ -467,6 +474,13 @@ export default function EditElectricityPage() {
           </FormSection>
 
           <FormSection title="Notes" description="Optional remarks for this bill" divided>
+            <Textarea
+              label="Variance reason (optional)"
+              rows={2}
+              placeholder="Explain any gap between bill total and room sum, e.g. common-area charges..."
+              {...register('varianceReason')}
+              disabled={isLocked}
+            />
             <Textarea
               label="Notes"
               rows={3}

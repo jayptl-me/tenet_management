@@ -113,8 +113,14 @@ export type { IMenuItem, IDailyMenu, IDailyMenuCreate } from './menu';
 // ── Notification ───────────────────────────────────────
 export type { INotificationType, INotification, INotificationCreate } from './notification';
 
-// ── Enquiry ────────────────────────────────────────────
-export type { IEnquiryStatus, IEnquiry, IEnquiryCreate } from './enquiry';
+export type {
+  IEnquiryStatus,
+  IEnquirySource,
+  IPreferredSharing,
+  IEnquiry,
+  IEnquiryCreate,
+  IEnquiryStats,
+} from './enquiry';
 
 // ── AppConfig ──────────────────────────────────────────
 export type {
@@ -148,6 +154,7 @@ export type {
   IDashboardEnquiryRecent,
   IDashboardRecent,
   IDashboardStats,
+  IComplaintSlaMetrics,
 } from './dashboard';
 
 // ── Visitor ────────────────────────────────────────────
@@ -176,6 +183,16 @@ export type {
   AttendanceMethod,
   LeaveStatus,
   IAttendanceRecord,
+  IAttendanceSummary,
+  IAttendanceTodayResponse,
+  IAttendanceCheckInRequest,
+  IAttendanceCheckOutRequest,
+  IAttendanceManualCreate,
+  IAttendanceUpdate,
+  IAttendancePopulatedRecord,
+  IAttendanceDayCounts,
+  IAttendanceSummaryResponse,
+  IAttendanceRangeQuery,
   ILeaveApplication,
   ILeaveApplicationCreate,
 } from './attendance';
@@ -203,3 +220,6 @@ export type {
   IWashingMachineClaim,
   IWashingMachineStatusUpdate,
 } from './washingMachine';
+
+// ── Health ─────────────────────────────────────────────
+export type { HealthDbStatus, HealthOverallStatus, IHealthResponse } from './health';

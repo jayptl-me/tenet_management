@@ -87,6 +87,22 @@ async function seedAppConfig(): Promise<void> {
 }
 
 async function seedSampleData(adminId: string): Promise<void> {
+  // Sample seed is insert-only with no wipe: refuse to run twice so a
+  // duplicate-key crash can never leave a half-seeded occupancy behind.
+  // (Bed↔tenant linkage is only consistent when the full pass completes.)
+  const [floorCount, roomCount, tenantCount] = await Promise.all([
+    Floor.countDocuments(),
+    Room.countDocuments(),
+    Tenant.countDocuments(),
+  ]);
+  if (floorCount > 0 || roomCount > 0 || tenantCount > 0) {
+    logger.info(
+      { floorCount, roomCount, tenantCount },
+      'Sample data already present, skipping (use a fresh DB to reseed)',
+    );
+    return;
+  }
+
   // ── Floors ──────────────────────────────────────────
   const floors: any[] = await Floor.insertMany([
     {

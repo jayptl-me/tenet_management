@@ -2,26 +2,51 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Calendar, User, MapPin, FileText, Check, X, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Calendar,
+  User,
+  Home,
+  FileText,
+  Check,
+  X,
+  Pencil,
+  ListChecks,
+  BedDouble,
+  Building2,
+  MessageCircle,
+  Copy,
+  ExternalLink,
+  Phone,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { LeaveLifecycleStepper } from '@/components/ui/LeaveLifecycleStepper';
+import { LeaveAttendanceImpact } from '@/components/ui/LeaveAttendanceImpact';
+import { TenantStayCalendar } from '@/components/ui/TenantStayCalendar';
+import { Textarea } from '@/components/ui/Textarea';
+import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 
 interface LeaveDetail {
   _id: string;
   tenant?: {
     _id: string;
+    bedId?: string | null;
     user?: { _id: string; name: string; email: string; phone: string };
-    room?: { _id: string; roomNumber: string };
+    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
   };
   startDate: string;
   endDate: string;
   reason?: string;
   status: string;
   adminNotes?: string;
+  approvedByName?: string | null;
+  approvedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +100,8 @@ export default function LeaveDetailPage() {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
   const [actionError, setActionError] = useState('');
+  const [showRejectPrompt, setShowRejectPrompt] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -84,7 +111,9 @@ export default function LeaveDetailPage() {
       .get(`leaves/${id}`)
       .json<{ success: boolean; data: LeaveDetail }>()
       .then((res) => setLeave(res.data))
-      .catch(() => setError('Failed to load leave details'))
+      .catch(async (err) => {
+        setError((await parseApiError(err)).message);
+      })
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -97,16 +126,17 @@ export default function LeaveDetailPage() {
       // but send {} so Content-Type is consistent across clients.
       const res = await api
         .put(`leaves/${id}/${action}`, {
-          json: action === 'reject' ? { adminNotes: '' } : {},
+          json: action === 'reject' ? { adminNotes: rejectNotes } : {},
         })
         .json<{ success: boolean; data: LeaveDetail }>();
       if (res.success) {
         setLeave(res.data);
+        setShowRejectPrompt(false);
       } else {
         setActionError('Failed to update leave status');
       }
-    } catch {
-      setActionError('Failed to update leave status');
+    } catch (err) {
+      setActionError((await parseApiError(err)).message);
     } finally {
       setActionLoading(null);
     }
@@ -127,13 +157,20 @@ export default function LeaveDetailPage() {
   const statusVariant = leave ? statusToVariant(leave.status) : 'neutral';
   const tenantName = leave?.tenant?.user?.name ?? 'N/A';
   const roomNumber = leave?.tenant?.room?.roomNumber ?? 'N/A';
+  const bedId = leave?.tenant?.bedId ?? null;
+  const floorLabel = leave?.tenant?.room?.floor?.label ?? null;
+  const tenantPhone = leave?.tenant?.user?.phone;
   const duration = leave ? getDurationDays(leave.startDate, leave.endDate) : 0;
   const isPending = leave?.status === 'pending';
 
   return (
     <FormPage
       title="Leave Application"
-      description={leave ? `${tenantName} · Room ${roomNumber}` : 'View leave details'}
+      description={
+        leave
+          ? `${tenantName} · Room ${roomNumber}${bedId ? ` · Bed ${bedId}` : ''} · ${duration} day${duration !== 1 ? 's' : ''}`
+          : 'View leave details'
+      }
       backHref="/leaves"
       isLoading={isLoading}
       maxWidth="4xl"
@@ -150,7 +187,7 @@ export default function LeaveDetailPage() {
             onClick={() => router.push(`/leaves/${leave._id}/edit`)}
           >
             <Pencil className="h-4 w-4" />
-            Edit
+            Review
           </Button>
         ) : undefined
       }
@@ -190,31 +227,121 @@ export default function LeaveDetailPage() {
             />
           </div>
 
+          <DetailCard title="Lifecycle progress" icon={<ListChecks />}>
+            <LeaveLifecycleStepper status={leave.status} />
+          </DetailCard>
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <DetailCard title="Tenant Information" icon={<User />}>
+            <DetailCard
+              title="Tenant Information"
+              icon={<User />}
+              action={
+                leave.tenant?._id ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/tenants/${leave.tenant!._id}`)}
+                  >
+                    View tenant
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                ) : undefined
+              }
+            >
               <DetailList>
                 <DetailRow
                   label="Name"
                   value={
-                    <span className="inline-flex items-center gap-1">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                      {tenantName}
-                    </span>
+                    leave.tenant?._id ? (
+                      <Link
+                        href={`/tenants/${leave.tenant._id}`}
+                        className="inline-flex items-center gap-1 text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      >
+                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {tenantName}
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {tenantName}
+                      </span>
+                    )
                   }
                 />
                 <DetailRow
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
                       {roomNumber}
                     </span>
                   }
                 />
-                {leave.tenant?.user?.phone && (
-                  <DetailRow label="Phone" value={leave.tenant.user.phone} />
+                <DetailRow
+                  label="Bed"
+                  value={
+                    <span className="inline-flex items-center gap-1">
+                      <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      {bedId ?? 'N/A'}
+                    </span>
+                  }
+                />
+                {floorLabel && (
+                  <DetailRow
+                    label="Floor"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {floorLabel}
+                      </span>
+                    }
+                  />
+                )}
+                {tenantPhone && (
+                  <DetailRow
+                    label="Phone"
+                    value={
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        {tenantPhone}
+                      </span>
+                    }
+                  />
                 )}
               </DetailList>
+              {tenantPhone && (
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-[color:var(--border-color)] pt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open(
+                        generateWhatsAppUrl(
+                          tenantPhone,
+                          `Hi ${tenantName}, regarding your leave ${leave.startDate} to ${leave.endDate}...`,
+                        ),
+                        '_blank',
+                        'noopener,noreferrer',
+                      );
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void copyToClipboard(
+                        `${tenantName} | Room ${roomNumber}${bedId ? ` Bed ${bedId}` : ''} | Leave ${leave.startDate} to ${leave.endDate} | ${leave.status}`,
+                      )
+                    }
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy summary
+                  </Button>
+                </div>
+              )}
             </DetailCard>
 
             <DetailCard title="Leave Details" icon={<Calendar />}>
@@ -228,9 +355,32 @@ export default function LeaveDetailPage() {
                     <StatusBadge variant={statusVariant} label={leave.status.replace(/_/g, ' ')} />
                   }
                 />
+                {leave.approvedByName && (
+                  <DetailRow
+                    label="Decided by"
+                    value={`${leave.approvedByName}${leave.approvedAt ? ` on ${formatDate(leave.approvedAt)}` : ''}`}
+                  />
+                )}
               </DetailList>
             </DetailCard>
           </div>
+
+          <DetailCard title="Leave Window" icon={<Calendar />}>
+            <TenantStayCalendar
+              moveInDate={leave.startDate}
+              moveOutDate={leave.endDate}
+              isActive={leave.status !== 'rejected' && leave.status !== 'cancelled'}
+            />
+          </DetailCard>
+
+          <DetailCard title="Attendance impact" icon={<Calendar />}>
+            <LeaveAttendanceImpact
+              tenantId={leave.tenant?._id}
+              fromDate={leave.startDate}
+              toDate={leave.endDate}
+              status={leave.status}
+            />
+          </DetailCard>
 
           <DetailCard title="Reason" icon={<FileText />}>
             <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
@@ -252,29 +402,73 @@ export default function LeaveDetailPage() {
 
           {isPending && (
             <DetailCard title="Actions">
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => handleAction('approve')}
-                  disabled={actionLoading !== null}
-                  loading={actionLoading === 'approve'}
-                >
-                  <Check className="h-4 w-4" /> Approve
-                </Button>
-                <Button
-                  variant="danger"
-                  size="md"
-                  onClick={() => handleAction('reject')}
-                  disabled={actionLoading !== null}
-                  loading={actionLoading === 'reject'}
-                >
-                  <X className="h-4 w-4" /> Reject
-                </Button>
-                {actionError && (
-                  <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">
-                    {actionError}
-                  </p>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => handleAction('approve')}
+                    disabled={actionLoading !== null}
+                    loading={actionLoading === 'approve'}
+                  >
+                    <Check className="h-4 w-4" /> Approve
+                  </Button>
+                  {!showRejectPrompt ? (
+                    <Button
+                      variant="danger"
+                      size="md"
+                      onClick={() => setShowRejectPrompt(true)}
+                      disabled={actionLoading !== null}
+                    >
+                      <X className="h-4 w-4" /> Reject
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      onClick={() => setShowRejectPrompt(false)}
+                      disabled={actionLoading !== null}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  {actionError && (
+                    <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">
+                      {actionError}
+                    </p>
+                  )}
+                </div>
+
+                {showRejectPrompt && (
+                  <div className="rounded-lg border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-4">
+                    <p className="mb-2 text-sm font-medium text-[color:var(--color-danger-900)]">
+                      Reason for Rejection (Optional)
+                    </p>
+                    <Textarea
+                      value={rejectNotes}
+                      onChange={(e) => setRejectNotes(e.target.value)}
+                      placeholder="Enter note or reason for rejection..."
+                      rows={3}
+                    />
+                    <div className="mt-3 flex justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowRejectPrompt(false)}
+                        disabled={actionLoading !== null}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleAction('reject')}
+                        loading={actionLoading === 'reject'}
+                      >
+                        Confirm Rejection
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </DetailCard>

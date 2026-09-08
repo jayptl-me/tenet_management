@@ -186,7 +186,17 @@ class _GuardianNoticesScreenState extends ConsumerState<GuardianNoticesScreen> {
                             title: n['title']?.toString() ?? 'Notice',
                             subtitle: n['content']?.toString() ??
                                 n['body']?.toString(),
-                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (n['pinned'] == true)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                    child: StatusChip(label: 'Pinned'),
+                                  ),
+                                const Icon(Icons.chevron_right, size: 20),
+                              ],
+                            ),
                             onTap: () => _showNoticeDetail(context, n),
                           ),
                         ),

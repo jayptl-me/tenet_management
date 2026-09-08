@@ -66,7 +66,8 @@ export function ServiceDueBanner({ onFilterServiceDue }: ServiceDueBannerProps) 
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-[color:var(--color-brand-800)]">
-          {items.length} {items.length === 1 ? 'asset requires' : 'assets require'} service within 30 days
+          {items.length} {items.length === 1 ? 'asset requires' : 'assets require'} service within
+          30 days
         </p>
         <p className="mt-0.5 text-[13px] text-[color:var(--color-brand-800)] opacity-80">
           {itemNames}

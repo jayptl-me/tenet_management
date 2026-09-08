@@ -27,7 +27,8 @@ export interface IOfflinePaymentCreate {
   tenantId: string;
   invoiceId: string;
   amount: number;
-  method: 'cash' | 'bank_transfer' | 'other';
+  method: 'cash' | 'bank_transfer' | 'other' | 'upi';
+  type?: IPaymentType;
   paidAt: string;
   notes?: string;
 }

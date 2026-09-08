@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 export interface FormActionsProps {
   /** Submitting state for the primary button. */
   loading?: boolean;
+  /** Disabled state for the primary submit button. */
+  disabled?: boolean;
   /** Primary action label. */
   submitLabel?: string;
   /** Cancel navigates back by default; pass href to push, or onCancel override. */
@@ -33,6 +35,7 @@ export interface FormActionsProps {
  */
 export function FormActions({
   loading = false,
+  disabled = false,
   submitLabel = 'Save Changes',
   cancelHref,
   onCancel,
@@ -73,7 +76,7 @@ export function FormActions({
         </Button>
       )}
       {!hideSubmit && (
-        <Button type="submit" loading={loading}>
+        <Button type="submit" loading={loading} disabled={disabled || loading}>
           {submitIcon ?? <Save className="h-4 w-4" />}
           {submitLabel}
         </Button>

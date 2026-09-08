@@ -82,6 +82,7 @@ export function rateLimiter(maxRequests: number, windowMs: number): MiddlewareHa
  * - publicLimiter: 3 requests per hour (enquiry form spam protection)
  */
 export const authLimiter = rateLimiter(5, 15 * 60 * 1000);
+export const refreshLimiter = rateLimiter(60, 60 * 1000);
 export const passwordResetLimiter = rateLimiter(3, 60 * 60 * 1000);
 export const generalLimiter = rateLimiter(300, 60 * 1000);
 export const publicLimiter = rateLimiter(3, 60 * 60 * 1000);

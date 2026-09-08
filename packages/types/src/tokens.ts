@@ -112,6 +112,7 @@ export const STATUS_COLOR_MAP: Record<string, StatusVariant> = {
   // ── Menu calendar ──
   past: 'neutral',
   scheduled: 'info',
+  published: 'success',
 };
 
 export const DEFAULT_BRAND_TOKENS: IBrandTokens = {

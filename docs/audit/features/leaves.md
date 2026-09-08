@@ -1,162 +1,136 @@
-# Leaves -- Gap Analysis
+# Leaves Module - Feature Listing
 
-**Last verified:** 2026-07-16  
-**Admin grade:** B+  
-**Priority:** P1 (no API feature gate; date field dual-name care)  
-**Theme:** SaaS FormPage approve/reject workflow (no generic PUT)
+Module: leaves
+Scope: admin web + API + DB + shared types + Flutter tenant portal (read-only mapping)
+Source verified: 2026-09-07 UTC
+Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes
+Pass 1 record: docs/audit/features/leaves_audit_pass1_20260907-234410.md
 
-## Source map
+## 1. Admin vs End-User Access Map
 
-| Layer    | Path                                                         |
-| -------- | ------------------------------------------------------------ |
-| Model    | `apps/api/src/models/leaveApplication.ts`                    |
-| Routes   | `apps/api/src/routes/leaves.ts`                              |
-| Types    | `packages/types/src/attendance.ts` (`ILeaveApplication*`)    |
-| Admin FE | `apps/web/src/app/(admin)/leaves/**`                         |
-| Flutter  | `mobile/lib/features/tenant/presentation/leaves_screen.dart` |
-| Repo     | `tenant_repository.dart` (`myLeaves`, create leave)          |
-| Cascade  | Tenant delete removes leave applications (`tenants.ts`)      |
+### 1.1 Admin (apps/web, role admin only)
 
-## Model truth
+| Page   | Route                                                                   | Status  |
+| ------ | ----------------------------------------------------------------------- | ------- |
+| List   | apps/web/src/app/(admin)/leaves/page.tsx -> /leaves                     | WORKING |
+| Create | apps/web/src/app/(admin)/leaves/new/page.tsx -> /leaves/new             | WORKING |
+| Detail | apps/web/src/app/(admin)/leaves/[id]/page.tsx -> /leaves/[id]           | WORKING |
+| Review | apps/web/src/app/(admin)/leaves/[id]/edit/page.tsx -> /leaves/[id]/edit | WORKING |
 
-| Field             | Constraints                                         |
-| ----------------- | --------------------------------------------------- |
-| tenantId          | ObjectId Tenant, required                           |
-| fromDate / toDate | YYYY-MM-DD strings                                  |
-| reason            | required, max 500                                   |
-| status            | `pending \| approved \| rejected` (default pending) |
-| approvedBy        | ObjectId User \| null                               |
-| approvedAt        | Date \| null                                        |
-| adminNotes        | max 500, default `''`                               |
-| Indexes           | `{ tenantId, fromDate }`, `{ status, createdAt }`   |
+### 1.2 End-User Tenant (mobile, role tenant only)
 
-**No dedicated leaves feature flag.** Admin nav for Leaves uses **`attendanceEnabled`**. API leaves routes are **always on** (no `requireFeature`).
+| Screen              | Route                               | API Used                              | Status  |
+| ------------------- | ----------------------------------- | ------------------------------------- | ------- |
+| Leave list + cancel | /tenant/leaves (leaves_screen.dart) | GET leaves/my, POST leaves/:id/cancel | WORKING |
+| Create sheet        | _LeaveCreateSheet bottom sheet      | POST leaves                           | WORKING |
 
-## API surface
+### 1.3 Not Accessible
 
-| Method | Path                  | Auth  | Notes                                                                                       |
-| ------ | --------------------- | ----- | ------------------------------------------------------------------------------------------- |
-| POST   | `/leaves`             | JWT   | tenant self-only; admin any tenant; overlap 409 OVERLAPPING_LEAVE; inactive tenant rejected |
-| GET    | `/leaves`             | admin | status, tenantId, **search** (tenant name via User regex)                                   |
-| GET    | `/leaves/my`          | JWT   | tenant own list                                                                             |
-| GET    | `/leaves/:id`         | JWT   | mapLeave; **no ownership**                                                                  |
-| DELETE | `/leaves/:id`         | admin | **pending only** else LEAVE_NOT_PENDING                                                     |
-| PUT    | `/leaves/:id/approve` | admin | **no body schema**; sets approved + approvedBy/At                                           |
-| PUT    | `/leaves/:id/reject`  | admin | **JSON body required** by zValidator: `{ adminNotes?: string max 500 }`                     |
+| Actor            | Blocked Surface                         | Enforcement                  |
+| ---------------- | --------------------------------------- | ---------------------------- |
+| tenant, guardian | all /leaves Next routes                 | AdminLayout role guard       |
+| admin            | all /tenant Flutter routes              | app_router.dart redirect     |
+| tenant           | GET /leaves, PUT approve/reject, DELETE | adminOnly middleware, 403    |
+| tenant           | other tenants leaves                    | ownership check, 403         |
+| guardian         | ward-external leaves on :id             | Guardian ward check, 403     |
+| guardian         | POST /leaves, GET /my                   | tenantOnly / role guard, 403 |
 
-`mapLeave` aliases `startDate`/`endDate` from fromDate/toDate and nests `tenant.user` / `tenant.room` + `approvedByName`.
+## 2. Admin Page-by-Page Feature Listing
 
-**No generic PUT `/:id`** -- intentional workflow design.
+### 2.1 List - leaves/page.tsx
 
-## FE page matrix
+| Feature                                                   | Element                          | Status        |
+| --------------------------------------------------------- | -------------------------------- | ------------- |
+| Columns Tenant/Room/Period/Days/Reason/Status/Actions     | DataTable                        | WORKING       |
+| Search by tenant name (server)                            | Input -> search query            | WORKING       |
+| Tenant filter                                             | ResourceSelect -> tenantId query | WORKING       |
+| Status filter                                             | Select -> status query           | WORKING       |
+| Pagination                                                | DataTable pagination             | WORKING       |
+| Row click -> detail                                       | onRowClick                       | WORKING       |
+| View/Edit/Delete (pending-only)                           | TableActions                     | WORKING       |
+| New Leave + Export CSV (11 cols, RFC4180 + formula guard) | Button + Plus/Download           | WORKING       |
+| Empty state + mobile cards (period + room)                | EmptyState + mobileCardRenderer  | WORKING       |
+| Delete confirm + parseApiError                            | ConfirmModal                     | WORKING       |
+| Custom SVG                                                | none, lucide only                | NO CUSTOM SVG |
 
-| Page   | Verdict             | Notes                                                                                               |
-| ------ | ------------------- | --------------------------------------------------------------------------------------------------- |
-| List   | **PASS**            | DataTable; status filter OK; server `search` by tenant name; delete only when pending               |
-| Detail | **PASS**            | Uses `startDate`/`endDate` aliases; approve/reject with JSON `{}` or `{ adminNotes: '' }`; Edit CTA |
-| New    | **PASS**            | POST leaves with fromDate/toDate/reason/tenantId -- matches createLeaveSchema                       |
-| Edit   | **PASS (workflow)** | Not a field editor; approve/reject + adminNotes textarea; reject sends `{ adminNotes }`             |
+### 2.2 Create - leaves/new/page.tsx
 
-### FE zod vs API
+| Feature                                                    | Element                       | Status        |
+| ---------------------------------------------------------- | ----------------------------- | ------------- |
+| Applicant picker (active tenants) + room/bed/floor preview | ResourceSelect + preview card | WORKING       |
+| From/To dates + duration preview + from<=to block          | date inputs + summary panel   | WORKING       |
+| Reason templates + 500 counter                             | chips + Textarea maxLength    | WORKING       |
+| Overlap 409 via parseApiError; push created detail         | api.post                      | WORKING       |
+| Buttons Save Leave/Cancel                                  | FormActions                   | WORKING       |
+| Custom SVG                                                 | none                          | NO CUSTOM SVG |
 
-| Surface | FE                                              | API                                | Match                      |
-| ------- | ----------------------------------------------- | ---------------------------------- | -------------------------- |
-| Create  | tenantId, fromDate, toDate, reason min 1        | same + date regex + reason max 500 | **YES** (FE lacks max 500) |
-| Approve | PUT `.../approve` (edit: no body; detail: `{}`) | no zValidator body                 | **YES**                    |
-| Reject  | PUT `.../reject` + `{ adminNotes? }`            | strictObject adminNotes optional   | **YES**                    |
+### 2.3 Detail - leaves/[id]/page.tsx
 
-### Date field dual names
+| Feature                                                   | Element                | Status        |
+| --------------------------------------------------------- | ---------------------- | ------------- |
+| Header title + badge + Review CTA                         | FormPage + StatusBadge | WORKING       |
+| StatCards start/end/duration/status                       | StatCard               | WORKING       |
+| Lifecycle stepper                                         | LeaveLifecycleStepper  | WORKING       |
+| Tenant card (link, phone, room/bed/floor) + WhatsApp/copy | DetailCard             | WORKING       |
+| Leave Details + decided-by row                            | DetailCard             | WORKING       |
+| Attendance impact panel                                   | LeaveAttendanceImpact  | WORKING       |
+| Reason + Admin Notes cards                                | DetailCard             | WORKING       |
+| Approve/Reject with notes + parseApiError                 | Buttons + Textarea     | WORKING       |
+| Record timestamps line                                    | muted text             | WORKING       |
+| Custom SVG                                                | none, lucide only      | NO CUSTOM SVG |
 
-| Consumer       | Fields used                                                      |
-| -------------- | ---------------------------------------------------------------- |
-| List / Detail  | `startDate`, `endDate` (aliases)                                 |
-| Edit page load | `fromDate`, `toDate` (raw; still present via spread in mapLeave) |
-| API create     | `fromDate`, `toDate`                                             |
+### 2.4 Review - leaves/[id]/edit/page.tsx
 
-Both shapes work on mapped GET because mapLeave spreads doc then adds aliases. Prefer one convention in FE.
+| Feature                                             | Element                     | Status        |
+| --------------------------------------------------- | --------------------------- | ------------- |
+| Applicant card (tenant link, phone, room/bed/floor) | DetailCard                  | WORKING       |
+| Period + duration tiles + StatusBadge + decided-by  | tiles                       | WORKING       |
+| Attendance impact preview                           | LeaveAttendanceImpact       | WORKING       |
+| Reason + admin notes editor (500 counter)           | Textarea                    | WORKING       |
+| Approve/Reject + parseApiError                      | FormActions leading buttons | WORKING       |
+| Existing admin notes section                        | FormSection                 | WORKING       |
+| Stale Suspense wrapper / hand-rolled pill           | deleted                     | REMOVED       |
+| Custom SVG                                          | none                        | NO CUSTOM SVG |
 
-## Field coverage
+## 3. Shared Components
 
-| Field         | List      | Detail  | New            | Edit           | API         |
-| ------------- | --------- | ------- | -------------- | -------------- | ----------- |
-| tenant        | Y         | Y       | ResourceSelect | read-only      | populate    |
-| from/to dates | period    | Y       | Y              | read-only      | Y           |
-| reason        | truncated | Y       | Y              | read-only      | Y           |
-| status        | badge     | badge   | pending        | approve/reject | enum        |
-| adminNotes    | --        | if set  | --             | reject input   | reject only |
-| approvedBy/At | --        | partial | --             | display if set | Y           |
+| Component                                                                                                                                                                          | Path                                                 | Status  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------- |
+| LeaveLifecycleStepper                                                                                                                                                              | apps/web/src/components/ui/LeaveLifecycleStepper.tsx | WORKING |
+| LeaveAttendanceImpact                                                                                                                                                              | apps/web/src/components/ui/LeaveAttendanceImpact.tsx | WORKING |
+| StatusBadge/statusToVariant                                                                                                                                                        | StatusBadge.tsx + tokens.ts                          | WORKING |
+| ResourceSelect/DataTable/TableActions/Select/PageHeader/ErrorBanner/EmptyState/FormPage/FormCard/FormSection/FormGrid/FormFullWidth/FormActions/Input/Textarea/DetailCard/StatCard | ui/*                                                 | WORKING |
 
-## Lifecycle
+## 4. API Routes (apps/api/src/routes/leaves.ts, requireFeature attendanceEnabled)
 
-```
-POST create -> status=pending
-  -> PUT approve -> approved + approvedBy + approvedAt
-  -> PUT reject  -> rejected + approvedBy + approvedAt + optional adminNotes
-  -> DELETE (pending only)
-```
+| Endpoint                                                                 | Auth                   | Status  |
+| ------------------------------------------------------------------------ | ---------------------- | ------- |
+| POST /leaves (overlap 409, active-tenant, range 400, admin/tenant only)  | authGuard + role guard | WORKING |
+| GET /leaves (status + tenantId + tenant-name search, bed/floor populate) | adminOnly              | WORKING |
+| GET /leaves/my                                                           | tenantOnly             | WORKING |
+| GET /leaves/:id (owner / ward / admin)                                   | authGuard              | WORKING |
+| POST /leaves/:id/cancel (pending only)                                   | authGuard              | WORKING |
+| DELETE /leaves/:id (pending+cancelled only)                              | adminOnly              | WORKING |
+| PUT /leaves/:id/approve (pending only, overlap re-check, on_leave sync)  | adminOnly              | WORKING |
+| PUT /leaves/:id/reject (pending only + adminNotes)                       | adminOnly              | WORKING |
 
-Overlap: any pending/approved leave intersecting date range blocks create (409).
+## 5. Database Models
 
-## Feature flags
+| Model                                         | Relation                                                                                        | Status  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------- |
+| LeaveApplication (models/leaveApplication.ts) | tenantId -> Tenant; YYYY-MM-DD range; reason 500; status enum; approvedBy/approvedAt/adminNotes | WORKING |
+| Tenant                                        | Leave.tenantId -> Tenant; roomId -> Room; bedId A-D                                             | WORKING |
+| Room                                          | beds[].tenantId -> Tenant; virtual floor                                                        | WORKING |
+| Floor                                         | Room.floorId -> Floor                                                                           | WORKING |
+| User                                          | host identity; approvedBy -> User                                                               | WORKING |
+| Guardian                                      | ward scope for GET :id                                                                          | WORKING |
+| AttendanceRecord                              | on_leave upserts, check-in preserving, race-tolerant                                            | WORKING |
 
-| Surface              | Behavior                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------- |
-| API leaves           | **Gated** -- `leaves.use('*', requireFeature('attendanceEnabled'))` (FLAG-leaves FIXED) |
-| Admin Sidebar Leaves | `featureFlag: 'attendanceEnabled'` (shared with attendance)                             |
-| Flutter              | 403 FEATURE_DISABLED when attendance flag off                                           |
+## 6. Tenant-Room-Bed-Tenant Chain (leaves flow)
 
-Product coupling: Leaves share attendance flag (nav + API).
-
-## Design
-
-| Check                                                | Verdict      |
-| ---------------------------------------------------- | ------------ |
-| PageHeader / DataTable / FormPage                    | PASS         |
-| StatusBadge on list/detail                           | PASS         |
-| Edit status chips use token colors (not StatusBadge) | PARTIAL      |
-| FormSection / FormActions                            | PASS on edit |
-
-## Open gaps
-
-### P0
-
-None for approve/reject happy path when admin is logged in.
-
-### P1
-
-_None open._ Material cancel/flag/search items closed.
-
-### P2
-
-- [x] List delete gated to status===pending (API LEAVE_NOT_PENDING)
-- [ ] Align FE to single date naming (`startDate` vs `fromDate`)
-- [ ] FE reason max 500 to match API
-- [ ] GET `/:id` tenant ownership
-- [ ] Detail reject should allow adminNotes input (currently empty string only on detail; notes live on edit)
-- [ ] StatusBadge on edit page instead of ad-hoc chips
-
-## Closed
-
-- [x] Edit page does **not** call missing generic PUT -- uses approve/reject
-- [x] Reject always sends JSON body (detail + edit)
-- [x] Overlap detection on create
-- [x] Pending-only delete
-- [x] **LV-search FIXED 2026-07-16** -- GET `/leaves?search=` + FE
-- [x] **FLAG-leaves FIXED 2026-07-16** -- `requireFeature('attendanceEnabled')`
-- [x] **LV-CANCEL FIXED 2026-07-16** -- `POST /leaves/:id/cancel` (tenant owner or admin) sets status `cancelled`; Flutter Cancel on pending; tests in `leave-cancel-complaint-photos.test.ts`
-
-## Acceptance checklist
-
-- [ ] Admin creates leave for tenant 201
-- [ ] Tenant creates self leave; cannot create for others 403
-- [ ] Overlap returns 409 with message
-- [ ] Approve sets approved; reject stores adminNotes
-- [ ] Delete only when pending
-- [x] List status filter works; server-side tenant name search works
-- [x] Flag story: Leaves share `attendanceEnabled` on nav + API
-
-## Remediation log
-
-- 2026-07-16: Full re-audit. Workflow approve/reject verified; search dead on list; API not feature-gated. Grade B+.
-- 2026-07-16: **LV-search FIXED** -- server-side tenant name search on list (API + FE).
-- 2026-07-16: **FLAG-leaves FIXED** -- `requireFeature('attendanceEnabled')` on leaves router.
+| Association                                                                 | Status  |
+| --------------------------------------------------------------------------- | ------- |
+| List/detail populate tenant.user + tenant.room + nested floor; bedId mapped | WORKING |
+| Approve -> attendance on_leave sync per day                                 | WORKING |
+| Overlap invariant at create + approve re-check                              | WORKING |
+| Range invariant from<=to (400 LEAVE_INVALID_RANGE)                          | WORKING |

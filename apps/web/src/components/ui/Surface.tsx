@@ -16,15 +16,12 @@ export interface SurfaceProps {
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
+// Deprecated: glass maps to ghost internally so existing callers keep working.
 const variantStyles: Record<SurfaceVariant, string> = {
   card: surfaceCardClass,
   nested: surfaceNestedClass,
   ghost: 'rounded-[var(--radius-xl)] bg-transparent',
-  glass: clsx(
-    'rounded-[var(--radius-xl)] border border-[color:var(--glass-border)]',
-    'bg-[color:var(--glass-bg)] shadow-[var(--shadow-card)]',
-    'backdrop-blur-[var(--glass-blur)]',
-  ),
+  glass: 'rounded-[var(--radius-xl)] bg-transparent',
 };
 
 const paddingStyles: Record<NonNullable<SurfaceProps['padding']>, string> = {

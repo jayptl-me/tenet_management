@@ -1,0 +1,511 @@
+/* ═════════════════════════════════════════════════════════
+   CUSTOM THEME BASE (Light & Dark)
+   Blank-canvas preset driven entirely by user choices:
+   brand color scale (applied at runtime by applyColorScaleToDOM),
+   fonts, and mode. Neutral surfaces keep custom brands legible.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Custom Light ───────────────────────────────────────── */
+[data-theme='custom']:not([data-mode='dark']) {
+  /* Brand — Teal default (replaced at runtime when user sets a brand color) */
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+
+  /* Semantic — Full scales */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #4ade80;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* Info — Blue */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* Accent — Brand-adjacent teal-violet */
+  --color-accent-50: #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-200: #ddd6fe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+  --color-accent-800: #5b21b6;
+  --color-accent-900: #4c1d95;
+
+  /* Neutral — True neutral gray */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+
+  /* Surface — Neutral */
+  --color-surface-50: #fafafa;
+  --color-surface-100: #f4f4f5;
+  --color-surface-200: #e4e4e7;
+  --color-surface-300: #d4d4d8;
+  --color-surface-400: #a1a1aa;
+  --color-surface-500: #71717a;
+  --color-surface-600: #52525b;
+  --color-surface-700: #3f3f46;
+  --color-surface-800: #27272a;
+  --color-surface-900: #18181b;
+  --color-surface-950: #09090b;
+
+  /* Borders */
+  --bw-default: 1px;
+  --bw-strong: 1.5px;
+  --border-color: #e4e4e7;
+  --border-color-default: var(--border-color);
+  --border-color-strong: var(--color-surface-300);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --shadow-card-hover: 0 6px 20px -4px rgba(20, 184, 166, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-button: var(--shadow-xs);
+  --shadow-button-pressed: 0 0 0 1px rgba(20, 184, 166, 0.3), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  /* Typography */
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+
+  /* Transition */
+  --transition-duration: 150ms;
+  --transition-duration-slow: 250ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Behaviors */
+  --hover-lift: translateY(-1px);
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 1px;
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-border: rgba(0, 0, 0, 0.06);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-900);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* Cross-cutting */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-500);
+  --color-text-inverted: var(--color-surface-50);
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: #ffffff;
+  --color-elevated: #ffffff;
+  --color-field-bg: var(--color-surface-50);
+  --color-field-bg-hover: var(--color-surface-100);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
+  --shimmer-base: var(--color-surface-200);
+  --shimmer-shine: var(--color-surface-100);
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
+  --disabled-opacity: 0.5;
+  --disabled-bg: var(--color-surface-200);
+
+  /* Chart / data-viz */
+  --chart-grid: var(--color-surface-200);
+  --chart-grid-strong: var(--color-surface-300);
+  --chart-axis: var(--color-surface-500);
+  --chart-label: var(--color-surface-600);
+  --chart-bar: var(--color-brand-500);
+  --chart-bar-secondary: var(--color-surface-300);
+  --chart-bar-radius: 4px;
+  --chart-track: var(--color-surface-100);
+  --chart-on-fill: var(--color-text-inverted);
+  --chart-tooltip-bg: var(--tooltip-bg);
+  --chart-tooltip-text: var(--tooltip-text);
+  --chart-tooltip-shadow: var(--shadow-tooltip);
+  --chart-heatmap-0: var(--color-surface-100);
+  --chart-heatmap-1: color-mix(in srgb, var(--color-brand-500) 22%, var(--color-surface-100));
+  --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 42%, var(--color-surface-100));
+  --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 68%, var(--color-surface-100));
+  --chart-heatmap-4: var(--color-brand-500);
+  --chart-heatmap-danger-1: color-mix(
+    in srgb,
+    var(--color-danger-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-2: color-mix(
+    in srgb,
+    var(--color-danger-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-3: color-mix(
+    in srgb,
+    var(--color-danger-500) 68%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-4: var(--color-danger-500);
+  --chart-heatmap-success-1: color-mix(
+    in srgb,
+    var(--color-success-500) 22%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-2: color-mix(
+    in srgb,
+    var(--color-success-500) 42%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-3: color-mix(
+    in srgb,
+    var(--color-success-500) 68%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-4: var(--color-success-500);
+  --chart-cell-border: var(--border-color);
+  --chart-cell-radius: 3px;
+}
+
+/* ── Custom Dark ────────────────────────────────────────── */
+[data-theme='custom'][data-mode='dark'] {
+  /* Surface — True dark */
+  --color-surface-50: #09090b;
+  --color-surface-100: #18181b;
+  --color-surface-200: #2c2c30;
+  --color-surface-300: #3d3d44;
+  --color-surface-400: #52525b;
+  --color-surface-500: #71717a;
+  --color-surface-600: #a1a1aa;
+  --color-surface-700: #d4d4d8;
+  --color-surface-800: #e4e4e7;
+  --color-surface-900: #f4f4f5;
+  --color-surface-950: #fafafa;
+
+  /* Brand — Teal (dark-adapted; replaced at runtime when user sets a brand color) */
+  --color-brand-50: #042f2e;
+  --color-brand-100: #134e4a;
+  --color-brand-200: #115e59;
+  --color-brand-300: #0f766e;
+  --color-brand-400: #0d9488;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #2dd4bf;
+  --color-brand-700: #5eead4;
+  --color-brand-800: #99f6e4;
+  --color-brand-900: #ccfbf1;
+  --color-brand-950: #f0fdfa;
+
+  /* Semantic — Dark-adjusted */
+  --color-success-50: #022c22;
+  --color-success-100: #022c22;
+  --color-success-200: #03582f;
+  --color-success-300: #059669;
+  --color-success-400: #10b981;
+  --color-success-500: #10b981;
+  --color-success-600: #34d399;
+  --color-success-700: #6ee7b7;
+  --color-success-800: #a7f3d0;
+  --color-success-900: #d1fae5;
+  --color-warning-50: #451a03;
+  --color-warning-100: #451a03;
+  --color-warning-200: #78350f;
+  --color-warning-300: #d97706;
+  --color-warning-400: #f59e0b;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #fbbf24;
+  --color-warning-700: #fcd34d;
+  --color-warning-800: #fde68a;
+  --color-warning-900: #fef3c7;
+
+  /* Info — Blue (inverted) */
+  --color-info-50: #172554;
+  --color-info-100: #172554;
+  --color-info-200: #1e3a8a;
+  --color-info-300: #1d4ed8;
+  --color-info-400: #3b82f6;
+  --color-info-500: #3b82f6;
+  --color-info-600: #60a5fa;
+  --color-info-700: #93c5fd;
+  --color-info-800: #bfdbfe;
+  --color-info-900: #dbeafe;
+
+  /* Accent — Violet (inverted) */
+  --color-accent-50: #2e1065;
+  --color-accent-100: #4c1d95;
+  --color-accent-200: #5b21b6;
+  --color-accent-300: #6d28d9;
+  --color-accent-400: #7c3aed;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #a78bfa;
+  --color-accent-700: #c4b5fd;
+  --color-accent-800: #ddd6fe;
+  --color-accent-900: #ede9fe;
+
+  /* Neutral — True neutral gray */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  --color-danger-50: #450a0a;
+  --color-danger-100: #450a0a;
+  --color-danger-200: #7f1d1d;
+  --color-danger-300: #dc2626;
+  --color-danger-400: #ef4444;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #f87171;
+  --color-danger-700: #fca5a5;
+  --color-danger-800: #fecaca;
+  --color-danger-900: #fee2e2;
+
+  /* Border */
+  --bw-default: 1px;
+  --bw-strong: 1.5px;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-color-default: var(--border-color);
+  --border-color-strong: rgba(255, 255, 255, 0.14);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Radii — Same as light */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows — Atmospheric */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-card-hover: 0 6px 20px -4px rgba(20, 184, 166, 0.2), 0 2px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-button: var(--shadow-xs);
+  --shadow-button-pressed: 0 0 0 1px rgba(20, 184, 166, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: var(--shadow-lg);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-tooltip: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Typography — Same as light */
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+
+  /* Transition — Same as light */
+  --transition-duration: 150ms;
+  --transition-duration-slow: 250ms;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layout — Same as light */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 56px;
+
+  /* Spacing scale — Same as light */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Behaviors — Same as light */
+  --hover-lift: translateY(-1px);
+  --active-press-scale: 0.98;
+  --active-press-x: 0px;
+  --active-press-y: 1px;
+
+  /* Glass — dark mode glass */
+  --glass-bg: rgba(24, 24, 27, 0.72);
+  --glass-bg-strong: rgba(24, 24, 27, 0.88);
+  --glass-blur: blur(16px);
+  --glass-blur-strong: blur(24px);
+  --glass-border: rgba(255, 255, 255, 0.06);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-800);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* Cross-cutting dark */
+  --color-text-primary: var(--color-surface-900);
+  --color-text-secondary: var(--color-surface-600);
+  --color-text-muted: var(--color-surface-500);
+  --color-text-inverted: var(--color-surface-950);
+  --color-page-bg: var(--color-surface-50);
+  --color-card-bg: var(--color-surface-100);
+  --color-elevated: var(--color-surface-100);
+  --color-field-bg: #0c0c0e;
+  --color-field-bg-hover: var(--color-surface-200);
+  --color-field-border: var(--border-color);
+  --color-field-border-hover: var(--color-surface-300);
+  --shimmer-base: var(--color-surface-300);
+  --shimmer-shine: var(--color-surface-200);
+  --focus-ring-color: var(--color-brand-500);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
+  --disabled-opacity: 0.4;
+  --disabled-bg: var(--color-surface-300);
+
+  /* Chart / data-viz — dark */
+  --chart-grid: var(--color-surface-200);
+  --chart-grid-strong: var(--color-surface-300);
+  --chart-axis: var(--color-surface-500);
+  --chart-label: var(--color-surface-600);
+  --chart-bar: var(--color-brand-500);
+  --chart-bar-secondary: var(--color-surface-300);
+  --chart-bar-radius: 4px;
+  --chart-track: var(--color-surface-200);
+  --chart-on-fill: #fafafa;
+  --chart-tooltip-bg: var(--color-surface-200);
+  --chart-tooltip-text: var(--color-surface-900);
+  --chart-tooltip-shadow: var(--shadow-tooltip);
+  --chart-heatmap-0: var(--color-surface-200);
+  --chart-heatmap-1: color-mix(in srgb, var(--color-brand-500) 28%, var(--color-surface-100));
+  --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 48%, var(--color-surface-100));
+  --chart-heatmap-3: color-mix(in srgb, var(--color-brand-500) 72%, var(--color-surface-100));
+  --chart-heatmap-4: var(--color-brand-500);
+  --chart-heatmap-danger-1: color-mix(
+    in srgb,
+    var(--color-danger-500) 28%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-2: color-mix(
+    in srgb,
+    var(--color-danger-500) 48%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-3: color-mix(
+    in srgb,
+    var(--color-danger-500) 72%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-danger-4: var(--color-danger-500);
+  --chart-heatmap-success-1: color-mix(
+    in srgb,
+    var(--color-success-500) 28%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-2: color-mix(
+    in srgb,
+    var(--color-success-500) 48%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-3: color-mix(
+    in srgb,
+    var(--color-success-500) 72%,
+    var(--color-surface-100)
+  );
+  --chart-heatmap-success-4: var(--color-success-500);
+  --chart-cell-border: rgba(255, 255, 255, 0.06);
+  --chart-cell-radius: 3px;
+}

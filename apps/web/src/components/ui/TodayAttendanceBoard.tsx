@@ -4,23 +4,18 @@ import { useEffect, useState } from 'react';
 import { Users, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatCard } from '@/components/ui/StatCard';
+import type { IAttendanceSummary, IAttendanceTodayResponse } from '@pg/types';
 
-interface TodaySummary {
-  total: number;
-  present: number;
-  absent: number;
-  onLeave: number;
-  notReturned: number;
+export interface TodayAttendanceBoardProps {
+  selectedStatus?: string;
+  onSelectStatus?: (status: string) => void;
 }
 
-interface TodayAttendanceResponse {
-  date: string;
-  summary: TodaySummary;
-  records: unknown[];
-}
-
-export function TodayAttendanceBoard() {
-  const [summary, setSummary] = useState<TodaySummary | null>(null);
+export function TodayAttendanceBoard({
+  selectedStatus,
+  onSelectStatus,
+}: TodayAttendanceBoardProps) {
+  const [summary, setSummary] = useState<IAttendanceSummary | null>(null);
   const [date, setDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -29,7 +24,7 @@ export function TodayAttendanceBoard() {
     let cancelled = false;
     api
       .get('attendance/today')
-      .json<{ success: boolean; data: TodayAttendanceResponse }>()
+      .json<{ success: boolean; data: IAttendanceTodayResponse }>()
       .then((res) => {
         if (!cancelled) {
           setSummary(res.data.summary);
@@ -50,8 +45,8 @@ export function TodayAttendanceBoard() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
             className="h-[88px] animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
@@ -84,30 +79,66 @@ export function TodayAttendanceBoard() {
           Today&apos;s attendance — {formattedDate}
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
           title="Active Tenants"
           value={summary.total}
           icon={<Users className="h-4 w-4" />}
           variant="brand"
+          className={
+            selectedStatus === ''
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              : undefined
+          }
+          onClick={onSelectStatus ? () => onSelectStatus('') : undefined}
         />
         <StatCard
           title="Present"
           value={summary.present}
           icon={<CheckCircle className="h-4 w-4" />}
           variant="success"
+          className={
+            selectedStatus === 'present'
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              : undefined
+          }
+          onClick={onSelectStatus ? () => onSelectStatus('present') : undefined}
         />
         <StatCard
           title="Absent"
           value={summary.absent}
           icon={<XCircle className="h-4 w-4" />}
           variant="danger"
+          className={
+            selectedStatus === 'absent'
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              : undefined
+          }
+          onClick={onSelectStatus ? () => onSelectStatus('absent') : undefined}
+        />
+        <StatCard
+          title="On Leave"
+          value={summary.onLeave}
+          icon={<Clock className="h-4 w-4" />}
+          variant="brand"
+          className={
+            selectedStatus === 'on_leave'
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              : undefined
+          }
+          onClick={onSelectStatus ? () => onSelectStatus('on_leave') : undefined}
         />
         <StatCard
           title="Not Marked"
           value={summary.notReturned}
           icon={<Clock className="h-4 w-4" />}
           variant="warning"
+          className={
+            selectedStatus === 'not_returned'
+              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              : undefined
+          }
+          onClick={onSelectStatus ? () => onSelectStatus('not_returned') : undefined}
         />
       </div>
     </div>

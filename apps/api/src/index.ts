@@ -36,7 +36,7 @@ import sseRoutes from './routes/sse.js';
 import laundryRoutes from './routes/laundry.js';
 import washingMachineRoutes from './routes/washingMachines.js';
 import auditRoutes from './routes/audit.js';
-import { startScheduler } from './jobs/scheduler.js';
+import { startScheduler, stopScheduler } from './jobs/scheduler.js';
 
 const app = new Hono();
 
@@ -70,16 +70,20 @@ const api = new Hono().basePath('/api/v1');
 // Apply mutation rate limiter to all API routes (30 req/min for POST/PUT/DELETE)
 api.use('*', generalMutationLimiter);
 
-api.get('/health', (c) =>
-  c.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    mongodb: isDatabaseConnected() ? 'connected' : 'disconnected',
-    uptime: process.uptime(),
-    bunVersion: Bun.version,
-    memory: process.memoryUsage(),
-  }),
-);
+api.get('/health', (c) => {
+  const dbOk = isDatabaseConnected();
+  return c.json(
+    {
+      status: dbOk ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      mongodb: dbOk ? 'connected' : 'disconnected',
+      uptime: process.uptime(),
+      bunVersion: Bun.version,
+      memory: process.memoryUsage(),
+    },
+    dbOk ? 200 : 503,
+  );
+});
 
 api.route('/auth', authRoutes);
 api.route('/floors', floorRoutes);
@@ -145,6 +149,7 @@ try {
 async function shutdown(signal: string): Promise<void> {
   logger.info(`${signal} — shutting down`);
   server.stop(true);
+  stopScheduler();
   await disconnectDatabase();
   process.exit(0);
 }

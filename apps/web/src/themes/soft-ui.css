@@ -97,7 +97,7 @@
   /* Borders — Thin, semi-transparent white */
   --bw-default: 1px;
   --bw-strong: 1px;
-  --border-color: rgba(255, 255, 255, 0.3);
+  --border-color: rgba(255, 255, 255, 0.65);
 
   /* Radii — Smooth, rounded */
   --radius-sm: 8px;
@@ -107,8 +107,8 @@
   --radius-full: 9999px;
 
   /* Shadows — Multi-layer soft, far-reaching */
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  --shadow-card-hover: 0 14px 40px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.95);
   --shadow-button: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-button-pressed: 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-dropdown: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
@@ -120,6 +120,34 @@
   --glass-bg: rgba(255, 255, 255, 0.58);
   --glass-bg-hover: rgba(255, 255, 255, 0.76);
 
+  /* Shadows — Full scale (soft luminous idiom) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 20px 60px rgba(0, 0, 0, 0.16);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  /* Borders — Aliases */
+  --border-color-default: var(--border-color);
+  --border-color-strong: var(--color-surface-300);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Tooltip */
+  --tooltip-bg: var(--color-surface-900);
+  --tooltip-text: var(--color-surface-50);
+  --tooltip-radius: var(--radius-md);
+  --tooltip-padding: 6px 10px;
+
+  /* Glass — Shared names consumed by shell components */
+  --glass-bg-strong: rgba(255, 255, 255, 0.82);
+  --glass-blur: 16px;
+  --glass-blur-strong: 24px;
+  --glass-border: var(--border-color);
+
   /* Typography — Modern geometric */
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Inter', sans-serif;
@@ -127,11 +155,26 @@
 
   /* Transition — Smooth, Material-like */
   --transition-duration: 250ms;
+  --transition-duration-slow: 350ms;
   --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
 
   /* Layout — Moderate width */
   --sidebar-width: 272px;
+  --sidebar-collapsed-width: 64px;
   --header-height: 60px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   /* Behaviors — Float upward on hover */
   --hover-lift: translateY(-2px);
@@ -155,6 +198,8 @@
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
   --disabled-opacity: 0.45;
   --disabled-bg: var(--color-surface-200);
   /* Chart / data-viz */
@@ -169,7 +214,7 @@
   --chart-on-fill: var(--color-text-inverted);
   --chart-tooltip-bg: var(--color-surface-900);
   --chart-tooltip-text: var(--color-surface-50);
-  --chart-tooltip-shadow: var(--shadow-tooltip, 0 4px 12px rgba(0, 0, 0, 0.12));
+  --chart-tooltip-shadow: var(--shadow-tooltip);
   --chart-heatmap-0: var(--color-surface-100);
   --chart-heatmap-1: color-mix(in srgb, var(--color-brand-500) 22%, var(--color-surface-100));
   --chart-heatmap-2: color-mix(in srgb, var(--color-brand-500) 42%, var(--color-surface-100));
@@ -308,8 +353,8 @@
   --glass-border-glow: rgba(100, 180, 220, 0.1);
 
   /* Shadows — Deeper, darker */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.2);
   --shadow-button-pressed: 0 1px 2px rgba(0, 0, 0, 0.15);
   --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.25);
@@ -320,6 +365,28 @@
   --backdrop-saturate: 120%;
   --glass-bg: rgba(12, 18, 34, 0.52);
   --glass-bg-hover: rgba(12, 18, 34, 0.72);
+
+  /* Shadows — Full scale (soft luminous idiom, dark) */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-2xl: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* Borders — Aliases */
+  --border-color-default: var(--border-color);
+  --border-color-strong: rgba(255, 255, 255, 0.16);
+  --border-color-focus: var(--color-brand-500);
+  --border-color-error: var(--color-danger-500);
+  --border-color-success: var(--color-success-500);
+
+  /* Glass — Shared names consumed by shell components */
+  --glass-bg-strong: rgba(12, 18, 34, 0.8);
+  --glass-blur: 12px;
+  --glass-blur-strong: 20px;
+  --glass-border: var(--border-color);
 
   /* Radii — Same as light (must be repeated) */
   --radius-sm: 8px;
@@ -335,11 +402,26 @@
 
   /* Layout — Same as light */
   --sidebar-width: 272px;
+  --sidebar-collapsed-width: 64px;
   --header-height: 60px;
+
+  /* Spacing scale — Same as light */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
   /* Transition — Same as light */
   --transition-duration: 250ms;
+  --transition-duration-slow: 350ms;
   --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
 
   /* Behaviors */
   --hover-lift: translateY(-2px);
@@ -363,6 +445,8 @@
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: var(--color-brand-500);
   --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-bg: var(--color-page-bg);
   --disabled-opacity: 0.45;
   --disabled-bg: var(--color-surface-300);
 
