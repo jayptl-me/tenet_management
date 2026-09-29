@@ -142,6 +142,7 @@ When changing auth, CORS, or portal APIs: update API + env + render.yaml if need
 2. `bun run typecheck` and lint green for JS changes; `flutter analyze` for Flutter changes.
 3. No emojis introduced.
 4. Connectivity and agent docs updated when architecture or CORS changes.
+5. After UI changes, run `bun run lint` and fix all `shadcn/*` errors (rules in `.oxlintrc.json`).
 
 ## Decision Gates — Two-Gate Law (adopted 2026-08-26, global across ~/Development)
 
