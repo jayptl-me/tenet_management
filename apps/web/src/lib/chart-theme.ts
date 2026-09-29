@@ -75,7 +75,7 @@ export function heatmapLevel(count: number, max: number): number {
 
 /** Shared tooltip chrome classes for HTML chart tooltips. */
 export const chartTooltipClass =
-  'pointer-events-none z-10 whitespace-nowrap rounded-[var(--radius-md)] border border-[color:var(--chart-cell-border)] px-3 py-2 text-[12px] font-medium shadow-[var(--chart-tooltip-shadow)] bg-[color:var(--chart-tooltip-bg)] text-[color:var(--chart-tooltip-text)]';
+  'pointer-events-none z-10 whitespace-nowrap rounded-(--radius-md) border border-(--chart-cell-border) px-3 py-2 text-12 font-medium shadow-(--chart-tooltip-shadow) bg-(--chart-tooltip-bg) text-(--chart-tooltip-text)';
 
 /** Series color helpers — prefer tokens so charts retheme with light/dark. */
 export const chartSeries = {

@@ -124,8 +124,12 @@
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
   --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.12), 0 6px 24px rgba(0, 0, 0, 0.06);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  --shadow-card-hover: 0 6px 20px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --shadow-card-hover:
+    0 6px 20px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   --shadow-button: var(--shadow-xs);
   --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-dropdown: var(--shadow-lg);
@@ -192,6 +196,48 @@
   --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-50);
 
+  /* ── Solid fills (text-bearing surfaces — guaranteed AA ink) ── */
+  --color-brand-solid: #4f46e5;
+  --color-brand-solid-hover: #4338ca;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #047857;
+  --color-success-solid-hover: #065f46;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #b45309;
+  --color-warning-solid-hover: #92400e;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #2563eb;
+  --color-info-solid-hover: #1d4ed8;
+  --color-on-info-solid: #ffffff;
+
+  /* ── Vivid on-fill ink (charts & icons on the 500 fills) ── */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #18181b;
+  --color-on-success: #18181b;
+  --color-on-warning: #18181b;
+  --color-on-info: #18181b;
+
+  /* ── Tinted semantic chips (badges, banners, status pills) ── */
+  --badge-success-bg: var(--color-success-100);
+  --badge-success-text: var(--color-success-800);
+  --badge-success-border: var(--color-success-200);
+  --badge-warning-bg: var(--color-warning-100);
+  --badge-warning-text: var(--color-warning-800);
+  --badge-warning-border: var(--color-warning-200);
+  --badge-danger-bg: var(--color-danger-100);
+  --badge-danger-text: var(--color-danger-800);
+  --badge-danger-border: var(--color-danger-200);
+  --badge-info-bg: var(--color-brand-100);
+  --badge-info-text: var(--color-brand-800);
+  --badge-info-border: var(--color-brand-200);
+  --badge-neutral-bg: var(--color-surface-100);
+  --badge-neutral-text: var(--color-text-secondary);
+  --badge-neutral-border: var(--color-surface-200);
+  --badge-dot: 6px; /* accent dot diameter */
+
   /* Semantic surfaces for forms / cards / fields */
   --color-page-bg: var(--color-surface-50);
   --color-card-bg: #ffffff;
@@ -206,6 +252,7 @@
   --border-color-focus: var(--color-brand-500);
   --border-color-error: var(--color-danger-500);
   --border-color-success: var(--color-success-500);
+  --border-color-hover: var(--color-brand-300);
 
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
@@ -403,8 +450,12 @@
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
   --shadow-2xl: 0 24px 64px rgba(0, 0, 0, 0.7);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --shadow-card-hover: 0 6px 20px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-card-hover:
+    0 6px 20px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   --shadow-button: var(--shadow-xs);
   --shadow-button-pressed: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-dropdown: var(--shadow-lg);
@@ -445,8 +496,50 @@
   /* Cross-cutting dark — inverted surface scale: higher step = lighter */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-500);
+  --color-text-muted: #82828b;
   --color-text-inverted: var(--color-surface-950);
+
+  /* ── Solid fills (text-bearing surfaces — guaranteed AA ink) ── */
+  --color-brand-solid: #4f46e5;
+  --color-brand-solid-hover: #4338ca;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #7f1d1d;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #03582f;
+  --color-success-solid-hover: #022c22;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #78350f;
+  --color-warning-solid-hover: #451a03;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #1d4ed8;
+  --color-info-solid-hover: #1e3a8a;
+  --color-on-info-solid: #ffffff;
+
+  /* ── Vivid on-fill ink (charts & icons on the 500 fills) ── */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #18181b;
+  --color-on-success: #18181b;
+  --color-on-warning: #18181b;
+  --color-on-info: #18181b;
+
+  /* ── Tinted semantic chips (dark): light text on dark-tinted bg ── */
+  --badge-success-bg: var(--color-success-200);
+  --badge-success-text: var(--color-success-900);
+  --badge-success-border: var(--color-success-800);
+  --badge-warning-bg: var(--color-warning-200);
+  --badge-warning-text: var(--color-warning-900);
+  --badge-warning-border: var(--color-warning-800);
+  --badge-danger-bg: var(--color-danger-200);
+  --badge-danger-text: var(--color-danger-900);
+  --badge-danger-border: var(--color-danger-800);
+  --badge-info-bg: var(--color-brand-200);
+  --badge-info-text: var(--color-brand-900);
+  --badge-info-border: var(--color-brand-800);
+  --badge-neutral-bg: var(--color-surface-200);
+  --badge-neutral-text: var(--color-surface-800);
+  --badge-neutral-border: var(--color-surface-300);
+  --badge-dot: 6px;
 
   /* Semantic surfaces — nested fields sit slightly above page bg */
   --color-page-bg: var(--color-surface-50);
@@ -462,6 +555,7 @@
   --border-color-focus: var(--color-brand-500);
   --border-color-error: var(--color-danger-500);
   --border-color-success: var(--color-success-500);
+  --border-color-hover: var(--color-brand-400);
 
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);

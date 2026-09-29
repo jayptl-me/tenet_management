@@ -3,6 +3,12 @@
 
 @import 'tailwindcss';
 
+/* ── Dark Variant Wiring ────────────────────────────────
+   Themes switch via data-mode on <html>. Tailwind v4 ships no
+   dark: variant by default, so `dark:` utilities were silently
+   dead. Bind dark: to the data-mode attribute (self + descendants). */
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
+
 /* ── Theme CSS Files ────────────────────────────────────── */
 @import '../themes/brutalist.css';
 @import '../themes/neumorphic.css';
@@ -15,6 +21,9 @@
    These serve as universal fallback before theme CSS loads.
    ═════════════════════════════════════════════════════════ */
 :root {
+  /* Native controls (scrollbars, inputs, pickers) follow the mode */
+  color-scheme: light;
+
   /* Brand — Indigo (SaaS) */
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
@@ -224,6 +233,12 @@
   /* ── Extended Typography Tokens (NEW) ──────────────────── */
   --text-5xl: 3rem;
   --text-2xs: 0.6875rem;
+  --text-3xs: 0.625rem;
+  --text-12: 0.75rem;
+  --text-13: 0.8125rem;
+  --text-15: 0.9375rem;
+  --text-16: 1rem;
+  --tracking-label: 0.08em;
   --text-body-lg: 1.0625rem;
   --leading-tight: 1.2;
   --leading-relaxed: 1.65;
@@ -246,6 +261,33 @@
   --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-50);
 
+  /* ── On-fill semantic ink ───────────────────────────────── */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-warning: #451a03;
+  --color-on-success: #ffffff;
+
+  /* ── Tinted semantic chips / badges ────────────────────── */
+  --badge-success-bg: var(--color-success-100);
+  --badge-success-text: var(--color-success-800);
+  --badge-success-border: var(--color-success-200);
+  --badge-warning-bg: var(--color-warning-100);
+  --badge-warning-text: var(--color-warning-800);
+  --badge-warning-border: var(--color-warning-200);
+  --badge-danger-bg: var(--color-danger-100);
+  --badge-danger-text: var(--color-danger-800);
+  --badge-danger-border: var(--color-danger-200);
+  --badge-info-bg: var(--color-brand-100);
+  --badge-info-text: var(--color-brand-800);
+  --badge-info-border: var(--color-brand-200);
+  --badge-neutral-bg: var(--color-surface-100);
+  --badge-neutral-text: var(--color-text-secondary);
+  --badge-neutral-border: var(--color-surface-200);
+  --badge-dot: 6px;
+
+  /* ── Interactive Card Hover Border ─────────────────────── */
+  --border-color-hover: var(--color-brand-300);
+
   /* Chart / data-viz defaults (themes may override) */
   --chart-grid: var(--color-surface-200);
   --chart-grid-strong: var(--color-surface-300);
@@ -255,7 +297,7 @@
   --chart-bar-secondary: var(--color-surface-300);
   --chart-bar-radius: 4px;
   --chart-track: var(--color-surface-100);
-  --chart-on-fill: var(--color-text-inverted);
+  --chart-on-fill: var(--color-on-brand-solid);
   --chart-tooltip-bg: var(--tooltip-bg);
   --chart-tooltip-text: var(--tooltip-text);
   --chart-tooltip-shadow: var(--shadow-tooltip);
@@ -362,6 +404,9 @@
    doesn't define every token in its dark block)
    ═════════════════════════════════════════════════════════ */
 [data-mode='dark'] {
+  /* Native controls (scrollbars, inputs, pickers) follow the mode */
+  color-scheme: dark;
+
   /* If a theme dark block doesn't define tooltip tokens, use these */
   --tooltip-bg: var(--color-surface-800);
   --tooltip-text: var(--color-surface-100);
@@ -389,6 +434,33 @@
   --color-field-bg-hover: var(--color-surface-200);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+
+  /* ── On-fill semantic ink (dark fallback) ───────────────── */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-warning: #451a03;
+  --color-on-success: #ffffff;
+
+  /* ── Tinted semantic chips / badges (dark fallback) ─────── */
+  --badge-success-bg: var(--color-success-200);
+  --badge-success-text: var(--color-success-900);
+  --badge-success-border: var(--color-success-800);
+  --badge-warning-bg: var(--color-warning-200);
+  --badge-warning-text: var(--color-warning-900);
+  --badge-warning-border: var(--color-warning-800);
+  --badge-danger-bg: var(--color-danger-200);
+  --badge-danger-text: var(--color-danger-900);
+  --badge-danger-border: var(--color-danger-800);
+  --badge-info-bg: var(--color-brand-200);
+  --badge-info-text: var(--color-brand-900);
+  --badge-info-border: var(--color-brand-800);
+  --badge-neutral-bg: var(--color-surface-200);
+  --badge-neutral-text: var(--color-surface-800);
+  --badge-neutral-border: var(--color-surface-300);
+  --badge-dot: 6px;
+
+  /* ── Interactive Card Hover Border (dark fallback) ──────── */
+  --border-color-hover: var(--color-brand-400);
 }
 
 /* ═════════════════════════════════════════════════════════
@@ -401,6 +473,15 @@
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
+
+  /* Micro type sizes (font-size only, no line-height companion). */
+  --text-3xs: var(--text-3xs);
+  --text-2xs: var(--text-2xs);
+  --text-12: var(--text-12);
+  --text-13: var(--text-13);
+  --text-15: var(--text-15);
+  --text-16: var(--text-16);
+  --tracking-label: var(--tracking-label);
 
   --color-brand-50: var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);
@@ -497,6 +578,12 @@
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
   --radius-full: var(--radius-full);
+
+  --color-on-brand: var(--color-on-brand);
+  --color-on-danger: var(--color-on-danger);
+  --color-on-warning: var(--color-on-warning);
+  --color-on-success: var(--color-on-success);
+  --border-color-hover: var(--border-color-hover);
 }
 
 /* ═════════════════════════════════════════════════════════
@@ -658,4 +745,12 @@ input[type='range'] {
 /* Progress bars */
 progress {
   accent-color: var(--color-brand-500);
+}
+
+/* Hide scrollbars on horizontal scrollers while keeping scroll */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
