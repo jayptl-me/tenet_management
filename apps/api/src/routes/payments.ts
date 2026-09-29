@@ -9,6 +9,9 @@ import { Payment } from '../models/payment.js';
 import { Invoice } from '../models/invoice.js';
 import { Tenant } from '../models/tenant.js';
 import { Guardian } from '../models/guardian.js';
+import { User } from '../models/user.js';
+import { Room } from '../models/room.js';
+import { AppConfig } from '../models/appConfig.js';
 import { generateUpiQr, generateTransactionRef, getPgUpiConfig } from '../lib/upi.js';
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { logger } from '../lib/logger.js';
@@ -133,6 +136,9 @@ payments.get('/', authGuard, adminOnly, async (c) => {
   const roomId = c.req.query('roomId');
   const method = c.req.query('method');
   const type = c.req.query('type');
+  const search = c.req.query('search')?.trim();
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
@@ -152,8 +158,58 @@ payments.get('/', authGuard, adminOnly, async (c) => {
     filter.tenantId = { $in: tenantIds };
   }
 
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, unknown> = {};
+    if (fromDate) dateFilter.$gte = new Date(fromDate);
+    if (toDate) {
+      const end = new Date(toDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+    filter.createdAt = dateFilter;
+  }
+
+  if (search) {
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const [matchingUsers, matchingRooms, matchingInvoices] = await Promise.all([
+      User.find({
+        $or: [
+          { name: { $regex: escaped, $options: 'i' } },
+          { phone: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+        ],
+      })
+        .select('_id')
+        .lean(),
+      Room.find({ roomNumber: { $regex: escaped, $options: 'i' } })
+        .select('_id')
+        .lean(),
+      Invoice.find({ invoiceNumber: { $regex: escaped, $options: 'i' } })
+        .select('_id')
+        .lean(),
+    ]);
+
+    const userIds = matchingUsers.map((u) => u._id);
+    const roomIds = matchingRooms.map((r) => r._id);
+    const invoiceIds = matchingInvoices.map((inv) => inv._id);
+
+    const matchingTenants = (await Tenant.find({
+      $or: [{ userId: { $in: userIds } }, { roomId: { $in: roomIds } }],
+    } as Record<string, unknown>)
+      .select('_id')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
+    const tenantIds = matchingTenants.map((t) => t._id);
+
+    filter.$or = [
+      { utrNumber: { $regex: escaped, $options: 'i' } },
+      ...(tenantIds.length > 0 ? [{ tenantId: { $in: tenantIds } }] : []),
+      ...(invoiceIds.length > 0 ? [{ invoiceId: { $in: invoiceIds } }] : []),
+    ];
+  }
+
   const [data, total] = await Promise.all([
-    Payment.find(safeFilter(filter))
+    Payment.find(filter as Record<string, unknown>)
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
@@ -170,7 +226,7 @@ payments.get('/', authGuard, adminOnly, async (c) => {
       })
       .populate('invoiceId')
       .lean() as unknown,
-    paymentCountDocs(safeFilter(filter)),
+    paymentCountDocs(filter as Record<string, unknown>),
   ]);
 
   return c.json({
@@ -178,6 +234,39 @@ payments.get('/', authGuard, adminOnly, async (c) => {
     data,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
+});
+
+// ── GET /payments/status-counts ─────────────────────────
+// Aggregated count of payments per status (all, pending_verification, paid, pending, overdue, cancelled)
+payments.get('/status-counts', authGuard, adminOnly, async (c) => {
+  const month = c.req.query('month');
+  const match: Record<string, unknown> = {};
+  if (month) match.month = month;
+
+  const agg = await paymentAggregate([
+    ...(Object.keys(match).length > 0 ? [{ $match: match }] : []),
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+
+  const counts: Record<string, number> = {
+    all: 0,
+    pending_verification: 0,
+    paid: 0,
+    pending: 0,
+    overdue: 0,
+    cancelled: 0,
+  };
+
+  let total = 0;
+  for (const item of agg as Array<{ _id: string; count: number }>) {
+    if (item._id in counts) {
+      counts[item._id] = item.count;
+    }
+    total += item.count;
+  }
+  counts.all = total;
+
+  return c.json({ success: true, data: counts });
 });
 
 // ── GET /payments/summary ───────────────────────────────
@@ -839,7 +928,21 @@ payments.get('/:id/receipt', authGuard, async (c) => {
     return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
   }
 
-  return c.json({ success: true, data: payment });
+  const config = await AppConfig.findOne().lean();
+  const pgBranding = config
+    ? {
+        pgName: config.pgName,
+        tagline: config.tagline,
+        address: config.address,
+        phone: config.phone,
+        email: config.email,
+        gstNumber: config.gstNumber,
+        upiId: config.upiId,
+        upiPayeeName: config.upiPayeeName,
+      }
+    : null;
+
+  return c.json({ success: true, data: { ...payment, pgBranding } });
 });
 
 // ── GET /payments/:id ─────────────────────────────────

@@ -11,6 +11,10 @@ import { Invoice } from '../models/invoice.js';
 import { Payment } from '../models/payment.js';
 import { Tenant } from '../models/tenant.js';
 import { Guardian } from '../models/guardian.js';
+import { User } from '../models/user.js';
+import { Room } from '../models/room.js';
+import { ElectricityBill } from '../models/electricityBill.js';
+import { AppConfig } from '../models/appConfig.js';
 import { generateSingleInvoice, generateMonthlyInvoices } from '../services/invoice.service.js';
 import { getInvoiceBalance } from '../services/payment-status.service.js';
 import { InvoicePdf } from '../templates/InvoicePdf.js';
@@ -35,6 +39,15 @@ const generateBulkSchema = z.strictObject({
 const generateSingleSchema = z.strictObject({
   tenantId: z.string().min(1, 'Tenant ID is required'),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Month must be YYYY-MM format'),
+  lineItems: z
+    .array(
+      z.strictObject({
+        description: z.string().min(1, 'Description is required'),
+        amount: z.number().min(0, 'Amount cannot be negative'),
+      }),
+    )
+    .optional(),
+  dueDate: z.string().optional(),
 });
 
 // ── GET /invoices ───────────────────────────────────────
@@ -43,6 +56,7 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
   const month = c.req.query('month');
   const status = c.req.query('status');
   const tenantId = c.req.query('tenantId');
+  const search = c.req.query('search')?.trim();
 
   const filter: Record<string, unknown> = {};
   if (month) filter.month = month;
@@ -58,8 +72,42 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
     filter.tenantId = new mongoose.Types.ObjectId(parsed);
   }
 
+  if (search) {
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const [matchingUsers, matchingRooms] = await Promise.all([
+      User.find({
+        $or: [
+          { name: { $regex: escaped, $options: 'i' } },
+          { phone: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+        ],
+      })
+        .select('_id')
+        .lean(),
+      Room.find({ roomNumber: { $regex: escaped, $options: 'i' } })
+        .select('_id')
+        .lean(),
+    ]);
+
+    const userIds = matchingUsers.map((u) => u._id);
+    const roomIds = matchingRooms.map((r) => r._id);
+
+    const matchingTenants = (await Tenant.find({
+      $or: [{ userId: { $in: userIds } }, { roomId: { $in: roomIds } }],
+    } as Record<string, unknown>)
+      .select('_id')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
+    const tenantIds = matchingTenants.map((t) => t._id);
+
+    filter.$or = [
+      { invoiceNumber: { $regex: escaped, $options: 'i' } },
+      ...(tenantIds.length > 0 ? [{ tenantId: { $in: tenantIds } }] : []),
+    ];
+  }
+
   const [data, total] = await Promise.all([
-    Invoice.find(safeFilter(filter))
+    Invoice.find(filter as Record<string, unknown>)
       .sort({ [sort]: order === 'asc' ? 1 : -1 } as Record<string, 1 | -1>)
       .skip(skip)
       .limit(limit)
@@ -75,13 +123,84 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
         ],
       })
       .lean() as unknown,
-    invoiceCountDocs(safeFilter(filter)),
+    invoiceCountDocs(filter as Record<string, unknown>),
   ]);
 
   return c.json({
     success: true,
     data,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+// ── GET /invoices/status-counts ─────────────────────────
+invoices.get('/status-counts', authGuard, adminOnly, async (c) => {
+  const month = c.req.query('month');
+  const match: Record<string, unknown> = {};
+  if (month) match.month = month;
+
+  const agg = await Invoice.aggregate([
+    ...(Object.keys(match).length > 0 ? [{ $match: match }] : []),
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+
+  const counts: Record<string, number> = {
+    all: 0,
+    draft: 0,
+    sent: 0,
+    partial: 0,
+    paid: 0,
+    overdue: 0,
+    cancelled: 0,
+  };
+
+  let total = 0;
+  for (const item of agg as Array<{ _id: string; count: number }>) {
+    if (item._id in counts) {
+      counts[item._id] = item.count;
+    }
+    total += item.count;
+  }
+  counts.all = total;
+
+  return c.json({ success: true, data: counts });
+});
+
+// ── GET /invoices/preview-bulk ──────────────────────────
+invoices.get('/preview-bulk', authGuard, adminOnly, async (c) => {
+  const month = c.req.query('month');
+  if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return badRequest(c, 'month query parameter must be YYYY-MM format', 'INVALID_MONTH');
+  }
+
+  const activeTenants = (await Tenant.find(safeFilter({ isActive: true })).lean()) as unknown as Array<
+    Record<string, unknown>
+  >;
+  const activeTenantsCount = activeTenants.length;
+
+  const existingInvoices = (await Invoice.find(
+    safeFilter({ month, status: { $ne: 'cancelled' } }),
+  )
+    .select('tenantId')
+    .lean()) as unknown as Array<Record<string, unknown>>;
+
+  const invoicedTenantIds = new Set(existingInvoices.map((inv) => String(inv.tenantId)));
+  const eligibleTenants = activeTenants.filter((t) => !invoicedTenantIds.has(String(t._id)));
+
+  const estimatedTotalAmount = eligibleTenants.reduce(
+    (sum, t) => sum + ((t.monthlyRent as number) ?? 0),
+    0,
+  );
+
+  return c.json({
+    success: true,
+    data: {
+      month,
+      activeTenantsCount,
+      alreadyInvoicedCount: existingInvoices.length,
+      toGenerateCount: eligibleTenants.length,
+      estimatedTotalAmount,
+    },
   });
 });
 
@@ -176,9 +295,7 @@ invoices.get('/aging', authGuard, adminOnly, async (c) => {
     { $match: { status: 'paid' } },
     { $group: { _id: '$invoiceId', total: { $sum: '$amount' } } },
   ])) as Array<Record<string, unknown>>;
-  const paidMap = new Map(
-    paidAgg.map((r) => [String(r._id), (r.total as number) ?? 0]),
-  );
+  const paidMap = new Map(paidAgg.map((r) => [String(r._id), (r.total as number) ?? 0]));
 
   const buckets = {
     current: { count: 0, amount: 0 },
@@ -197,8 +314,7 @@ invoices.get('/aging', authGuard, adminOnly, async (c) => {
 
     const due = inv.dueDate ? new Date(inv.dueDate as string | Date) : null;
     const dueMs = due && !Number.isNaN(due.getTime()) ? due.getTime() : null;
-    const daysPastDue =
-      dueMs != null ? Math.floor((nowMs - dueMs) / (24 * 60 * 60 * 1000)) : 0;
+    const daysPastDue = dueMs != null ? Math.floor((nowMs - dueMs) / (24 * 60 * 60 * 1000)) : 0;
 
     if (daysPastDue <= 0) {
       buckets.current.count += 1;
@@ -238,10 +354,10 @@ invoices.post(
   adminOnly,
   zValidator('json', generateSingleSchema),
   async (c) => {
-    const { tenantId, month } = c.req.valid('json');
+    const { tenantId, month, lineItems, dueDate } = c.req.valid('json');
     const user = c.get('user');
     try {
-      const invoice = await generateSingleInvoice({ tenantId, month });
+      const invoice = await generateSingleInvoice({ tenantId, month, lineItems, dueDate });
 
       writeAuditLog({
         userId: user.sub,
@@ -324,9 +440,69 @@ invoices.get('/:id', authGuard, async (c) => {
 
   const whatsAppUrl = buildWhatsAppUrl((userInfo?.phone as string) ?? '+910000000000', shareText);
 
+  const config = await AppConfig.findOne().lean();
+  const pgBranding = config
+    ? {
+        pgName: config.pgName,
+        tagline: config.tagline,
+        address: config.address,
+        phone: config.phone,
+        email: config.email,
+        gstNumber: config.gstNumber,
+        upiId: config.upiId,
+        upiPayeeName: config.upiPayeeName,
+      }
+    : null;
+
+  let electricityDetails: Record<string, unknown> | null = null;
+  const roomIdStr = roomInfo?._id ? String(roomInfo._id) : null;
+  if (roomIdStr && invoice.month) {
+    const elecBill = (await ElectricityBill.findOne(
+      safeFilter({ month: invoice.month }),
+    ).lean()) as Record<string, unknown> | null;
+
+    if (elecBill) {
+      const roomEntries = (elecBill.roomEntries as Array<Record<string, unknown>>) ?? [];
+      const entry = roomEntries.find((e) => {
+        const rId =
+          typeof e.roomId === 'object' && e.roomId !== null && '_id' in e.roomId
+            ? String((e.roomId as { _id: unknown })._id)
+            : String(e.roomId ?? '');
+        return rId === roomIdStr;
+      });
+
+      if (entry) {
+        const prev = (entry.previousReading as number) ?? 0;
+        const curr = (entry.currentReading as number) ?? 0;
+        const units = (entry.unitsConsumed as number) ?? Math.max(0, curr - prev);
+        electricityDetails = {
+          billId: String(elecBill._id),
+          month: elecBill.month,
+          billStatus: elecBill.status,
+          previousReading: prev,
+          currentReading: curr,
+          unitsConsumed: units,
+          ratePerUnit: (entry.ratePerUnit as number) ?? 0,
+          roomTotalAmount: (entry.amount as number) ?? 0,
+          tenantShare: (invoice.electricityAmount as number) ?? 0,
+          billImageUrl: elecBill.billImageUrl ?? null,
+        };
+      }
+    }
+  }
+
   return c.json({
     success: true,
-    data: { ...invoice, paidAmount, balance, payments, whatsAppUrl, shareText },
+    data: {
+      ...invoice,
+      paidAmount,
+      balance,
+      payments,
+      whatsAppUrl,
+      shareText,
+      pgBranding,
+      electricityDetails,
+    },
   });
 });
 
@@ -349,7 +525,7 @@ const updateInvoiceSchema = z.strictObject({
     )
     .optional(),
   status: z.enum(['draft', 'sent', 'overdue', 'cancelled']).optional(),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().optional(),
 });
 
 invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchema), async (c) => {

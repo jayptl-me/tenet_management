@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "seed": "bun --filter '@pg/api' seed",
     "seed:sample": "bun --filter '@pg/api' seed -- --with-sample-data",
+    "seed:dashboard": "bun --filter '@pg/api' seed:dashboard",
     "seo": "bun scripts/generate-seo-files.ts",
     "mobile:setup": "cd mobile && flutter pub get",
     "mobile:gen": "cd mobile && dart run build_runner build --delete-conflicting-outputs"

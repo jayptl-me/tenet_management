@@ -20,6 +20,7 @@ import {
 } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { getInvoiceBalance } from '../services/payment-status.service.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateArrFn = (
@@ -327,19 +328,31 @@ guardians.get('/me/ward', authGuard, async (c) => {
   };
 
   if (tenantId) {
+    // Remaining balance per invoice (after verified payments), mirroring the
+    // checkout gate in tenants.ts so guardians see accurate dues.
     const unpaidInvoices = (await Invoice.find(
       safeFilter({
         tenantId,
         status: { $in: ['sent', 'partial', 'overdue'] },
       }),
-    ).lean()) as unknown as Array<{ totalAmount?: number; month?: string }>;
+    )
+      .select('totalAmount month')
+      .lean()) as unknown as Array<{
+      _id: unknown;
+      totalAmount?: number;
+      month?: string;
+    }>;
 
     if (unpaidInvoices.length > 0) {
-      const totalDue = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+      let totalDue = 0;
+      for (const inv of unpaidInvoices) {
+        const remaining = await getInvoiceBalance(String(inv._id), inv.totalAmount || 0);
+        if (remaining > 0.001) totalDue += remaining;
+      }
       duesSummary = {
-        totalDue,
+        totalDue: Math.round(totalDue * 100) / 100,
         unpaidCount: unpaidInvoices.length,
-        isClear: totalDue <= 0,
+        isClear: totalDue <= 0.001,
         latestMonth: unpaidInvoices[0]?.month ?? null,
       };
     }

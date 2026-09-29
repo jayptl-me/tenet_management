@@ -9,14 +9,15 @@ import { ServiceStatus } from '../models/serviceStatus.js';
 import { Complaint } from '../models/complaint.js';
 import { Room } from '../models/room.js';
 import { Tenant } from '../models/tenant.js';
-import { AppConfig } from '../models/appConfig.js';
+import { AppConfig, DEFAULT_AMENITY_DEFINITIONS } from '../models/appConfig.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
 import { broadcast } from '../lib/eventBus.js';
 
 // ── Helper: derive complaint categories from AppConfig amenity definitions ──
 async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
   const config = await AppConfig.findOne().select('amenityDefinitions').lean();
-  const definitions = config?.amenityDefinitions ?? [];
+  const rawDefs = config?.amenityDefinitions ?? [];
+  const definitions = rawDefs.length > 0 ? rawDefs : DEFAULT_AMENITY_DEFINITIONS;
   const map: Record<string, string[]> = {};
   for (const def of definitions) {
     if (def.applicableComplaintCategories && def.applicableComplaintCategories.length > 0) {
@@ -30,7 +31,8 @@ async function getAmenityComplaintMap(): Promise<Record<string, string[]>> {
 // Room-only amenities (isPerFloor=false) must not become floor ServiceStatus rows.
 async function isValidFloorServiceType(serviceType: string): Promise<boolean> {
   const config = await AppConfig.findOne().select('amenityDefinitions').lean();
-  const definitions = config?.amenityDefinitions ?? [];
+  const rawDefs = config?.amenityDefinitions ?? [];
+  const definitions = rawDefs.length > 0 ? rawDefs : DEFAULT_AMENITY_DEFINITIONS;
   return definitions.some((d) => d.key === serviceType && d.isPerFloor === true);
 }
 

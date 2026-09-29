@@ -66,7 +66,21 @@ export async function reconcileOccupancy(dryRun: boolean): Promise<ReconcileRepo
     .lean()) as unknown as ActiveTenantRow[];
 
   const roomById = new Map<string, (typeof rooms)[number]>();
-  for (const room of rooms) roomById.set(String(room._id), room);
+  const initialBedCounts = new Map<string, number>();
+  for (const room of rooms) {
+    roomById.set(String(room._id), room);
+    initialBedCounts.set(String(room._id), room.beds.length);
+    const expectedSlots = ['A', 'B', 'C', 'D'].slice(0, room.sharingType);
+    for (const slot of expectedSlots) {
+      if (!room.beds.some((b) => b.bedId === slot)) {
+        room.beds.push({
+          bedId: slot,
+          isOccupied: false,
+          tenantId: null,
+        } as (typeof room.beds)[number]);
+      }
+    }
+  }
 
   const claims = new Map<string, ActiveTenantRow[]>();
   const orphans: TenantOrphan[] = [];
@@ -120,6 +134,9 @@ export async function reconcileOccupancy(dryRun: boolean): Promise<ReconcileRepo
   let freedBeds = 0;
 
   for (const room of rooms) {
+    const originalCount = initialBedCounts.get(String(room._id)) ?? room.beds.length;
+    let changed = room.beds.length !== originalCount;
+
     if (room.beds.length !== room.sharingType) {
       invalidRooms.push({
         roomId: String(room._id),
@@ -128,8 +145,6 @@ export async function reconcileOccupancy(dryRun: boolean): Promise<ReconcileRepo
         bedCount: room.beds.length,
       });
     }
-
-    let changed = false;
     for (const bed of room.beds) {
       const key = `${String(room._id)}:${bed.bedId}`;
       const list = claims.get(key) ?? [];
