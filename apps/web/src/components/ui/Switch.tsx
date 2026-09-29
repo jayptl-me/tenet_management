@@ -25,21 +25,21 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           className,
         )}
       >
-        <div className="relative mt-0.5 inline-flex h-5 w-9 shrink-0">
+        <div className="relative mt-0.5 inline-flex h-6 w-11 shrink-0">
           <input ref={ref} id={switchId} type="checkbox" className="peer sr-only" {...props} />
           <span
             className={clsx(
-              'absolute inset-0 rounded-full transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-              'bg-[color:var(--color-surface-300)]',
-              'peer-checked:bg-[color:var(--color-brand-500)]',
+              'absolute inset-0 rounded-full border border-[color:var(--border-color)] transition-all duration-200 ease-out',
+              'bg-[color:var(--color-surface-200)]',
+              'peer-checked:border-[color:var(--color-brand-600)] peer-checked:bg-[color:var(--color-brand-500)]',
               'peer-disabled:cursor-not-allowed peer-disabled:opacity-[var(--disabled-opacity)]',
               'peer-focus-visible:ring-2 peer-focus-visible:ring-[color:var(--focus-ring-color)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[color:var(--focus-ring-offset-bg)]',
             )}
           />
           <span
             className={clsx(
-              'absolute top-[3px] left-[3px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-              'peer-checked:translate-x-4 peer-checked:bg-white',
+              'absolute top-[1px] left-[1px] h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-all duration-200 ease-out',
+              'peer-checked:translate-x-5 peer-checked:bg-white',
             )}
           />
         </div>

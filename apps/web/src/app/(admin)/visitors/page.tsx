@@ -164,7 +164,7 @@ export default function VisitorsPage() {
     {
       header: 'Visitor',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.name}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.name}</span>
       ),
     },
     {
@@ -300,7 +300,7 @@ export default function VisitorsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.name}
               </span>
               <StatusBadge
@@ -308,11 +308,11 @@ export default function VisitorsPage() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span className="capitalize">{row.purpose}</span>
               <span>{row.tenant?.user?.name ?? 'N/A'}</span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>
                 {row.tenant?.room?.roomNumber
                   ? `Room ${row.tenant.room.roomNumber}${row.tenant.bedId ? ` · Bed ${row.tenant.bedId}` : ''}`

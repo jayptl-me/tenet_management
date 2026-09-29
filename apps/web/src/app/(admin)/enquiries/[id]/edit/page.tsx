@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Phone, Mail, UserRound, ArrowRight } from 'lucide-react';
@@ -212,17 +212,31 @@ export default function EditEnquiryPage() {
               autoComplete="email"
               {...register('email')}
             />
-            <Select
-              label="Source"
-              options={sourceOptions}
-              error={err.source?.message}
-              {...register('source')}
+            <Controller
+              name="source"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Source"
+                  options={sourceOptions}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={err.source?.message}
+                />
+              )}
             />
-            <Select
-              label="Preferred sharing"
-              options={sharingOptions}
-              error={err.preferredSharing?.message}
-              {...register('preferredSharing')}
+            <Controller
+              name="preferredSharing"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Preferred sharing"
+                  options={sharingOptions}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={err.preferredSharing?.message}
+                />
+              )}
             />
           </FormGrid>
         </FormSection>
@@ -230,19 +244,26 @@ export default function EditEnquiryPage() {
         <FormSection title="Follow-up" description="Message and pipeline status" divided>
           <FormGrid>
             <div className="space-y-3">
-              <Select
-                label="Pipeline status"
-                options={visibleStatusOptions}
-                error={err.status?.message}
-                disabled={isConverted}
-                helperText={
-                  isConverted ? 'Pinned to the converted tenant; status cannot change' : undefined
-                }
-                {...register('status')}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Pipeline status"
+                    options={visibleStatusOptions}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.status?.message}
+                    disabled={isConverted}
+                    helperText={
+                      isConverted ? 'Pinned to the converted tenant; status cannot change' : undefined
+                    }
+                  />
+                )}
               />
-              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-info-200)] bg-[color:var(--color-info-50)] px-3 py-2">
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-info-500)]" />
-                <p className="text-xs font-medium text-[color:var(--color-info-700)]">
+              <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--color-info-200) bg-(--color-info-50) px-3 py-2">
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-(--color-info-500)" />
+                <p className="text-xs font-medium text-(--color-info-700)">
                   {nextStatusHint}
                 </p>
               </div>

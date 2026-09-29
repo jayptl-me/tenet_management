@@ -191,10 +191,10 @@ export default function LaundryPage() {
       header: 'Tenant',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">
+          <span className="font-semibold text-(--color-text-primary)">
             {row.tenant?.user?.name ?? 'N/A'}
           </span>
-          <p className="text-xs text-[color:var(--color-text-muted)]">
+          <p className="text-xs text-(--color-text-muted)">
             Room {row.tenant?.room?.roomNumber ?? '—'}
             {row.tenant?.bedId ? ` · Bed ${row.tenant.bedId}` : ''}
             {row.tenant?.room?.floor?.label ? ` · ${row.tenant.room.floor.label}` : ''}
@@ -235,7 +235,7 @@ export default function LaundryPage() {
               onClick={() => handleStatusUpdate(row._id, 'confirmed')}
               title="Confirm slot"
             >
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
+              <CheckCircle className="h-4 w-4 text-(--color-success-600)" />
             </Button>
           )}
           {row.status === 'confirmed' && (
@@ -246,7 +246,7 @@ export default function LaundryPage() {
               onClick={() => handleStatusUpdate(row._id, 'completed')}
               title="Mark completed"
             >
-              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <CheckCircle className="h-4 w-4 text-(--color-info-600)" />
             </Button>
           )}
           {row.status !== 'cancelled' && row.status !== 'completed' && (
@@ -257,7 +257,7 @@ export default function LaundryPage() {
               onClick={() => handleStatusUpdate(row._id, 'cancelled')}
               title="Cancel slot"
             >
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4 text-(--color-danger-500)" />
             </Button>
           )}
           <TableActions
@@ -366,7 +366,7 @@ export default function LaundryPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
               <StatusBadge
@@ -374,7 +374,7 @@ export default function LaundryPage() {
                 label={row.status.replace(/_/g, ' ')}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>
                 {new Date(row.slotDate).toLocaleDateString('en-IN', {
                   day: '2-digit',

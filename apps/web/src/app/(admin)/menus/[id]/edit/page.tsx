@@ -256,7 +256,7 @@ export default function EditMenuPage() {
             >
               <div className="space-y-3">
                 {fieldArray.fields.length === 0 && (
-                  <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-6 text-center text-sm text-[color:var(--color-text-secondary)]">
+                  <p className="rounded-(--radius-md) border border-dashed border-(--border-color) px-4 py-6 text-center text-sm text-(--color-text-secondary)">
                     No items yet. Add an item to begin.
                   </p>
                 )}
@@ -277,18 +277,18 @@ export default function EditMenuPage() {
                         id={`${key}-${itemIdx}-name`}
                         {...register(`meals.${key}.${itemIdx}.name` as const)}
                         placeholder="Item name"
-                        className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
+                        className="w-full rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm text-(--color-text-primary) placeholder:text-(--color-text-muted) focus:ring-2 focus:ring-(--focus-ring-color) focus:outline-none"
                       />
                     </div>
                     <input
                       {...register(`meals.${key}.${itemIdx}.description` as const)}
                       placeholder="Description (optional)"
-                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
+                      className="w-full rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm text-(--color-text-primary) placeholder:text-(--color-text-muted) focus:ring-2 focus:ring-(--focus-ring-color) focus:outline-none"
                     />
                     <input
                       {...register(`meals.${key}.${itemIdx}.category` as const)}
                       placeholder="Category (optional)"
-                      className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:outline-none"
+                      className="w-full rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm text-(--color-text-primary) placeholder:text-(--color-text-muted) focus:ring-2 focus:ring-(--focus-ring-color) focus:outline-none"
                     />
                     <div className="flex justify-end sm:pb-0.5">
                       <Button
@@ -311,24 +311,24 @@ export default function EditMenuPage() {
         {/* Summary */}
         <FormSection title="Summary" divided>
           <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
-              <Sun className="h-3.5 w-3.5 text-[color:var(--color-warning-500)]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1.5 font-semibold text-(--color-text-secondary)">
+              <Sun className="h-3.5 w-3.5 text-(--color-warning-500)" />
               {itemCounts.breakfast} breakfast items
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
-              <Sunset className="h-3.5 w-3.5 text-[color:var(--color-brand-500)]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1.5 font-semibold text-(--color-text-secondary)">
+              <Sunset className="h-3.5 w-3.5 text-(--color-brand-500)" />
               {itemCounts.lunch} lunch items
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
-              <Cookie className="h-3.5 w-3.5 text-[color:var(--color-warning-600)]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1.5 font-semibold text-(--color-text-secondary)">
+              <Cookie className="h-3.5 w-3.5 text-(--color-warning-600)" />
               {itemCounts.snacks} snacks items
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1.5 font-semibold text-[color:var(--color-text-secondary)]">
-              <Moon className="h-3.5 w-3.5 text-[color:var(--color-info-500)]" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1.5 font-semibold text-(--color-text-secondary)">
+              <Moon className="h-3.5 w-3.5 text-(--color-info-500)" />
               {itemCounts.dinner} dinner items
             </span>
-            <span className="text-[color:var(--color-text-muted)]">|</span>
-            <span className="font-bold text-[color:var(--color-text-primary)]">
+            <span className="text-(--color-text-muted)">|</span>
+            <span className="font-bold text-(--color-text-primary)">
               {totalItems} total items
             </span>
           </div>

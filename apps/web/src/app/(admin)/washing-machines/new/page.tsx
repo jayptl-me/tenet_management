@@ -138,11 +138,18 @@ export default function NewWashingMachinePage() {
             />
           </FormGrid>
           <div className="mt-4 space-y-4">
-            <Select
-              label="Status"
-              options={STATUS_OPTIONS}
-              error={err.status?.message}
-              {...register('status')}
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Status"
+                  options={STATUS_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={err.status?.message}
+                />
+              )}
             />
             <Textarea
               label="Notes (optional)"

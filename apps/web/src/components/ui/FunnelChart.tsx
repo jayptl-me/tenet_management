@@ -13,7 +13,7 @@ export function FunnelChart({
   barGap = 8,
   className,
 }: {
-  stages: Array<{ label: string; value: number; color: string }>;
+  stages: Array<{ label: string; value: number; color: string; ink?: string }>;
   /** @deprecated Ignored — layout uses a fixed plot width with label column. */
   maxWidth?: number;
   barHeight?: number;
@@ -95,7 +95,7 @@ export function FunnelChart({
                 y={y + barHeight / 2}
                 textAnchor={width > 44 ? 'end' : 'start'}
                 dominantBaseline="middle"
-                fill={width > 44 ? chartTokens.onFill : chartTokens.axis}
+                fill={width > 44 ? stage.ink ?? chartTokens.onFill : chartTokens.axis}
                 fontSize={11}
                 fontFamily={chartTokens.fontMono}
                 fontWeight={700}

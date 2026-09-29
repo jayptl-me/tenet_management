@@ -277,7 +277,7 @@ function NotificationsContent() {
     {
       header: 'Title',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.title}</span>
       ),
     },
     {
@@ -285,7 +285,7 @@ function NotificationsContent() {
       accessor: (row) => (
         <span className="inline-flex items-center gap-1.5">
           {typeIconsMap[row.type] ?? <Bell className="h-4 w-4" />}
-          <span className="text-[color:var(--color-text-secondary)] capitalize">
+          <span className="text-(--color-text-secondary) capitalize">
             {row.type.replace(/_/g, ' ')}
           </span>
         </span>
@@ -294,10 +294,10 @@ function NotificationsContent() {
     {
       header: 'Target',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-secondary)]">
+        <span className="text-(--color-text-secondary)">
           {targetLabels[row.targetType as TargetFilter] ?? row.targetType}
           {row.targetIds.length > 0 && (
-            <span className="text-[color:var(--color-text-muted)]"> ({row.targetIds.length})</span>
+            <span className="text-(--color-text-muted)"> ({row.targetIds.length})</span>
           )}
         </span>
       ),
@@ -305,7 +305,7 @@ function NotificationsContent() {
     {
       header: 'Sent At',
       accessor: (row) => (
-        <span className="text-[color:var(--color-text-secondary)]">
+        <span className="text-(--color-text-secondary)">
           {new Date(row.sentAt).toLocaleDateString('en-IN', {
             day: '2-digit',
             month: 'short',
@@ -349,7 +349,7 @@ function NotificationsContent() {
       <div
         role="tablist"
         aria-label="Notification views"
-        className="mb-6 flex gap-1 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-1 shadow-[var(--shadow-xs)]"
+        className="mb-6 flex gap-1 rounded-xl border border-(--border-color) bg-(--color-field-bg) p-1 shadow-(--shadow-xs)"
       >
         <button
           role="tab"
@@ -357,10 +357,10 @@ function NotificationsContent() {
           aria-selected={activeTab === 'compose'}
           aria-controls="panel-compose"
           onClick={() => setActiveTab('compose')}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-display font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`font-display flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-(--transition-duration) ${
             activeTab === 'compose'
-              ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
-              : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+              ? 'bg-(--color-card-bg) text-(--color-text-primary) shadow-(--shadow-button)'
+              : 'text-(--color-text-muted) hover:text-(--color-text-secondary)'
           }`}
         >
           <Send className="mr-2 inline-block h-4 w-4" />
@@ -372,10 +372,10 @@ function NotificationsContent() {
           aria-selected={activeTab === 'history'}
           aria-controls="panel-history"
           onClick={() => setActiveTab('history')}
-          className={`flex-1 rounded-lg px-4 py-2 text-sm font-display font-bold transition-all duration-[var(--transition-duration)] ${
+          className={`font-display flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-(--transition-duration) ${
             activeTab === 'history'
-              ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
-              : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+              ? 'bg-(--color-card-bg) text-(--color-text-primary) shadow-(--shadow-button)'
+              : 'text-(--color-text-muted) hover:text-(--color-text-secondary)'
           }`}
         >
           <Bell className="mr-2 inline-block h-4 w-4" />
@@ -389,12 +389,12 @@ function NotificationsContent() {
           role="tabpanel"
           id="panel-compose"
           aria-labelledby="tab-compose"
-          className="rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]"
+          className="rounded-xl border border-(--border-color) bg-(--color-card-bg) p-6 shadow-(--shadow-card)"
         >
           <div className="grid gap-5">
             {/* Target Type */}
             <div>
-              <label className="mb-2 block text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+              <label className="mb-2 block text-13 font-semibold text-(--color-text-primary)">
                 Target Audience
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -407,10 +407,10 @@ function NotificationsContent() {
                       setPickerValue('');
                       setTargetError('');
                     }}
-                    className={`flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all duration-[var(--transition-duration)] active:scale-[var(--active-press-scale)] ${
+                    className={`flex items-center justify-center gap-2 rounded-lg border-[length:var(--bw-default)] border-(--border-color) px-3 py-2 text-xs font-semibold transition-all duration-(--transition-duration) active:scale-(--active-press-scale) ${
                       form.targetType === key
-                        ? 'bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-button)]'
-                        : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                        ? 'bg-(--color-brand-500) text-(--color-on-brand) shadow-(--shadow-button)'
+                        : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                     }`}
                   >
                     {targetIcons[key]}
@@ -419,7 +419,7 @@ function NotificationsContent() {
                 ))}
               </div>
               {form.targetType === 'all' && (
-                <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+                <p className="mt-2 text-xs text-(--color-text-muted)">
                   Broadcasts facility-wide to all active PG residents (tenants). Excludes staff and
                   guardians.
                 </p>
@@ -477,12 +477,10 @@ function NotificationsContent() {
                         key={id}
                         type="button"
                         onClick={() => removeTargetId(id)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-2.5 py-1 text-xs font-medium text-(--color-text-secondary) hover:border-(--color-danger-300) hover:text-(--color-danger-600)"
                         title="Remove"
                       >
-                        <span className="max-w-[12rem] truncate font-mono">
-                          {id}
-                        </span>
+                        <span className="max-w-[12rem] truncate font-mono">{id}</span>
                         <span aria-hidden="true">x</span>
                       </button>
                     ))}
@@ -493,7 +491,7 @@ function NotificationsContent() {
 
             {/* Type */}
             <div>
-              <label className="mb-2 block text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+              <label className="mb-2 block text-13 font-semibold text-(--color-text-primary)">
                 Notification Type
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -502,10 +500,10 @@ function NotificationsContent() {
                     key={opt.value}
                     type="button"
                     onClick={() => setForm({ ...form, type: opt.value })}
-                    className={`flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-[color:var(--border-color)] px-3 py-2 text-xs font-semibold transition-all duration-[var(--transition-duration)] active:scale-[var(--active-press-scale)] ${
+                    className={`flex items-center gap-2 rounded-lg border-[length:var(--bw-default)] border-(--border-color) px-3 py-2 text-xs font-semibold transition-all duration-(--transition-duration) active:scale-(--active-press-scale) ${
                       form.type === opt.value
-                        ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)] shadow-[var(--shadow-button)]'
-                        : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                        ? 'bg-(--color-text-primary) text-(--color-card-bg) shadow-(--shadow-button)'
+                        : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                     }`}
                   >
                     {typeIconsMap[opt.value]}
@@ -543,8 +541,8 @@ function NotificationsContent() {
                   `EMERGENCY: ${form.title}\n${form.body}`,
                 );
                 return (
-                  <div className="mt-1 rounded-lg border-[length:var(--bw-default)] border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
-                    <p className="mb-2 text-xs font-semibold tracking-wider text-[color:var(--color-text-primary)] uppercase">
+                  <div className="mt-1 rounded-lg border-[length:var(--bw-default)] border-(--color-warning-500) bg-(--color-warning-50) p-4">
+                    <p className="mb-2 text-xs font-semibold tracking-wider text-(--color-text-primary) uppercase">
                       WhatsApp Share Preview
                     </p>
                     <div className="flex items-center gap-2">
@@ -552,7 +550,7 @@ function NotificationsContent() {
                         href={whatsappUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 truncate text-xs font-mono text-[color:var(--color-brand-600)] underline"
+                        className="flex-1 truncate font-mono text-xs text-(--color-brand-600) underline"
                       >
                         {whatsappUrl}
                       </a>
@@ -580,16 +578,16 @@ function NotificationsContent() {
                   type="checkbox"
                   checked={form.sendPush}
                   onChange={(e) => setForm({ ...form, sendPush: e.target.checked })}
-                  className="h-5 w-5 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)] text-[color:var(--color-brand-500)] focus:ring-[color:var(--color-brand-300)]"
+                  className="h-5 w-5 rounded border-[length:var(--bw-default)] border-(--border-color) text-(--color-brand-500) focus:ring-(--color-brand-300)"
                 />
-                <span className="text-sm text-[color:var(--color-text-primary)]">
+                <span className="text-sm text-(--color-text-primary)">
                   Send push notification via ntfy.sh
                 </span>
               </label>
             </div>
 
             {/* Send Button */}
-            <div className="flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] pt-5">
+            <div className="flex items-center justify-end gap-3 border-t-[length:var(--bw-strong)] border-t-(--color-surface-200) pt-5">
               <Button
                 variant="outline"
                 type="button"
@@ -630,7 +628,8 @@ function NotificationsContent() {
                 setFilterType(e.target.value as INotificationType | '');
                 setPage(1);
               }}
-              className="min-h-8 w-auto min-w-[13rem] py-1.5 text-xs font-semibold"
+              size="compact"
+              className="w-auto min-w-[13rem]"
               options={[
                 { value: '', label: 'All Types' },
                 ...typeOptions.map((opt) => ({ value: opt.value, label: opt.label })),
@@ -642,7 +641,8 @@ function NotificationsContent() {
                 setFilterStatus(e.target.value as '' | 'unread' | 'all');
                 setPage(1);
               }}
-              className="min-h-8 w-auto min-w-[10rem] py-1.5 text-xs font-semibold"
+              size="compact"
+              className="w-auto min-w-[10rem]"
               options={[
                 { value: '', label: 'All Statuses' },
                 { value: 'unread', label: 'Unread only' },
@@ -654,12 +654,11 @@ function NotificationsContent() {
               size="sm"
               onClick={handleExportCsv}
               disabled={notifications.length === 0}
-              className="flex items-center gap-1.5 text-xs font-medium"
             >
               <Download className="h-3.5 w-3.5" />
               Export CSV
             </Button>
-            <span className="ml-auto text-xs font-mono text-[color:var(--color-text-muted)]">
+            <span className="ml-auto font-mono text-xs text-(--color-text-muted)">
               {total} notification{total !== 1 ? 's' : ''}
             </span>
           </div>
@@ -689,7 +688,7 @@ function NotificationsContent() {
             mobileCardRenderer={(row) => (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  <span className="min-w-0 truncate text-sm font-semibold text-(--color-text-primary)">
                     {row.title}
                   </span>
                   {row.unreadBy.length > 0 ? (
@@ -698,10 +697,10 @@ function NotificationsContent() {
                     <StatusBadge variant="success" label="All read" />
                   )}
                 </div>
-                <p className="line-clamp-2 text-xs text-[color:var(--color-text-secondary)]">
+                <p className="line-clamp-2 text-xs text-(--color-text-secondary)">
                   {row.body}
                 </p>
-                <div className="flex items-center gap-3 text-xs text-[color:var(--color-text-muted)]">
+                <div className="flex items-center gap-3 text-xs text-(--color-text-muted)">
                   <span className="inline-flex items-center gap-1 capitalize">
                     {typeIconsMap[row.type] ?? <Bell className="h-3.5 w-3.5" />}
                     {row.type.replace(/_/g, ' ')}
@@ -746,7 +745,7 @@ export default function NotificationsPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

@@ -89,7 +89,7 @@ function GuardiansList() {
     {
       header: 'Name',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.name}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.name}</span>
       ),
     },
     {
@@ -111,7 +111,7 @@ function GuardiansList() {
     {
       header: 'Email',
       accessor: (row) => (
-        <span className="text-xs text-[color:var(--color-text-secondary)]">{row.email ?? '—'}</span>
+        <span className="text-xs text-(--color-text-secondary)">{row.email ?? '—'}</span>
       ),
     },
     {
@@ -213,7 +213,7 @@ function GuardiansList() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.name}
               </span>
               <StatusBadge
@@ -221,7 +221,7 @@ function GuardiansList() {
                 label={row.isActive ? 'Active' : 'Inactive'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>{row.phone}</span>
               <span className="capitalize">{row.relation}</span>
               <span>{row.tenant?.user?.name ?? 'N/A'}</span>
@@ -253,7 +253,7 @@ export default function GuardiansPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

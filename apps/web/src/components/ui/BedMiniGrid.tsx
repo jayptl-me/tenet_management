@@ -24,7 +24,9 @@ export interface BedMiniGridProps {
 export function BedMiniGrid({ beds, size = 'sm', maxVisible = 10, className }: BedMiniGridProps) {
   if (beds.length === 0) {
     return (
-      <span className={clsx('text-[11px] font-medium text-[color:var(--color-text-muted)]', className)}>
+      <span
+        className={clsx('text-[11px] font-medium text-[color:var(--color-text-muted)]', className)}
+      >
         No beds
       </span>
     );
@@ -40,9 +42,9 @@ export function BedMiniGrid({ beds, size = 'sm', maxVisible = 10, className }: B
       role="img"
       aria-label={`${beds.filter((b) => b.isOccupied).length} of ${beds.length} beds occupied`}
     >
-      {visible.map((bed) => (
+      {visible.map((bed, idx) => (
         <span
-          key={bed.bedId}
+          key={`${bed.bedId}-${idx}`}
           title={bed.isOccupied ? `Occupied by ${bed.tenantName ?? 'tenant'}` : 'Vacant'}
           className={clsx(
             'rounded-[3px] border transition-colors duration-[var(--transition-duration)]',
@@ -54,7 +56,9 @@ export function BedMiniGrid({ beds, size = 'sm', maxVisible = 10, className }: B
         />
       ))}
       {overflow > 0 && (
-        <span className="text-[10px] font-bold text-[color:var(--color-text-muted)]">+{overflow}</span>
+        <span className="text-[10px] font-bold text-[color:var(--color-text-muted)]">
+          +{overflow}
+        </span>
       )}
     </div>
   );
@@ -86,7 +90,7 @@ export function OccupancyBar({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-[11px] font-bold tabular-nums text-[color:var(--color-text-secondary)]">
+      <span className="text-[11px] font-bold text-[color:var(--color-text-secondary)] tabular-nums">
         {occupied}/{total}
       </span>
     </div>

@@ -55,10 +55,14 @@ const headerBorder: Record<DetailCardVariant, string> = {
 };
 
 const iconTone: Record<DetailCardVariant, string> = {
-  default: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border border-[color:var(--border-color)]',
-  warning: 'bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)] border border-[color:var(--color-warning-200)]',
-  danger: 'bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)] border border-[color:var(--color-danger-200)]',
-  success: 'bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)] border border-[color:var(--color-success-200)]',
+  default:
+    'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border border-[color:var(--border-color)]',
+  warning:
+    'bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)] border border-[color:var(--color-warning-200)]',
+  danger:
+    'bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)] border border-[color:var(--color-danger-200)]',
+  success:
+    'bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)] border border-[color:var(--color-success-200)]',
   info: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border border-[color:var(--border-color)]',
 };
 

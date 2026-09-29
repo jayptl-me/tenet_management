@@ -201,7 +201,6 @@ export function VerifyPaymentModal({
                   className="block w-full overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] transition-opacity hover:opacity-90"
                   aria-label="Open screenshot full size"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={target.screenshotUrl}
                     alt="Payment screenshot"
@@ -230,7 +229,8 @@ export function VerifyPaymentModal({
                 htmlFor="verify-notes"
                 className="mb-1 block text-[13px] font-semibold text-[color:var(--color-text-primary)]"
               >
-                Verification note <span className="font-normal text-[color:var(--color-text-muted)]">(optional)</span>
+                Verification note{' '}
+                <span className="font-normal text-[color:var(--color-text-muted)]">(optional)</span>
               </label>
               <input
                 id="verify-notes"
@@ -238,7 +238,7 @@ export function VerifyPaymentModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Bank statement matched"
-                className="w-full rounded-[var(--radius-md)] border border-[color:var(--color-field-border)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-medium text-[color:var(--color-text-primary)] outline-none transition-[background-color,border-color,box-shadow] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--border-color-focus)] focus:bg-[color:var(--color-card-bg)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                className="w-full rounded-[var(--radius-md)] border border-[color:var(--color-field-border)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-[background-color,border-color,box-shadow] outline-none placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--border-color-focus)] focus:bg-[color:var(--color-card-bg)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
               />
             </div>
 
@@ -278,7 +278,6 @@ export function VerifyPaymentModal({
                 role="dialog"
                 aria-label="Payment screenshot full size"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={target.screenshotUrl}
                   alt="Payment screenshot full size"

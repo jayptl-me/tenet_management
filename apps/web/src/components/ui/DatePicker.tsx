@@ -24,11 +24,10 @@ import {
 
 // ── Types ──────────────────────────────────────────────
 
-export interface DatePickerProps
-  extends Omit<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    'onChange' | 'value' | 'defaultValue' | 'min' | 'max'
-  > {
+export interface DatePickerProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'onChange' | 'value' | 'defaultValue' | 'min' | 'max'
+> {
   value?: string;
   defaultValue?: string;
   onChange?: ((value: string) => void) | ((e: React.ChangeEvent<HTMLInputElement>) => void);
@@ -171,7 +170,9 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     const current = isControlled ? String(valueProp ?? '') : uncontrolled;
 
     // View state for popover calendar (year, month)
-    const initialDate = current ? new Date(current.length === 7 ? `${current}-01` : current) : new Date();
+    const initialDate = current
+      ? new Date(current.length === 7 ? `${current}-01` : current)
+      : new Date();
     const validInitial = isNaN(initialDate.getTime()) ? new Date() : initialDate;
     const [viewYear, setViewYear] = useState<number>(validInitial.getFullYear());
     const [viewMonth, setViewMonth] = useState<number>(validInitial.getMonth());
@@ -320,7 +321,9 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                 ) : (
                   <CalendarIcon className="h-4 w-4 shrink-0 text-[color:var(--color-text-muted)]" />
                 )}
-                <span className="truncate">{displayValue || placeholder || defaultPlaceholder}</span>
+                <span className="truncate">
+                  {displayValue || placeholder || defaultPlaceholder}
+                </span>
               </span>
 
               <div className="flex shrink-0 items-center gap-1">
@@ -329,7 +332,9 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                     role="button"
                     tabIndex={0}
                     onClick={handleClear}
-                    onKeyDown={(e) => e.key === 'Enter' && handleClear(e as unknown as React.MouseEvent)}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && handleClear(e as unknown as React.MouseEvent)
+                    }
                     className="rounded p-0.5 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-surface-200)] hover:text-[color:var(--color-text-primary)]"
                     aria-label="Clear date"
                   >
@@ -376,7 +381,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                 <div>
                   <div className="mb-1 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-[color:var(--color-text-muted)]">
                     {DAY_NAMES.map((d) => (
-                      <div key={d} className="h-7 flex items-center justify-center">
+                      <div key={d} className="flex h-7 items-center justify-center">
                         {d}
                       </div>
                     ))}
@@ -405,11 +410,11 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           className={clsx(
                             'h-8 w-full rounded-[var(--radius-md)] text-xs font-medium transition-colors',
                             isSelected
-                              ? 'bg-[color:var(--color-brand-500)] text-[color:var(--color-text-inverted)] font-bold shadow-[var(--shadow-xs)]'
+                              ? 'bg-[color:var(--color-brand-solid)] font-bold text-[color:var(--color-on-brand-solid)] shadow-[var(--shadow-xs)]'
                               : isToday
                                 ? 'border border-[color:var(--color-brand-500)] font-bold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-field-bg)]'
                                 : 'text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-field-bg)]',
-                            isDayDisabled && 'opacity-30 pointer-events-none',
+                            isDayDisabled && 'pointer-events-none opacity-30',
                           )}
                         >
                           {day}
@@ -467,11 +472,11 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           className={clsx(
                             'h-9 rounded-[var(--radius-md)] text-xs font-medium transition-colors',
                             isSelected
-                              ? 'bg-[color:var(--color-brand-500)] text-[color:var(--color-text-inverted)] font-bold shadow-[var(--shadow-xs)]'
+                              ? 'bg-[color:var(--color-brand-solid)] font-bold text-[color:var(--color-on-brand-solid)] shadow-[var(--shadow-xs)]'
                               : isThisMonth
                                 ? 'border border-[color:var(--color-brand-500)] font-bold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-field-bg)]'
                                 : 'text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-field-bg)]',
-                            isMonthDisabled && 'opacity-30 pointer-events-none',
+                            isMonthDisabled && 'pointer-events-none opacity-30',
                           )}
                         >
                           {m}

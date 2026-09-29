@@ -61,17 +61,17 @@ function ResetPasswordForm() {
 
   if (status === 'success') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[color:var(--color-page-bg)] p-4">
+      <div className="flex min-h-screen items-center justify-center bg-(--color-page-bg) p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 text-center shadow-[var(--shadow-lg)]"
+          className="w-full max-w-md rounded-2xl border border-(--border-color) bg-(--color-card-bg) p-8 text-center shadow-(--shadow-lg)"
         >
-          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[color:var(--color-success-500)]" />
-          <h1 className="text-xl font-bold text-[color:var(--color-text-primary)]">
+          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-(--color-success-500)" />
+          <h1 className="text-xl font-bold text-(--color-text-primary)">
             Password Reset Successful
           </h1>
-          <p className="mt-2 text-sm text-[color:var(--color-text-secondary)]">
+          <p className="mt-2 text-sm text-(--color-text-secondary)">
             Redirecting you to login...
           </p>
         </motion.div>
@@ -80,24 +80,24 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[color:var(--color-page-bg)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-(--color-page-bg) p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-6 rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 shadow-[var(--shadow-lg)]"
+        className="w-full max-w-md space-y-6 rounded-2xl border border-(--border-color) bg-(--color-card-bg) p-8 shadow-(--shadow-lg)"
       >
         <div className="text-center">
-          <KeyRound className="mx-auto mb-3 h-10 w-10 text-[color:var(--color-brand-500)]" />
-          <h1 className="text-xl font-bold text-[color:var(--color-text-primary)]">
+          <KeyRound className="mx-auto mb-3 h-10 w-10 text-(--color-brand-500)" />
+          <h1 className="text-xl font-bold text-(--color-text-primary)">
             Reset Your Password
           </h1>
-          <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
+          <p className="mt-1 text-sm text-(--color-text-secondary)">
             Enter your new password below.
           </p>
         </div>
 
         {!token ? (
-          <div className="flex items-center gap-2 rounded-lg bg-[color:var(--color-danger-50)] p-3 text-sm text-[color:var(--color-danger-700)]">
+          <div className="flex items-center gap-2 rounded-lg bg-(--color-danger-50) p-3 text-sm text-(--color-danger-700)">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>Invalid or missing reset token. Please request a new password reset.</span>
           </div>
@@ -121,7 +121,7 @@ function ResetPasswordForm() {
             />
 
             {errorMsg && (
-              <div className="flex items-center gap-2 rounded-lg bg-[color:var(--color-danger-50)] p-3 text-sm text-[color:var(--color-danger-700)]">
+              <div className="flex items-center gap-2 rounded-lg bg-(--color-danger-50) p-3 text-sm text-(--color-danger-700)">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -133,8 +133,8 @@ function ResetPasswordForm() {
           </form>
         )}
 
-        <p className="text-center text-xs text-[color:var(--color-text-muted)]">
-          <Link href="/login" className="text-[color:var(--color-brand-500)] hover:underline">
+        <p className="text-center text-xs text-(--color-text-muted)">
+          <Link href="/login" className="text-(--color-brand-500) hover:underline">
             Back to login
           </Link>
         </p>
@@ -147,8 +147,8 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[color:var(--color-page-bg)]">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--color-brand-500)] border-t-transparent" />
+        <div className="flex min-h-screen items-center justify-center bg-(--color-page-bg)">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-(--color-brand-500) border-t-transparent" />
         </div>
       }
     >

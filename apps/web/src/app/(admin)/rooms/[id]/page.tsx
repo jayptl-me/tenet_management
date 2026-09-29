@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -15,16 +15,19 @@ import {
   FileText,
   Image as ImageIcon,
   Plus,
+  UserPlus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
 import { DonutChart } from '@/components/ui/DonutChart';
-import { StackedBarChart } from '@/components/ui/StackedBarChart';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { FloorServiceGrid } from '@/components/ui/FloorServiceGrid';
+import { QuickBedAssignModal, type BedAssignTarget } from '@/components/admin/QuickBedAssignModal';
 
 interface BedDetail {
   bedId: string;
@@ -61,6 +64,39 @@ function formatCurrency(amount: number | null | undefined): string {
   }
 }
 
+const occupiedBedColumns: DataTableColumn<BedDetail>[] = [
+  {
+    header: 'Bed',
+    accessor: (bed) => (
+      <span className="font-mono text-sm font-bold text-(--color-text-primary)">
+        {bed.bedId}
+      </span>
+    ),
+    className: 'w-[120px]',
+  },
+  {
+    header: 'Tenant',
+    accessor: (bed) =>
+      bed.tenantId ? (
+        <Link
+          href={`/tenants/${bed.tenantId}`}
+          className="font-semibold text-(--color-brand-600) underline-offset-2 hover:underline"
+        >
+          {bed.tenantName ?? 'View tenant'}
+        </Link>
+      ) : (
+        <span className="font-semibold text-(--color-text-primary)">
+          {bed.tenantName ?? 'N/A'}
+        </span>
+      ),
+  },
+  {
+    header: 'Status',
+    accessor: () => <StatusBadge variant="success" label="Occupied" />,
+    className: 'text-right w-[100px]',
+  },
+];
+
 export default function RoomDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -69,8 +105,9 @@ export default function RoomDetailPage() {
   const [room, setRoom] = useState<RoomDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [assignBedTarget, setAssignBedTarget] = useState<BedAssignTarget | null>(null);
 
-  useEffect(() => {
+  const fetchRoom = useCallback(() => {
     if (!id) return;
     setIsLoading(true);
     setError('');
@@ -83,6 +120,10 @@ export default function RoomDetailPage() {
       })
       .finally(() => setIsLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    fetchRoom();
+  }, [fetchRoom]);
 
   if (!isLoading && (error || !room)) {
     return (
@@ -100,10 +141,6 @@ export default function RoomDetailPage() {
   const occupiedBeds = room?.beds?.filter((b) => b.isOccupied).length ?? 0;
   const availableBeds = totalBeds - occupiedBeds;
   const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-  const amenityOperational =
-    room?.roomAmenities?.filter((a) => a.status === 'operational').length ?? 0;
-  const amenityDegraded = room?.roomAmenities?.filter((a) => a.status === 'degraded').length ?? 0;
-  const amenityDown = room?.roomAmenities?.filter((a) => a.status === 'down').length ?? 0;
 
   const floorDescription = room
     ? room.floor?._id || room.floor?.id
@@ -138,11 +175,11 @@ export default function RoomDetailPage() {
       {room && (
         <div className="space-y-6">
           {room.floor && (room.floor._id || room.floor.id) && (
-            <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+            <p className="text-sm font-medium text-(--color-text-muted)">
               Floor:{' '}
               <button
                 type="button"
-                className="font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                className="font-semibold text-(--color-brand-600) hover:underline"
                 onClick={() => router.push(`/floors/${room.floor!._id ?? room.floor!.id}`)}
               >
                 {room.floor.label ?? 'Floor'}
@@ -203,25 +240,25 @@ export default function RoomDetailPage() {
                 <div className="mt-4 sm:mt-0 sm:self-center">
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-[color:var(--color-brand-500)]" />
-                      <span className="font-semibold text-[color:var(--color-text-primary)]">
+                      <CheckCircle2 className="h-4 w-4 text-(--color-brand-500)" />
+                      <span className="font-semibold text-(--color-text-primary)">
                         {occupiedBeds} Occupied
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-[color:var(--color-success-500)]" />
-                      <span className="font-semibold text-[color:var(--color-text-primary)]">
+                      <CheckCircle2 className="h-4 w-4 text-(--color-success-500)" />
+                      <span className="font-semibold text-(--color-text-primary)">
                         {availableBeds} Available
                       </span>
                     </div>
-                    <div className="pt-2 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                    <div className="pt-2 text-2xs font-bold tracking-wider text-(--color-text-muted) uppercase">
                       {totalBeds} Total Beds
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-sm font-semibold text-[color:var(--color-text-muted)]">
+              <p className="text-sm font-semibold text-(--color-text-muted)">
                 No bed data available
               </p>
             )}
@@ -229,49 +266,11 @@ export default function RoomDetailPage() {
 
           {room.beds && room.beds.filter((b) => b.isOccupied).length > 0 && (
             <DetailCard title="Current Tenants" icon={<User />}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[color:var(--border-color)]">
-                      <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-                        Bed
-                      </th>
-                      <th className="pb-3 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-                        Tenant
-                      </th>
-                      <th className="pb-3 text-right text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[color:var(--border-color)]">
-                    {room.beds
-                      .filter((b) => b.isOccupied)
-                      .map((bed) => (
-                        <tr key={bed.bedId}>
-                          <td className="py-3 font-mono text-sm font-bold text-[color:var(--color-text-primary)]">
-                            {bed.bedId}
-                          </td>
-                          <td className="py-3 font-semibold text-[color:var(--color-text-primary)]">
-                            {bed.tenantId ? (
-                              <Link
-                                href={`/tenants/${bed.tenantId}`}
-                                className="text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
-                              >
-                                {bed.tenantName ?? 'View tenant'}
-                              </Link>
-                            ) : (
-                              (bed.tenantName ?? 'N/A')
-                            )}
-                          </td>
-                          <td className="py-3 text-right">
-                            <StatusBadge variant="success" label="Occupied" />
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={occupiedBedColumns}
+                data={room.beds.filter((b) => b.isOccupied)}
+                keyExtractor={(bed) => bed.bedId}
+              />
             </DetailCard>
           )}
 
@@ -281,47 +280,57 @@ export default function RoomDetailPage() {
                 {room.beds.map((bed) => (
                   <div
                     key={bed.bedId}
-                    className={`rounded-[var(--radius-lg)] border p-4 transition-all duration-[var(--transition-duration)] ${
+                    className={`rounded-(--radius-lg) border p-4 transition-all duration-(--transition-duration) ${
                       bed.isOccupied
-                        ? 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] shadow-[var(--shadow-sm)]'
-                        : 'border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] shadow-[var(--shadow-sm)]'
+                        ? 'border-(--border-color) bg-(--color-field-bg) shadow-(--shadow-sm)'
+                        : 'border-(--color-success-200) bg-(--color-success-50) shadow-(--shadow-sm)'
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-bold text-[color:var(--color-text-primary)]">
+                      <span className="text-sm font-bold text-(--color-text-primary)">
                         {bed.bedId}
                       </span>
-                      <span
-                        className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                          bed.isOccupied
-                            ? 'border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]'
-                            : 'border-[color:var(--color-success-200)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
-                        }`}
-                      >
-                        {bed.isOccupied ? 'Occupied' : 'Available'}
-                      </span>
+                      <StatusBadge
+                        variant={bed.isOccupied ? 'warning' : 'success'}
+                        label={bed.isOccupied ? 'Occupied' : 'Available'}
+                      />
                     </div>
                     {bed.isOccupied ? (
                       bed.tenantId ? (
                         <Link
                           href={`/tenants/${bed.tenantId}`}
-                          className="block truncate text-xs font-semibold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                          className="block truncate text-xs font-semibold text-(--color-brand-600) underline-offset-2 hover:underline"
                         >
                           {bed.tenantName ?? 'View tenant'}
                         </Link>
                       ) : (
-                        <p className="truncate text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                        <p className="truncate text-xs font-semibold text-(--color-text-secondary)">
                           {bed.tenantName ?? 'Occupied'}
                         </p>
                       )
                     ) : (
-                      <div className="pt-1">
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAssignBedTarget({
+                              roomId: room._id,
+                              roomNumber: room.roomNumber,
+                              bedId: bed.bedId,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 text-xs font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
+                        >
+                          <UserPlus className="h-3 w-3" />
+                          Assign Existing
+                        </button>
+                        <span className="text-(--color-text-muted)">&middot;</span>
                         <Link
                           href={`/tenants/new?roomId=${room._id}&bedId=${bed.bedId}`}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--color-success-700)] underline-offset-2 hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-(--color-success-700) underline-offset-2 hover:underline"
                         >
                           <Plus className="h-3 w-3" />
-                          Assign Tenant
+                          New Intake
                         </Link>
                       </div>
                     )}
@@ -329,7 +338,7 @@ export default function RoomDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm font-semibold text-[color:var(--color-text-muted)]">
+              <p className="text-sm font-semibold text-(--color-text-muted)">
                 No bed information available
               </p>
             )}
@@ -346,39 +355,56 @@ export default function RoomDetailPage() {
             </DetailCard>
           )}
 
+          {/* In-room appliance and amenity status */}
           {room.roomAmenities && room.roomAmenities.length > 0 && (
-            <DetailCard title="Room Amenities Status" icon={<CheckCircle2 />}>
-              <StackedBarChart
-                bars={[
-                  {
-                    label: 'Amenities',
-                    segments: [
-                      {
-                        value: amenityOperational,
-                        color: 'var(--color-success-500)',
-                        label: 'Operational',
-                      },
-                      {
-                        value: amenityDegraded,
-                        color: 'var(--color-warning-500)',
-                        label: 'Degraded',
-                      },
-                      {
-                        value: amenityDown,
-                        color: 'var(--color-danger-500)',
-                        label: 'Down',
-                      },
-                    ],
-                  },
-                ]}
-                barHeight={36}
+            <DetailCard title="In-Room Amenities & Appliance Health" icon={<CheckCircle2 />}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {room.roomAmenities.map((amenity) => {
+                  const statusVariant =
+                    amenity.status === 'operational'
+                      ? 'success'
+                      : amenity.status === 'degraded'
+                        ? 'warning'
+                        : 'danger';
+                  return (
+                    <div
+                      key={amenity.amenityKey}
+                      className="flex items-center justify-between rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3 shadow-(--shadow-sm)"
+                    >
+                      <span className="text-xs font-semibold text-(--color-text-primary) capitalize">
+                        {amenity.amenityKey.replace(/_/g, ' ')}
+                      </span>
+                      <StatusBadge
+                        variant={statusVariant}
+                        label={amenity.status.charAt(0).toUpperCase() + amenity.status.slice(1)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </DetailCard>
+          )}
+
+          {/* Floor-scoped service health with report-issue wiring (replaces the
+              abstract amenity stacked bar; per-room amenity states remain in
+              the room edit form). */}
+          {room.floor?._id && (
+            <DetailCard title="Floor Service Health" icon={<CheckCircle2 />}>
+              <FloorServiceGrid
+                floorId={room.floor._id}
+                floorLabel={room.floor.label}
+                onReportIssue={(serviceType) => {
+                  router.push(
+                    `/complaints/new?category=${encodeURIComponent(serviceType)}&roomId=${encodeURIComponent(room._id)}`,
+                  );
+                }}
               />
             </DetailCard>
           )}
 
           {room.description && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="text-sm font-medium text-[color:var(--color-text-secondary)]">
+              <p className="text-sm font-medium text-(--color-text-secondary)">
                 {room.description}
               </p>
             </DetailCard>
@@ -393,9 +419,8 @@ export default function RoomDetailPage() {
                     href={photo}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block aspect-square overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
+                    className="block aspect-square overflow-hidden rounded-(--radius-lg) border border-(--border-color) shadow-(--shadow-sm) transition-all duration-(--transition-duration)"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo}
                       alt={`Room ${room.roomNumber} photo ${index + 1}`}
@@ -408,10 +433,10 @@ export default function RoomDetailPage() {
                             'flex',
                             'items-center',
                             'justify-center',
-                            'bg-[color:var(--color-field-bg)]',
+                            'bg-(--color-field-bg)',
                           );
                           t.parentElement.innerHTML =
-                            '<svg class="h-8 w-8 text-[color:var(--color-text-muted)]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                            '<svg class="h-8 w-8 text-(--color-text-muted)" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                         }
                       }}
                     />
@@ -422,6 +447,12 @@ export default function RoomDetailPage() {
           )}
         </div>
       )}
+
+      <QuickBedAssignModal
+        target={assignBedTarget}
+        onClose={() => setAssignBedTarget(null)}
+        onSuccess={() => fetchRoom()}
+      />
     </FormPage>
   );
 }

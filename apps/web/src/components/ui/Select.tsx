@@ -14,6 +14,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import {
   fieldControlBase,
+  fieldControlCompact,
   fieldControlBorderError,
   fieldControlBorderOk,
   fieldErrorClass,
@@ -32,7 +33,7 @@ export interface SelectOption {
 
 export interface SelectProps extends Omit<
   React.SelectHTMLAttributes<HTMLSelectElement>,
-  'children'
+  'children' | 'size'
 > {
   label?: string;
   error?: string;
@@ -41,6 +42,8 @@ export interface SelectProps extends Omit<
   options: SelectOption[];
   placeholder?: string;
   leftIcon?: React.ReactNode;
+  /** Compact metrics for dense filter bars (default 'md'). */
+  size?: 'md' | 'compact';
 }
 
 // ── Component ──────────────────────────────────────────
@@ -57,6 +60,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       options,
       placeholder = 'Select...',
       leftIcon,
+      size = 'md',
       className,
       id,
       name,
@@ -82,15 +86,41 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     useEffect(() => {
       const el = nativeRef.current;
       if (!el || isControlled) return;
-      const sync = () => setUncontrolled(el.value);
-      // RHF may set value after mount
-      const t = window.setTimeout(sync, 0);
-      el.addEventListener('change', sync);
-      return () => {
-        window.clearTimeout(t);
-        el.removeEventListener('change', sync);
+
+      const sync = (val?: string) => {
+        const next = val !== undefined ? val : el.value;
+        setUncontrolled(next);
       };
-    }, [isControlled]);
+
+      // Intercept programmatic assignment to el.value (e.g. from RHF reset())
+      const desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+      if (desc?.set) {
+        Object.defineProperty(el, 'value', {
+          get() {
+            return desc.get?.call(this);
+          },
+          set(v) {
+            desc.set?.call(this, v);
+            sync(String(v ?? ''));
+          },
+          configurable: true,
+        });
+      }
+
+      sync();
+      const changeHandler = () => sync();
+      el.addEventListener('change', changeHandler);
+      return () => {
+        el.removeEventListener('change', changeHandler);
+        if (desc) {
+          try {
+            Object.defineProperty(el, 'value', desc);
+          } catch {
+            // Ignore reset error on unmount
+          }
+        }
+      };
+    }, [isControlled, options]);
 
     const current = isControlled ? String(valueProp ?? '') : uncontrolled;
     // Radix Select forbids empty-string item values; map '' <-> sentinel
@@ -155,9 +185,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             onChange?.(e);
           }}
           onBlur={onBlur}
-          className="sr-only"
+          className="sr-only select-none pointer-events-none"
+          style={{ userSelect: 'none' }}
           tabIndex={-1}
-          aria-hidden
+          aria-hidden="true"
           {...rest}
         >
           {placeholder && (
@@ -181,7 +212,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             }
             aria-label={rest['aria-label'] || (!label ? placeholder || 'Select option' : undefined)}
             className={clsx(
-              fieldControlBase,
+              size === 'compact' ? fieldControlCompact : fieldControlBase,
               'flex cursor-pointer items-center justify-between gap-2 text-left',
               error ? fieldControlBorderError : fieldControlBorderOk,
               'data-[placeholder]:text-[color:var(--color-text-muted)]',

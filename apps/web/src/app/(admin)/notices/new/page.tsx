@@ -217,12 +217,10 @@ export default function NewNoticePage() {
                         key={id}
                         type="button"
                         onClick={() => removeTargetId(id)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-2.5 py-1 text-xs font-medium text-(--color-text-secondary) hover:border-(--color-danger-300) hover:text-(--color-danger-600)"
                         title="Remove"
                       >
-                        <span className="max-w-[12rem] truncate font-mono">
-                          {id}
-                        </span>
+                        <span className="max-w-[12rem] truncate font-mono">{id}</span>
                         <span aria-hidden="true">x</span>
                       </button>
                     ))}
@@ -230,7 +228,7 @@ export default function NewNoticePage() {
                 )}
               </div>
             ) : (
-              <p className="self-end pb-2 text-xs text-[color:var(--color-text-muted)]">
+              <p className="self-end pb-2 text-xs text-(--color-text-muted)">
                 Visible to all tenants. No target IDs needed.
               </p>
             )}

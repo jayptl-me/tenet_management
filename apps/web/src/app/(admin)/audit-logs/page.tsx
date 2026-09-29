@@ -9,7 +9,7 @@ import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Select } from '@/components/ui/Select';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -277,10 +277,10 @@ export default function AuditLogsPage() {
       header: 'Resource',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">
+          <span className="font-semibold text-(--color-text-primary)">
             {row.resource}
           </span>
-          <p className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
+          <p className="font-mono text-3xs text-(--color-text-muted)">
             {row.resourceId?.slice(0, 12)}…
           </p>
         </div>
@@ -290,17 +290,17 @@ export default function AuditLogsPage() {
       header: 'User',
       accessor: (row) => (
         <div>
-          <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+          <span className="text-sm font-semibold text-(--color-text-primary)">
             {row.userId?.name ?? 'System'}
           </span>
-          <p className="text-xs text-[color:var(--color-text-muted)]">{row.userId?.email ?? '—'}</p>
+          <p className="text-xs text-(--color-text-muted)">{row.userId?.email ?? '—'}</p>
         </div>
       ),
     },
     {
       header: 'Role',
       accessor: (row) => (
-        <span className="text-xs font-semibold text-[color:var(--color-text-secondary)] capitalize">
+        <span className="text-xs font-semibold text-(--color-text-secondary) capitalize">
           {row.userId?.role ?? '—'}
         </span>
       ),
@@ -308,7 +308,7 @@ export default function AuditLogsPage() {
     {
       header: 'Timestamp',
       accessor: (row) => (
-        <span className="text-xs whitespace-nowrap text-[color:var(--color-text-secondary)]">
+        <span className="text-xs whitespace-nowrap text-(--color-text-secondary)">
           {new Date(row.timestamp).toLocaleString('en-IN', {
             day: '2-digit',
             month: 'short',
@@ -323,7 +323,7 @@ export default function AuditLogsPage() {
     {
       header: 'IP',
       accessor: (row) => (
-        <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">
+        <span className="font-mono text-2xs text-(--color-text-muted)">
           {row.ip ?? '—'}
         </span>
       ),
@@ -337,7 +337,7 @@ export default function AuditLogsPage() {
             e.stopPropagation();
             setSelectedLog(row);
           }}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]"
+          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-(--color-brand-600) hover:bg-(--color-brand-50)"
           title="Inspect log details"
         >
           <Eye className="h-3.5 w-3.5" />
@@ -359,10 +359,9 @@ export default function AuditLogsPage() {
             size="sm"
             onClick={handleExportCsv}
             disabled={isExporting}
-            className="flex items-center gap-2"
           >
             {isExporting ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[color:var(--color-brand-600)]" />
+              <Loader2 className="h-4 w-4 animate-spin text-(--color-brand-600)" />
             ) : (
               <Download className="h-4 w-4" />
             )}
@@ -419,33 +418,25 @@ export default function AuditLogsPage() {
           aria-label="Filter by user ID"
           className="w-full font-mono text-xs sm:w-[200px]"
         />
-        <DatePicker
-          value={fromDate}
-          onChange={(val: string) => {
+        <DateRangePicker
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromChange={(val: string) => {
             setFromDate(val);
             setPage(1);
           }}
-          aria-label="From date"
-          placeholder="From date..."
-          className="w-full sm:w-[150px]"
-        />
-        <DatePicker
-          value={toDate}
-          onChange={(val: string) => {
+          onToChange={(val: string) => {
             setToDate(val);
             setPage(1);
           }}
-          aria-label="To date"
-          placeholder="To date..."
-          className="w-full sm:w-[150px]"
+          compact
         />
 
         {(fromDate || toDate) && (
           <Button
-            variant="ghost"
+            variant="muted"
             size="sm"
             onClick={handleClearDates}
-            className="flex items-center gap-1 text-xs text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
             title="Reset date bounds"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -484,7 +475,7 @@ export default function AuditLogsPage() {
                 variant={formatActionVariant(row.action)}
                 label={formatAction(row.action)}
               />
-              <span className="font-mono text-[11px] text-[color:var(--color-text-muted)]">
+              <span className="font-mono text-2xs text-(--color-text-muted)">
                 {new Date(row.timestamp).toLocaleDateString('en-IN', {
                   day: '2-digit',
                   month: 'short',
@@ -493,13 +484,13 @@ export default function AuditLogsPage() {
                 })}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[color:var(--color-text-muted)]">
-              <span className="font-semibold text-[color:var(--color-text-primary)]">
+            <div className="flex items-center gap-2 text-xs text-(--color-text-muted)">
+              <span className="font-semibold text-(--color-text-primary)">
                 {row.resource}
               </span>
-              <span className="font-mono text-[10px]">{row.resourceId?.slice(0, 12)}…</span>
+              <span className="font-mono text-3xs">{row.resourceId?.slice(0, 12)}…</span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-3 text-xs text-(--color-text-muted)">
               <span>{row.userId?.name ?? 'System'}</span>
               <span className="lowercase">{row.userId?.role ?? '—'}</span>
               <span className="font-mono">{row.ip ?? '—'}</span>
@@ -524,22 +515,22 @@ export default function AuditLogsPage() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+              className="relative w-full max-w-lg rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-6 shadow-(--shadow-modal)"
             >
-              <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] pb-4">
+              <div className="flex items-center justify-between border-b border-b-(--border-color) pb-4">
                 <div className="flex items-center gap-2">
                   <StatusBadge
                     variant={formatActionVariant(selectedLog.action)}
                     label={formatAction(selectedLog.action)}
                   />
-                  <h3 className="text-base font-semibold text-[color:var(--color-text-primary)]">
+                  <h3 className="text-base font-semibold text-(--color-text-primary)">
                     Audit Log Details
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSelectedLog(null)}
-                  className="rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                  className="rounded-lg p-1 text-(--color-text-muted) hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
                   aria-label="Close modal"
                 >
                   <X className="h-5 w-5" />
@@ -549,42 +540,42 @@ export default function AuditLogsPage() {
               <div className="mt-4 space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">User</span>
-                    <p className="font-semibold text-[color:var(--color-text-primary)]">
+                    <span className="text-xs text-(--color-text-muted)">User</span>
+                    <p className="font-semibold text-(--color-text-primary)">
                       {selectedLog.userId?.name ?? 'System'}
                     </p>
                     {selectedLog.userId?.email && (
-                      <p className="text-xs text-[color:var(--color-text-muted)]">
+                      <p className="text-xs text-(--color-text-muted)">
                         {selectedLog.userId.email}
                       </p>
                     )}
                   </div>
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">Role</span>
-                    <p className="font-semibold text-[color:var(--color-text-primary)] capitalize">
+                    <span className="text-xs text-(--color-text-muted)">Role</span>
+                    <p className="font-semibold text-(--color-text-primary) capitalize">
                       {selectedLog.userId?.role ?? '—'}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">Resource</span>
-                    <p className="font-semibold text-[color:var(--color-text-primary)]">
+                    <span className="text-xs text-(--color-text-muted)">Resource</span>
+                    <p className="font-semibold text-(--color-text-primary)">
                       {selectedLog.resource}
                     </p>
-                    <p className="font-mono text-xs text-[color:var(--color-text-muted)]">
+                    <p className="font-mono text-xs text-(--color-text-muted)">
                       ID: {selectedLog.resourceId}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">IP Address</span>
-                    <p className="font-mono text-xs text-[color:var(--color-text-primary)]">
+                    <span className="text-xs text-(--color-text-muted)">IP Address</span>
+                    <p className="font-mono text-xs text-(--color-text-primary)">
                       {selectedLog.ip ?? '—'}
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-xs text-[color:var(--color-text-muted)]">Timestamp</span>
-                  <p className="text-xs text-[color:var(--color-text-secondary)]">
+                  <span className="text-xs text-(--color-text-muted)">Timestamp</span>
+                  <p className="text-xs text-(--color-text-secondary)">
                     {new Date(selectedLog.timestamp).toLocaleString('en-IN', {
                       day: '2-digit',
                       month: 'short',
@@ -598,10 +589,10 @@ export default function AuditLogsPage() {
 
                 {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
                   <div>
-                    <span className="text-xs text-[color:var(--color-text-muted)]">
+                    <span className="text-xs text-(--color-text-muted)">
                       Action Details
                     </span>
-                    <pre className="mt-1 max-h-48 overflow-auto rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-3 font-mono text-xs text-[color:var(--color-text-primary)]">
+                    <pre className="mt-1 max-h-48 overflow-auto rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-100) p-3 font-mono text-xs text-(--color-text-primary)">
                       {JSON.stringify(selectedLog.details, null, 2)}
                     </pre>
                   </div>

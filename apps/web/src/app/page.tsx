@@ -279,21 +279,21 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[color:var(--color-surface-50)] text-[color:var(--color-text-primary)] transition-colors duration-[var(--transition-duration)]">
+    <div className="min-h-screen bg-(--color-surface-50) text-(--color-text-primary) transition-colors duration-(--transition-duration)">
       {/* ── Nav ──────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-50 border-b transition-all duration-[var(--transition-duration-slow)] ${
+        className={`sticky top-0 z-50 border-b transition-all duration-(--transition-duration-slow) ${
           scrolled
-            ? 'border-b-[color:var(--border-color)] bg-[color:var(--glass-bg-strong)] shadow-[var(--shadow-sm)] backdrop-blur-[var(--glass-blur-strong)]'
-            : 'border-b-transparent bg-[color:var(--glass-bg)] backdrop-blur-[var(--glass-blur)]'
+            ? 'border-b-(--border-color) bg-(--glass-bg-strong) shadow-(--shadow-sm) backdrop-blur-(--glass-blur-strong)'
+            : 'border-b-transparent bg-(--glass-bg) backdrop-blur-(--glass-blur)'
         }`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href="/" className="group flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-(--color-brand-500) shadow-(--shadow-sm) transition-all duration-(--transition-duration) group-hover:scale-105 group-hover:shadow-(--shadow-md)">
               <span className="text-xs font-bold tracking-tight text-white">A</span>
             </div>
-            <span className="text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <span className="text-lg font-bold tracking-tight text-(--color-text-primary)">
               {pgName}
             </span>
           </Link>
@@ -304,7 +304,7 @@ export default function LandingPage() {
               <a
                 key={link}
                 href={`#${link}`}
-                className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-[color:var(--color-text-secondary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                className="rounded-lg px-3 py-1.5 text-13 font-medium text-(--color-text-secondary) transition-colors duration-(--transition-duration) hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
               >
                 {link.charAt(0).toUpperCase() + link.slice(1)}
               </a>
@@ -319,7 +319,7 @@ export default function LandingPage() {
 
           {/* Mobile hamburger */}
           <button
-            className="rounded-lg border border-[color:var(--border-color)] p-2 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-100)] md:hidden"
+            className="rounded-lg border border-(--border-color) p-2 text-(--color-text-secondary) transition-colors hover:bg-(--color-surface-100) md:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -329,12 +329,12 @@ export default function LandingPage() {
 
         {/* Mobile nav */}
         {mobileOpen && (
-          <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-4 py-4 md:hidden">
+          <div className="space-y-1 border-t border-t-(--border-color) bg-(--color-surface-100) px-4 py-4 md:hidden">
             {['amenities', 'rooms', 'gallery', 'testimonials', 'contact'].map((link) => (
               <a
                 key={link}
                 href={`#${link}`}
-                className="block rounded-lg px-3 py-2.5 text-[13px] font-medium text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)]"
+                className="block rounded-lg px-3 py-2.5 text-13 font-medium text-(--color-text-secondary) transition-colors hover:bg-(--color-surface-50) hover:text-(--color-text-primary)"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.charAt(0).toUpperCase() + link.slice(1)}
@@ -360,7 +360,7 @@ export default function LandingPage() {
       </header>
 
       {/* ── Hero (Theme-aware + Geometric Animated BG) ── */}
-      <section className="relative overflow-hidden border-b border-b-[color:var(--color-brand-600)] bg-[color:var(--color-brand-500)]">
+      <section className="relative overflow-hidden border-b border-b-(--color-brand-600) bg-(--color-brand-500)">
         {/* Animated geometric background */}
         <HeroBackground />
 
@@ -379,7 +379,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, ease: 'easeOut' }}
             className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5"
           >
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[color:var(--color-success-400)]" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-(--color-success-400)" />
             <span className="text-xs font-semibold text-white/90">Now Open for Bookings</span>
           </motion.div>
 
@@ -396,7 +396,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-[color:var(--color-brand-100)] md:text-base"
+            className="mx-auto mt-4 max-w-xl text-15 leading-relaxed text-(--color-brand-100) md:text-base"
           >
             {subline}
           </motion.p>
@@ -415,18 +415,16 @@ export default function LandingPage() {
             </a>
             <a href="#rooms">
               <Button
-                variant="outline"
+                variant="hero"
                 size="lg"
-                className="border-white/30 text-white hover:border-white/50 hover:bg-white/10"
               >
                 View Rooms & Pricing
               </Button>
             </a>
             {TENANT_APP_URL && (
               <Button
-                variant="outline"
+                variant="hero"
                 size="lg"
-                className="border-white/20 text-white/80 hover:border-white/40 hover:bg-white/10 hover:text-white"
                 onClick={handleTenantApp}
               >
                 <ExternalLink className="h-4 w-4" />
@@ -452,7 +450,7 @@ export default function LandingPage() {
                 className="rounded-xl border border-white/10 bg-white/5 px-2 py-3 backdrop-blur-sm"
               >
                 <p className="text-xl font-bold text-white tabular-nums">{s.val}</p>
-                <p className="text-[10px] font-semibold tracking-wider text-[color:var(--color-brand-200)] uppercase">
+                <p className="text-3xs font-semibold tracking-wider text-(--color-brand-200) uppercase">
                   {s.label}
                 </p>
               </div>
@@ -464,11 +462,11 @@ export default function LandingPage() {
       {/* ── Amenities ─────────────────────────────── */}
       <Section id="amenities" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
             Amenities
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything included</h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
             Everything you need for a comfortable, stress-free stay at {pgName}.
           </p>
         </motion.div>
@@ -478,12 +476,12 @@ export default function LandingPage() {
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="group rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-5 text-center shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+              className="group rounded-xl border border-(--border-color) bg-(--color-surface-100) p-5 text-center shadow-(--shadow-sm) transition-all duration-(--transition-duration) hover:-translate-y-0.5 hover:shadow-(--shadow-md)"
             >
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)] group-hover:border-[color:var(--color-brand-500)] group-hover:bg-[color:var(--color-brand-500)] group-hover:text-white">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-(--border-color) bg-(--color-brand-50) text-(--color-brand-600) shadow-(--shadow-xs) transition-colors duration-(--transition-duration) group-hover:border-(--color-brand-500) group-hover:bg-(--color-brand-500) group-hover:text-white">
                 {getAmenityIcon(amenity)}
               </div>
-              <h3 className="text-[13px] font-semibold tracking-tight">{amenity}</h3>
+              <h3 className="text-13 font-semibold tracking-tight">{amenity}</h3>
             </motion.div>
           ))}
         </div>
@@ -492,17 +490,17 @@ export default function LandingPage() {
       {/* ── Room Pricing ──────────────────────────── */}
       <Section
         id="rooms"
-        className="border-y border-y-[color:var(--border-color)] bg-[color:var(--color-surface-100)] py-20 md:py-28"
+        className="border-y border-y-(--border-color) bg-(--color-surface-100) py-20 md:py-28"
       >
         <div className="mx-auto max-w-6xl px-4">
           <motion.div variants={fadeInUp} className="mb-12 text-center">
-            <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+            <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
               Pricing
             </p>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Transparent, affordable plans
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+            <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
               Flexible sharing options designed around your budget and comfort.
             </p>
           </motion.div>
@@ -527,21 +525,21 @@ export default function LandingPage() {
                 <motion.div
                   key={share}
                   variants={fadeInUp}
-                  className={`relative flex flex-col rounded-xl border bg-[color:var(--color-surface-50)] p-6 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] ${
+                  className={`relative flex flex-col rounded-xl border bg-(--color-surface-50) p-6 shadow-(--shadow-md) transition-all duration-(--transition-duration) hover:-translate-y-0.5 hover:shadow-(--shadow-lg) ${
                     isPopular
-                      ? 'border-[color:var(--color-brand-500)] ring-1 ring-[color:var(--color-brand-500)]'
-                      : 'border-[color:var(--border-color)]'
+                      ? 'border-(--color-brand-500) ring-1 ring-(--color-brand-500)'
+                      : 'border-(--border-color)'
                   }`}
                 >
                   {isPopular && (
-                    <span className="absolute -top-3 right-6 rounded-full border border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-500)] px-3 py-0.5 text-[10px] font-bold tracking-wider text-white uppercase shadow-[var(--shadow-sm)]">
+                    <span className="absolute -top-3 right-6 rounded-full border border-(--color-brand-400) bg-(--color-brand-500) px-3 py-0.5 text-3xs font-bold tracking-wider text-white uppercase shadow-(--shadow-sm)">
                       Most Popular
                     </span>
                   )}
 
                   <div>
                     <h3 className="text-lg font-bold">{share} Sharing</h3>
-                    <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-muted)]">
+                    <p className="mt-1 text-13 leading-relaxed text-(--color-text-muted)">
                       {share === 2
                         ? 'Double sharing occupancy'
                         : share === 3
@@ -551,7 +549,7 @@ export default function LandingPage() {
 
                     <div className="my-5">
                       <span className="text-3xl font-bold tabular-nums">₹{price}</span>
-                      <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+                      <span className="text-13 font-medium text-(--color-text-muted)">
                         {' '}
                         / month
                       </span>
@@ -561,9 +559,9 @@ export default function LandingPage() {
                       {features.map((f, i) => (
                         <li
                           key={i}
-                          className="flex items-center gap-2 text-[13px] font-medium text-[color:var(--color-text-secondary)]"
+                          className="flex items-center gap-2 text-13 font-medium text-(--color-text-secondary)"
                         >
-                          <Check className="h-4 w-4 flex-shrink-0 text-[color:var(--color-success-500)]" />
+                          <Check className="h-4 w-4 flex-shrink-0 text-(--color-success-500)" />
                           {f}
                         </li>
                       ))}
@@ -587,11 +585,11 @@ export default function LandingPage() {
       {/* ── Gallery ──────────────────────────────── */}
       <Section id="gallery" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
             Gallery
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it for yourself</h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
             Take a virtual tour of our rooms, dining area, and facilities.
           </p>
         </motion.div>
@@ -612,20 +610,20 @@ export default function LandingPage() {
               img: null,
               title: 'Quiet Study Area',
               desc: 'Dedicated space for high-productivity workflow with 24/7 power backup.',
-              bg: 'bg-[color:var(--color-brand-400)]',
+              bg: 'bg-(--color-brand-400)',
             },
           ].map((item, i) => (
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="group overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]"
+              className="group overflow-hidden rounded-xl border border-(--border-color) bg-(--color-surface-100) shadow-(--shadow-md) transition-all duration-(--transition-duration) hover:-translate-y-0.5 hover:shadow-(--shadow-lg)"
             >
-              <div className="h-48 overflow-hidden bg-[color:var(--color-surface-200)]">
+              <div className="h-48 overflow-hidden bg-(--color-surface-200)">
                 {item.img ? (
-                  <img /* eslint-disable-line @next/next/no-img-element */
+                  <img
                     src={item.img}
                     alt={item.title}
-                    className="h-full w-full object-cover transition-transform duration-[var(--duration-glacial)] group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-(--duration-glacial) group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (
@@ -638,11 +636,11 @@ export default function LandingPage() {
                   </div>
                 )}
               </div>
-              <div className="border-t border-t-[color:var(--border-color)] p-4">
-                <h3 className="text-[15px] font-bold text-[color:var(--color-text-primary)]">
+              <div className="border-t border-t-(--border-color) p-4">
+                <h3 className="text-15 font-bold text-(--color-text-primary)">
                   {item.title}
                 </h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-muted)]">
+                <p className="mt-1 text-13 leading-relaxed text-(--color-text-muted)">
                   {item.desc}
                 </p>
               </div>
@@ -654,32 +652,32 @@ export default function LandingPage() {
       {/* ── About ──────────────────────────────────── */}
       <Section
         id="about"
-        className="border-y border-y-[color:var(--border-color)] bg-[color:var(--color-surface-100)] py-20 md:py-28"
+        className="border-y border-y-(--border-color) bg-(--color-surface-100) py-20 md:py-28"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp}>
-              <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+              <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
                 About Us
               </p>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why {pgName}?</h2>
-              <p className="mt-4 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="mt-4 text-15 leading-relaxed text-(--color-text-secondary)">
                 We provide premium paying guest accommodations designed for working professionals
                 and students who value comfort, convenience, and community. Our properties are
                 strategically located near major business hubs and educational institutions.
               </p>
-              <p className="mt-3 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="mt-3 text-15 leading-relaxed text-(--color-text-secondary)">
                 Every room is fully furnished with modern amenities including high-speed internet,
                 attached bathrooms, and 24/7 power backup. We take pride in our transparent billing
                 and responsive management.
               </p>
-              <div className="mt-6 flex items-center gap-6 text-[13px] font-semibold text-[color:var(--color-text-muted)]">
+              <div className="mt-6 flex items-center gap-6 text-13 font-semibold text-(--color-text-muted)">
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+                  <MapPin className="h-4 w-4 text-(--color-brand-500)" />
                   Prime Location
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Phone className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+                  <Phone className="h-4 w-4 text-(--color-brand-500)" />
                   24×7 Support
                 </span>
               </div>
@@ -687,10 +685,10 @@ export default function LandingPage() {
 
             <motion.div
               variants={fadeScaleIn}
-              className="rounded-xl border border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-500)] p-8 text-center text-white shadow-[var(--shadow-lg)]"
+              className="rounded-xl border border-(--color-brand-400) bg-(--color-brand-500) p-8 text-center text-white shadow-(--shadow-lg)"
             >
               <p className="text-5xl font-bold">500+</p>
-              <p className="mt-1 text-[13px] font-medium text-[color:var(--color-brand-100)]">
+              <p className="mt-1 text-13 font-medium text-(--color-brand-100)">
                 Happy Residents
               </p>
               <div className="mt-8 grid grid-cols-2 gap-3">
@@ -702,7 +700,7 @@ export default function LandingPage() {
                 ].map((s, i) => (
                   <div key={i} className="rounded-lg border border-white/15 bg-white/10 p-3">
                     <p className="text-2xl font-bold">{s.val}</p>
-                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-brand-200)] uppercase">
+                    <p className="text-2xs font-semibold tracking-wider text-(--color-brand-200) uppercase">
                       {s.label}
                     </p>
                   </div>
@@ -716,11 +714,11 @@ export default function LandingPage() {
       {/* ── Testimonials ──────────────────────────── */}
       <Section id="testimonials" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
             Testimonials
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Loved by residents</h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
             Real feedback from working professionals and students at {pgName}.
           </p>
         </motion.div>
@@ -730,22 +728,22 @@ export default function LandingPage() {
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="flex flex-col rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-6 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-lg)]"
+              className="flex flex-col rounded-xl border border-(--border-color) bg-(--color-surface-100) p-6 shadow-(--shadow-md) transition-all duration-(--transition-duration) hover:shadow-(--shadow-lg)"
             >
-              <div className="mb-3 flex gap-0.5 text-[color:var(--color-warning-500)]">
+              <div className="mb-3 flex gap-0.5 text-(--color-warning-500)">
                 {Array.from({ length: t.rating }).map((_, idx) => (
                   <Star key={idx} className="h-4 w-4" fill="currentColor" />
                 ))}
               </div>
-              <p className="flex-1 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)] italic">
+              <p className="flex-1 text-15 leading-relaxed text-(--color-text-secondary) italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <div className="mt-4 flex items-center justify-between border-t border-t-[color:var(--color-surface-200)] pt-4">
-                <span className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
+              <div className="mt-4 flex items-center justify-between border-t border-t-(--color-surface-200) pt-4">
+                <span className="text-13 font-bold text-(--color-text-primary)">
                   {t.name}
                 </span>
                 {t.occupation && (
-                  <span className="text-[12px] font-medium text-[color:var(--color-text-muted)]">
+                  <span className="text-12 font-medium text-(--color-text-muted)">
                     {t.occupation}
                   </span>
                 )}
@@ -758,22 +756,22 @@ export default function LandingPage() {
       {/* ── Contact ───────────────────────────────── */}
       <Section
         id="contact"
-        className="border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] py-20 md:py-28"
+        className="border-t border-t-(--border-color) bg-(--color-surface-100) py-20 md:py-28"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp} className="space-y-6">
               <div>
-                <p className="mb-2 text-[11px] font-bold tracking-widest text-[color:var(--color-brand-500)] uppercase">
+                <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
                   Contact
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight">Get in touch</h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--color-text-secondary)]">
+                <p className="mt-2 text-15 leading-relaxed text-(--color-text-secondary)">
                   Drop by for a visit! We are centrally located and easy to reach.
                 </p>
               </div>
 
-              <div className="h-72 overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] shadow-[var(--shadow-md)]">
+              <div className="h-72 overflow-hidden rounded-xl border border-(--border-color) bg-(--color-surface-200) shadow-(--shadow-md)">
                 {mapsEmbedUrl ? (
                   <iframe
                     title="Google Maps Location"
@@ -784,24 +782,24 @@ export default function LandingPage() {
                   />
                 ) : (
                   <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center">
-                    <MapPin className="mb-2 h-8 w-8 text-[color:var(--color-brand-500)]" />
-                    <span className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                    <MapPin className="mb-2 h-8 w-8 text-(--color-brand-500)" />
+                    <span className="text-13 font-semibold text-(--color-text-primary)">
                       {address.line1}
                     </span>
-                    <span className="mt-1 text-[12px] text-[color:var(--color-text-muted)]">
+                    <span className="mt-1 text-12 text-(--color-text-muted)">
                       {address.city}, {address.state} - {address.pincode}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col gap-2 text-[13px] font-medium text-[color:var(--color-text-secondary)]">
+              <div className="flex flex-col gap-2 text-13 font-medium text-(--color-text-secondary)">
                 <span className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+                  <Phone className="h-4 w-4 text-(--color-brand-500)" />
                   {phone}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-[color:var(--color-brand-500)]" />
+                  <Mail className="h-4 w-4 text-(--color-brand-500)" />
                   {email}
                 </span>
               </div>
@@ -809,19 +807,19 @@ export default function LandingPage() {
 
             <motion.div variants={fadeInUp}>
               {formSent ? (
-                <div className="rounded-xl border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] p-8 text-center shadow-[var(--shadow-md)]">
-                  <Check className="mx-auto h-10 w-10 text-[color:var(--color-success-500)]" />
-                  <h3 className="mt-3 text-lg font-bold text-[color:var(--color-success-700)]">
+                <div className="rounded-xl border border-(--color-success-200) bg-(--color-success-50) p-8 text-center shadow-(--shadow-md)">
+                  <Check className="mx-auto h-10 w-10 text-(--color-success-500)" />
+                  <h3 className="mt-3 text-lg font-bold text-(--color-success-700)">
                     Thank You!
                   </h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-success-600)]">
+                  <p className="mt-1 text-13 leading-relaxed text-(--color-success-600)">
                     We have received your enquiry and will get back to you shortly.
                   </p>
                 </div>
               ) : (
                 <form
                   onSubmit={handleEnquiry}
-                  className="space-y-4 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-6 shadow-[var(--shadow-md)]"
+                  className="space-y-4 rounded-xl border border-(--border-color) bg-(--color-surface-50) p-6 shadow-(--shadow-md)"
                 >
                   <Input label="Full Name" name="name" placeholder="John Doe" required />
                   <Input
@@ -840,7 +838,7 @@ export default function LandingPage() {
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="preferredSharing"
-                      className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+                      className="text-13 font-semibold text-(--color-text-primary)"
                     >
                       Preferred sharing
                     </label>
@@ -848,7 +846,7 @@ export default function LandingPage() {
                       id="preferredSharing"
                       name="preferredSharing"
                       defaultValue="2"
-                      className="w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none"
+                      className="w-full rounded-lg border border-(--border-color) bg-(--color-surface-50) px-3.5 py-2 text-sm font-medium text-(--color-text-primary) focus:border-(--color-brand-500) focus:ring-2 focus:ring-(--color-brand-400) focus:outline-none"
                     >
                       <option value="2">2 Sharing</option>
                       <option value="3">3 Sharing</option>
@@ -859,7 +857,7 @@ export default function LandingPage() {
                   <div className="flex flex-col gap-1.5">
                     <label
                       htmlFor="message"
-                      className="text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+                      className="text-13 font-semibold text-(--color-text-primary)"
                     >
                       Message
                     </label>
@@ -870,11 +868,11 @@ export default function LandingPage() {
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Tell us about your requirements..."
-                      className="w-full resize-none rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3.5 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-500)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none"
+                      className="w-full resize-none rounded-lg border border-(--border-color) bg-(--color-surface-50) px-3.5 py-2 text-sm font-medium text-(--color-text-primary) transition-all duration-(--transition-duration) placeholder:text-(--color-text-muted) focus:border-(--color-brand-500) focus:ring-2 focus:ring-(--color-brand-400) focus:outline-none"
                     />
                   </div>
                   {formError && (
-                    <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">
+                    <p className="text-12 font-medium text-(--color-danger-600)">
                       {formError}
                     </p>
                   )}
@@ -890,31 +888,31 @@ export default function LandingPage() {
       </Section>
 
       {/* ── Footer ────────────────────────────────── */}
-      <footer className="border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-900)] text-[color:var(--color-surface-400)]">
+      <footer className="border-t border-t-(--border-color) bg-(--color-surface-900) text-(--color-surface-400)">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <span className="text-lg font-bold tracking-tight text-white">{pgName}</span>
-            <nav className="flex items-center gap-6 text-[13px] font-medium">
+            <nav className="flex items-center gap-6 text-13 font-medium">
               {['amenities', 'rooms', 'gallery', 'testimonials'].map((link) => (
                 <a
                   key={link}
                   href={`#${link}`}
-                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  className="transition-colors duration-(--transition-duration) hover:text-white"
                 >
                   {link.charAt(0).toUpperCase() + link.slice(1)}
                 </a>
               ))}
             </nav>
-            <p className="text-[12px]">
+            <p className="text-12">
               &copy; {new Date().getFullYear()} {pgName}. All rights reserved.
             </p>
           </div>
           {social && (
-            <div className="mt-4 flex justify-center gap-4 border-t border-t-[color:var(--color-surface-700)] pt-4">
+            <div className="mt-4 flex justify-center gap-4 border-t border-t-(--color-surface-700) pt-4">
               {social.instagram && (
                 <a
                   href={social.instagram}
-                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  className="transition-colors duration-(--transition-duration) hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -924,7 +922,7 @@ export default function LandingPage() {
               {social.facebook && (
                 <a
                   href={social.facebook}
-                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  className="transition-colors duration-(--transition-duration) hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -934,7 +932,7 @@ export default function LandingPage() {
               {social.whatsapp && (
                 <a
                   href={social.whatsapp}
-                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  className="transition-colors duration-(--transition-duration) hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -944,7 +942,7 @@ export default function LandingPage() {
               {social.youtube && (
                 <a
                   href={social.youtube}
-                  className="transition-colors duration-[var(--transition-duration)] hover:text-white"
+                  className="transition-colors duration-(--transition-duration) hover:text-white"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

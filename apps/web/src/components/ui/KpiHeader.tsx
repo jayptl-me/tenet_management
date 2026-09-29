@@ -125,7 +125,8 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
 
         const shell = clsx(
           'relative bg-[color:var(--color-card-bg)] px-5 py-4',
-          interactive && 'cursor-pointer transition-colors hover:bg-[color:var(--color-field-bg-hover)]',
+          interactive &&
+            'cursor-pointer transition-colors hover:bg-[color:var(--color-field-bg-hover)]',
         );
 
         return interactive ? (

@@ -167,14 +167,21 @@ export default function EditMealFeedbackPage() {
         >
           <FormSection title="Feedback" description="Meal rating and staff follow-up">
             <FormGrid>
-              <Select
-                label="Meal type"
-                options={mealTypeOptions}
-                error={err.mealType?.message}
-                {...register('mealType')}
+              <Controller
+                name="mealType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Meal type"
+                    options={mealTypeOptions}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.mealType?.message}
+                  />
+                )}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                <label className="text-13 font-semibold text-(--color-text-primary)">
                   Rating
                 </label>
                 <Controller
@@ -183,24 +190,31 @@ export default function EditMealFeedbackPage() {
                   render={({ field }) => (
                     <div className="flex items-center gap-2">
                       <StarRating value={field.value ?? 0} onChange={field.onChange} size="lg" />
-                      <span className="font-display text-sm font-bold text-[color:var(--color-warning-500)]">
+                      <span className="font-display text-sm font-bold text-(--color-warning-500)">
                         {field.value ?? 0}/5
                       </span>
                     </div>
                   )}
                 />
                 {errors.rating?.message && (
-                  <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">
+                  <p className="text-12 font-medium text-(--color-danger-600)">
                     {errors.rating.message}
                   </p>
                 )}
               </div>
-              <Select
-                label="Status"
-                options={statusOptions}
-                error={err.status?.message}
-                leftIcon={<MessageSquare className="h-4 w-4" />}
-                {...register('status')}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Status"
+                    options={statusOptions}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.status?.message}
+                    leftIcon={<MessageSquare className="h-4 w-4" />}
+                  />
+                )}
               />
               <FormFullWidth>
                 <Controller

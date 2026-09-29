@@ -66,10 +66,14 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
-function serviceHealth(status: string, nextServiceDate?: string): { label: string; variant: 'success' | 'warning' | 'danger' | 'default' } {
+function serviceHealth(
+  status: string,
+  nextServiceDate?: string,
+): { label: string; variant: 'success' | 'warning' | 'danger' | 'default' } {
   if (status === 'retired') return { label: 'Closed', variant: 'default' };
   if (!nextServiceDate) return { label: 'Unscheduled', variant: 'default' };
-  if (new Date(nextServiceDate).getTime() < Date.now()) return { label: 'Overdue', variant: 'danger' };
+  if (new Date(nextServiceDate).getTime() < Date.now())
+    return { label: 'Overdue', variant: 'danger' };
   return { label: formatShortDate(nextServiceDate), variant: 'success' };
 }
 
@@ -131,7 +135,9 @@ export default function AssetDetailPage() {
     <FormPage
       title={asset?.name ?? 'Asset Details'}
       description={
-        asset ? `${assetCategoryLabel(asset.category)} · ${asset.location ?? 'No location'}` : 'Asset details'
+        asset
+          ? `${assetCategoryLabel(asset.category)} · ${asset.location ?? 'No location'}`
+          : 'Asset details'
       }
       backHref="/assets"
       isLoading={isLoading}
@@ -175,7 +181,11 @@ export default function AssetDetailPage() {
               variant={low ? 'warning' : 'default'}
               trend={
                 low
-                  ? { value: 'Low', direction: 'down', label: `threshold ${asset.lowStockThreshold ?? 0}` }
+                  ? {
+                      value: 'Low',
+                      direction: 'down',
+                      label: `threshold ${asset.lowStockThreshold ?? 0}`,
+                    }
                   : undefined
               }
             />
@@ -199,7 +209,9 @@ export default function AssetDetailPage() {
                   : null) ??
                 (asset.floorId && typeof asset.floorId === 'object'
                   ? (asset.floorId.label ??
-                    (asset.floorId.floorNumber != null ? `Floor ${asset.floorId.floorNumber}` : null))
+                    (asset.floorId.floorNumber != null
+                      ? `Floor ${asset.floorId.floorNumber}`
+                      : null))
                   : null) ??
                 (asset.location ? asset.location.slice(0, 18) : null) ??
                 'Unassigned'
@@ -219,7 +231,7 @@ export default function AssetDetailPage() {
                     <span className="inline-flex items-center gap-1.5">
                       <AssetCategoryIcon
                         category={asset.category}
-                        className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]"
+                        className="h-3.5 w-3.5 text-(--color-text-muted)"
                       />
                       {assetCategoryLabel(asset.category)}
                     </span>
@@ -229,7 +241,7 @@ export default function AssetDetailPage() {
                   label="Location"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {asset.location ?? '—'}
                     </span>
                   }
@@ -257,7 +269,7 @@ export default function AssetDetailPage() {
                           asset.roomId._id &&
                           router.push(`/rooms/${asset.roomId._id}`)
                         }
-                        className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                       >
                         {asset.roomId.roomNumber ?? 'Room'}
                       </button>
@@ -284,7 +296,7 @@ export default function AssetDetailPage() {
                     <span className="inline-flex items-center gap-2">
                       <span className="tabular-nums">{asset.quantity}</span>
                       {low && (
-                        <span className="inline-flex items-center rounded-full bg-[color:var(--color-warning-100)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-warning-800)]">
+                        <span className="inline-flex items-center rounded-full bg-(--color-warning-100) px-2 py-0.5 text-xs font-semibold text-(--color-warning-800)">
                           Low Stock
                         </span>
                       )}
@@ -305,44 +317,44 @@ export default function AssetDetailPage() {
 
           <DetailCard title="Dates & Service" icon={<Wrench />}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
+                <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                   Purchase Date
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                  <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                  <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.purchasedDate)}
                 </p>
               </div>
-              <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
+                <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                   Last Service
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                  <Wrench className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                  <Wrench className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.lastServicedDate)}
                 </p>
               </div>
-              <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                     Next Service
                   </p>
                   {health?.variant === 'danger' && (
-                    <span className="inline-flex items-center rounded-full bg-[color:var(--color-danger-100)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--color-danger-700)]">
+                    <span className="inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 text-3xs font-semibold text-(--color-danger-700)">
                       Overdue
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                  <Wrench className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                  <Wrench className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.nextServiceDate)}
                 </p>
                 {asset.status !== 'retired' && (
                   <button
                     type="button"
                     onClick={() => router.push(`/assets/${asset._id}/edit`)}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                   >
                     <CalendarClock className="h-3.5 w-3.5" />
                     Reschedule service
@@ -361,7 +373,7 @@ export default function AssetDetailPage() {
 
           {asset.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
-              <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                 {asset.notes}
               </p>
             </DetailCard>
@@ -375,7 +387,7 @@ export default function AssetDetailPage() {
                 label="Lifecycle"
                 value={
                   <span className="inline-flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Activity className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {asset.status === 'retired' ? 'Retired (terminal)' : 'Active record'}
                   </span>
                 }

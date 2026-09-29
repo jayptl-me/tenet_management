@@ -70,7 +70,13 @@ export function OccupancyRing({
   return (
     <div className={clsx('flex flex-col items-center gap-1.5', className)}>
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90" role="img" aria-label={`${clamped}% occupied`}>
+        <svg
+          width={size}
+          height={size}
+          className="-rotate-90"
+          role="img"
+          aria-label={`${clamped}% occupied`}
+        >
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -96,7 +102,7 @@ export function OccupancyRing({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={clsx(
-              'font-display font-bold tabular-nums leading-none',
+              'font-display leading-none font-bold tabular-nums',
               colors.text,
               size >= 80 ? 'text-xl' : 'text-sm',
             )}
@@ -104,14 +110,16 @@ export function OccupancyRing({
             {clamped}%
           </span>
           {size >= 80 && (
-            <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+            <span className="mt-0.5 text-[10px] font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
               occupied
             </span>
           )}
         </div>
       </div>
       {caption && (
-        <span className="text-xs font-semibold text-[color:var(--color-text-secondary)]">{caption}</span>
+        <span className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
+          {caption}
+        </span>
       )}
     </div>
   );

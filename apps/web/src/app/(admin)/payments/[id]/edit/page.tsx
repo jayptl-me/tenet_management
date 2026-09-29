@@ -6,15 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  AlertTriangle,
-  User,
-  Home,
-  Hash,
-  Receipt,
-  Lock,
-  History,
-} from 'lucide-react';
+import { AlertTriangle, User, Home, Hash, Receipt, Lock, History } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
@@ -143,8 +135,7 @@ export default function EditPaymentPage() {
   };
 
   const tenant = context?.tenantId;
-  const tenantId =
-    typeof tenant === 'string' ? tenant : (tenant?._id ?? '');
+  const tenantId = typeof tenant === 'string' ? tenant : (tenant?._id ?? '');
   const tenantName = typeof tenant === 'object' ? (tenant?.userId?.name ?? 'Tenant') : 'Tenant';
   const roomNumber = typeof tenant === 'object' ? (tenant?.roomId?.roomNumber ?? null) : null;
   const invoice = context?.invoiceId;
@@ -161,22 +152,24 @@ export default function EditPaymentPage() {
   return (
     <FormPage
       title="Edit Payment"
-      description={descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update payment details'}
+      description={
+        descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update payment details'
+      }
       backHref={`/payments/${id}`}
       error={submitError}
       isLoading={isLoading}
       maxWidth="5xl"
     >
       {isPaidLocked && (
-        <div className="mb-6 flex items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-4">
-          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-warning-600)]" />
-          <div className="text-sm font-semibold text-[color:var(--color-warning-800)]">
+        <div className="mb-6 flex items-start gap-3 rounded-(--radius-lg) border border-(--color-warning-300) bg-(--color-warning-50) p-4">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-(--color-warning-600)" />
+          <div className="text-sm font-semibold text-(--color-warning-800)">
             <p>This payment is marked paid and cannot be edited.</p>
-            <p className="mt-1 text-xs font-medium text-[color:var(--color-warning-700)]">
+            <p className="mt-1 text-xs font-medium text-(--color-warning-700)">
               Use{' '}
               <Link
                 href={`/payments/${id}`}
-                className="underline underline-offset-2 hover:text-[color:var(--color-warning-900)]"
+                className="underline underline-offset-2 hover:text-(--color-warning-900)"
               >
                 the detail page
               </Link>{' '}
@@ -216,7 +209,10 @@ export default function EditPaymentPage() {
             }
           >
             <fieldset disabled={isPaidLocked} className="min-w-0 space-y-0 disabled:opacity-70">
-              <FormSection title="Payment details" description="Amount, method, and payment category">
+              <FormSection
+                title="Payment details"
+                description="Amount, method, and payment category"
+              >
                 <FormGrid>
                   <Input
                     label="Amount (₹)"
@@ -271,7 +267,7 @@ export default function EditPaymentPage() {
                       {...register('status')}
                     />
                     {watched.status && STATUS_HELP[watched.status] && (
-                      <p className="mt-1.5 flex items-start gap-1.5 text-[12px] font-medium text-[color:var(--color-text-secondary)]">
+                      <p className="mt-1.5 flex items-start gap-1.5 text-12 font-medium text-(--color-text-secondary)">
                         <History className="mt-0.5 h-3 w-3 shrink-0" />
                         {STATUS_HELP[watched.status]}
                       </p>
@@ -296,7 +292,7 @@ export default function EditPaymentPage() {
         <div className="space-y-4 xl:col-span-1">
           {context && (
             <div className={clsx(surfaceCardClass, 'sticky top-6 space-y-4 p-5')}>
-              <h3 className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+              <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
                 Linked records
               </h3>
 
@@ -304,19 +300,19 @@ export default function EditPaymentPage() {
                 {tenantId ? (
                   <Link
                     href={`/tenants/${tenantId}`}
-                    className="flex items-center gap-2 text-sm font-bold text-[color:var(--color-brand-600)] hover:underline"
+                    className="flex items-center gap-2 text-sm font-bold text-(--color-brand-600) hover:underline"
                   >
                     <User className="h-4 w-4 shrink-0" />
                     {tenantName}
                   </Link>
                 ) : (
-                  <span className="flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                  <span className="flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
                     <User className="h-4 w-4 shrink-0" />
                     {tenantName}
                   </span>
                 )}
                 {roomNumber && (
-                  <span className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-(--color-text-secondary)">
                     <Home className="h-3.5 w-3.5 shrink-0" />
                     Room {roomNumber}
                   </span>
@@ -324,28 +320,28 @@ export default function EditPaymentPage() {
                 {invoiceHref && (
                   <Link
                     href={`/invoices/${invoiceHref}`}
-                    className="flex items-center gap-2 font-mono text-xs font-bold text-[color:var(--color-brand-600)] hover:underline"
+                    className="flex items-center gap-2 font-mono text-xs font-bold text-(--color-brand-600) hover:underline"
                   >
                     <Receipt className="h-3.5 w-3.5 shrink-0" />
                     {invoiceLabel}
                   </Link>
                 )}
                 {typeof context.amount === 'number' && (
-                  <span className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-text-secondary)] tabular-nums">
-                    <Hash className="h-3.5 w-3.5 shrink-0" />
-                    ₹{context.amount.toLocaleString('en-IN')}
+                  <span className="flex items-center gap-2 text-xs font-semibold text-(--color-text-secondary) tabular-nums">
+                    <Hash className="h-3.5 w-3.5 shrink-0" />₹
+                    {context.amount.toLocaleString('en-IN')}
                     {context.method ? ` via ${context.method.replace(/_/g, ' ')}` : ''}
                   </span>
                 )}
                 {context.utrNumber && (
-                  <span className="block font-mono text-[11px] font-bold text-[color:var(--color-text-muted)]">
+                  <span className="block font-mono text-2xs font-bold text-(--color-text-muted)">
                     UTR {context.utrNumber}
                   </span>
                 )}
               </div>
 
               <div>
-                <p className="mb-1.5 text-[11px] font-bold tracking-[0.08em] text-[color:var(--color-text-muted)] uppercase">
+                <p className="mb-1.5 text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
                   Current status
                 </p>
                 <StatusBadge
@@ -355,7 +351,7 @@ export default function EditPaymentPage() {
               </div>
 
               {!isPaidLocked && isDirty && (
-                <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-info-200)] bg-[color:var(--color-info-50)] px-3 py-2 text-xs font-semibold text-[color:var(--color-info-800)]">
+                <div className="flex items-start gap-2 rounded-(--radius-md) border border-(--color-info-200) bg-(--color-info-50) px-3 py-2 text-xs font-semibold text-(--color-info-800)">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   Unsaved changes — save or cancel before leaving.
                 </div>

@@ -240,14 +240,21 @@ export default function EditAssetPage() {
                 error={err.name?.message}
                 {...register('name')}
               />
-              <Select
-                label="Category"
-                options={CATEGORY_OPTIONS}
-                error={err.category?.message}
-                helperText={
-                  watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
-                }
-                {...register('category')}
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Category"
+                    options={CATEGORY_OPTIONS}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.category?.message}
+                    helperText={
+                      watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
+                    }
+                  />
+                )}
               />
             </FormGrid>
           </FormSection>
@@ -313,12 +320,19 @@ export default function EditAssetPage() {
                 helperText="Alert fires when quantity falls to this level (0 disables)"
                 {...register('lowStockThreshold')}
               />
-              <Select
-                label="Status"
-                options={STATUS_OPTIONS}
-                error={err.status?.message}
-                helperText={isRetired ? 'Retired is terminal: service schedule closes' : undefined}
-                {...register('status')}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Status"
+                    options={STATUS_OPTIONS}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.status?.message}
+                    helperText={isRetired ? 'Retired is terminal: service schedule closes' : undefined}
+                  />
+                )}
               />
             </FormGrid>
           </FormSection>
@@ -381,7 +395,7 @@ export default function EditAssetPage() {
                 label="Placement"
                 value={
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {loaded?.location ?? '—'}
                   </span>
                 }
@@ -417,7 +431,7 @@ export default function EditAssetPage() {
 
           {loaded?.status !== 'retired' && (
             <DetailCard title="Danger zone" variant="danger" icon={<AlertTriangle />}>
-              <p className="text-[13px] leading-relaxed font-medium text-[color:var(--color-danger-700)]">
+              <p className="text-13 leading-relaxed font-medium text-(--color-danger-700)">
                 Retiring closes the service schedule. The record is kept, not deleted.
               </p>
               <Button

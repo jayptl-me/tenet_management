@@ -86,19 +86,20 @@ export function FloorStackPreview({
 
   const rowStyles: Record<string, string> = {
     existing:
-      'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]',
+      'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] transition-colors hover:border-[color:var(--border-color-hover)]',
     current:
-      'border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] ring-1 ring-[color:var(--color-brand-300)]',
-    new: 'border-[color:var(--color-success-300)] border-dashed bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]',
+      'border-[color:var(--badge-info-border)] bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)] ring-1 ring-[color:var(--badge-info-border)] shadow-[var(--shadow-xs)] font-bold',
+    new: 'border-[color:var(--badge-success-border)] border-dashed bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)] font-bold',
     conflict:
-      'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)]',
+      'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)] font-bold',
   };
 
   const badgeStyles: Record<string, string> = {
-    existing: 'bg-[color:var(--color-surface-200)] text-[color:var(--color-text-secondary)]',
-    current: 'bg-[color:var(--color-brand-500)] text-[color:var(--color-text-inverted)]',
-    new: 'bg-[color:var(--color-success-500)] text-[color:var(--color-text-inverted)]',
-    conflict: 'bg-[color:var(--color-danger-500)] text-[color:var(--color-text-inverted)]',
+    existing:
+      'border border-[color:var(--badge-neutral-border)] bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)]',
+    current: 'bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]',
+    new: 'bg-[color:var(--color-success-500)] text-[color:var(--color-on-success)]',
+    conflict: 'bg-[color:var(--color-danger-500)] text-[color:var(--color-on-danger)]',
   };
 
   return (
@@ -107,12 +108,12 @@ export function FloorStackPreview({
         <p className="text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)]">
           Building preview
         </p>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+        <span className="text-[10px] font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
           {mode === 'new' ? 'New floor' : 'This floor'} highlighted
         </span>
       </div>
 
-      <div className="flex flex-col-reverse gap-1 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2">
+      <div className="flex flex-col-reverse gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-2.5 shadow-[var(--shadow-xs)]">
         {stack.map((row) => (
           <motion.div
             key={row.key}
@@ -143,7 +144,7 @@ export function FloorStackPreview({
       </div>
 
       {conflict && (
-        <p className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] px-2.5 py-1.5 text-[11px] font-semibold text-[color:var(--color-danger-700)]">
+        <p className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-2.5 py-1.5 text-[11px] font-semibold text-[color:var(--badge-danger-text)]">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           Floor number {current.floorNumber} already exists. Pick a different number.
         </p>

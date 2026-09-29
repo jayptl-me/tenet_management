@@ -134,7 +134,7 @@ export default function MealsPage() {
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {row.tenant?.user?.name ?? 'N/A'}
         </span>
       ),
@@ -168,7 +168,7 @@ export default function MealsPage() {
       accessor: (row) => (
         <div className="flex items-center gap-2">
           <StarRating value={row.rating} readonly size="sm" />
-          <span className="font-display text-xs font-bold text-[color:var(--color-warning-500)]">
+          <span className="font-display text-xs font-bold text-(--color-warning-500)">
             {row.rating}/5
           </span>
         </div>
@@ -177,7 +177,7 @@ export default function MealsPage() {
     {
       header: 'Comment',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
+        <span className="block max-w-[200px] truncate text-xs text-(--color-text-muted)">
           {row.comment ?? '—'}
         </span>
       ),
@@ -316,12 +316,12 @@ export default function MealsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
               <StarRating value={row.rating} readonly size="sm" />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span className="capitalize">{row.mealType}</span>
               {(row.date ?? row.createdAt) && (
                 <span>

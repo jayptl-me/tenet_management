@@ -46,7 +46,10 @@ export function AssetCategoryIcon({
 
 // ── Stock meter ──────────────────────────────────────────
 
-export function isLowStock(quantity: number | null | undefined, threshold: number | null | undefined): boolean {
+export function isLowStock(
+  quantity: number | null | undefined,
+  threshold: number | null | undefined,
+): boolean {
   return (threshold ?? 0) > 0 && (quantity ?? 0) <= (threshold ?? 0);
 }
 
@@ -161,9 +164,7 @@ export function AssetServiceTimeline({
                   aria-hidden
                   className={clsx(
                     'absolute top-5 bottom-0 left-[15px] w-0.5 sm:top-[15px] sm:right-0 sm:bottom-auto sm:left-[32px] sm:h-0.5 sm:w-auto',
-                    done
-                      ? 'bg-[color:var(--color-success-400)]'
-                      : 'bg-[color:var(--border-color)]',
+                    done ? 'bg-[color:var(--color-success-400)]' : 'bg-[color:var(--border-color)]',
                   )}
                 />
               )}

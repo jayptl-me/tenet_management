@@ -15,9 +15,11 @@ import {
   Clock,
   Share2,
   Copy,
+  FileSearch,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { notificationTargetHref } from '@/lib/notificationLinks';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -116,6 +118,15 @@ export default function NotificationDetailPage() {
       actions={
         notification ? (
           <div className="flex items-center gap-2">
+            {notificationTargetHref(notification) && (
+              <Button
+                variant="primary"
+                onClick={() => router.push(notificationTargetHref(notification)!)}
+              >
+                <FileSearch className="h-4 w-4" />
+                Review Document
+              </Button>
+            )}
             <Button variant="outline" onClick={() => router.push(`/notifications/${notifId}/edit`)}>
               <Pencil className="h-4 w-4" />
               Edit Notification
@@ -141,10 +152,10 @@ export default function NotificationDetailPage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <DetailCard title="Category & Type" icon={<Bell />}>
               <div className="space-y-1">
-                <p className="text-base font-bold text-[color:var(--color-text-primary)]">
+                <p className="text-base font-bold text-(--color-text-primary)">
                   {formatType(notification.type)}
                 </p>
-                <p className="text-xs text-[color:var(--color-text-muted)]">
+                <p className="text-xs text-(--color-text-muted)">
                   Sent on {formatDateTime(notification.sentAt || notification.createdAt)}
                 </p>
               </div>
@@ -153,13 +164,13 @@ export default function NotificationDetailPage() {
             <DetailCard title="Target Audience" icon={<Target />}>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)] capitalize">
+                  <span className="text-sm font-semibold text-(--color-text-primary) capitalize">
                     {notification.targetType === 'all'
                       ? 'All Active Tenants'
                       : `By ${notification.targetType}`}
                   </span>
                   {notification.targetIds?.length > 0 && (
-                    <span className="rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 font-mono text-xs font-medium text-[color:var(--color-text-secondary)]">
+                    <span className="rounded-full bg-(--color-surface-100) px-2 py-0.5 font-mono text-xs font-medium text-(--color-text-secondary)">
                       {notification.targetIds.length} target
                       {notification.targetIds.length !== 1 ? 's' : ''}
                     </span>
@@ -170,7 +181,7 @@ export default function NotificationDetailPage() {
                     {notification.targetIds.map((tid) => (
                       <span
                         key={tid}
-                        className="rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2 py-0.5 font-mono text-[11px] text-[color:var(--color-text-secondary)]"
+                        className="rounded-md border border-(--border-color) bg-(--color-field-bg) px-2 py-0.5 font-mono text-2xs text-(--color-text-secondary)"
                       >
                         {tid}
                       </span>
@@ -183,41 +194,41 @@ export default function NotificationDetailPage() {
 
           <DetailCard title="Delivery & Read Breakdown" icon={<Users />}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-text-muted)]">
+              <div className="rounded-lg border border-(--border-color) bg-(--color-field-bg) p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-(--color-text-muted)">
                   <Users className="h-3.5 w-3.5" />
                   Total Recipients
                 </div>
-                <p className="mt-1 text-2xl font-extrabold text-[color:var(--color-text-primary)]">
+                <p className="mt-1 text-2xl font-extrabold text-(--color-text-primary)">
                   {recipientCount}
                 </p>
-                <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                <p className="text-2xs text-(--color-text-muted)">
                   Active tenants matched at broadcast
                 </p>
               </div>
 
-              <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-success-600)]">
+              <div className="rounded-lg border border-(--border-color) bg-(--color-field-bg) p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-(--color-success-600)">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Read Receipts
                 </div>
-                <p className="mt-1 text-2xl font-extrabold text-[color:var(--color-success-600)]">
+                <p className="mt-1 text-2xl font-extrabold text-(--color-success-600)">
                   {readCount}
                 </p>
-                <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                <p className="text-2xs text-(--color-text-muted)">
                   {readPercent}% completion rate
                 </p>
               </div>
 
-              <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[color:var(--color-warning-600)]">
+              <div className="rounded-lg border border-(--border-color) bg-(--color-field-bg) p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-(--color-warning-600)">
                   <Clock className="h-3.5 w-3.5" />
                   Pending Read
                 </div>
-                <p className="mt-1 text-2xl font-extrabold text-[color:var(--color-warning-600)]">
+                <p className="mt-1 text-2xl font-extrabold text-(--color-warning-600)">
                   {unreadCount}
                 </p>
-                <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                <p className="text-2xs text-(--color-text-muted)">
                   Tenants yet to acknowledge
                 </p>
               </div>
@@ -225,11 +236,11 @@ export default function NotificationDetailPage() {
           </DetailCard>
 
           <DetailCard title="Notification Message" icon={<MessageCircle />}>
-            <div className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
-              <h4 className="text-base font-bold text-[color:var(--color-text-primary)]">
+            <div className="rounded-lg border border-(--border-color) bg-(--color-field-bg) p-4">
+              <h4 className="text-base font-bold text-(--color-text-primary)">
                 {notification.title}
               </h4>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                 {notification.body}
               </p>
             </div>
@@ -237,14 +248,14 @@ export default function NotificationDetailPage() {
 
           {/* WhatsApp share for emergency alerts */}
           {notification.type === 'emergency' && (
-            <div className="rounded-xl border border-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)] p-4">
+            <div className="rounded-xl border border-(--color-warning-500) bg-(--color-warning-50) p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
-                    <Share2 className="h-4 w-4 text-[color:var(--color-warning-600)]" />
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
+                    <Share2 className="h-4 w-4 text-(--color-warning-600)" />
                     WhatsApp Broadcast Share
                   </h4>
-                  <p className="mt-0.5 text-xs text-[color:var(--color-text-secondary)]">
+                  <p className="mt-0.5 text-xs text-(--color-text-secondary)">
                     Share this emergency alert via WhatsApp Web or Mobile
                   </p>
                 </div>
@@ -274,7 +285,7 @@ export default function NotificationDetailPage() {
                 label="Sent At"
                 value={
                   <span className="inline-flex items-center gap-1 font-mono text-xs">
-                    <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {formatDateTime(notification.sentAt || notification.createdAt)}
                   </span>
                 }
@@ -296,6 +307,33 @@ export default function NotificationDetailPage() {
               />
             </DetailList>
           </DetailCard>
+
+          {notification.data && Object.keys(notification.data).length > 0 && (
+            <DetailCard title="Payload" icon={<Info />}>
+              <DetailList>
+                {Object.entries(notification.data).map(([key, value]) => (
+                  <DetailRow
+                    key={key}
+                    label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase())}
+                    value={
+                      key === 'url' && typeof value === 'string' ? (
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="break-all font-mono text-xs text-(--color-brand-600) underline underline-offset-2"
+                        >
+                          {value}
+                        </a>
+                      ) : (
+                        <span className="break-all font-mono text-xs">{String(value)}</span>
+                      )
+                    }
+                  />
+                ))}
+              </DetailList>
+            </DetailCard>
+          )}
         </div>
       )}
 

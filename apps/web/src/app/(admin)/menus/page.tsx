@@ -175,7 +175,7 @@ export default function MenusPage() {
     {
       header: 'Date',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {new Date(row.date).toLocaleDateString('en-IN', {
             weekday: 'long',
             day: '2-digit',
@@ -221,14 +221,14 @@ export default function MenusPage() {
         description="Plan daily meals for tenants"
         action={
           <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-0.5">
+            <div className="flex items-center rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) p-0.5">
               <button
                 type="button"
                 onClick={() => setView('list')}
-                className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                className={`flex items-center gap-1.5 rounded-(--radius-sm) px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                   view === 'list'
-                    ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
-                    : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+                    ? 'bg-(--color-brand-100) text-(--color-brand-700)'
+                    : 'text-(--color-text-muted) hover:text-(--color-text-secondary)'
                 }`}
               >
                 <List className="h-3.5 w-3.5" /> List
@@ -236,10 +236,10 @@ export default function MenusPage() {
               <button
                 type="button"
                 onClick={() => setView('week')}
-                className={`flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                className={`flex items-center gap-1.5 rounded-(--radius-sm) px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                   view === 'week'
-                    ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
-                    : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]'
+                    ? 'bg-(--color-brand-100) text-(--color-brand-700)'
+                    : 'text-(--color-text-muted) hover:text-(--color-text-secondary)'
                 }`}
               >
                 <CalendarRange className="h-3.5 w-3.5" /> Week
@@ -320,7 +320,7 @@ export default function MenusPage() {
             mobileCardRenderer={(row) => (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  <span className="text-sm font-semibold text-(--color-text-primary)">
                     {new Date(row.date).toLocaleDateString('en-IN', {
                       weekday: 'long',
                       day: '2-digit',

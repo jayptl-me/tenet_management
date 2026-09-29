@@ -232,26 +232,26 @@ export default function EnquiryDetailPage() {
           </div>
 
           {/* ── Quick Communication Actions ───────────────────────── */}
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-sm">
-            <span className="text-xs font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-(--border-color) bg-(--color-card-bg) p-4 shadow-sm">
+            <span className="text-xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
               Quick Outreach:
             </span>
             <a href={`tel:${enquiry.phone}`}>
               <Button variant="outline" size="sm">
-                <Phone className="h-3.5 w-3.5 text-[color:var(--color-brand-600)]" />
+                <Phone className="h-3.5 w-3.5 text-(--color-brand-600)" />
                 Call ({enquiry.phone})
               </Button>
             </a>
             <a href={`https://wa.me/${cleanPhoneDigits}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
-                <MessageSquareMore className="h-3.5 w-3.5 text-emerald-600" />
+                <MessageSquareMore className="h-3.5 w-3.5 text-(--color-success-600)" />
                 WhatsApp Message
               </Button>
             </a>
             {enquiry.email && (
               <a href={`mailto:${enquiry.email}`}>
                 <Button variant="outline" size="sm">
-                  <Mail className="h-3.5 w-3.5 text-[color:var(--color-text-secondary)]" />
+                  <Mail className="h-3.5 w-3.5 text-(--color-text-secondary)" />
                   Email ({enquiry.email})
                 </Button>
               </a>
@@ -267,7 +267,7 @@ export default function EnquiryDetailPage() {
                   value={
                     <a
                       href={`tel:${enquiry.phone}`}
-                      className="text-[color:var(--color-brand-600)] hover:underline"
+                      className="text-(--color-brand-600) hover:underline"
                     >
                       {enquiry.phone}
                     </a>
@@ -279,9 +279,9 @@ export default function EnquiryDetailPage() {
                     value={
                       <a
                         href={`mailto:${enquiry.email}`}
-                        className="inline-flex items-center gap-1 text-[color:var(--color-text-secondary)] hover:underline"
+                        className="inline-flex items-center gap-1 text-(--color-text-secondary) hover:underline"
                       >
-                        <Mail className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+                        <Mail className="h-3 w-3 text-(--color-text-muted)" />
                         {enquiry.email}
                       </a>
                     }
@@ -299,11 +299,11 @@ export default function EnquiryDetailPage() {
               </DetailList>
 
               {enquiry.message && (
-                <div className="mt-4 border-t border-[color:var(--border-color)] pt-4">
-                  <p className="mb-2 text-xs font-medium text-[color:var(--color-text-muted)]">
+                <div className="mt-4 border-t border-(--border-color) pt-4">
+                  <p className="mb-2 text-xs font-medium text-(--color-text-muted)">
                     Message
                   </p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                     {enquiry.message}
                   </p>
                 </div>
@@ -329,11 +329,11 @@ export default function EnquiryDetailPage() {
                 <DetailRow label="Received Date" value={formatDate(enquiry.createdAt)} />
               </DetailList>
               {enquiry.notes && (
-                <div className="mt-3 border-t border-[color:var(--border-color)] pt-3">
-                  <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                <div className="mt-3 border-t border-(--border-color) pt-3">
+                  <p className="text-xs font-medium text-(--color-text-muted)">
                     Staff Notes
                   </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+                  <p className="mt-1 text-sm whitespace-pre-wrap text-(--color-text-secondary)">
                     {enquiry.notes}
                   </p>
                 </div>
@@ -388,8 +388,8 @@ export default function EnquiryDetailPage() {
           <DetailCard title="Tenant Conversion" icon={<UserPlus />}>
             {enquiry.status === 'converted' ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700">
-                  <UserCheck className="h-5 w-5 text-emerald-600" />
+                <div className="flex items-center gap-2 text-sm font-medium text-(--color-success-700)">
+                  <UserCheck className="h-5 w-5 text-(--color-success-600)" />
                   This lead has been successfully converted into an active PG tenant.
                 </div>
                 {(() => {
@@ -417,7 +417,7 @@ export default function EnquiryDetailPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-[color:var(--color-text-secondary)]">
+                <p className="text-sm text-(--color-text-secondary)">
                   Convert this enquiry into an active tenant. This pre-fills the tenant onboarding
                   form with the prospect contact details, opens room and bed selection, and records
                   the booking.
@@ -438,7 +438,7 @@ export default function EnquiryDetailPage() {
           </DetailCard>
 
           {enquiry.updatedAt && (
-            <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+            <p className="text-right text-xs font-semibold text-(--color-text-muted)">
               Last updated: {formatDateTime(enquiry.updatedAt)}
             </p>
           )}

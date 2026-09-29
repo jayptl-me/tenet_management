@@ -38,7 +38,13 @@ export function TenantLeasePassport({
   const deposit = Number(depositPaid) || 0;
   const totalMoveIn = rent + deposit;
 
-  const beds = room?.beds ?? [];
+  const standardSlotCount = Math.max(room?.sharingType ?? 0, room?.beds?.length ?? 0);
+  const standardBedIds = ['A', 'B', 'C', 'D'].slice(0, standardSlotCount);
+  const bedMap = new Map((room?.beds ?? []).map((b) => [b.bedId, b]));
+  const beds =
+    standardBedIds.length > 0
+      ? standardBedIds.map((id) => bedMap.get(id) ?? { bedId: id, isOccupied: false })
+      : room?.beds ?? [];
   const floorLabel = room?.floor?.label ?? 'Floor not specified';
 
   return (
@@ -104,7 +110,7 @@ export function TenantLeasePassport({
                   <span className="text-[10px] font-bold tracking-wider text-[color:var(--color-brand-600)] uppercase">
                     Assigned Bed
                   </span>
-                  <span className="rounded-full bg-[color:var(--color-brand-500)] px-2.5 py-0.5 font-mono text-xs font-bold text-white shadow-sm">
+                  <span className="rounded-full bg-[color:var(--color-brand-500)] px-2.5 py-0.5 font-mono text-xs font-bold text-[color:var(--color-on-brand)] shadow-sm">
                     Bed {selectedBedId}
                   </span>
                 </div>

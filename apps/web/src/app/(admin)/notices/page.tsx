@@ -116,13 +116,13 @@ export default function NoticesPage() {
     {
       header: 'Title',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.title}</span>
       ),
     },
     {
       header: 'Content',
       accessor: (row) => (
-        <span className="block max-w-[250px] truncate text-xs text-[color:var(--color-text-muted)]">
+        <span className="block max-w-[250px] truncate text-xs text-(--color-text-muted)">
           {row.content}
         </span>
       ),
@@ -133,7 +133,7 @@ export default function NoticesPage() {
         <span className="inline-flex items-center gap-1.5">
           <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
           {(row.targetIds?.length ?? 0) > 0 && (
-            <span className="text-[11px] font-bold text-[color:var(--color-text-muted)]">
+            <span className="text-2xs font-bold text-(--color-text-muted)">
               · {row.targetIds!.length}
             </span>
           )}
@@ -239,12 +239,12 @@ export default function NoticesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="max-w-[70%] truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="max-w-[70%] truncate text-sm font-semibold text-(--color-text-primary)">
                 {row.title}
               </span>
               <StatusBadge variant="info" label={(row.targetType ?? 'all').replace(/_/g, ' ')} />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <StatusBadge
                 variant={statusToVariant(row.pinned ? 'published' : 'draft')}
                 label={row.pinned ? 'Pinned' : 'Normal'}

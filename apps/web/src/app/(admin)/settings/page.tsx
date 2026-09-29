@@ -1,9 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Save, Plus, Trash2, Star, Lock } from 'lucide-react';
+import {
+  Save,
+  Plus,
+  Trash2,
+  Star,
+  Lock,
+  Sliders,
+  IndianRupee,
+  CreditCard,
+  Sparkles,
+  Layers,
+  MessageSquareQuote,
+  Cpu,
+  Palette,
+  ShieldCheck,
+  Terminal,
+  Clock,
+  Shirt,
+  Utensils,
+  Shield,
+  Bell,
+  Users,
+  AlertTriangle,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -37,17 +60,85 @@ type TabKey =
   | 'security'
   | 'advanced';
 
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'general', label: 'General' },
-  { key: 'pricing', label: 'Pricing' },
-  { key: 'payment', label: 'Payment' },
-  { key: 'amenities', label: 'Landing Amenities' },
-  { key: 'amenity-types', label: 'Amenity Types' },
-  { key: 'testimonials', label: 'Testimonials' },
-  { key: 'features', label: 'Features' },
-  { key: 'appearance', label: 'Appearance' },
-  { key: 'security', label: 'Security' },
-  { key: 'advanced', label: 'Advanced' },
+const tabs: { key: TabKey; label: string; icon: typeof Sliders }[] = [
+  { key: 'general', label: 'General', icon: Sliders },
+  { key: 'pricing', label: 'Pricing', icon: IndianRupee },
+  { key: 'payment', label: 'Payment', icon: CreditCard },
+  { key: 'amenities', label: 'Landing Amenities', icon: Sparkles },
+  { key: 'amenity-types', label: 'Amenity Types', icon: Layers },
+  { key: 'testimonials', label: 'Testimonials', icon: MessageSquareQuote },
+  { key: 'features', label: 'Features', icon: Cpu },
+  { key: 'appearance', label: 'Appearance', icon: Palette },
+  { key: 'security', label: 'Security', icon: ShieldCheck },
+  { key: 'advanced', label: 'Advanced', icon: Terminal },
+];
+
+interface FeatureModule {
+  key: keyof IFeatureFlags;
+  label: string;
+  category: 'Operations & Facilities' | 'Resident Services' | 'Safety & Access';
+  description: string;
+  icon: typeof Clock;
+  routeGuard: string;
+}
+
+const FEATURE_MODULES: FeatureModule[] = [
+  {
+    key: 'attendanceEnabled',
+    label: 'Attendance Tracking',
+    category: 'Operations & Facilities',
+    description: 'Attendance and leaves tracking with QR and admin/tenant check-in workflows.',
+    icon: Clock,
+    routeGuard: '/attendance, /leaves',
+  },
+  {
+    key: 'laundryEnabled',
+    label: 'Laundry & Washing Machines',
+    category: 'Operations & Facilities',
+    description: 'Washing machine slot bookings, cycle timer tracking, and machine hardware controls.',
+    icon: Shirt,
+    routeGuard: '/laundry, /washing-machines',
+  },
+  {
+    key: 'messFeedbackEnabled',
+    label: 'Meal Feedback & Menus',
+    category: 'Resident Services',
+    description: 'Weekly mess schedules, daily meal menus, and resident quality ratings.',
+    icon: Utensils,
+    routeGuard: '/meals, /menus',
+  },
+  {
+    key: 'guardianPortalEnabled',
+    label: 'Guardian Ward Portal',
+    category: 'Resident Services',
+    description: 'Dedicated portal for parents and guardians to monitor resident status and billing.',
+    icon: Shield,
+    routeGuard: '/guardians',
+  },
+  {
+    key: 'noticeBoardEnabled',
+    label: 'Digital Notice Board',
+    category: 'Resident Services',
+    description: 'Property-wide announcement broadcasts, circulars, and community feed.',
+    icon: Bell,
+    routeGuard: '/notices',
+  },
+  {
+    key: 'visitorManagementEnabled',
+    label: 'Visitor Gate-Pass Flow',
+    category: 'Safety & Access',
+    description: 'Guest check-in, digital gate passes, and resident host verification.',
+    icon: Users,
+    routeGuard: '/visitors',
+  },
+  {
+    key: 'emergencyAlertsEnabled',
+    label: 'Emergency Broadcasts',
+    category: 'Safety & Access',
+    description: 'Instant high-priority alerts with automated push and SMS triggers.',
+    icon: AlertTriangle,
+    routeGuard: '/notifications/emergency',
+  },
 ];
 
 const defaultFeatureFlags: IFeatureFlags = {
@@ -105,9 +196,7 @@ function isPreviewableUrl(value: string): boolean {
 function getUpiError(value: string): string | undefined {
   const trimmed = value.trim();
   if (trimmed === '') return undefined;
-  return UPI_RE.test(trimmed)
-    ? undefined
-    : 'Use the something@bank format (e.g. name@okhdfcbank)';
+  return UPI_RE.test(trimmed) ? undefined : 'Use the something@bank format (e.g. name@okhdfcbank)';
 }
 
 function getGstWarning(value: string): string | undefined {
@@ -145,15 +234,6 @@ function featureLabel(key: string): string {
     .trim();
 }
 
-const FEATURE_DESCRIPTIONS: Record<keyof IFeatureFlags, string> = {
-  attendanceEnabled: 'Attendance + leaves tracking (admin + tenant check-in/out)',
-  laundryEnabled: 'Laundry slots + washing machines',
-  messFeedbackEnabled: 'Meal feedback + menus',
-  visitorManagementEnabled: 'Visitor gate-pass flow',
-  guardianPortalEnabled: 'Guardian ward portal',
-  noticeBoardEnabled: 'Notices feed',
-  emergencyAlertsEnabled: 'Emergency broadcasts',
-};
 
 const CONFIRM_OFF_FLAGS: (keyof IFeatureFlags)[] = [
   'attendanceEnabled',
@@ -437,9 +517,7 @@ export default function SettingsPage() {
   const addAmenity = () => {
     const trimmed = newAmenity.trim();
     if (!trimmed) return;
-    const exists = (config?.amenities ?? []).some(
-      (a) => a.toLowerCase() === trimmed.toLowerCase(),
-    );
+    const exists = (config?.amenities ?? []).some((a) => a.toLowerCase() === trimmed.toLowerCase());
     if (exists) {
       setAmenityError('This amenity already exists');
       return;
@@ -477,7 +555,7 @@ export default function SettingsPage() {
             <ShimmerBlock className="h-7 w-40" />
             <ShimmerBlock className="h-4 w-64" />
           </div>
-          <ShimmerBlock className="h-11 w-44 rounded-[var(--radius-lg)]" />
+          <ShimmerBlock className="h-11 w-44 rounded-(--radius-lg)" />
         </div>
         <ShimmerBlock className="h-11 w-full rounded-xl" />
         <CardSkeleton lines={5} />
@@ -491,8 +569,8 @@ export default function SettingsPage() {
 
   if (!config) {
     return (
-      <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-6 text-center">
-        <p className="text-lg font-display font-semibold text-[color:var(--color-danger-800)]">
+      <div className="rounded-lg border-[length:var(--bw-strong)] border-(--color-danger-500) bg-(--color-danger-100) p-6 text-center">
+        <p className="font-display text-lg font-semibold text-(--color-danger-800)">
           {error || 'Failed to load settings'}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => setReloadKey((k) => k + 1)}>
@@ -522,12 +600,12 @@ export default function SettingsPage() {
   const panWarning = getPanWarning(config.panNumber);
 
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
-    <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+    <section className="space-y-4 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-6 shadow-(--shadow-card)">
       <div>
-        <h3 className="text-lg font-display font-bold text-[color:var(--color-text-primary)]">
+        <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
           {title}
         </h3>
-        <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">{description}</p>
+        <p className="mt-0.5 text-sm text-(--color-text-muted)">{description}</p>
       </div>
       {content}
     </section>
@@ -537,16 +615,16 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-2xl font-display font-extrabold text-[color:var(--color-text-primary)]">
+          <h2 className="font-display text-2xl font-extrabold text-(--color-text-primary)">
             Settings
           </h2>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Configure PG brand, pricing, and features
           </p>
         </div>
         <div className="flex items-center gap-3">
           {isDirty && (
-            <span className="rounded-full border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-100)] px-2.5 py-1 text-xs font-bold text-[color:var(--color-warning-800)]">
+            <span className="rounded-full border border-(--color-warning-300) bg-(--color-warning-100) px-2.5 py-1 text-xs font-bold text-(--color-warning-800)">
               Unsaved changes
             </span>
           )}
@@ -558,12 +636,12 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-4 text-sm font-semibold text-[color:var(--color-danger-800)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-(--color-danger-500) bg-(--color-danger-100) p-4 text-sm font-semibold text-(--color-danger-800)">
           {error}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] p-4 text-sm font-semibold text-[color:var(--color-success-800)]">
+        <div className="rounded-lg border-[length:var(--bw-strong)] border-(--color-success-500) bg-(--color-success-100) p-4 text-sm font-semibold text-(--color-success-800)">
           Settings saved successfully
         </div>
       )}
@@ -572,25 +650,32 @@ export default function SettingsPage() {
       <div
         role="tablist"
         aria-label="Settings categories"
-        className="flex gap-1 overflow-x-auto rounded-xl border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-surface-200)] p-1"
+        className="no-scrollbar flex gap-1.5 overflow-x-auto rounded-(--radius-xl) border border-(--border-color) bg-(--color-field-bg) p-1.5 shadow-(--shadow-xs)"
       >
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            role="tab"
-            id={`tab-${tab.key}`}
-            aria-selected={activeTab === tab.key}
-            aria-controls={`panel-${tab.key}`}
-            onClick={() => handleTabChange(tab.key)}
-            className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-display font-bold transition-all ${
-              activeTab === tab.key
-                ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)] shadow-[var(--shadow-button)]'
-                : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              role="tab"
+              id={`tab-${tab.key}`}
+              aria-selected={isActive}
+              aria-controls={`panel-${tab.key}`}
+              onClick={() => handleTabChange(tab.key)}
+              className={`font-display flex flex-shrink-0 items-center gap-2 rounded-(--radius-lg) px-3.5 py-2 text-xs font-bold tracking-tight transition-all duration-200 ${
+                isActive
+                  ? 'border border-(--border-color) bg-(--color-card-bg) text-(--color-text-primary) shadow-(--shadow-sm)'
+                  : 'text-(--color-text-muted) hover:bg-(--color-surface-200)/60 hover:text-(--color-text-primary)'
+              }`}
+            >
+              <Icon
+                className={`h-4 w-4 ${isActive ? 'text-(--color-brand-600)' : 'text-(--color-text-muted)'}`}
+              />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}
@@ -639,12 +724,12 @@ export default function SettingsPage() {
                       width={56}
                       height={56}
                       unoptimized
-                      className="h-14 w-14 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] object-contain p-1"
+                      className="h-14 w-14 rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-surface-50) object-contain p-1"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
-                    <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                    <span className="text-xs font-medium text-(--color-text-muted)">
                       Live logo preview
                     </span>
                   </div>
@@ -672,12 +757,12 @@ export default function SettingsPage() {
                       width={112}
                       height={64}
                       unoptimized
-                      className="h-16 w-28 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] object-cover"
+                      className="h-16 w-28 rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-surface-50) object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
-                    <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                    <span className="text-xs font-medium text-(--color-text-muted)">
                       Live hero preview
                     </span>
                   </div>
@@ -696,17 +781,17 @@ export default function SettingsPage() {
                 placeholder="contact@pg.com"
               />
 
-              <h4 className="pt-2 text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="font-display pt-2 text-sm font-bold text-(--color-text-primary)">
                 Address
               </h4>
-              <p className="-mt-2 text-xs font-medium text-[color:var(--color-text-muted)]">
+              <p className="-mt-2 text-xs font-medium text-(--color-text-muted)">
                 Saved only when line 1, city, state, and pincode are all filled; a partial address
                 is left unchanged.
               </p>
               {showAddressWarning && (
                 <p
                   role="alert"
-                  className="rounded-[var(--radius-md)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-2.5 text-xs font-semibold text-[color:var(--color-warning-800)]"
+                  className="rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-2.5 text-xs font-semibold text-(--color-warning-800)"
                 >
                   Partial address will be left unchanged on save. Fill line 1, city, state and
                   pincode to update it.
@@ -746,7 +831,7 @@ export default function SettingsPage() {
                 placeholder="https://www.google.com/maps/embed?..."
               />
 
-              <h4 className="pt-2 text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="font-display pt-2 text-sm font-bold text-(--color-text-primary)">
                 Social Links
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -776,7 +861,7 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <h4 className="pt-2 text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="font-display pt-2 text-sm font-bold text-(--color-text-primary)">
                 Branding
               </h4>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -789,9 +874,7 @@ export default function SettingsPage() {
                         onChange={(e) => update({ primaryColor: e.target.value })}
                         placeholder="#f59e0b"
                         error={primaryColorError}
-                        helperText={
-                          primaryColorError ? undefined : '6-digit hex, e.g. #f59e0b'
-                        }
+                        helperText={primaryColorError ? undefined : '6-digit hex, e.g. #f59e0b'}
                       />
                     </div>
                     <input
@@ -799,12 +882,12 @@ export default function SettingsPage() {
                       aria-label="Pick primary color"
                       value={pickerValue(config.primaryColor, '#f59e0b')}
                       onChange={(e) => update({ primaryColor: e.target.value })}
-                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1"
+                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-card-bg) p-1"
                     />
                   </div>
                   <div
-                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)]"
-                    style={{ backgroundColor: config.primaryColor }}
+                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-(--border-color) bg-(--preview-bg)"
+                    style={{ '--preview-bg': config.primaryColor } as CSSProperties}
                   />
                 </div>
                 <div>
@@ -816,9 +899,7 @@ export default function SettingsPage() {
                         onChange={(e) => update({ primaryColorDark: e.target.value })}
                         placeholder="#d97706"
                         error={primaryDarkError}
-                        helperText={
-                          primaryDarkError ? undefined : '6-digit hex, e.g. #d97706'
-                        }
+                        helperText={primaryDarkError ? undefined : '6-digit hex, e.g. #d97706'}
                       />
                     </div>
                     <input
@@ -826,12 +907,12 @@ export default function SettingsPage() {
                       aria-label="Pick primary dark color"
                       value={pickerValue(config.primaryColorDark, '#d97706')}
                       onChange={(e) => update({ primaryColorDark: e.target.value })}
-                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1"
+                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-card-bg) p-1"
                     />
                   </div>
                   <div
-                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)]"
-                    style={{ backgroundColor: config.primaryColorDark }}
+                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-(--border-color) bg-(--preview-bg)"
+                    style={{ '--preview-bg': config.primaryColorDark } as CSSProperties}
                   />
                 </div>
                 <div>
@@ -853,22 +934,22 @@ export default function SettingsPage() {
                       aria-label="Pick primary light color"
                       value={pickerValue(config.primaryColorLight ?? '', '#ffffff')}
                       onChange={(e) => update({ primaryColorLight: e.target.value })}
-                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1"
+                      className="mb-0.5 h-10 w-12 cursor-pointer rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-card-bg) p-1"
                     />
                   </div>
                   <div
-                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-[color:var(--border-color)]"
+                    className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-(--border-color) bg-(--preview-bg)"
                     style={{
-                      backgroundColor:
+                      '--preview-bg':
                         config.primaryColorLight && config.primaryColorLight.trim() !== ''
                           ? config.primaryColorLight
                           : 'transparent',
-                    }}
+                    } as CSSProperties}
                   />
                 </div>
               </div>
 
-              <h4 className="pt-2 text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+              <h4 className="font-display pt-2 text-sm font-bold text-(--color-text-primary)">
                 Landing Page
               </h4>
               <Input
@@ -942,9 +1023,9 @@ export default function SettingsPage() {
             'Amenities',
             'List of amenities shown on the landing page',
             <div className="space-y-3">
-              <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
-                Landing amenities are marketing strings shown on the public site. Amenity Types
-                are operational definitions used by floors, rooms and complaints.
+              <p className="text-xs font-medium text-(--color-text-muted)">
+                Landing amenities are marketing strings shown on the public site. Amenity Types are
+                operational definitions used by floors, rooms and complaints.
               </p>
               <div className="flex gap-2">
                 <Input
@@ -969,13 +1050,13 @@ export default function SettingsPage() {
               {amenityError && (
                 <p
                   role="alert"
-                  className="text-xs font-semibold text-[color:var(--color-danger-700)]"
+                  className="text-xs font-semibold text-(--color-danger-700)"
                 >
                   {amenityError}
                 </p>
               )}
               {config.amenities.length === 0 ? (
-                <p className="py-4 text-center text-sm text-[color:var(--color-text-muted)]">
+                <p className="py-4 text-center text-sm text-(--color-text-muted)">
                   No amenities added yet
                 </p>
               ) : (
@@ -983,14 +1064,14 @@ export default function SettingsPage() {
                   {config.amenities.map((a, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-2"
+                      className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-(--border-color) bg-(--color-field-bg) px-4 py-2"
                     >
-                      <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                      <span className="text-sm font-semibold text-(--color-text-primary)">
                         {a}
                       </span>
                       <button
                         onClick={() => removeAmenity(i)}
-                        className="rounded-md p-1 text-[color:var(--color-danger-500)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
+                        className="rounded-md p-1 text-(--color-danger-500) transition-colors duration-(--transition-duration) hover:bg-(--color-danger-50)"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1014,22 +1095,22 @@ export default function SettingsPage() {
             'Reviews displayed on the landing page',
             <div className="space-y-4">
               {config.testimonials.length === 0 ? (
-                <p className="py-4 text-center text-sm text-[color:var(--color-text-muted)]">
+                <p className="py-4 text-center text-sm text-(--color-text-muted)">
                   No testimonials added yet
                 </p>
               ) : (
                 config.testimonials.map((t, i) => (
                   <div
                     key={i}
-                    className="space-y-3 rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4"
+                    className="space-y-3 rounded-md border-[length:var(--bw-default)] border-(--border-color) bg-(--color-field-bg) p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+                      <span className="font-display text-sm font-bold text-(--color-text-primary)">
                         Testimonial #{i + 1}
                       </span>
                       <button
                         onClick={() => removeTestimonial(i)}
-                        className="rounded-md p-1 text-[color:var(--color-danger-500)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-danger-50)]"
+                        className="rounded-md p-1 text-(--color-danger-500) transition-colors duration-(--transition-duration) hover:bg-(--color-danger-50)"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1048,7 +1129,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-body font-semibold text-[color:var(--color-text-primary)]">
+                      <label className="font-body mb-1 block text-sm font-semibold text-(--color-text-primary)">
                         Rating
                       </label>
                       <div className="flex gap-1">
@@ -1057,7 +1138,7 @@ export default function SettingsPage() {
                             key={star}
                             type="button"
                             onClick={() => updateTestimonial(i, { rating: star })}
-                            className={`p-0.5 transition-colors duration-[var(--transition-duration)] ${star <= t.rating ? 'text-[color:var(--color-warning-500)]' : 'text-[color:var(--color-text-muted)]'}`}
+                            className={`p-0.5 transition-colors duration-(--transition-duration) ${star <= t.rating ? 'text-(--color-warning-500)' : 'text-(--color-text-muted)'}`}
                           >
                             <Star
                               className="h-5 w-5"
@@ -1087,17 +1168,89 @@ export default function SettingsPage() {
         {activeTab === 'features' &&
           renderSection(
             'Feature Toggles',
-            'Enable or disable optional modules. Disabling a module blocks its portal routes (403).',
-            <div className="space-y-1">
-              {(Object.keys(config.features) as (keyof IFeatureFlags)[]).map((key) => (
-                <Switch
-                  key={key}
-                  label={featureLabel(key)}
-                  description={FEATURE_DESCRIPTIONS[key]}
-                  checked={config.features[key]}
-                  onChange={(e) => handleFeatureToggle(key, e.target.checked)}
-                />
-              ))}
+            'Enable or disable optional modules. Disabling a module blocks its portal routes with 403 Forbidden.',
+            <div className="space-y-6">
+              {(['Operations & Facilities', 'Resident Services', 'Safety & Access'] as const).map(
+                (category) => {
+                  const modules = FEATURE_MODULES.filter((m) => m.category === category);
+                  return (
+                    <div key={category} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display text-xs font-bold uppercase tracking-wider text-(--color-text-muted)">
+                          {category}
+                        </span>
+                        <div className="h-px flex-1 bg-(--border-color)" />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {modules.map((mod) => {
+                          const isEnabled = config.features[mod.key];
+                          const Icon = mod.icon;
+                          return (
+                            <div
+                              key={mod.key}
+                              className={`flex flex-col justify-between rounded-(--radius-lg) border p-4 transition-all duration-200 ${
+                                isEnabled
+                                  ? 'border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-xs)'
+                                  : 'border-(--border-color)/60 bg-(--color-field-bg)/50 opacity-80'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                  <div
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-(--radius-md) border ${
+                                      isEnabled
+                                        ? 'border-(--color-brand-200) bg-(--color-brand-50) text-(--color-brand-600)'
+                                        : 'border-(--border-color) bg-(--color-surface-100) text-(--color-text-muted)'
+                                    }`}
+                                  >
+                                    <Icon className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-display text-sm font-bold text-(--color-text-primary)">
+                                        {mod.label}
+                                      </h4>
+                                      <span className="rounded border border-(--border-color) bg-(--color-surface-100) px-1.5 py-0.5 font-mono text-3xs text-(--color-text-muted)">
+                                        403
+                                      </span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-(--color-text-secondary)">
+                                      {mod.description}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Switch
+                                  id={`feature-${mod.key}`}
+                                  checked={isEnabled}
+                                  onChange={(e) => handleFeatureToggle(mod.key, e.target.checked)}
+                                  aria-label={mod.label}
+                                />
+                              </div>
+
+                              <div className="mt-4 flex items-center justify-between border-t border-(--border-color) pt-3 text-2xs">
+                                <span className="font-mono text-(--color-text-muted)">
+                                  {mod.routeGuard}
+                                </span>
+                                {isEnabled ? (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-success-200) bg-(--color-success-50) px-2 py-0.5 font-bold text-(--color-success-700)">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-(--color-success-500)" />
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-surface-100) px-2 py-0.5 font-semibold text-(--color-text-muted)">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-(--color-surface-400)" />
+                                    Disabled
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                },
+              )}
             </div>,
           )}
 
@@ -1114,12 +1267,12 @@ export default function SettingsPage() {
             'Update your administrator master password credentials',
             <form onSubmit={handlePasswordChange} className="max-w-md space-y-4">
               {passwordError && (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-sm font-medium text-[color:var(--color-danger-800)]">
+                <div className="rounded-(--radius-md) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-sm font-medium text-(--color-danger-800)">
                   {passwordError}
                 </div>
               )}
               {passwordSuccess && (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-sm font-medium text-[color:var(--color-success-800)]">
+                <div className="rounded-(--radius-md) border border-(--color-success-300) bg-(--color-success-50) p-3 text-sm font-medium text-(--color-success-800)">
                   {passwordSuccess}
                 </div>
               )}
@@ -1197,9 +1350,9 @@ export default function SettingsPage() {
       </div>
 
       {/* Bottom save */}
-      <div className="flex items-center gap-3 border-t-[length:var(--bw-strong)] border-t-[color:var(--color-surface-200)] pt-6">
+      <div className="flex items-center gap-3 border-t-[length:var(--bw-strong)] border-t-(--color-surface-200) pt-6">
         {isDirty && (
-          <span className="rounded-full border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-100)] px-2.5 py-1 text-xs font-bold text-[color:var(--color-warning-800)]">
+          <span className="rounded-full border border-(--color-warning-300) bg-(--color-warning-100) px-2.5 py-1 text-xs font-bold text-(--color-warning-800)">
             Unsaved changes
           </span>
         )}
@@ -1208,7 +1361,7 @@ export default function SettingsPage() {
           Save All Settings
         </Button>
         {saved && (
-          <span className="text-sm font-display font-semibold text-[color:var(--color-success-600)]">
+          <span className="font-display text-sm font-semibold text-(--color-success-600)">
             Settings saved
           </span>
         )}

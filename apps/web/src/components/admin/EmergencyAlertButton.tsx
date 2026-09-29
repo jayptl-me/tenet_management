@@ -70,7 +70,7 @@ export function EmergencyAlertButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-text-inverted)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
+        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-on-danger)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
         title="Send Emergency Alert"
         aria-label="Send Emergency Alert"
       >

@@ -98,7 +98,9 @@ export function AgingBars({
                       'absolute inset-y-0 left-0 rounded-[var(--radius-full)] transition-[width] duration-500',
                       BUCKET_TONES[bucket.key] ?? 'bg-[color:var(--color-surface-300)]',
                     )}
-                    style={{ width: isLoading ? '0%' : `${Math.max(share, bucket.count > 0 ? 3 : 0)}%` }}
+                    style={{
+                      width: isLoading ? '0%' : `${Math.max(share, bucket.count > 0 ? 3 : 0)}%`,
+                    }}
                   />
                 </span>
                 <span className="w-8 text-right text-[11px] font-semibold text-[color:var(--color-text-muted)] tabular-nums">

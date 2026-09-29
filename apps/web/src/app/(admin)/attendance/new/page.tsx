@@ -193,11 +193,11 @@ export default function NewAttendancePage() {
               />
             </FormGrid>
             {duration !== '' && (
-              <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
-                Duration: <span className="text-[color:var(--color-text-primary)]">{duration}</span>
+              <div className="mt-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm font-semibold text-(--color-text-secondary)">
+                Duration: <span className="text-(--color-text-primary)">{duration}</span>
               </div>
             )}
-            <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+            <p className="mt-2 text-xs text-(--color-text-muted)">
               On-leave rows are created automatically when a leave is approved. Manual on-leave
               entries should reference the leave in notes.
             </p>

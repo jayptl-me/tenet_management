@@ -146,7 +146,7 @@ export default function EditLeavePage() {
                     tenant._id ? (
                       <Link
                         href={`/tenants/${tenant._id}`}
-                        className="inline-flex items-center gap-1 font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                       >
                         {tenant.user?.name ?? 'View tenant'}
                         <ExternalLink className="h-3 w-3" />
@@ -160,7 +160,7 @@ export default function EditLeavePage() {
                   label="Phone"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenant.user?.phone ?? 'N/A'}
                     </span>
                   }
@@ -169,7 +169,7 @@ export default function EditLeavePage() {
                   label="Room & Bed"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <DoorOpen className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <DoorOpen className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenant.room?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
                     </span>
                   }
@@ -179,7 +179,7 @@ export default function EditLeavePage() {
                     label="Floor"
                     value={
                       <span className="inline-flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {tenant.room.floor.label}
                       </span>
                     }
@@ -190,7 +190,7 @@ export default function EditLeavePage() {
                     label="Bed"
                     value={
                       <span className="inline-flex items-center gap-1.5">
-                        <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {tenant.bedId}
                       </span>
                     }
@@ -204,20 +204,20 @@ export default function EditLeavePage() {
             <FormSection title="Leave details" description="Period, reason, and current status">
               <FormGrid cols={2}>
                 <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                     Period
                   </p>
-                  <p className="mt-1 flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
-                    <CalendarDays className="h-4 w-4 text-[color:var(--color-text-muted)]" />
+                  <p className="mt-1 flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
+                    <CalendarDays className="h-4 w-4 text-(--color-text-muted)" />
                     {formatDate(from)} — {formatDate(to)}
                   </p>
-                  <p className="mt-0.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                  <p className="mt-0.5 text-xs font-semibold text-(--color-text-secondary)">
                     {daysBetween(from, to)} day{daysBetween(from, to) !== 1 ? 's' : ''} inclusive
                   </p>
                 </div>
 
                 <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                     Status
                   </p>
                   <div className="mt-1.5">
@@ -227,7 +227,7 @@ export default function EditLeavePage() {
                     />
                   </div>
                   {leaveData.approvedByName && (
-                    <p className="mt-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                    <p className="mt-1 text-xs font-medium text-(--color-text-muted)">
                       by {leaveData.approvedByName}
                       {leaveData.approvedAt && ` on ${formatDate(leaveData.approvedAt)}`}
                     </p>
@@ -246,7 +246,7 @@ export default function EditLeavePage() {
 
             <FormSection title="Reason" divided>
               <div className={clsx(surfaceNestedClass, 'p-4')}>
-                <p className="text-sm leading-relaxed text-[color:var(--color-text-primary)]">
+                <p className="text-sm leading-relaxed text-(--color-text-primary)">
                   {leaveData.reason}
                 </p>
               </div>
@@ -267,7 +267,7 @@ export default function EditLeavePage() {
                     onChange={(e) => setAdminNotes(e.target.value)}
                     maxLength={500}
                   />
-                  <p className="mt-1 text-right text-[11px] text-[color:var(--color-text-muted)]">
+                  <p className="mt-1 text-right text-2xs text-(--color-text-muted)">
                     {adminNotes.length}/500
                   </p>
                 </FormFullWidth>
@@ -289,7 +289,7 @@ export default function EditLeavePage() {
                       loading={actionLoading === 'reject'}
                       onClick={handleReject}
                     >
-                      <X className="h-4 w-4 text-[color:var(--color-danger-600)]" />
+                      <X className="h-4 w-4 text-(--color-danger-600)" />
                       Reject
                     </Button>
                     <Button
@@ -319,7 +319,7 @@ export default function EditLeavePage() {
             {leaveData.adminNotes && (
               <FormSection title="Existing admin notes" divided>
                 <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+                  <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                     {leaveData.adminNotes}
                   </p>
                 </div>

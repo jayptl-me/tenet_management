@@ -71,7 +71,7 @@ export function VisitorLifecycleStepper({
                   className={clsx(
                     'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-default)] text-[11px] font-bold',
                     reached
-                      ? 'border-[color:var(--color-success-500)] bg-[color:var(--color-success-500)] text-white'
+                      ? 'border-[color:var(--color-success-500)] bg-[color:var(--color-success-500)] text-[color:var(--color-on-success)]'
                       : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
                   )}
                 >

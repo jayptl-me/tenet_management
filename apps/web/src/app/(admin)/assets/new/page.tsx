@@ -145,14 +145,21 @@ export default function NewAssetPage() {
                 error={errors.name?.message}
                 {...register('name')}
               />
-              <Select
-                label="Category"
-                options={CATEGORY_OPTIONS}
-                error={errors.category?.message}
-                helperText={
-                  watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
-                }
-                {...register('category')}
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Category"
+                    options={CATEGORY_OPTIONS}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={errors.category?.message}
+                    helperText={
+                      watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
+                    }
+                  />
+                )}
               />
             </FormGrid>
             <div className="mt-4 space-y-4">
@@ -218,11 +225,18 @@ export default function NewAssetPage() {
                 helperText="0 disables the alert"
                 {...register('lowStockThreshold')}
               />
-              <Select
-                label="Status"
-                options={STATUS_OPTIONS}
-                error={errors.status?.message}
-                {...register('status')}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Status"
+                    options={STATUS_OPTIONS}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={errors.status?.message}
+                  />
+                )}
               />
             </FormGrid>
           </FormSection>
@@ -267,14 +281,14 @@ export default function NewAssetPage() {
           className="lg:sticky lg:top-6"
         >
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] [&_svg]:h-5 [&_svg]:w-5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) [&_svg]:h-5 [&_svg]:w-5">
               <AssetCategoryIcon category={watchedCategory} />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-[color:var(--color-text-primary)]">
+              <p className="truncate text-sm font-bold text-(--color-text-primary)">
                 {watchedName?.trim() || 'Untitled asset'}
               </p>
-              <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
+              <p className="text-xs font-medium text-(--color-text-muted)">
                 {assetCategoryLabel(watchedCategory)}
               </p>
             </div>
@@ -284,7 +298,7 @@ export default function NewAssetPage() {
               label="Placement"
               value={
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                  <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {watchedLocation?.trim() || '—'}
                 </span>
               }

@@ -3,17 +3,16 @@
 import { clsx } from 'clsx';
 import { motion } from 'motion/react';
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   ArrowUpRight,
   ArrowDownRight,
+  Minus,
   ArrowRight,
 } from 'lucide-react';
-import { cardHover } from '@/lib/animations';
 import { surfaceCardClass } from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
+
+export type StatCardTone = 'default' | 'success' | 'warning' | 'danger' | 'brand';
 
 export interface StatCardProps {
   title: string;
@@ -36,56 +35,85 @@ export interface StatCardProps {
     color?: string;
     label?: string;
   };
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'brand';
-  tone?: 'default' | 'success' | 'warning' | 'danger' | 'brand';
+  variant?: StatCardTone;
+  tone?: StatCardTone;
+  /** Selected state (e.g. active filter card): tone-matched ring. */
+  selected?: boolean;
   className?: string;
   onClick?: () => void;
   animate?: boolean;
   children?: React.ReactNode;
 }
 
-// ── Style Maps ─────────────────────────────────────────
+// ── Accent Tile Styles ─────────────────────────────────
 
-const toneAccent: Record<string, string> = {
-  default: 'bg-[color:var(--color-surface-300)]',
-  brand: 'bg-[color:var(--color-brand-500)]',
-  success: 'bg-[color:var(--color-success-500)]',
-  warning: 'bg-[color:var(--color-warning-500)]',
-  danger: 'bg-[color:var(--color-danger-500)]',
+const iconTileStyles: Record<StatCardTone, string> = {
+  brand:
+    'bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)] border-[color:var(--badge-info-border)]',
+  success:
+    'bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)] border-[color:var(--badge-success-border)]',
+  warning:
+    'bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)] border-[color:var(--badge-warning-border)]',
+  danger:
+    'bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)] border-[color:var(--badge-danger-border)]',
+  default:
+    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] border-[color:var(--border-color)]',
 };
 
-const trendStyles: Record<string, { badge: string; iconColor: string }> = {
-  up: {
-    badge:
-      'text-[color:var(--color-success-700)] bg-[color:var(--color-success-50)] border-[color:var(--color-success-200)]',
-    iconColor: 'text-[color:var(--color-success-600)]',
-  },
-  down: {
-    badge:
-      'text-[color:var(--color-danger-700)] bg-[color:var(--color-danger-50)] border-[color:var(--color-danger-200)]',
-    iconColor: 'text-[color:var(--color-danger-600)]',
-  },
-  neutral: {
-    badge:
-      'text-[color:var(--color-text-secondary)] bg-[color:var(--color-surface-100)] border-[color:var(--color-surface-200)]',
-    iconColor: 'text-[color:var(--color-text-muted)]',
-  },
+// ── Selected Ring Styles ───────────────────────────────
+
+const selectedRingStyles: Record<StatCardTone, string> = {
+  brand: 'ring-2 ring-[color:var(--color-brand-500)]',
+  success: 'ring-2 ring-[color:var(--color-success-500)]',
+  warning: 'ring-2 ring-[color:var(--color-warning-500)]',
+  danger: 'ring-2 ring-[color:var(--color-danger-500)]',
+  default: 'ring-2 ring-[color:var(--color-text-primary)]',
 };
 
-const iconBgColors: Record<string, string> = {
-  default: 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)]',
-  success: 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]',
-  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]',
-  brand: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]',
-};
+// ── Helpers ────────────────────────────────────────────
+
+function renderDeltaPill(
+  item: { value: string; direction: 'up' | 'down' | 'neutral'; label?: string },
+  key: string,
+) {
+  const isUp = item.direction === 'up';
+  const isDown = item.direction === 'down';
+
+  return (
+    <span key={key} className="inline-flex items-center gap-1.5">
+      <span
+        className={clsx(
+          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums leading-tight',
+          isUp &&
+            'border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]',
+          isDown &&
+            'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
+          !isUp &&
+            !isDown &&
+            'border-[color:var(--badge-neutral-border)] bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)]',
+        )}
+      >
+        {isUp && <ArrowUpRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
+        {isDown && <ArrowDownRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
+        {!isUp && !isDown && <Minus className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
+        <span>{item.value}</span>
+      </span>
+      {item.label && (
+        <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+          {item.label}
+        </span>
+      )}
+    </span>
+  );
+}
 
 // ── Component ──────────────────────────────────────────
 
 /**
- * Enterprise Metric Card — Stripe & Mercury style.
- * Standardized height baseline, hairline tone accent, vector delta pills,
- * optional micro-progress bar, and full-width responsive slots.
+ * Enterprise Metric Card — Stripe & Mercury Executive Standard.
+ * High-contrast surface featuring structured tone-aware accent icon tiles,
+ * bold tabular figures, tinted micro-delta comparison pills,
+ * and razor-thin progress indicators with theme-driven hover highlights.
  */
 export function StatCard({
   title,
@@ -95,58 +123,54 @@ export function StatCard({
   trend,
   delta,
   progress,
-  variant = 'default',
+  variant,
   tone,
+  selected = false,
   className,
   onClick,
   animate = true,
   children,
 }: StatCardProps) {
   const isInteractive = Boolean(onClick);
-  const resolvedTone = tone ?? variant;
+  const resolvedTone: StatCardTone = tone ?? variant ?? 'default';
 
-  const cardInner = (
-    <div
-      className={clsx(
-        surfaceCardClass,
-        'group relative flex h-full min-h-[148px] flex-col justify-between overflow-hidden p-5',
-        'transition-[border-color,box-shadow,transform] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-        'hover:border-[color:var(--color-brand-300)] hover:shadow-[var(--shadow-card-hover)]',
-        isInteractive && 'cursor-pointer',
-        className,
-      )}
-    >
-      {/* 2px Tone Hairline */}
-      <span
-        aria-hidden="true"
-        className={clsx(
-          'absolute inset-x-0 top-0 h-0.5 transition-colors',
-          toneAccent[resolvedTone] ?? toneAccent.default,
-        )}
-      />
+  const sharedClasses = clsx(
+    surfaceCardClass,
+    '@container group relative flex h-full min-h-[148px] flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] p-5 text-left',
+    'transition-[border-color,box-shadow,transform] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+    'hover:border-[color:var(--border-color-hover)] hover:shadow-[var(--shadow-card-hover)]',
+    isInteractive && 'cursor-pointer',
+    selected && selectedRingStyles[resolvedTone],
+    className,
+  );
 
-      {/* Top Row: Title + Icon */}
+  const content = (
+    <>
+      {/* Top Row: Metric Label + Tone-Aware Accent Icon Tile */}
       <div>
-        <div className="flex items-start justify-between gap-2.5">
-          <p className="text-[12px] font-semibold tracking-tight text-[color:var(--color-text-secondary)]">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12px] font-semibold tracking-wide text-[color:var(--color-text-secondary)] uppercase">
             {title}
           </p>
           {icon && (
             <div
               className={clsx(
-                'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-transparent transition-colors',
-                iconBgColors[resolvedTone] ?? iconBgColors.default,
+                'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-lg)] border shadow-[var(--shadow-xs)] transition-transform duration-200 group-hover:scale-105 [&_svg]:h-4 [&_svg]:w-4',
+                iconTileStyles[resolvedTone],
               )}
+              aria-hidden="true"
             >
-              <div className="[&_svg]:h-4 [&_svg]:w-4">{icon}</div>
+              {icon}
             </div>
           )}
         </div>
 
         {/* Primary Metric Value */}
-        <p className="font-display mt-2 text-[26px] leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums sm:text-[28px]">
-          {value}
-        </p>
+        <div className="mt-2 flex items-baseline gap-2">
+          <p className="font-display text-[28px] sm:text-[32px] font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums leading-none">
+            {value}
+          </p>
+        </div>
 
         {/* Contextual Subtitle */}
         {subtitle && (
@@ -156,10 +180,10 @@ export function StatCard({
         )}
       </div>
 
-      {/* Middle: Micro Progress Bar (Optional) */}
+      {/* Middle Slot: Sleek Micro Progress Bar */}
       {progress && (
-        <div className="my-2.5 space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
+        <div className="my-2 space-y-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--chart-track)]">
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
@@ -171,90 +195,78 @@ export function StatCard({
           {progress.label && (
             <div className="flex items-center justify-between text-[10px] font-medium text-[color:var(--color-text-muted)]">
               <span>{progress.label}</span>
-              <span className="font-mono tabular-nums">
-                {Math.round((progress.value / (progress.max ?? 100)) * 100)}%
-              </span>
             </div>
           )}
         </div>
       )}
 
       {/* Embedded Children (e.g. Sparkline) */}
-      {children && <div className="mt-2 w-full">{children}</div>}
+      {children && <div className="mt-1.5 w-full">{children}</div>}
 
-      {/* Bottom Row: Trend / Delta / Interactive Hint */}
+      {/* Bottom Row: Tinted Delta Pills & Navigation Affordance */}
       {(trend || delta || isInteractive) && (
         <div className="mt-3 flex items-center justify-between gap-2 border-t border-[color:var(--border-color)]/60 pt-2.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {trend && (
-              <span
-                className={clsx(
-                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-tight',
-                  trendStyles[trend.direction]?.badge ?? trendStyles.neutral.badge,
-                )}
-              >
-                {trend.direction === 'up' && <TrendingUp className="h-3 w-3" />}
-                {trend.direction === 'down' && <TrendingDown className="h-3 w-3" />}
-                {trend.direction === 'neutral' && <Minus className="h-3 w-3" />}
-                {trend.value}
-                {trend.label && <span className="font-medium opacity-80">{trend.label}</span>}
+          <div className="flex flex-wrap items-center gap-2">
+            {trend && renderDeltaPill(trend, 'trend')}
+            {trend && delta && (
+              <span className="text-[color:var(--border-color)]" aria-hidden="true">
+                ·
               </span>
             )}
-
-            {delta && (
-              <span
-                className={clsx(
-                  'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-bold',
-                  trendStyles[delta.direction]?.badge ?? trendStyles.neutral.badge,
-                )}
-              >
-                {delta.direction === 'up' && <ArrowUpRight className="h-3 w-3" />}
-                {delta.direction === 'down' && <ArrowDownRight className="h-3 w-3" />}
-                {delta.direction === 'neutral' && <Minus className="h-3 w-3" />}
-                {delta.value}
-                {delta.label && <span className="font-medium opacity-80">{delta.label}</span>}
-              </span>
-            )}
+            {delta && renderDeltaPill(delta, 'delta')}
           </div>
 
           {isInteractive && (
-            <span className="text-[color:var(--color-text-muted)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <span
+              className="text-[color:var(--color-text-muted)] opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[color:var(--color-brand-600)]"
+              aria-hidden="true"
+            >
               <ArrowRight className="h-3.5 w-3.5" />
             </span>
           )}
         </div>
       )}
-    </div>
+    </>
   );
 
   if (animate && isInteractive) {
     return (
       <motion.div
-        variants={cardHover}
-        initial="rest"
-        whileHover="hover"
-        whileTap="tap"
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.99 }}
+        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
         onClick={onClick}
-        className="h-full"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+          }
+        }}
+        className={sharedClasses}
       >
-        {cardInner}
+        {content}
       </motion.div>
     );
   }
 
-  if (onClick) {
+  if (isInteractive) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className="h-full w-full rounded-[var(--radius-xl)] text-left focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:ring-offset-2 focus:outline-none"
+        className={clsx(
+          sharedClasses,
+          'w-full focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:ring-offset-2 focus:outline-none',
+        )}
       >
-        {cardInner}
+        {content}
       </button>
     );
   }
 
-  return cardInner;
+  return <div className={sharedClasses}>{content}</div>;
 }
 
 export default StatCard;

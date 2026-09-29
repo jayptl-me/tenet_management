@@ -367,7 +367,7 @@ export default function AttendanceDetailPage() {
                   label="Name"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenantName}
                     </span>
                   }
@@ -376,7 +376,7 @@ export default function AttendanceDetailPage() {
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {roomNumber}
                     </span>
                   }
@@ -385,7 +385,7 @@ export default function AttendanceDetailPage() {
                   label="Date"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {formatDate(record.date)}
                     </span>
                   }
@@ -397,7 +397,7 @@ export default function AttendanceDetailPage() {
                       <button
                         type="button"
                         onClick={() => router.push(`/tenants/${tenantId}`)}
-                        className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                        className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
                       >
                         View tenant
                         <ExternalLink className="h-3.5 w-3.5" />
@@ -429,7 +429,7 @@ export default function AttendanceDetailPage() {
                           onClick={() =>
                             router.push(`/leaves/${leaveLink._id ?? leaveLink.id ?? ''}`)
                           }
-                          className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                          className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
                         >
                           View covering leave ({leaveLink.status ?? 'leave'})
                           <ExternalLink className="h-3.5 w-3.5" />
@@ -444,7 +444,7 @@ export default function AttendanceDetailPage() {
             </DetailCard>
           </div>
 
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4">
+          <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4">
             <AttendanceMonthCalendar
               days={calendarDays}
               initialYear={recordMonth.getFullYear()}
@@ -459,27 +459,27 @@ export default function AttendanceDetailPage() {
 
           <DetailCard title="Recording Info" icon={<CheckCircle />}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
                 <div className="flex items-center gap-3">
                   {methodIcon}
                   <div>
-                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                    <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                       Method
                     </p>
-                    <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                    <p className="text-13 font-semibold text-(--color-text-primary)">
                       {methodLabel}
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-[color:var(--color-text-muted)]" />
+                  <CheckCircle className="h-5 w-5 text-(--color-text-muted)" />
                   <div>
-                    <p className="text-[11px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                    <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                       Recorded By
                     </p>
-                    <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                    <p className="text-13 font-semibold text-(--color-text-primary)">
                       {record.recordedBy?.name ?? 'System'}
                     </p>
                   </div>
@@ -490,13 +490,13 @@ export default function AttendanceDetailPage() {
 
           {record.notes && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                 {record.notes}
               </p>
             </DetailCard>
           )}
 
-          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+          <p className="text-right text-xs font-semibold text-(--color-text-muted)">
             Recorded {formatDateTime(record.createdAt)} · Updated {formatDateTime(record.updatedAt)}
           </p>
 

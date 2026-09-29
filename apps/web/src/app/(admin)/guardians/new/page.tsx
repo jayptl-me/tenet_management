@@ -171,13 +171,13 @@ function NewGuardianForm() {
             )}
           />
           {tenantIdWatch ? (
-            <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
+            <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
+                <p className="text-xs font-semibold text-(--color-brand-700)">
                   Loading resident stay…
                 </p>
               ) : hostPreview ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-[color:var(--color-brand-800)]">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
                     <UserRound className="h-3.5 w-3.5" />
                     {hostPreview.name}
@@ -201,7 +201,7 @@ function NewGuardianForm() {
                   )}
                 </div>
               ) : (
-                <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+                <p className="text-xs font-semibold text-(--color-text-muted)">
                   Select a tenant to preview their room and bed placement.
                 </p>
               )}
@@ -269,7 +269,7 @@ export default function NewGuardianPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

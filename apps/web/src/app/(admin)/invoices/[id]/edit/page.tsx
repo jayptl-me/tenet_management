@@ -104,7 +104,9 @@ export default function EditInvoicePage() {
   const otherCharges = useWatch({ control, name: 'otherCharges' });
 
   const autoTotal = useMemo(() => {
-    return (Number(rentAmount) || 0) + (Number(electricityAmount) || 0) + (Number(otherCharges) || 0);
+    return (
+      (Number(rentAmount) || 0) + (Number(electricityAmount) || 0) + (Number(otherCharges) || 0)
+    );
   }, [rentAmount, electricityAmount, otherCharges]);
 
   useEffect(() => {
@@ -161,9 +163,7 @@ export default function EditInvoicePage() {
 
   const originalTotal = invoiceData?.totalAmount ?? 0;
   const totalDelta = autoTotal - originalTotal;
-  const balanceAfter =
-    invoiceData?.balance != null ? invoiceData.balance + totalDelta : null;
-
+  const balanceAfter = invoiceData?.balance != null ? invoiceData.balance + totalDelta : null;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -194,7 +194,6 @@ export default function EditInvoicePage() {
   if (invoiceData?.invoiceNumber) descriptionParts.push(`#${invoiceData.invoiceNumber}`);
   if (invoiceData?.month) descriptionParts.push(invoiceData.month);
 
-
   return (
     <FormPage
       title="Edit Invoice"
@@ -208,11 +207,11 @@ export default function EditInvoicePage() {
     >
       <div className="space-y-5">
         {isPaidLocked && (
-          <div className="flex items-start gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-4">
-            <Lock className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-warning-600)]" />
-            <div className="text-sm font-semibold text-[color:var(--color-warning-800)]">
+          <div className="flex items-start gap-3 rounded-(--radius-lg) border border-(--color-warning-300) bg-(--color-warning-50) p-4">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0 text-(--color-warning-600)" />
+            <div className="text-sm font-semibold text-(--color-warning-800)">
               <p>This invoice is paid and locked.</p>
-              <p className="mt-1 text-xs font-medium text-[color:var(--color-warning-700)]">
+              <p className="mt-1 text-xs font-medium text-(--color-warning-700)">
                 Amounts, due date, and status cannot be edited. Void or adjust payments instead.
               </p>
             </div>
@@ -226,34 +225,34 @@ export default function EditInvoicePage() {
           <div className="space-y-5 xl:col-span-2">
             {tenant && (
               <div className={clsx(surfaceCardClass, 'p-4 sm:p-5')}>
-                <h3 className="mb-3 text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+                <h3 className="mb-3 text-sm font-bold tracking-tight text-(--color-text-primary)">
                   Tenant
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="flex min-h-10 items-center gap-2">
-                    <User className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
-                    <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    <User className="h-4 w-4 shrink-0 text-(--color-brand-500)" />
+                    <span className="text-sm font-semibold text-(--color-text-primary)">
                       {tenantDisplayName(tenant)}
                     </span>
                   </div>
                   <div className="flex min-h-10 items-center gap-2">
-                    <Home className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
-                    <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    <Home className="h-4 w-4 shrink-0 text-(--color-brand-500)" />
+                    <span className="text-sm font-semibold text-(--color-text-primary)">
                       Room {tenantRoomNumber(tenant)}
                     </span>
                   </div>
                   {tenant.bedId && (
                     <div className="flex min-h-10 items-center gap-2">
-                      <Hash className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
-                      <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                      <Hash className="h-4 w-4 shrink-0 text-(--color-brand-500)" />
+                      <span className="text-sm font-semibold text-(--color-text-primary)">
                         Bed {tenant.bedId}
                       </span>
                     </div>
                   )}
                   {tenant.roomId?.floorId != null && typeof tenant.roomId.floorId === 'object' && (
                     <div className="flex min-h-10 items-center gap-2">
-                      <Building className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
-                      <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                      <Building className="h-4 w-4 shrink-0 text-(--color-brand-500)" />
+                      <span className="text-sm font-semibold text-(--color-text-primary)">
                         {tenant.roomId.floorId.label ??
                           (tenant.roomId.floorId.floorNumber != null
                             ? `Floor ${tenant.roomId.floorId.floorNumber}`
@@ -318,15 +317,15 @@ export default function EditInvoicePage() {
                 </FormGrid>
                 <div className={clsx(surfaceNestedClass, 'mt-4 p-4')}>
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                    <span className="text-sm font-semibold text-(--color-text-secondary)">
                       Auto-calculated total
                     </span>
-                    <span className="font-mono text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
+                    <span className="font-mono text-2xl font-bold tracking-tight text-(--color-text-primary) tabular-nums">
                       {fmtMoney(autoTotal)}
                     </span>
                   </div>
                   {!isPaidLocked && totalDelta !== 0 && (
-                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[color:var(--color-warning-700)]">
+                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-(--color-warning-700)">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                       {totalDelta > 0
                         ? `Increases total by ${fmtMoney(totalDelta)}`
@@ -368,7 +367,7 @@ export default function EditInvoicePage() {
             {invoiceData && (
               <div className={clsx(surfaceCardClass, 'sticky top-6 space-y-4 p-5')}>
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+                  <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
                     {invoiceData.invoiceNumber}
                   </h3>
                   <StatusBadge
@@ -377,43 +376,47 @@ export default function EditInvoicePage() {
                   />
                 </div>
 
-                <div className={clsx(surfaceNestedClass, 'space-y-2 p-3.5 text-[13px]')}>
+                <div className={clsx(surfaceNestedClass, 'space-y-2 p-3.5 text-13')}>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Month</span>
-                    <span className="font-semibold text-[color:var(--color-text-primary)]">
+                    <span className="font-medium text-(--color-text-muted)">Month</span>
+                    <span className="font-semibold text-(--color-text-primary)">
                       {invoiceData.month}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Paid</span>
-                    <span className="font-semibold text-[color:var(--color-success-600)] tabular-nums">
+                    <span className="font-medium text-(--color-text-muted)">Paid</span>
+                    <span className="font-semibold text-(--color-success-600) tabular-nums">
                       {fmtMoney(invoiceData.paidAmount ?? 0)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Balance</span>
-                    <span className="font-display text-base font-bold text-[color:var(--color-danger-600)] tabular-nums">
+                    <span className="font-medium text-(--color-text-muted)">
+                      Balance
+                    </span>
+                    <span className="font-display text-base font-bold text-(--color-danger-600) tabular-nums">
                       {fmtMoney(invoiceData.balance ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-2">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Current total</span>
-                    <span className="font-semibold text-[color:var(--color-text-primary)] tabular-nums">
+                  <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
+                    <span className="font-medium text-(--color-text-muted)">
+                      Current total
+                    </span>
+                    <span className="font-semibold text-(--color-text-primary) tabular-nums">
                       {fmtMoney(invoiceData.totalAmount)}
                     </span>
                   </div>
                 </div>
 
                 {isPaymentDriven && (
-                  <p className="flex items-start gap-1.5 text-[11px] font-medium leading-relaxed text-[color:var(--color-text-muted)]">
+                  <p className="flex items-start gap-1.5 text-2xs leading-relaxed font-medium text-(--color-text-muted)">
                     <CreditCard className="mt-0.5 h-3 w-3 shrink-0" />
-                    Status is payment-driven for this invoice; it updates automatically when payments
-                    are verified.
+                    Status is payment-driven for this invoice; it updates automatically when
+                    payments are verified.
                   </p>
                 )}
 
                 {!isPaidLocked && isDirty && (
-                  <div className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-info-200)] bg-[color:var(--color-info-50)] px-3 py-2 text-xs font-semibold text-[color:var(--color-info-800)]">
+                  <div className="flex items-start gap-2 rounded-(--radius-md) border border-(--color-info-200) bg-(--color-info-50) px-3 py-2 text-xs font-semibold text-(--color-info-800)">
                     <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     Unsaved changes — save or cancel before leaving.
                   </div>

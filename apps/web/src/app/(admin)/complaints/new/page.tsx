@@ -5,9 +5,19 @@ import { useState, useEffect, Suspense } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserRound, DoorOpen, FileText, Camera, Tag } from 'lucide-react';
+import {
+  UserRound,
+  DoorOpen,
+  FileText,
+  Camera,
+  Tag,
+  Plus,
+  X,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -78,6 +88,9 @@ function ComplaintForm() {
   const prefilledFloorId = searchParams.get('floorId') || '';
 
   const [submitError, setSubmitError] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoInput, setPhotoInput] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   const {
     register,
@@ -133,6 +146,30 @@ function ComplaintForm() {
       cancelled = true;
     };
   }, [selectedTenantId, setValue]);
+
+  const handleAddPhoto = () => {
+    const url = photoInput.trim();
+    if (!url) return;
+    if (photos.length >= 5) {
+      setPhotoError('Maximum 5 photos allowed.');
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setPhotoError('Photo must be a valid http(s) URL.');
+      return;
+    }
+    const next = [...photos, url];
+    setPhotos(next);
+    setValue('photoUrls', next.join('\n'), { shouldValidate: true });
+    setPhotoInput('');
+    setPhotoError('');
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    const next = photos.filter((_, i) => i !== index);
+    setPhotos(next);
+    setValue('photoUrls', next.join('\n'), { shouldValidate: true });
+  };
 
   const onSubmit = async (data: ComplaintFormData) => {
     setSubmitError('');
@@ -283,22 +320,87 @@ function ComplaintForm() {
         </FormSection>
 
         <FormSection
-          title="Evidence"
+          title={`Evidence Photos (${photos.length}/5)`}
           icon={<Camera />}
-          description="Optional photo URLs (max 5)"
+          description="Optional evidence URLs with instant visual preview"
           divided
         >
-          <Textarea
-            label="Photo URLs"
-            rows={2}
-            placeholder="One HTTPS image URL per line (max 5)"
-            error={err.photoUrls?.message}
-            {...register('photoUrls')}
-          />
-          <p className="mt-1 flex items-center gap-1 text-xs text-[color:var(--color-text-muted)]">
-            <FileText className="h-3 w-3" />
-            More photos can be attached from the complaint detail page.
-          </p>
+          <input type="hidden" {...register('photoUrls')} />
+
+          <div className="space-y-3">
+            {photos.length < 5 && (
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="https://images.example.com/evidence.jpg"
+                    value={photoInput}
+                    onChange={(e) => {
+                      setPhotoInput(e.target.value);
+                      if (photoError) setPhotoError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddPhoto();
+                      }
+                    }}
+                    leftIcon={<LinkIcon className="h-4 w-4 text-(--color-text-muted)" />}
+                    error={photoError || err.photoUrls?.message}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddPhoto}
+                  className="shrink-0"
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Photo
+                </Button>
+              </div>
+            )}
+
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {photos.map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="group relative flex flex-col items-center overflow-hidden rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-2"
+                  >
+                    <div className="relative h-20 w-full overflow-hidden rounded-sm bg-black/5">
+                      <img
+                        src={url}
+                        alt={`Photo evidence ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(idx)}
+                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                        title="Remove photo"
+                        aria-label={`Remove photo ${idx + 1}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <span className="mt-1.5 w-full truncate text-center text-3xs font-medium text-(--color-text-muted)">
+                      Photo {idx + 1}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="flex items-center gap-1 text-xs text-(--color-text-muted)">
+              <FileText className="h-3.5 w-3.5" />
+              Press Add or Enter to attach photo URLs. You can also attach more from the detail
+              page.
+            </p>
+          </div>
         </FormSection>
       </FormCard>
     </FormPage>

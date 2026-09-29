@@ -255,14 +255,14 @@ export default function LeaveDetailPage() {
                     leave.tenant?._id ? (
                       <Link
                         href={`/tenants/${leave.tenant._id}`}
-                        className="inline-flex items-center gap-1 text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 text-(--color-brand-600) underline-offset-2 hover:underline"
                       >
-                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {tenantName}
                       </Link>
                     ) : (
                       <span className="inline-flex items-center gap-1">
-                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {tenantName}
                       </span>
                     )
@@ -272,7 +272,7 @@ export default function LeaveDetailPage() {
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {roomNumber}
                     </span>
                   }
@@ -281,7 +281,7 @@ export default function LeaveDetailPage() {
                   label="Bed"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {bedId ?? 'N/A'}
                     </span>
                   }
@@ -291,7 +291,7 @@ export default function LeaveDetailPage() {
                     label="Floor"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {floorLabel}
                       </span>
                     }
@@ -302,7 +302,7 @@ export default function LeaveDetailPage() {
                     label="Phone"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {tenantPhone}
                       </span>
                     }
@@ -310,7 +310,7 @@ export default function LeaveDetailPage() {
                 )}
               </DetailList>
               {tenantPhone && (
-                <div className="mt-3 flex flex-wrap gap-2 border-t border-[color:var(--border-color)] pt-3">
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-(--border-color) pt-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -383,9 +383,9 @@ export default function LeaveDetailPage() {
           </DetailCard>
 
           <DetailCard title="Reason" icon={<FileText />}>
-            <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+            <p className="text-sm leading-relaxed text-(--color-text-secondary)">
               {leave.reason || (
-                <span className="text-[color:var(--color-text-muted)] italic">
+                <span className="text-(--color-text-muted) italic">
                   No reason provided
                 </span>
               )}
@@ -394,7 +394,7 @@ export default function LeaveDetailPage() {
 
           {leave.adminNotes && (
             <DetailCard title="Admin Notes" icon={<FileText />} variant="warning">
-              <p className="text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                 {leave.adminNotes}
               </p>
             </DetailCard>
@@ -433,15 +433,15 @@ export default function LeaveDetailPage() {
                     </Button>
                   )}
                   {actionError && (
-                    <p className="text-sm font-semibold text-[color:var(--color-danger-600)]">
+                    <p className="text-sm font-semibold text-(--color-danger-600)">
                       {actionError}
                     </p>
                   )}
                 </div>
 
                 {showRejectPrompt && (
-                  <div className="rounded-lg border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-4">
-                    <p className="mb-2 text-sm font-medium text-[color:var(--color-danger-900)]">
+                  <div className="rounded-lg border border-(--color-danger-200) bg-(--color-danger-50) p-4">
+                    <p className="mb-2 text-sm font-medium text-(--color-danger-900)">
                       Reason for Rejection (Optional)
                     </p>
                     <Textarea
@@ -474,7 +474,7 @@ export default function LeaveDetailPage() {
             </DetailCard>
           )}
 
-          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+          <p className="text-right text-xs font-semibold text-(--color-text-muted)">
             Applied {formatDateTime(leave.createdAt)} · Updated {formatDateTime(leave.updatedAt)}
           </p>
         </div>

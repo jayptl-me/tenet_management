@@ -174,9 +174,7 @@ export default function EnquiriesPage() {
     }
   };
 
-  const hasActiveFilters = Boolean(
-    search || statusFilter || sourceFilter || fromDate || toDate,
-  );
+  const hasActiveFilters = Boolean(search || statusFilter || sourceFilter || fromDate || toDate);
 
   const handleClearFilters = () => {
     setSearch('');
@@ -187,10 +185,11 @@ export default function EnquiriesPage() {
     setPage(1);
   };
 
-  const columns: DataTableColumn<EnquiryRow>[] = [    {
+  const columns: DataTableColumn<EnquiryRow>[] = [
+    {
       header: 'Name',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.name}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.name}</span>
       ),
     },
     {
@@ -198,7 +197,7 @@ export default function EnquiriesPage() {
       accessor: (row) => (
         <a
           href={`tel:${row.phone}`}
-          className="text-[color:var(--color-brand-600)] hover:underline"
+          className="text-(--color-brand-600) hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
           {row.phone}
@@ -211,7 +210,7 @@ export default function EnquiriesPage() {
         row.email ? (
           <a
             href={`mailto:${row.email}`}
-            className="text-[color:var(--color-text-secondary)] hover:underline"
+            className="text-(--color-text-secondary) hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             {row.email}
@@ -245,7 +244,7 @@ export default function EnquiriesPage() {
                   e.stopPropagation();
                   router.push(`/tenants/${converted.id}`);
                 }}
-                className="text-[11px] font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                className="text-2xs font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
               >
                 {converted.label}
               </button>
@@ -334,13 +333,13 @@ export default function EnquiriesPage() {
             placeholder="Search by name, phone, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            leftIcon={<Search className="h-4 w-4 text-[color:var(--color-text-muted)]" />}
+            leftIcon={<Search className="h-4 w-4 text-(--color-text-muted)" />}
             aria-label="Search enquiries"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute top-1/2 right-3 -translate-y-1/2 text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-text-primary)"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -385,10 +384,9 @@ export default function EnquiriesPage() {
           />
           {hasActiveFilters && (
             <Button
-              variant="ghost"
+              variant="muted"
               size="sm"
               onClick={handleClearFilters}
-              className="text-xs text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
               aria-label="Clear all active filters"
             >
               <RotateCcw className="mr-1 h-3.5 w-3.5" />
@@ -429,7 +427,7 @@ export default function EnquiriesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.name}
               </span>
               <StatusBadge
@@ -437,7 +435,7 @@ export default function EnquiriesPage() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-(--color-text-muted)">
               <span>{row.phone}</span>
               {row.email && <span>{row.email}</span>}
               <span className="capitalize">{row.source.replace(/_/g, ' ')}</span>

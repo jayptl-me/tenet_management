@@ -205,7 +205,7 @@ export default function WashingMachineDetailPage() {
                   value={
                     machine.currentUser ? (
                       <span className="inline-flex items-center gap-1 text-sm">
-                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {machine.currentUser.name} (Room {machine.currentUser.room})
                       </span>
                     ) : (
@@ -222,7 +222,7 @@ export default function WashingMachineDetailPage() {
 
           {machine.notes && (
             <DetailCard title="Notes" variant="warning">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                 {machine.notes}
               </p>
             </DetailCard>

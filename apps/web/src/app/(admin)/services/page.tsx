@@ -19,10 +19,12 @@ import {
   AlertTriangle,
   XCircle,
   Download,
+  RotateCcw,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -90,6 +92,29 @@ export default function ServicesPage() {
   const [summary, setSummary] = useState<ServiceSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncAllFloors = async () => {
+    setSyncing(true);
+    setError('');
+    try {
+      const res = await api.post('floors/reseed-services').json<{
+        success: boolean;
+        data: { floorsTouched: number; rowsCreated: number };
+      }>();
+      if (res.success) {
+        toast.success(
+          `Floor services synced: ${res.data.rowsCreated} service(s) provisioned across ${res.data.floorsTouched} floor(s).`,
+        );
+        fetchServices();
+        fetchSummary();
+      }
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     api
@@ -221,15 +246,15 @@ export default function ServicesPage() {
         const Icon = getIcon(row.serviceType);
         return (
           <div className="flex items-center gap-2">
-            <span className="flex-shrink-0 text-[color:var(--color-text-muted)]">
+            <span className="flex-shrink-0 text-(--color-text-muted)">
               <Icon className="h-5 w-5" />
             </span>
             <div>
-              <span className="font-semibold text-[color:var(--color-text-primary)]">
+              <span className="font-semibold text-(--color-text-primary)">
                 {getLabel(row.serviceType)}
               </span>
               {row.openComplaintCount ? (
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-[color:var(--color-danger-100)] px-1.5 py-0.5 font-mono text-[10px] font-bold text-[color:var(--color-danger-600)]">
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 font-mono text-3xs font-bold text-(--color-danger-600)">
                   {row.openComplaintCount} open
                 </span>
               ) : null}
@@ -267,7 +292,7 @@ export default function ServicesPage() {
     {
       header: 'Note',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
+        <span className="block max-w-[200px] truncate text-xs text-(--color-text-muted)">
           {row.note ?? '—'}
         </span>
       ),
@@ -291,10 +316,20 @@ export default function ServicesPage() {
         title="Service Status"
         description="Monitor and update service health across floors"
         action={
-          <Button onClick={() => router.push('/services/new')}>
-            <Plus className="h-4 w-4" />
-            Add Service
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSyncAllFloors}
+              loading={syncing}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Sync All Floor Services
+            </Button>
+            <Button onClick={() => router.push('/services/new')}>
+              <Plus className="h-4 w-4" />
+              Add Service
+            </Button>
+          </div>
         }
       />
 
@@ -306,7 +341,7 @@ export default function ServicesPage() {
             title="Operational"
             value={summary.operational ?? 0}
             variant="success"
-            icon={<CheckCircle className="h-5 w-5 text-[color:var(--color-success-600)]" />}
+            icon={<CheckCircle className="h-5 w-5 text-(--color-success-600)" />}
             onClick={() => {
               setStatusFilter(statusFilter === 'operational' ? '' : 'operational');
               setPage(1);
@@ -317,7 +352,7 @@ export default function ServicesPage() {
             title="Degraded"
             value={summary.degraded ?? 0}
             variant="warning"
-            icon={<AlertTriangle className="h-5 w-5 text-[color:var(--color-warning-600)]" />}
+            icon={<AlertTriangle className="h-5 w-5 text-(--color-warning-600)" />}
             onClick={() => {
               setStatusFilter(statusFilter === 'degraded' ? '' : 'degraded');
               setPage(1);
@@ -328,7 +363,7 @@ export default function ServicesPage() {
             title="Down"
             value={summary.down ?? 0}
             variant="danger"
-            icon={<XCircle className="h-5 w-5 text-[color:var(--color-danger-600)]" />}
+            icon={<XCircle className="h-5 w-5 text-(--color-danger-600)" />}
             onClick={() => {
               setStatusFilter(statusFilter === 'down' ? '' : 'down');
               setPage(1);
@@ -369,7 +404,6 @@ export default function ServicesPage() {
           variant="outline"
           onClick={handleExportCsv}
           disabled={services.length === 0}
-          className="flex items-center gap-1.5"
         >
           <Download className="h-4 w-4" />
           Export CSV
@@ -406,8 +440,8 @@ export default function ServicesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  <Icon className="h-4 w-4 text-(--color-text-muted)" />
+                  <span className="text-sm font-semibold text-(--color-text-primary)">
                     {getLabel(row.serviceType)}
                   </span>
                 </div>
@@ -416,7 +450,7 @@ export default function ServicesPage() {
                   label={row.status.replace(/_/g, ' ')}
                 />
               </div>
-              <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
                 <span>{row.floor?.label ?? '—'}</span>
                 {row.lastUpdatedAt && (
                   <span>

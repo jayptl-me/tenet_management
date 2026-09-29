@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Download,
   IndianRupee,
-  TriangleAlert,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -16,7 +15,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,8 +24,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { StatusTabs } from '@/components/ui/StatusTabs';
-import { KpiHeader } from '@/components/ui/KpiHeader';
-import { VerifyPaymentModal, type VerifyPaymentTarget } from '@/components/admin/VerifyPaymentModal';
+import { StatCard } from '@/components/ui/StatCard';
+import {
+  VerifyPaymentModal,
+  type VerifyPaymentTarget,
+} from '@/components/admin/VerifyPaymentModal';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter } from 'next/navigation';
 import {
@@ -123,6 +125,7 @@ export default function PaymentsPage() {
   const [deleting, setDeleting] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<VerifyPaymentTarget | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const searchInit = useRef(false);
 
   // Debounce search input
@@ -154,6 +157,18 @@ export default function PaymentsPage() {
     }
   }, []);
 
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const res = await api.get('payments/status-counts').json<{
+        success: boolean;
+        data: Record<string, number>;
+      }>();
+      setStatusCounts(res.data);
+    } catch {
+      // Status counts load failure is non-blocking
+    }
+  }, []);
+
   const handleVerify = async (approved: boolean, notes: string) => {
     if (!verifyTarget) return;
     setVerifying(true);
@@ -167,6 +182,7 @@ export default function PaymentsPage() {
       setVerifyTarget(null);
       fetchPayments();
       fetchSummary();
+      fetchStatusCounts();
     } catch (err) {
       toast.error((await parseApiError(err)).message);
     } finally {
@@ -186,6 +202,7 @@ export default function PaymentsPage() {
       if (statusFilter) params.set('status', statusFilter);
       if (fromDate) params.set('fromDate', fromDate);
       if (toDate) params.set('toDate', toDate);
+      if (debouncedSearch) params.set('search', debouncedSearch);
 
       const res = await api.get(`payments?${params.toString()}`).json<{
         success: boolean;
@@ -199,12 +216,13 @@ export default function PaymentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, methodFilter, typeFilter, statusFilter, fromDate, toDate]);
+  }, [page, perPage, methodFilter, typeFilter, statusFilter, fromDate, toDate, debouncedSearch]);
 
   useEffect(() => {
     fetchPayments();
     fetchSummary();
-  }, [fetchPayments, fetchSummary]);
+    fetchStatusCounts();
+  }, [fetchPayments, fetchSummary, fetchStatusCounts]);
 
   // Client-side search fallback (tenant, UTR, invoice number, amount)
   const visiblePayments = useMemo(() => {
@@ -304,7 +322,10 @@ export default function PaymentsPage() {
     }
   };
 
-  const delta = (cur: number, prev: number | undefined): { percent: number | null; label: string } => {
+  const delta = (
+    cur: number,
+    prev: number | undefined,
+  ): { percent: number | null; label: string } => {
     if (prev == null || prev === 0) return { percent: null, label: 'no prior month' };
     const pct = ((cur - prev) / prev) * 100;
     return { percent: pct, label: `vs ${fmtCompact(prev)} last month` };
@@ -407,10 +428,10 @@ export default function PaymentsPage() {
       header: 'Tenant',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">
+          <span className="font-semibold text-(--color-text-primary)">
             {tenantDisplayName(row.tenantId)}
           </span>
-          <span className="block text-xs text-[color:var(--color-text-muted)]">
+          <span className="block text-xs text-(--color-text-muted)">
             {tenantRoomNumber(row.tenantId) !== 'N/A'
               ? `Room ${tenantRoomNumber(row.tenantId)}${tenantBedId(row.tenantId) ? ` · Bed ${tenantBedId(row.tenantId)}` : ''}`
               : '—'}
@@ -421,7 +442,7 @@ export default function PaymentsPage() {
     {
       header: 'Amount',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)] tabular-nums">
+        <span className="font-semibold text-(--color-text-primary) tabular-nums">
           {fmtMoney(row.amount)}
         </span>
       ),
@@ -440,14 +461,14 @@ export default function PaymentsPage() {
         return (
           <div className="space-y-0.5">
             {utr ? (
-              <span className="block font-mono text-xs font-bold text-[color:var(--color-brand-700)]">
+              <span className="block font-mono text-xs font-bold text-(--color-brand-700)">
                 {utr}
               </span>
             ) : (
-              <span className="block text-xs text-[color:var(--color-text-muted)]">No UTR</span>
+              <span className="block text-xs text-(--color-text-muted)">No UTR</span>
             )}
             {inv && (
-              <span className="block font-mono text-[11px] text-[color:var(--color-text-muted)]">
+              <span className="block font-mono text-2xs text-(--color-text-muted)">
                 {inv}
               </span>
             )}
@@ -487,7 +508,7 @@ export default function PaymentsPage() {
                   {
                     label: 'Verify UTR',
                     icon: (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--color-success-600)]" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />
                     ),
                     onClick: () => {
                       const inv = row.invoiceId;
@@ -516,8 +537,6 @@ export default function PaymentsPage() {
     },
   ];
 
-  const pendingVerifyCount = statusFilter === 'pending_verification' ? total : null;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -533,51 +552,70 @@ export default function PaymentsPage() {
 
       {error && <ErrorBanner message={error} />}
 
-      {/* KPI strip */}
-      <KpiHeader
-        items={[
-          {
-            label: `Collected · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.collected ?? 0),
-            delta: delta(summary?.collected ?? 0, prevSummary?.collected),
-            tone: 'success',
-          },
-          {
-            label: `Expected · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.expected ?? 0),
-            delta: delta(summary?.expected ?? 0, prevSummary?.expected),
-            tone: 'brand',
-          },
-          {
-            label: `Pending · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.pending ?? 0),
-            sub:
-              summary && summary.expected > 0
-                ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
-                : undefined,
-            tone: (summary?.pending ?? 0) > 0 ? 'warning' : 'success',
-            icon: <IndianRupee className="h-4 w-4" />,
-          },
-          {
-            label: 'Awaiting verification',
-            value: pendingVerifyCount != null ? String(pendingVerifyCount) : '—',
-            sub: 'filter: To verify',
-            tone: 'danger',
-            icon: <TriangleAlert className="h-4 w-4" />,
-            onClick: () => {
-              setStatusFilter('pending_verification');
-              setPage(1);
-            },
-          },
-        ]}
-      />
+      {/* Executive Metric Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title={`Collected · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.collected ?? 0)}
+          delta={
+            summary
+              ? {
+                  value: delta(summary.collected, prevSummary?.collected).label,
+                  direction:
+                    (summary.collected ?? 0) >= (prevSummary?.collected ?? 0) ? 'up' : 'down',
+                  label: '',
+                }
+              : undefined
+          }
+          tone="success"
+          icon={<CheckCircle2 />}
+        />
+        <StatCard
+          title={`Expected · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.expected ?? 0)}
+          delta={
+            summary
+              ? {
+                  value: delta(summary.expected, prevSummary?.expected).label,
+                  direction:
+                    (summary.expected ?? 0) >= (prevSummary?.expected ?? 0) ? 'up' : 'down',
+                  label: '',
+                }
+              : undefined
+          }
+          tone="brand"
+          icon={<IndianRupee />}
+        />
+        <StatCard
+          title={`Pending · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.pending ?? 0)}
+          subtitle={
+            summary && summary.expected > 0
+              ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
+              : undefined
+          }
+          tone={(summary?.pending ?? 0) > 0 ? 'warning' : 'success'}
+          icon={<IndianRupee />}
+        />
+        <StatCard
+          title="Awaiting Verification"
+          value={statusCounts.pending_verification ?? 0}
+          subtitle="Click to filter to verify queue"
+          tone={(statusCounts.pending_verification ?? 0) > 0 ? 'danger' : 'default'}
+          icon={<ShieldCheck />}
+          onClick={() => {
+            setStatusFilter('pending_verification');
+            setPage(1);
+          }}
+        />
+      </div>
 
       {/* Status tab strip */}
       <StatusTabs
         tabs={STATUS_TABS.map((s) => ({
           key: s.key,
           label: s.label,
-          count: s.key === 'pending_verification' && pendingVerifyCount != null ? pendingVerifyCount : null,
+          count: statusCounts[s.key || 'all'] ?? null,
           tone:
             s.key === 'pending_verification'
               ? 'danger'
@@ -631,35 +669,23 @@ export default function PaymentsPage() {
                 }}
               />
             </div>
-            <div className="w-[150px]">
-              <DatePicker
-                type="date"
-                aria-label="From date"
-                value={fromDate}
-                onChange={(val: string) => {
-                  setFromDate(val);
-                  setPage(1);
-                }}
-                placeholder="From..."
-              />
-            </div>
-            <div className="w-[150px]">
-              <DatePicker
-                type="date"
-                aria-label="To date"
-                value={toDate}
-                onChange={(val: string) => {
-                  setToDate(val);
-                  setPage(1);
-                }}
-                placeholder="To..."
-              />
-            </div>
+            <DateRangePicker
+              fromDate={fromDate}
+              toDate={toDate}
+              onFromChange={(val: string) => {
+                setFromDate(val);
+                setPage(1);
+              }}
+              onToChange={(val: string) => {
+                setToDate(val);
+                setPage(1);
+              }}
+              compact
+            />
             <Button
               variant="outline"
               onClick={handleExportCsv}
               disabled={payments.length === 0}
-              className="flex items-center gap-1.5"
             >
               <Download className="h-4 w-4" />
               Export CSV
@@ -692,7 +718,7 @@ export default function PaymentsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {tenantDisplayName(row.tenantId)}
               </span>
               <StatusBadge
@@ -700,8 +726,8 @@ export default function PaymentsPage() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span className="font-semibold text-[color:var(--color-text-primary)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
+              <span className="font-semibold text-(--color-text-primary)">
                 {fmtMoney(row.amount)}
               </span>
               <span className="capitalize">
@@ -715,7 +741,7 @@ export default function PaymentsPage() {
               </span>
             </div>
             {row.utrNumber && (
-              <p className="font-mono text-[11px] font-bold text-[color:var(--color-brand-700)]">
+              <p className="font-mono text-2xs font-bold text-(--color-brand-700)">
                 {row.utrNumber}
               </p>
             )}

@@ -149,7 +149,7 @@ export default function EditGuardianPage() {
               />
             )}
           />
-          <p className="mt-1 text-[12px] text-[color:var(--color-text-secondary)]">
+          <p className="mt-1 text-12 text-(--color-text-secondary)">
             Tenant reassignment is not supported on update. Create a new guardian link if needed.
           </p>
         </FormSection>
@@ -197,7 +197,7 @@ export default function EditGuardianPage() {
           divided
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-6">
-            <p className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
+            <p className="text-xs font-semibold text-(--color-text-secondary)">
               Emergency contact: {isEmergencyContact ? 'Yes (father/mother)' : 'No'} — change the
               relation above to update it.
             </p>

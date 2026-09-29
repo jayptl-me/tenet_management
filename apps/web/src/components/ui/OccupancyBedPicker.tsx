@@ -50,10 +50,10 @@ export function OccupancyBedPicker({
       const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>();
       const room = res.data;
       const roomBeds = Array.isArray(room.beds) && room.beds.length > 0 ? room.beds : null;
-      const bedIds =
-        roomBeds != null
-          ? roomBeds.map((b) => b.bedId)
-          : ['A', 'B', 'C', 'D'].slice(0, room.sharingType ?? 4);
+      const standardCount = Math.max(room.sharingType ?? 0, roomBeds?.length ?? 0, 1);
+      const standardSlots = ['A', 'B', 'C', 'D'].slice(0, standardCount);
+      const bedIdSet = new Set([...standardSlots, ...(roomBeds?.map((b) => b.bedId) ?? [])]);
+      const bedIds = Array.from(bedIdSet).sort();
       const beds = bedIds.map((bedId) => {
         const bedMeta = roomBeds?.find((b) => b.bedId === bedId);
         const isCurrent = currentBedId != null && bedId === currentBedId;

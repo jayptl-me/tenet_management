@@ -160,13 +160,13 @@ export default function ElectricityPage() {
     {
       header: 'Month',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.month}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.month}</span>
       ),
     },
     {
       header: 'Total Amount',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           ₹{row.totalBillAmount.toLocaleString()}
         </span>
       ),
@@ -192,7 +192,7 @@ export default function ElectricityPage() {
     {
       header: 'Notes',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
+        <span className="block max-w-[200px] truncate text-xs text-(--color-text-muted)">
           {row.notes ?? '—'}
         </span>
       ),
@@ -315,7 +315,7 @@ export default function ElectricityPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.month}
               </span>
               <StatusBadge
@@ -323,7 +323,7 @@ export default function ElectricityPage() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>₹{row.totalBillAmount.toLocaleString()}</span>
               <span>{row.roomEntries?.length ?? 0} rooms</span>
             </div>

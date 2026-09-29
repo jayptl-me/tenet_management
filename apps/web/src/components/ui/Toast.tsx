@@ -100,7 +100,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   {ICONS[toast.type]}
                 </span>
                 <p
-                  className={`flex-1 text-sm leading-snug font-body font-semibold ${TEXT_COLORS[toast.type]}`}
+                  className={`font-body flex-1 text-sm leading-snug font-semibold ${TEXT_COLORS[toast.type]}`}
                 >
                   {toast.message}
                 </p>

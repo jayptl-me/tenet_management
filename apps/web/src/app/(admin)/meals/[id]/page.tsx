@@ -169,7 +169,7 @@ export default function MealFeedbackDetailPage() {
               <div className="flex items-center justify-center">
                 <StarRating value={feedback.rating} readonly size="lg" />
               </div>
-              <p className="mt-2 text-xl font-bold text-[color:var(--color-text-primary)]">
+              <p className="mt-2 text-xl font-bold text-(--color-text-primary)">
                 {feedback.rating} / 5
               </p>
             </div>
@@ -203,7 +203,7 @@ export default function MealFeedbackDetailPage() {
                   label="Tenant"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenantName}
                     </span>
                   }
@@ -212,7 +212,7 @@ export default function MealFeedbackDetailPage() {
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {roomNumber}
                     </span>
                   }
@@ -234,9 +234,9 @@ export default function MealFeedbackDetailPage() {
                     {feedback.categories.map((cat) => (
                       <span
                         key={cat}
-                        className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)]"
+                        className="inline-flex items-center gap-1 rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1 text-xs font-semibold text-(--color-text-secondary)"
                       >
-                        <Tag className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+                        <Tag className="h-3 w-3 text-(--color-text-muted)" />
                         {cat}
                       </span>
                     ))}
@@ -246,7 +246,7 @@ export default function MealFeedbackDetailPage() {
 
               {feedback.comment && (
                 <DetailCard title="Comment" icon={<FileText />} variant="warning">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                     {feedback.comment}
                   </p>
                 </DetailCard>

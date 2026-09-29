@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
@@ -74,6 +74,7 @@ export default function EditWashingMachinePage() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -161,7 +162,7 @@ export default function EditWashingMachinePage() {
         )}
 
         {isInUse && (
-          <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] px-4 py-3 text-sm font-medium text-[color:var(--color-warning-700)]">
+          <div className="rounded-(--radius-md) border-[length:var(--bw-default)] border-(--color-warning-200) bg-(--color-warning-50) px-4 py-3 text-sm font-medium text-(--color-warning-700)">
             Machine is currently in use. Leave status untouched to keep the claim, or pick a status
             below to release it.
           </div>
@@ -203,12 +204,19 @@ export default function EditWashingMachinePage() {
                 error={err.timerDuration?.message}
                 {...register('timerDuration')}
               />
-              <Select
-                label="Status"
-                options={isInUse ? STATUS_OPTIONS_IN_USE : STATUS_OPTIONS}
-                error={err.status?.message}
-                helperText={isInUse ? 'Leave as-is to keep the current claim.' : undefined}
-                {...register('status')}
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Status"
+                    options={isInUse ? STATUS_OPTIONS_IN_USE : STATUS_OPTIONS}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    error={err.status?.message}
+                    helperText={isInUse ? 'Leave as-is to keep the current claim.' : undefined}
+                  />
+                )}
               />
             </FormGrid>
             <Textarea
