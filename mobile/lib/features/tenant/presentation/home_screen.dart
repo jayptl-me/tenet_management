@@ -132,7 +132,7 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                   const SizedBox(width: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () => context.go('/tenant/profile'),
+                    onTap: () => context.go('/tenant/room'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(

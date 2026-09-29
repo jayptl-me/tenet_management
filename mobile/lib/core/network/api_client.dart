@@ -128,6 +128,28 @@ class ApiClient {
     }
   }
 
+  /// Authenticated multipart upload (e.g. KYC documents).
+  /// [files] entries are (fieldName, filePath) pairs read from disk.
+  Future<dynamic> postMultipart(
+    String path, {
+    required List<(String, String)> files,
+    Map<String, String>? fields,
+  }) async {
+    try {
+      final formData = FormData();
+      for (final (name, filePath) in files) {
+        formData.files.add(
+          MapEntry(name, await MultipartFile.fromFile(filePath)),
+        );
+      }
+      fields?.forEach((key, value) => formData.fields.add(MapEntry(key, value)));
+      final res = await _dio.post(_normalizePath(path), data: formData);
+      return _unwrap(res.data);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   /// Authenticated binary download (e.g. invoice PDF). Does not unwrap JSON.
   Future<List<int>> getBytes(
     String path, {
