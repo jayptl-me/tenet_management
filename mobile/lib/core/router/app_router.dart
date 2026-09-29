@@ -22,6 +22,7 @@ import '../../features/tenant/presentation/attendance_screen.dart';
 import '../../features/tenant/presentation/leaves_screen.dart';
 import '../../features/tenant/presentation/meals_screen.dart';
 import '../../features/tenant/presentation/more_screen.dart';
+import '../../features/tenant/presentation/my_room_screen.dart';
 import '../../features/tenant/presentation/notices_screen.dart';
 import '../../features/tenant/presentation/notifications_screen.dart';
 import '../../features/tenant/presentation/payments_screen.dart';
@@ -196,6 +197,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/tenant/attendance',
         builder: (_, __) => const TenantAttendanceScreen(),
+      ),
+      GoRoute(
+        path: '/tenant/room',
+        builder: (_, __) => const TenantMyRoomScreen(),
       ),
       GoRoute(
         path: '/tenant/notifications',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
@@ -61,12 +62,38 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
     }
   }
 
+  Future<void> _callNumber(String phone) async {
+    if (phone.isEmpty) return;
+    final uri = Uri(scheme: 'tel', path: phone);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (_) {
+      // Silent: tel links unsupported on this platform (e.g. desktop web).
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
+    final cs = Theme.of(context).colorScheme;
     final tenant = _ward?['tenant'] as Map?;
     final tenantUser = tenant?['user'] as Map?;
     final room = tenant?['room'] as Map?;
+    final floor = room?['floor'] as Map?;
+
+    final wardName = tenantUser?['name']?.toString() ?? 'Ward';
+    final wardPhone = tenantUser?['phone']?.toString() ?? '';
+    final roomNumber = room?['roomNumber']?.toString() ?? 'N/A';
+    final bedId = tenant?['bedId']?.toString() ?? '--';
+    final floorLabel = floor?['label']?.toString();
+    final moveIn = tenant?['moveInDate'];
+
+    final dues = _ward?['duesSummary'] as Map?;
+    final isClear = dues?['isClear'] == true;
+    final totalDue = (dues?['totalDue'] as num?) ?? 0;
+    final unpaidCount = (dues?['unpaidCount'] as num?) ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -107,8 +134,8 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                 children: [
                   Text(
                     'Signed in as ${user?.name ?? 'guardian'}',
-                    style: const TextStyle(
-                      color: AppTheme.muted,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -119,37 +146,7 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                   else if (_ward == null)
                     const EmptyState(message: 'No ward linked to this account')
                   else ...[
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Tenant',
-                              style: TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 8),
-                            _row('Name', tenantUser?['name']?.toString() ?? 'N/A'),
-                            _row(
-                              'Phone',
-                              tenantUser?['phone']?.toString() ?? 'N/A',
-                            ),
-                            _row(
-                              'Room / bed',
-                              '${room?['roomNumber'] ?? 'N/A'} / ${tenant?['bedId'] ?? '--'}',
-                            ),
-                            const SizedBox(height: 8),
-                            StatusChip(
-                              label: (tenant?['isActive'] == true)
-                                   ? 'active'
-                                  : 'inactive',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    // ── Ward card ──────────────────────────────
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -157,7 +154,83 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor:
+                                      cs.primary.withValues(alpha: 0.12),
+                                  child: Text(
+                                    wardName.isNotEmpty
+                                        ? wardName[0].toUpperCase()
+                                        : 'W',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        wardName,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Room $roomNumber · Bed $bedId',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: cs.onSurfaceVariant,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                StatusChip(
+                                  label: (tenant?['isActive'] == true)
+                                      ? 'active'
+                                      : 'inactive',
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            _row('Floor', floorLabel ?? '--'),
+                            _row('Move-in', formatDate(moveIn)),
+                            if (wardPhone.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _callNumber(wardPhone),
+                                  icon: const Icon(Icons.call_outlined,
+                                      size: 18),
+                                  label: const Text('Call ward'),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ── Fee & rent status ──────────────────────
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
                                   'Fee & Rent Status',
@@ -167,29 +240,23 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                                   ),
                                 ),
                                 StatusChip(
-                                  label: (_ward?['duesSummary']?['isClear'] == true)
-                                      ? 'Paid'
-                                      : 'Pending',
+                                  label: isClear ? 'Paid' : 'Pending',
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
+                            _row('Outstanding balance',
+                                formatMoney(isClear ? 0 : totalDue)),
                             _row(
-                              'Total outstanding',
-                              formatMoney(
-                                _ward?['duesSummary']?['totalDue'] as num?,
-                              ),
+                              'Open invoices',
+                              '$unpaidCount invoice${unpaidCount == 1 ? '' : 's'}',
                             ),
-                            _row(
-                              'Pending invoices',
-                              '${_ward?['duesSummary']?['unpaidCount'] ?? 0} invoice${_ward?['duesSummary']?['unpaidCount'] == 1 ? '' : 's'}',
-                            ),
-                            if (_ward?['duesSummary']?['latestMonth'] != null)
+                            if (dues?['latestMonth'] != null)
                               _row(
-                                'Billing cycle',
-                                _ward!['duesSummary']['latestMonth'].toString(),
+                                'Oldest open cycle',
+                                dues!['latestMonth'].toString(),
                               ),
-                            if (_ward?['duesSummary']?['isClear'] != true) ...[
+                            if (!isClear) ...[
                               const SizedBox(height: 12),
                               Container(
                                 padding: const EdgeInsets.all(12),
@@ -199,7 +266,8 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                                 ),
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.info_outline, size: 18, color: AppTheme.warning),
+                                    Icon(Icons.info_outline,
+                                        size: 18, color: AppTheme.warning),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -220,28 +288,43 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+
+                    // ── Navigation ─────────────────────────────
                     Card(
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.calendar_month_outlined, color: AppTheme.brand),
-                            title: const Text('Ward Attendance', style: TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: const Text('View ward attendance history grouped by month'),
-                            trailing: const Icon(Icons.chevron_right),
+                            leading: const Icon(
+                                Icons.calendar_month_outlined,
+                                color: AppTheme.brand),
+                            title: const Text('Ward Attendance',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            subtitle: const Text(
+                                'View ward attendance history grouped by month'),
+                            trailing:
+                                const Icon(Icons.chevron_right),
                             onTap: () => context.go('/guardian/attendance'),
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.campaign_outlined, color: AppTheme.brand),
-                            title: const Text('PG Notices', style: TextStyle(fontWeight: FontWeight.w700)),
-                            subtitle: const Text('View updates and announcements from the PG'),
-                            trailing: const Icon(Icons.chevron_right),
+                            leading: const Icon(Icons.campaign_outlined,
+                                color: AppTheme.brand),
+                            title: const Text('PG Notices',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700)),
+                            subtitle: const Text(
+                                'View updates and announcements from the PG'),
+                            trailing:
+                                const Icon(Icons.chevron_right),
                             onTap: () => context.go('/guardian/notices'),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
+
+                    // ── Guardian link ──────────────────────────
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -250,12 +333,14 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                           children: [
                             const Text(
                               'Your link',
-                              style: TextStyle(fontWeight: FontWeight.w800),
+                              style:
+                                  TextStyle(fontWeight: FontWeight.w800),
                             ),
                             const SizedBox(height: 8),
                             _row(
                               'Relation',
-                              _ward?['relation']?.toString() ?? '--',
+                              (_ward?['relation']?.toString() ?? '--')
+                                  .replaceAll('_', ' '),
                             ),
                             _row(
                               'Guardian phone',
@@ -270,7 +355,8 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                     const SizedBox(height: 16),
                     Card(
                       child: ListTile(
-                        leading: const Icon(Icons.logout, color: AppTheme.danger),
+                        leading: const Icon(Icons.logout,
+                            color: AppTheme.danger),
                         title: const Text(
                           'Sign out',
                           style: TextStyle(
@@ -278,7 +364,8 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        subtitle: const Text('Log out of the guardian portal'),
+                        subtitle:
+                            const Text('Log out of the guardian portal'),
                         onTap: () => _confirmSignOut(context),
                       ),
                     ),
@@ -323,13 +410,19 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppTheme.muted,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
           Flexible(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
           ),
         ],
       ),
