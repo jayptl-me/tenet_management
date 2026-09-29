@@ -8,10 +8,10 @@ Pass 1 record: docs/audit/features/assets_audit_pass1_20260908-004257.md
 
 ## Feature Listing
 
-| Surface     | Capability                                                                                 | Status  |
-| ----------- | ------------------------------------------------------------------------------------------ | ------- |
-| List        | summary StatCards + server alert modes + search + placement/stock/category-visual columns  | WORKING |
-| Create/Edit | 2-column forms + live preview/context + floor/room links + timeline + danger zone          | WORKING |
-| Detail      | StatCards + timeline + stock meter + history card + links + reschedule CTA + retire        | WORKING |
-| Shared      | AssetVisuals (meter/timeline/category icons) + banners + badges                             | WORKING |
-| API         | enum filters, extended search, floor/room refs + populate, retire audit                    | WORKING |
+| Surface     | Capability                                                                                | Status  |
+| ----------- | ----------------------------------------------------------------------------------------- | ------- |
+| List        | summary StatCards + server alert modes + search + placement/stock/category-visual columns | WORKING |
+| Create/Edit | 2-column forms + live preview/context + floor/room links + timeline + danger zone         | WORKING |
+| Detail      | StatCards + timeline + stock meter + history card + links + reschedule CTA + retire       | WORKING |
+| Shared      | AssetVisuals (meter/timeline/category icons) + banners + badges                           | WORKING |
+| API         | enum filters, extended search, floor/room refs + populate, retire audit                   | WORKING |
