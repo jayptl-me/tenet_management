@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { AppConfig } from '../models/appConfig.js';
+import { AppConfig, DEFAULT_AMENITY_DEFINITIONS } from '../models/appConfig.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import chroma from 'chroma-js';
 
@@ -136,11 +136,16 @@ appConfig.get('/', async (c) => {
   if (!config) {
     return c.json({
       success: true,
-      data: { pgName: 'PG Management' },
+      data: { pgName: 'PG Management', amenityDefinitions: DEFAULT_AMENITY_DEFINITIONS },
     });
   }
 
   const data = { ...(config as unknown as Record<string, unknown>) };
+
+  const rawDefs = (data.amenityDefinitions as unknown[]) ?? [];
+  if (rawDefs.length === 0) {
+    data.amenityDefinitions = DEFAULT_AMENITY_DEFINITIONS;
+  }
 
   // Public callers: hide tax IDs. Admin JWT: return full settings (GST/PAN).
   let isAdmin = false;

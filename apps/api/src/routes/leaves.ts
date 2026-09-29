@@ -268,10 +268,20 @@ leaves.get('/', authGuard, adminOnly, async (c) => {
   const status = c.req.query('status');
   const tenantId = c.req.query('tenantId');
   const search = c.req.query('search')?.trim();
+  const fromDate = c.req.query('fromDate');
+  const toDate = c.req.query('toDate');
 
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
   if (tenantId) filter.tenantId = tenantId;
+  if (fromDate && toDate) {
+    filter.fromDate = { $lte: toDate };
+    filter.toDate = { $gte: fromDate };
+  } else if (fromDate) {
+    filter.toDate = { $gte: fromDate };
+  } else if (toDate) {
+    filter.fromDate = { $lte: toDate };
+  }
 
   // Resolve search by tenant name (same pattern as meals feedback / tenants)
   if (search) {

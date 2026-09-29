@@ -674,7 +674,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         token: adminToken,
         body: {
           tenantId,
-          slotDate: '2026-07-22',
+          slotDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
           slotTime: '10:00',
           items: 3,
         },

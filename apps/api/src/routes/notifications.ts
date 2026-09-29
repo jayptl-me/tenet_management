@@ -81,6 +81,7 @@ const createSchema = z.object({
     'welcome',
     'emergency',
     'meal_feedback',
+    'kyc_uploaded',
   ]),
   data: z.record(z.string(), z.string()).optional().default({}),
   sendPush: z.boolean().optional().default(true),
