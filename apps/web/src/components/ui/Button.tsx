@@ -9,14 +9,7 @@ import { transitionTween } from '@/lib/animations';
 // ── Types ──────────────────────────────────────────────
 
 type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'danger'
-  | 'ghost'
-  | 'outline'
-  | 'glass'
-  | 'hero'
-  | 'muted';
+  'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'glass' | 'hero' | 'muted';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'icon';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

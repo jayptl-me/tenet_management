@@ -410,9 +410,7 @@ export default function EditElectricityPage() {
                       <Calculator className="h-3.5 w-3.5" />
                       <span>
                         Units:{' '}
-                        <strong className="font-mono text-(--color-text-primary)">
-                          {units}
-                        </strong>
+                        <strong className="font-mono text-(--color-text-primary)">{units}</strong>
                       </span>
                       <span className="text-(--border-color)">|</span>
                       <span>

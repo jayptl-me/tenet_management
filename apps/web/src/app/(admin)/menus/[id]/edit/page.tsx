@@ -328,9 +328,7 @@ export default function EditMenuPage() {
               {itemCounts.dinner} dinner items
             </span>
             <span className="text-(--color-text-muted)">|</span>
-            <span className="font-bold text-(--color-text-primary)">
-              {totalItems} total items
-            </span>
+            <span className="font-bold text-(--color-text-primary)">{totalItems} total items</span>
           </div>
         </FormSection>
       </FormCard>

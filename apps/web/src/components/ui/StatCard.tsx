@@ -2,12 +2,7 @@
 
 import { clsx } from 'clsx';
 import { motion } from 'motion/react';
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
-  ArrowRight,
-} from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, ArrowRight } from 'lucide-react';
 import { surfaceCardClass } from '@/lib/field-styles';
 
 // ── Types ──────────────────────────────────────────────
@@ -83,7 +78,7 @@ function renderDeltaPill(
     <span key={key} className="inline-flex items-center gap-1.5">
       <span
         className={clsx(
-          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold tabular-nums leading-tight',
+          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-tight font-semibold tabular-nums',
           isUp &&
             'border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]',
           isDown &&
@@ -167,7 +162,7 @@ export function StatCard({
 
         {/* Primary Metric Value */}
         <div className="mt-2 flex items-baseline gap-2">
-          <p className="font-display text-[28px] sm:text-[32px] font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums leading-none">
+          <p className="font-display text-[28px] leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums sm:text-[32px]">
             {value}
           </p>
         </div>
@@ -218,7 +213,7 @@ export function StatCard({
 
           {isInteractive && (
             <span
-              className="text-[color:var(--color-text-muted)] opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-[color:var(--color-brand-600)]"
+              className="-translate-x-1 text-[color:var(--color-text-muted)] opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-[color:var(--color-brand-600)] group-hover:opacity-100"
               aria-hidden="true"
             >
               <ArrowRight className="h-3.5 w-3.5" />

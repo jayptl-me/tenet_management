@@ -376,7 +376,7 @@ export default function EditInvoicePage() {
                   />
                 </div>
 
-                <div className={clsx(surfaceNestedClass, 'space-y-2 p-3.5 text-13')}>
+                <div className={clsx(surfaceNestedClass, 'text-13 space-y-2 p-3.5')}>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Month</span>
                     <span className="font-semibold text-(--color-text-primary)">
@@ -390,17 +390,13 @@ export default function EditInvoicePage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-(--color-text-muted)">
-                      Balance
-                    </span>
+                    <span className="font-medium text-(--color-text-muted)">Balance</span>
                     <span className="font-display text-base font-bold text-(--color-danger-600) tabular-nums">
                       {fmtMoney(invoiceData.balance ?? 0)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
-                    <span className="font-medium text-(--color-text-muted)">
-                      Current total
-                    </span>
+                    <span className="font-medium text-(--color-text-muted)">Current total</span>
                     <span className="font-semibold text-(--color-text-primary) tabular-nums">
                       {fmtMoney(invoiceData.totalAmount)}
                     </span>
@@ -408,7 +404,7 @@ export default function EditInvoicePage() {
                 </div>
 
                 {isPaymentDriven && (
-                  <p className="flex items-start gap-1.5 text-2xs leading-relaxed font-medium text-(--color-text-muted)">
+                  <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-text-muted)">
                     <CreditCard className="mt-0.5 h-3 w-3 shrink-0" />
                     Status is payment-driven for this invoice; it updates automatically when
                     payments are verified.

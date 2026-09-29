@@ -387,7 +387,7 @@ function ComplaintForm() {
                         <X className="h-3 w-3" />
                       </button>
                     </div>
-                    <span className="mt-1.5 w-full truncate text-center text-3xs font-medium text-(--color-text-muted)">
+                    <span className="text-3xs mt-1.5 w-full truncate text-center font-medium text-(--color-text-muted)">
                       Photo {idx + 1}
                     </span>
                   </div>

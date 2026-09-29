@@ -350,9 +350,7 @@ export default function EditVisitorPage() {
               {...register('expectedArrival')}
             />
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-(--color-text-primary)">
-                Arrival summary
-              </p>
+              <p className="text-sm font-medium text-(--color-text-primary)">Arrival summary</p>
               {summary ? (
                 <div
                   className={
@@ -367,9 +365,7 @@ export default function EditVisitorPage() {
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-(--color-brand-600)" />
                   )}
                   <span>
-                    <span className="font-bold text-(--color-text-primary)">
-                      {summary.label}
-                    </span>
+                    <span className="font-bold text-(--color-text-primary)">{summary.label}</span>
                     <span className="block text-xs font-medium text-(--color-text-secondary)">
                       {summary.detail}
                     </span>
@@ -395,9 +391,7 @@ export default function EditVisitorPage() {
           divided
         >
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-(--color-text-primary)">
-              Current status
-            </p>
+            <p className="text-sm font-medium text-(--color-text-primary)">Current status</p>
             <p className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm font-bold text-(--color-text-secondary)">
               {statusLabel}
             </p>

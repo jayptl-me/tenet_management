@@ -83,24 +83,17 @@ const roomEntryColumns: DataTableColumn<RoomEntry>[] = [
     accessor: (entry) => {
       const href = roomHref(entry);
       return href ? (
-        <Link
-          href={href}
-          className="font-semibold text-(--color-brand-600) hover:underline"
-        >
+        <Link href={href} className="font-semibold text-(--color-brand-600) hover:underline">
           {roomNumberOf(entry)}
         </Link>
       ) : (
-        <span className="font-semibold text-(--color-text-primary)">
-          {roomNumberOf(entry)}
-        </span>
+        <span className="font-semibold text-(--color-text-primary)">{roomNumberOf(entry)}</span>
       );
     },
   },
   {
     header: 'Floor',
-    accessor: (entry) => (
-      <span className="text-(--color-text-secondary)">{floorOf(entry)}</span>
-    ),
+    accessor: (entry) => <span className="text-(--color-text-secondary)">{floorOf(entry)}</span>,
   },
   {
     header: 'Previous',
@@ -162,7 +155,7 @@ const linkedInvoiceColumns: DataTableColumn<LinkedInvoice>[] = [
   {
     header: 'Electricity Share',
     accessor: (inv) => (
-      <span className="font-semibold tabular-nums text-(--color-brand-600)">
+      <span className="font-semibold text-(--color-brand-600) tabular-nums">
         ₹{inv.electricityAmount.toLocaleString('en-IN')}
       </span>
     ),
@@ -170,16 +163,14 @@ const linkedInvoiceColumns: DataTableColumn<LinkedInvoice>[] = [
   {
     header: 'Total Invoice',
     accessor: (inv) => (
-      <span className="font-semibold tabular-nums text-(--color-text-primary)">
+      <span className="font-semibold text-(--color-text-primary) tabular-nums">
         ₹{inv.totalAmount.toLocaleString('en-IN')}
       </span>
     ),
   },
   {
     header: 'Status',
-    accessor: (inv) => (
-      <StatusBadge variant={statusToVariant(inv.status)} label={inv.status} />
-    ),
+    accessor: (inv) => <StatusBadge variant={statusToVariant(inv.status)} label={inv.status} />,
   },
 ];
 

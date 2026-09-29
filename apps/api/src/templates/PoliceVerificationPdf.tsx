@@ -269,8 +269,7 @@ export function PoliceVerificationPdf({
             <Text style={styles.pgAddress}>{pg.address || 'Address not specified'}</Text>
             {pg.policeStation ? (
               <Text style={styles.pgAddress}>
-                Local Police Jurisdiction:{' '}
-                <Text style={styles.valueBold}>{pg.policeStation}</Text>
+                Local Police Jurisdiction: <Text style={styles.valueBold}>{pg.policeStation}</Text>
               </Text>
             ) : null}
           </View>
@@ -280,9 +279,7 @@ export function PoliceVerificationPdf({
             {tenant.photoUrl ? (
               <Image src={tenant.photoUrl} style={styles.photoImage} />
             ) : (
-              <Text style={styles.photoPlaceholderText}>
-                Affix Recent Passport Photo Here
-              </Text>
+              <Text style={styles.photoPlaceholderText}>Affix Recent Passport Photo Here</Text>
             )}
           </View>
         </View>
@@ -298,9 +295,7 @@ export function PoliceVerificationPdf({
               </View>
               <View style={styles.col2}>
                 <Text style={styles.label}>Father / Spouse Name</Text>
-                <Text style={styles.value}>
-                  {profile?.fatherOrSpouseName || 'Not specified'}
-                </Text>
+                <Text style={styles.value}>{profile?.fatherOrSpouseName || 'Not specified'}</Text>
               </View>
             </View>
 
@@ -372,9 +367,7 @@ export function PoliceVerificationPdf({
               </View>
               <View style={styles.col3}>
                 <Text style={styles.label}>College / Company Name</Text>
-                <Text style={styles.valueBold}>
-                  {occ?.organizationName || 'Not specified'}
-                </Text>
+                <Text style={styles.valueBold}>{occ?.organizationName || 'Not specified'}</Text>
               </View>
               <View style={styles.col3}>
                 <Text style={styles.label}>ID / Enrollment No.</Text>
@@ -429,9 +422,7 @@ export function PoliceVerificationPdf({
               </View>
               <View style={styles.col2}>
                 <Text style={styles.label}>Emergency Phone Number</Text>
-                <Text style={styles.valueBold}>
-                  {emergencyContact?.phone || 'Not specified'}
-                </Text>
+                <Text style={styles.valueBold}>{emergencyContact?.phone || 'Not specified'}</Text>
               </View>
             </View>
           </View>
@@ -439,9 +430,7 @@ export function PoliceVerificationPdf({
 
         {/* Section 5: Local City References (Mandatory in Police Orders) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            5. Two Local References / Guarantors in City
-          </Text>
+          <Text style={styles.sectionTitle}>5. Two Local References / Guarantors in City</Text>
           <View style={styles.sectionContent}>
             <View style={styles.row}>
               <View style={styles.col2}>
@@ -474,7 +463,9 @@ export function PoliceVerificationPdf({
               <View style={styles.col3}>
                 <Text style={styles.label}>Document Type Attached</Text>
                 <Text style={styles.valueBold}>
-                  {documentInfo?.type ? documentInfo.type.toUpperCase().replace('_', ' ') : 'GOVT ID'}
+                  {documentInfo?.type
+                    ? documentInfo.type.toUpperCase().replace('_', ' ')
+                    : 'GOVT ID'}
                 </Text>
               </View>
               <View style={styles.col3}>
@@ -496,12 +487,15 @@ export function PoliceVerificationPdf({
         {/* Section 7: Statutory Declaration & Undertakings */}
         <View style={{ marginTop: 4, marginBottom: 6 }}>
           <Text style={styles.declarationText}>
-            <Text style={{ fontFamily: 'Helvetica-Bold' }}>Tenant Declaration: </Text>
-            I hereby solemnly declare that all information furnished above is true and correct to the best of my knowledge. I have not been convicted by any Court of Law, nor is any criminal proceeding or investigation pending against me in any police station or court in India.
+            <Text style={{ fontFamily: 'Helvetica-Bold' }}>Tenant Declaration: </Text>I hereby
+            solemnly declare that all information furnished above is true and correct to the best of
+            my knowledge. I have not been convicted by any Court of Law, nor is any criminal
+            proceeding or investigation pending against me in any police station or court in India.
           </Text>
           <Text style={styles.declarationText}>
-            <Text style={{ fontFamily: 'Helvetica-Bold' }}>Landlord Undertaking: </Text>
-            I hereby certify that I have verified the original identity proof and admission/employment details of the tenant before letting out the above accommodation.
+            <Text style={{ fontFamily: 'Helvetica-Bold' }}>Landlord Undertaking: </Text>I hereby
+            certify that I have verified the original identity proof and admission/employment
+            details of the tenant before letting out the above accommodation.
           </Text>
         </View>
 

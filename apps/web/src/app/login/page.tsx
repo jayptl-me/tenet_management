@@ -168,7 +168,7 @@ export default function AdminLoginPage() {
             <h1 className="font-display text-2xl font-bold tracking-tight text-(--color-text-primary)">
               Admin Login
             </h1>
-            <p className="mt-1.5 text-13 font-medium text-(--color-text-muted)">
+            <p className="text-13 mt-1.5 font-medium text-(--color-text-muted)">
               Sign in to the admin panel
             </p>
           </div>
@@ -189,7 +189,7 @@ export default function AdminLoginPage() {
                   {error.includes('Flutter') ||
                   error.includes('Tenant') ||
                   error.includes('Guardian') ? (
-                    <p className="mt-1.5 text-2xs font-medium text-(--color-danger-600)">
+                    <p className="text-2xs mt-1.5 font-medium text-(--color-danger-600)">
                       Use the Flutter app under /mobile (web or mobile) for resident portals.
                     </p>
                   ) : null}

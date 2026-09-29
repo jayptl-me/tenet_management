@@ -185,9 +185,7 @@ export default function WashingMachinesPage() {
             <span className="flex items-center gap-1 text-sm font-medium text-(--color-text-primary)">
               <User className="h-3 w-3" /> {row.currentUser.name}
             </span>
-            <p className="text-xs text-(--color-text-muted)">
-              Room {row.currentUser.room}
-            </p>
+            <p className="text-xs text-(--color-text-muted)">Room {row.currentUser.room}</p>
           </div>
         ) : (
           <span className="text-sm text-(--color-text-muted)">—</span>

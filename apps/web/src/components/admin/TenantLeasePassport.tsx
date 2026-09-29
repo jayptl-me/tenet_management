@@ -44,7 +44,7 @@ export function TenantLeasePassport({
   const beds =
     standardBedIds.length > 0
       ? standardBedIds.map((id) => bedMap.get(id) ?? { bedId: id, isOccupied: false })
-      : room?.beds ?? [];
+      : (room?.beds ?? []);
   const floorLabel = room?.floor?.label ?? 'Floor not specified';
 
   return (
