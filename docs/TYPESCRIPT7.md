@@ -54,8 +54,8 @@ v16.3.4 release notes and shipped dist
    TS 6 compatibility line). It would silently move the web app off TS 7.
 3. Never run `npm install` or `yarn install` in this repo. Bun only
    (`bun install`); npm cannot resolve `workspace:*`.
-4. Keep `next` and `eslint-config-next` on the same version in
-   `apps/web/package.json`.
+4. Keep `oxlint` at >=1.80 in root `package.json` (`@shadcn/lint`
+   registers as an oxlint jsPlugin).
 5. In-Next build type checking is bypassed (`typescript.ignoreBuildErrors`
    in `apps/web/next.config.ts`). Strict typing is enforced by
    `bun run typecheck` (`tsc --noEmit` on TS 7). Keep that gate in CI.
