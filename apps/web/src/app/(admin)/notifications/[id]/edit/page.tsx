@@ -207,22 +207,35 @@ export default function EditNotificationPage() {
 
         <FormSection title="Delivery settings" description="Type and audience targeting" divided>
           <FormGrid>
-            <Select
-              label="Notification type"
-              options={typeOptions}
-              error={err.type?.message}
-              {...register('type')}
+            <Controller
+              name="type"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Notification type"
+                  options={typeOptions}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  error={err.type?.message}
+                />
+              )}
             />
-            <Select
-              label="Target audience"
-              options={targetTypeOptions}
-              error={err.targetType?.message}
-              {...register('targetType', {
-                onChange: () => {
-                  setValue('targetIds', '', { shouldValidate: true });
-                  setPickerValue('');
-                },
-              })}
+            <Controller
+              name="targetType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Target audience"
+                  options={targetTypeOptions}
+                  value={field.value ?? ''}
+                  onChange={(val) => {
+                    field.onChange(val);
+                    setValue('targetIds', '', { shouldValidate: true });
+                    setPickerValue('');
+                  }}
+                  error={err.targetType?.message}
+                />
+              )}
             />
             {currentTarget !== 'all' && (
               <FormFullWidth>
@@ -285,12 +298,10 @@ export default function EditNotificationPage() {
                           key={tid}
                           type="button"
                           onClick={() => removeTargetId(tid)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-xs font-medium text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-danger-300)] hover:text-[color:var(--color-danger-600)]"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-(--border-color) bg-(--color-field-bg) px-2.5 py-1 text-xs font-medium text-(--color-text-secondary) hover:border-(--color-danger-300) hover:text-(--color-danger-600)"
                           title="Remove"
                         >
-                          <span className="max-w-[12rem] truncate font-mono">
-                            {tid}
-                          </span>
+                          <span className="max-w-[12rem] truncate font-mono">{tid}</span>
                           <span aria-hidden="true">x</span>
                         </button>
                       ))}
@@ -301,8 +312,8 @@ export default function EditNotificationPage() {
             )}
           </FormGrid>
 
-          <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] px-3 py-2">
-            <p className="text-xs font-medium text-[color:var(--color-brand-700)]">
+          <div className="mt-4 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) px-3 py-2">
+            <p className="text-xs font-medium text-(--color-brand-700)">
               <Send className="mr-1 inline h-3 w-3" />
               Notice: Editing updates notification content and classification in system history. It
               does not retract or re-dispatch push notifications.

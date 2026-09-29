@@ -64,6 +64,17 @@ const schema = z.object({
     .or(z.literal(''))
     .refine((v) => !v || isValidInPhone(v), 'Must be a valid Indian mobile (+91...)'),
   emergencyRelation: z.string().optional(),
+  fatherOrSpouseName: z.string().optional(),
+  dob: z.string().optional(),
+  gender: z.enum(['', 'male', 'female', 'other']).optional(),
+  permanentStreet: z.string().optional(),
+  permanentCity: z.string().optional(),
+  permanentState: z.string().optional(),
+  permanentPincode: z.string().optional(),
+  permanentPoliceStation: z.string().optional(),
+  occupationCategory: z.enum(['', 'salaried', 'student', 'business', 'other']).optional(),
+  organizationName: z.string().optional(),
+  stayPurpose: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -157,19 +168,35 @@ function TenantForm() {
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      const moveInIso = new Date(`${data.moveInDate}T00:00:00.000Z`).toISOString();
       const hasEmergency = Boolean(data.emergencyName?.trim());
       if (hasEmergency && (!data.emergencyPhone || !data.emergencyRelation)) {
         setSubmitError('Emergency contact requires name, phone, and relation.');
         return;
       }
+      const hasPermanent = Boolean(
+        data.permanentStreet?.trim() ||
+          data.permanentCity?.trim() ||
+          data.permanentPoliceStation?.trim(),
+      );
+      const hasOccupation = Boolean(
+        data.occupationCategory || data.organizationName?.trim(),
+      );
+      const hasVp = Boolean(
+        data.fatherOrSpouseName?.trim() ||
+          data.dob ||
+          data.gender ||
+          hasPermanent ||
+          hasOccupation ||
+          data.stayPurpose?.trim(),
+      );
+
       const payload: Record<string, unknown> = {
-        name: data.name,
-        email: data.email,
+        name: data.name.trim(),
+        email: data.email.toLowerCase().trim(),
         phone: normalizeInPhone(data.phone),
         roomId: data.roomId,
         bedId: data.bedId,
-        moveInDate: moveInIso,
+        moveInDate: new Date(`${data.moveInDate}T00:00:00.000Z`).toISOString(),
         depositPaid: data.depositPaid,
         monthlyRent: data.monthlyRent,
         enquiryId: enquiryId || undefined,
@@ -178,6 +205,31 @@ function TenantForm() {
               name: data.emergencyName!.trim(),
               phone: normalizeInPhone(data.emergencyPhone),
               relation: data.emergencyRelation!.trim(),
+            }
+          : undefined,
+        verificationProfile: hasVp
+          ? {
+              fatherOrSpouseName: data.fatherOrSpouseName?.trim() || undefined,
+              dob: data.dob ? new Date(`${data.dob}T00:00:00.000Z`).toISOString() : undefined,
+              gender: data.gender ? (data.gender as 'male' | 'female' | 'other') : undefined,
+              permanentAddress: hasPermanent
+                ? {
+                    street: data.permanentStreet?.trim() || undefined,
+                    city: data.permanentCity?.trim() || undefined,
+                    state: data.permanentState?.trim() || undefined,
+                    pincode: data.permanentPincode?.trim() || undefined,
+                    policeStation: data.permanentPoliceStation?.trim() || undefined,
+                  }
+                : undefined,
+              occupation: hasOccupation
+                ? {
+                    category: data.occupationCategory
+                      ? (data.occupationCategory as 'salaried' | 'student' | 'business' | 'other')
+                      : undefined,
+                    organizationName: data.organizationName?.trim() || undefined,
+                  }
+                : undefined,
+              stayPurpose: data.stayPurpose?.trim() || undefined,
             }
           : undefined,
       };
@@ -211,22 +263,22 @@ function TenantForm() {
           <div className="space-y-6 lg:col-span-7 xl:col-span-8">
             {/* Unit Pre-Selected Notification Strip */}
             {selectedRoom && (
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] border border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-50)]/60 p-4 shadow-[var(--shadow-sm)]">
+              <div className="flex items-center justify-between rounded-(--radius-xl) border border-(--color-brand-300) bg-(--color-brand-50)/60 p-4 shadow-(--shadow-sm)">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-[color:var(--color-brand-500)] text-white shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-(--radius-lg) bg-(--color-brand-500) text-(--color-on-brand) shadow-sm">
                     <Building className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-base font-bold text-[color:var(--color-brand-950)]">
+                      <span className="font-mono text-base font-bold text-(--color-brand-950)">
                         Room {selectedRoom.roomNumber}
                         {bedIdWatch ? ` · Bed ${bedIdWatch}` : ''}
                       </span>
-                      <span className="rounded-full bg-[color:var(--color-brand-100)] px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-[color:var(--color-brand-800)] uppercase">
+                      <span className="rounded-full bg-(--color-brand-100) px-2.5 py-0.5 text-3xs font-bold tracking-wider text-(--color-brand-800) uppercase">
                         Assigned Unit
                       </span>
                     </div>
-                    <p className="text-xs text-[color:var(--color-brand-700)]">
+                    <p className="text-xs text-(--color-brand-700)">
                       {selectedRoom.floor?.label ?? 'Floor'} · ₹
                       {selectedRoom.monthlyRent?.toLocaleString()}/mo · {selectedRoom.sharingType}{' '}
                       Sharing
@@ -240,7 +292,7 @@ function TenantForm() {
                     setValue('bedId', '');
                     setSelectedRoom(null);
                   }}
-                  className="text-xs font-bold text-[color:var(--color-brand-700)] underline-offset-2 hover:underline"
+                  className="text-xs font-bold text-(--color-brand-700) underline-offset-2 hover:underline"
                 >
                   Change Unit
                 </button>
@@ -368,14 +420,14 @@ function TenantForm() {
                         <button
                           type="button"
                           onClick={() => setValue('depositPaid', selectedRoom.monthlyRent)}
-                          className="rounded bg-[color:var(--color-field-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]"
+                          className="rounded bg-(--color-field-bg) px-1.5 py-0.5 text-3xs font-semibold text-(--color-brand-600) hover:bg-(--color-brand-50)"
                         >
                           1 Mo (₹{selectedRoom.monthlyRent.toLocaleString()})
                         </button>
                         <button
                           type="button"
                           onClick={() => setValue('depositPaid', 0)}
-                          className="rounded bg-[color:var(--color-field-bg)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-200)]"
+                          className="rounded bg-(--color-field-bg) px-1.5 py-0.5 text-3xs font-semibold text-(--color-text-muted) hover:bg-(--color-surface-200)"
                         >
                           No Deposit
                         </button>
@@ -421,6 +473,69 @@ function TenantForm() {
                   />
                 </FormGrid>
               </FormSection>
+
+              {/* Section 5: Police Verification & Statutory Profile (Optional) */}
+              <FormSection
+                title="Police Verification (Optional at Intake)"
+                icon={<Shield className="h-4 w-4" />}
+                description="Permanent native address, jurisdiction police station, and occupation details"
+                divided
+              >
+                <FormGrid cols={3}>
+                  <Input
+                    label="Father / Spouse Name"
+                    placeholder="Full name"
+                    {...register('fatherOrSpouseName')}
+                  />
+                  <DatePicker
+                    label="Date of Birth"
+                    error={err.dob?.message}
+                    leftIcon={<CalendarDays className="h-4 w-4" />}
+                    {...register('dob')}
+                  />
+                  <Select
+                    label="Gender"
+                    options={[
+                      { value: '', label: 'Select gender' },
+                      { value: 'male', label: 'Male' },
+                      { value: 'female', label: 'Female' },
+                      { value: 'other', label: 'Other' },
+                    ]}
+                    {...register('gender')}
+                  />
+                </FormGrid>
+
+                <FormGrid cols={3}>
+                  <Input
+                    label="Native City / Town"
+                    placeholder="City"
+                    {...register('permanentCity')}
+                  />
+                  <Input
+                    label="Native State"
+                    placeholder="State"
+                    {...register('permanentState')}
+                  />
+                  <Input
+                    label="Native Police Station"
+                    placeholder="Police Station jurisdiction"
+                    {...register('permanentPoliceStation')}
+                  />
+                </FormGrid>
+
+                <FormGrid cols={2}>
+                  <Input
+                    label="Organization / College"
+                    placeholder="Workplace or university"
+                    {...register('organizationName')}
+                  />
+                  <Input
+                    label="Purpose of Stay"
+                    placeholder="Employment / Higher Education"
+                    {...register('stayPurpose')}
+                  />
+                </FormGrid>
+              </FormSection>
             </FormCard>
           </div>
 
@@ -457,7 +572,7 @@ export default function NewTenantPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

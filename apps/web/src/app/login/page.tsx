@@ -136,11 +136,11 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[color:var(--color-surface-50)] p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-(--color-surface-50) p-4">
       {/* Decorative background blobs — theme-aware */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-[color:var(--color-brand-500)] opacity-[0.04] blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-[color:var(--color-accent-500)] opacity-[0.04] blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-(--color-brand-500) opacity-5 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-(--color-accent-500) opacity-5 blur-3xl" />
       </div>
 
       {/* Card */}
@@ -150,7 +150,7 @@ export default function AdminLoginPage() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="relative w-full max-w-md"
       >
-        <div className="rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 shadow-[var(--shadow-card)]">
+        <div className="rounded-2xl border border-(--border-color) bg-(--color-card-bg) p-8 shadow-(--shadow-card)">
           {/* Brand Icon */}
           <motion.div
             variants={brandIcon}
@@ -158,17 +158,17 @@ export default function AdminLoginPage() {
             animate={mounted ? 'visible' : 'hidden'}
             className="mb-6 flex justify-center"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--color-brand-100)] shadow-[var(--shadow-sm)] ring-2 ring-[color:var(--color-brand-200)]">
-              <Building2 className="h-7 w-7 text-[color:var(--color-brand-600)]" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-(--color-brand-100) shadow-(--shadow-sm) ring-2 ring-(--color-brand-200)">
+              <Building2 className="h-7 w-7 text-(--color-brand-600)" />
             </div>
           </motion.div>
 
           {/* Header */}
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-display font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-(--color-text-primary)">
               Admin Login
             </h1>
-            <p className="mt-1.5 text-[13px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="mt-1.5 text-13 font-medium text-(--color-text-muted)">
               Sign in to the admin panel
             </p>
           </div>
@@ -178,18 +178,18 @@ export default function AdminLoginPage() {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mb-6 rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-4"
+              className="mb-6 rounded-xl border border-(--color-danger-200) bg-(--color-danger-50) p-4"
             >
               <div className="flex items-start gap-2.5">
-                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:var(--color-danger-500)]" />
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-(--color-danger-500)" />
                 <div>
-                  <p className="text-[13px] leading-snug font-semibold text-[color:var(--color-danger-700)]">
+                  <p className="text-13 leading-snug font-semibold text-(--color-danger-700)">
                     {error}
                   </p>
                   {error.includes('Flutter') ||
                   error.includes('Tenant') ||
                   error.includes('Guardian') ? (
-                    <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-danger-600)]">
+                    <p className="mt-1.5 text-2xs font-medium text-(--color-danger-600)">
                       Use the Flutter app under /mobile (web or mobile) for resident portals.
                     </p>
                   ) : null}
@@ -250,7 +250,7 @@ export default function AdminLoginPage() {
                   setForgotEmail('');
                   setForgotOpen(true);
                 }}
-                className="text-[11px] font-semibold text-[color:var(--color-brand-600)] underline-offset-2 transition-colors hover:text-[color:var(--color-brand-700)] hover:underline"
+                className="text-2xs font-semibold text-(--color-brand-600) underline-offset-2 transition-colors hover:text-(--color-brand-700) hover:underline"
               >
                 Forgot password?
               </button>
@@ -288,7 +288,7 @@ export default function AdminLoginPage() {
             custom={4}
             initial="hidden"
             animate={mounted ? 'visible' : 'hidden'}
-            className="mt-6 space-y-3 border-t border-[color:var(--border-color)] pt-4"
+            className="mt-6 space-y-3 border-t border-(--border-color) pt-4"
           >
             {/* Demo admin login */}
             <Button
@@ -301,7 +301,7 @@ export default function AdminLoginPage() {
                 setValue('password', 'Admin@123456', { shouldValidate: true });
                 handleSubmit(onSubmit)();
               }}
-              className="flex w-full items-center justify-center gap-1.5 text-[12px] font-semibold"
+              className="w-full"
               size="sm"
             >
               <Zap className="h-3.5 w-3.5" />
@@ -309,8 +309,8 @@ export default function AdminLoginPage() {
             </Button>
 
             <div className="flex items-center justify-center gap-1.5 text-center">
-              <KeyRound className="h-3 w-3 text-[color:var(--color-text-muted)]" />
-              <p className="text-[10px] font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+              <KeyRound className="h-3 w-3 text-(--color-text-muted)" />
+              <p className="text-3xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                 Administrator access only
               </p>
             </div>
@@ -335,18 +335,18 @@ export default function AdminLoginPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-md rounded-2xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-lg)]"
+              className="relative w-full max-w-md rounded-2xl border border-(--border-color) bg-(--color-card-bg) p-6 shadow-(--shadow-lg)"
             >
               <div className="flex items-start justify-between pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--color-brand-100) text-(--color-brand-600)">
                     <KeyRound className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-[color:var(--color-text-primary)]">
+                    <h2 className="text-lg font-bold text-(--color-text-primary)">
                       Reset Password
                     </h2>
-                    <p className="text-xs text-[color:var(--color-text-muted)]">
+                    <p className="text-xs text-(--color-text-muted)">
                       Receive recovery instructions via email
                     </p>
                   </div>
@@ -354,7 +354,7 @@ export default function AdminLoginPage() {
                 <button
                   type="button"
                   onClick={() => setForgotOpen(false)}
-                  className="rounded-lg p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                  className="rounded-lg p-1 text-(--color-text-muted) hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -362,14 +362,14 @@ export default function AdminLoginPage() {
 
               {forgotSuccess ? (
                 <div className="space-y-4 py-2 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-success-100)] text-[color:var(--color-success-600)]">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-(--color-success-100) text-(--color-success-600)">
                     <CheckCircle2 className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                    <h3 className="text-sm font-semibold text-(--color-text-primary)">
                       Reset Link Dispatched
                     </h3>
-                    <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                    <p className="mt-1 text-xs text-(--color-text-muted)">
                       If an account exists with this email address, a password reset link has been
                       sent. The link expires in 1 hour.
                     </p>
@@ -378,20 +378,20 @@ export default function AdminLoginPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setForgotOpen(false)}
-                    className="w-full text-xs font-semibold"
+                    className="w-full"
                   >
                     Back to Sign In
                   </Button>
                 </div>
               ) : (
                 <form onSubmit={handleForgotSubmit} className="space-y-4 pt-2">
-                  <p className="text-xs text-[color:var(--color-text-secondary)]">
+                  <p className="text-xs text-(--color-text-secondary)">
                     Enter the email address registered with your administrator account.
                   </p>
 
                   {forgotError && (
-                    <div className="flex items-start gap-2 rounded-xl border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-3 text-xs text-[color:var(--color-danger-700)]">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-danger-500)]" />
+                    <div className="flex items-start gap-2 rounded-xl border border-(--color-danger-200) bg-(--color-danger-50) p-3 text-xs text-(--color-danger-700)">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-danger-500)" />
                       <span>{forgotError}</span>
                     </div>
                   )}
@@ -411,7 +411,7 @@ export default function AdminLoginPage() {
                       type="button"
                       variant="outline"
                       onClick={() => setForgotOpen(false)}
-                      className="flex-1 text-xs"
+                      className="flex-1"
                     >
                       Cancel
                     </Button>
@@ -419,7 +419,7 @@ export default function AdminLoginPage() {
                       type="submit"
                       variant="primary"
                       loading={forgotSubmitting}
-                      className="flex-1 text-xs"
+                      className="flex-1"
                     >
                       Send Reset Link
                     </Button>

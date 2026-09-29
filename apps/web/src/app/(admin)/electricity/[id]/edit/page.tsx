@@ -228,7 +228,7 @@ export default function EditElectricityPage() {
       maxWidth="4xl"
     >
       {isLocked && (
-        <div className="mb-5 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-400)] bg-[color:var(--color-warning-50)] p-4 text-[color:var(--color-warning-800)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 rounded-(--radius-lg) border border-(--color-warning-400) bg-(--color-warning-50) p-4 text-(--color-warning-800) sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <Lock className="mt-0.5 h-5 w-5 flex-shrink-0" />
             <div>
@@ -242,7 +242,7 @@ export default function EditElectricityPage() {
           </div>
           <Link
             href={`/electricity/${id}`}
-            className="inline-flex items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--color-warning-400)] bg-[color:var(--color-card-bg)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-warning-800)] hover:bg-[color:var(--color-warning-100)]"
+            className="inline-flex items-center justify-center rounded-(--radius-md) border border-(--color-warning-400) bg-(--color-card-bg) px-3 py-1.5 text-xs font-bold text-(--color-warning-800) hover:bg-(--color-warning-100)"
           >
             Back to detail
           </Link>
@@ -314,7 +314,7 @@ export default function EditElectricityPage() {
           >
             <div className="space-y-3">
               {fields.length === 0 && (
-                <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--border-color)] px-4 py-8 text-center text-sm text-[color:var(--color-text-secondary)]">
+                <p className="rounded-(--radius-md) border border-dashed border-(--border-color) px-4 py-8 text-center text-sm text-(--color-text-secondary)">
                   No room readings yet. Click &quot;Add room&quot; to begin.
                 </p>
               )}
@@ -406,18 +406,18 @@ export default function EditElectricityPage() {
                     </div>
 
                     {/* Computed values for this entry */}
-                    <div className="col-span-full flex items-center gap-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface-50)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                    <div className="col-span-full flex items-center gap-4 rounded-(--radius-md) bg-(--color-surface-50) px-3 py-1.5 text-xs font-semibold text-(--color-text-secondary)">
                       <Calculator className="h-3.5 w-3.5" />
                       <span>
                         Units:{' '}
-                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                        <strong className="font-mono text-(--color-text-primary)">
                           {units}
                         </strong>
                       </span>
-                      <span className="text-[color:var(--border-color)]">|</span>
+                      <span className="text-(--border-color)">|</span>
                       <span>
                         Amount:{' '}
-                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                        <strong className="font-mono text-(--color-text-primary)">
                           ₹{amount.toLocaleString('en-IN')}
                         </strong>
                       </span>
@@ -431,11 +431,11 @@ export default function EditElectricityPage() {
               <div
                 className={clsx(surfaceNestedClass, 'mt-4 flex items-center justify-between p-4')}
               >
-                <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                <span className="flex items-center gap-2 text-sm font-semibold text-(--color-text-secondary)">
                   <Zap className="h-4 w-4" />
                   Computed total from readings
                 </span>
-                <span className="font-mono text-xl font-bold text-[color:var(--color-text-primary)] tabular-nums">
+                <span className="font-mono text-xl font-bold text-(--color-text-primary) tabular-nums">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -444,10 +444,10 @@ export default function EditElectricityPage() {
             {showReconcileWarning && !isLocked && (
               <div
                 className={clsx(
-                  'mt-4 flex items-start gap-3 rounded-[var(--radius-lg)] border p-4',
+                  'mt-4 flex items-start gap-3 rounded-(--radius-lg) border p-4',
                   blockReconcile
-                    ? 'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]'
-                    : 'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
+                    ? 'border-(--color-danger-300) bg-(--color-danger-50) text-(--color-danger-800)'
+                    : 'border-(--color-warning-300) bg-(--color-warning-50) text-(--color-warning-800)',
                 )}
                 role="status"
               >

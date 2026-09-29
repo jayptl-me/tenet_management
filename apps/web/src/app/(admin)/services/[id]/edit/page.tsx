@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
@@ -58,6 +58,7 @@ export default function EditServicePage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -167,17 +168,31 @@ export default function EditServicePage() {
               helperText="Floor assignment is immutable"
               disabled
             />
-            <Select
-              label="Service type"
-              options={serviceTypeOptions}
-              error={errors.serviceType?.message}
-              {...register('serviceType')}
+            <Controller
+              name="serviceType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Service type"
+                  options={serviceTypeOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.serviceType?.message}
+                />
+              )}
             />
-            <Select
-              label="Status"
-              options={serviceStatusOptions}
-              error={errors.status?.message}
-              {...register('status')}
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Status"
+                  options={serviceStatusOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.status?.message}
+                />
+              )}
             />
           </FormGrid>
         </FormSection>

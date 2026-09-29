@@ -39,6 +39,16 @@ interface FloorDetail {
   createdAt: string;
 }
 
+interface FloorStats {
+  activeRooms: number;
+  inactiveRooms: number;
+  totalBeds: number;
+  occupiedBeds: number;
+  vacantBeds: number;
+  occupancyPct: number;
+  potentialRent: number;
+}
+
 interface RoomListing {
   _id: string;
   roomNumber: string;
@@ -79,6 +89,7 @@ export default function FloorDetailPage() {
 
   const [floor, setFloor] = useState<FloorDetail | null>(null);
   const [rooms, setRooms] = useState<RoomListing[]>([]);
+  const [floorStats, setFloorStats] = useState<FloorStats | null>(null);
   const [machines, setMachines] = useState<MachineListing[]>([]);
   const [amenityDefs, setAmenityDefs] = useState<AmenityDef[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,10 +107,15 @@ export default function FloorDetailPage() {
       .catch(async (err) => setError((await parseApiError(err)).message))
       .finally(() => setIsLoading(false));
 
+    // Server-aggregated rooms + stats — single source of truth, no client
+    // limit truncation. Falls back to zeros while loading.
     api
-      .get(`rooms?floorId=${id}&limit=200`)
-      .json<{ success: boolean; data: RoomListing[] }>()
-      .then((res) => setRooms(res.data ?? []))
+      .get(`floors/${id}/rooms`)
+      .json<{ success: boolean; data: { rooms: RoomListing[]; stats: FloorStats } }>()
+      .then((res) => {
+        setRooms(res.data?.rooms ?? []);
+        setFloorStats(res.data?.stats ?? null);
+      })
       .catch(() => {});
 
     api
@@ -116,21 +132,25 @@ export default function FloorDetailPage() {
   }, [id]);
 
   const stats = useMemo(() => {
-    const activeRooms = rooms.filter((r) => r.isActive);
-    const beds = activeRooms.flatMap((r) => r.beds ?? []);
-    const occupiedBeds = beds.filter((b) => b.isOccupied).length;
-    return {
-      activeRooms,
-      inactiveRooms: rooms.length - activeRooms.length,
-      beds,
-      occupiedBeds,
-      vacantBeds: beds.length - occupiedBeds,
-      occupancyPct: beds.length > 0 ? Math.round((occupiedBeds / beds.length) * 100) : 0,
-      potentialRent: activeRooms.reduce((sum, r) => sum + (r.monthlyRent ?? 0), 0),
+    const s: FloorStats = floorStats ?? {
+      activeRooms: 0,
+      inactiveRooms: 0,
+      totalBeds: 0,
+      occupiedBeds: 0,
+      vacantBeds: 0,
+      occupancyPct: 0,
+      potentialRent: 0,
     };
-  }, [rooms]);
+    const activeRooms = rooms.filter((r) => r.isActive);
+    return {
+      ...s,
+      activeRooms,
+      bedsCount: s.totalBeds,
+      occupiedBedsDisplay: s.occupiedBeds,
+    };
+  }, [rooms, floorStats]);
 
-    if (!isLoading && (error || !floor)) {
+  if (!isLoading && (error || !floor)) {
     return (
       <FormPage
         title="Floor Details"
@@ -145,7 +165,11 @@ export default function FloorDetailPage() {
   return (
     <FormPage
       title={floor?.label ?? 'Floor Details'}
-      description={floor ? `Floor #${floor.floorNumber} - rooms, beds, services, and amenities` : 'View floor information'}
+      description={
+        floor
+          ? `Floor #${floor.floorNumber} - rooms, beds, services, and amenities`
+          : 'View floor information'
+      }
       backHref="/floors"
       isLoading={isLoading}
       maxWidth="5xl"
@@ -178,20 +202,20 @@ export default function FloorDetailPage() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_1fr]">
             <div
               className={clsx(
-                'flex items-center justify-center gap-5 rounded-[var(--radius-xl)] border border-[color:var(--border-color)]',
-                'bg-[color:var(--color-card-bg)] px-8 py-5 shadow-[var(--shadow-card)]',
+                'flex items-center justify-center gap-5 rounded-(--radius-xl) border border-(--border-color)',
+                'bg-(--color-card-bg) px-8 py-5 shadow-(--shadow-card)',
               )}
             >
               <OccupancyRing
                 value={stats.occupancyPct}
                 size={112}
-                caption={`${stats.occupiedBeds} / ${stats.beds.length} beds`}
+                caption={`${stats.occupiedBedsDisplay} / ${stats.bedsCount} beds`}
               />
               <div className="space-y-1.5 text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                <p className="text-2xs font-semibold tracking-wide text-(--color-text-muted) uppercase">
                   {stats.vacantBeds} vacant bed{stats.vacantBeds !== 1 ? 's' : ''}
                 </p>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--color-text-muted)]">
+                <p className="text-2xs font-semibold tracking-wide text-(--color-text-muted) uppercase">
                   {stats.inactiveRooms > 0
                     ? `${stats.inactiveRooms} inactive room${stats.inactiveRooms !== 1 ? 's' : ''}`
                     : 'All rooms active'}
@@ -207,12 +231,12 @@ export default function FloorDetailPage() {
               />
               <StatCard
                 title="Total Beds"
-                value={stats.beds.length}
+                value={stats.bedsCount}
                 icon={<BedDouble className="h-4 w-4" />}
               />
               <StatCard
                 title="Tenants Housed"
-                value={stats.occupiedBeds}
+                value={stats.occupiedBedsDisplay}
                 icon={<Users className="h-4 w-4" />}
                 variant="success"
               />
@@ -275,13 +299,13 @@ export default function FloorDetailPage() {
                       onClick={() => router.push(`/rooms/${room._id}`)}
                       className={clsx(
                         surfaceNestedClass,
-                        'group cursor-pointer p-4 text-left transition-[border-color,box-shadow] duration-[var(--transition-duration)]',
-                        'hover:border-[color:var(--color-brand-300)] hover:shadow-[var(--shadow-sm)]',
+                        'group cursor-pointer p-4 text-left transition-all duration-(--transition-duration)',
+                        'hover:border-(--color-brand-300) hover:shadow-(--shadow-sm)',
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2 text-sm font-bold text-[color:var(--color-text-primary)]">
-                          <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <span className="flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
+                          <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
                           {room.roomNumber}
                         </span>
                         <StatusBadge
@@ -289,7 +313,7 @@ export default function FloorDetailPage() {
                           label={room.isActive ? 'Active' : 'Inactive'}
                         />
                       </div>
-                      <p className="mt-1 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                      <p className="mt-1 text-2xs font-medium text-(--color-text-muted)">
                         {room.sharingType} sharing - {formatCurrency(room.monthlyRent)}/mo
                       </p>
                       <div className="mt-3 space-y-1.5">
@@ -297,12 +321,12 @@ export default function FloorDetailPage() {
                           <BedMiniGrid beds={room.beds ?? []} />
                           <span
                             className={clsx(
-                              'text-[11px] font-bold tabular-nums',
+                              'text-2xs font-bold tabular-nums',
                               full
-                                ? 'text-[color:var(--color-danger-600)]'
+                                ? 'text-(--color-danger-600)'
                                 : occupied > 0
-                                  ? 'text-[color:var(--color-warning-600)]'
-                                  : 'text-[color:var(--color-success-600)]',
+                                  ? 'text-(--color-warning-600)'
+                                  : 'text-(--color-success-600)',
                             )}
                           >
                             {occupied}/{totalBeds}
@@ -330,13 +354,13 @@ export default function FloorDetailPage() {
                     <span
                       key={ac.amenityKey}
                       className={clsx(
-                        'inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)]',
-                        'bg-[color:var(--color-field-bg)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-primary)]',
+                        'inline-flex items-center gap-1.5 rounded-full border border-(--border-color)',
+                        'bg-(--color-field-bg) px-3 py-1.5 text-xs font-semibold text-(--color-text-primary)',
                       )}
                     >
-                      <Building className="h-3.5 w-3.5 text-[color:var(--color-brand-500)]" />
+                      <Building className="h-3.5 w-3.5 text-(--color-brand-500)" />
                       {label}
-                      <span className="rounded-full bg-[color:var(--color-brand-100)] px-1.5 text-[10px] font-bold tabular-nums text-[color:var(--color-brand-700)]">
+                      <span className="rounded-full bg-(--color-brand-100) px-1.5 text-3xs font-bold text-(--color-brand-700) tabular-nums">
                         x{ac.count}
                       </span>
                     </span>
@@ -365,19 +389,19 @@ export default function FloorDetailPage() {
                     onClick={() => router.push('/washing-machines')}
                     className={clsx(
                       surfaceNestedClass,
-                      'flex cursor-pointer items-center justify-between gap-2 p-3.5 text-left transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg-hover)]',
+                      'flex cursor-pointer items-center justify-between gap-2 p-3.5 text-left transition-colors duration-(--transition-duration) hover:bg-(--color-field-bg-hover)',
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) bg-(--color-brand-100) text-(--color-brand-600)">
                         <Shirt className="h-4 w-4" />
                       </span>
                       <div>
-                        <p className="text-sm font-bold text-[color:var(--color-text-primary)]">
+                        <p className="text-sm font-bold text-(--color-text-primary)">
                           Machine #{m.machineNumber}
                         </p>
                         {m.label && (
-                          <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                          <p className="text-2xs font-medium text-(--color-text-muted)">
                             {m.label}
                           </p>
                         )}
@@ -403,5 +427,3 @@ export default function FloorDetailPage() {
     </FormPage>
   );
 }
-
-

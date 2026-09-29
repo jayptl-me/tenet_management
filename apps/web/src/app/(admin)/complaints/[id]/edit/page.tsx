@@ -194,7 +194,7 @@ export default function EditComplaintPage() {
                 label="Room"
                 value={
                   <span className="inline-flex items-center gap-1.5">
-                    <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Hash className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {tenantRoomNumber(tenant)} · Bed {tenantBed(tenant)}
                   </span>
                 }

@@ -11,7 +11,8 @@ import { findInvalidPhotoLine, parsePhotoUrls } from '@/lib/photo-urls';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { Hash, Banknote } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Hash, Banknote, Link as LinkIcon, Plus, X } from 'lucide-react';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -47,6 +48,9 @@ function NewRoomForm() {
   } | null>(null);
   const [rentTouched, setRentTouched] = useState(false);
   const [loadingDefs, setLoadingDefs] = useState(true);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoInput, setPhotoInput] = useState('');
+  const [photoError, setPhotoError] = useState('');
 
   const schema = z.object({
     roomNumber: z.string().min(1, 'Room number is required').max(20, 'Room number max 20 chars'),
@@ -96,6 +100,34 @@ function NewRoomForm() {
   });
 
   const watchedSharing = Number(watch('sharingType'));
+
+  const handleAddPhoto = () => {
+    const trimmed = photoInput.trim();
+    if (!trimmed) return;
+    if (!/^https?:\/\/.+/i.test(trimmed)) {
+      setPhotoError('Must be a valid http:// or https:// URL');
+      return;
+    }
+    if (photos.includes(trimmed)) {
+      setPhotoError('This photo URL has already been added');
+      return;
+    }
+    if (photos.length >= 8) {
+      setPhotoError('Maximum 8 photos allowed');
+      return;
+    }
+    const updated = [...photos, trimmed];
+    setPhotos(updated);
+    setValue('photoUrls', updated.join('\n'), { shouldValidate: true });
+    setPhotoInput('');
+    setPhotoError('');
+  };
+
+  const handleRemovePhoto = (idx: number) => {
+    const updated = photos.filter((_, i) => i !== idx);
+    setPhotos(updated);
+    setValue('photoUrls', updated.join('\n'), { shouldValidate: true });
+  };
 
   useEffect(() => {
     api
@@ -253,14 +285,80 @@ function NewRoomForm() {
             />
           </div>
           <div className="mt-4">
-            <Textarea
-              label="Photo URLs"
-              rows={3}
-              placeholder="Paste image URLs (one per line, e.g. https://...)"
-              helperText="Add public image links for this room. One URL per line."
-              error={err.photoUrls?.message}
-              {...register('photoUrls')}
-            />
+            <input type="hidden" {...register('photoUrls')} />
+            <label className="mb-1.5 block text-xs font-semibold text-(--color-text-primary)">
+              Room Photos {photos.length > 0 ? `(${photos.length}/8)` : ''}
+            </label>
+            <div className="space-y-3">
+              {photos.length < 8 && (
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="https://images.example.com/room-photo.jpg"
+                      value={photoInput}
+                      onChange={(e) => {
+                        setPhotoInput(e.target.value);
+                        if (photoError) setPhotoError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddPhoto();
+                        }
+                      }}
+                      leftIcon={
+                        <LinkIcon className="h-4 w-4 text-(--color-text-muted)" />
+                      }
+                      error={photoError || err.photoUrls?.message}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddPhoto}
+                    className="shrink-0"
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add Photo
+                  </Button>
+                </div>
+              )}
+
+              {photos.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {photos.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="group relative flex flex-col items-center overflow-hidden rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-2"
+                    >
+                      <div className="relative h-24 w-full overflow-hidden rounded-sm bg-black/5">
+                        <img
+                          src={url}
+                          alt={`Room photo ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src =
+                              'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                          title="Remove photo"
+                          aria-label={`Remove photo ${idx + 1}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <span className="mt-1.5 w-full truncate text-center font-mono text-2xs text-(--color-text-muted)">
+                        {url.split('/').pop() || `Photo ${idx + 1}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </FormSection>
 
@@ -296,7 +394,7 @@ export default function NewRoomPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

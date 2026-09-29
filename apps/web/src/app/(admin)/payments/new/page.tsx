@@ -15,11 +15,14 @@ import {
   CircleDollarSign,
   Info,
   ArrowRight,
+  Home,
+  FilePlus2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { Button } from '@/components/ui/Button';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -61,6 +64,23 @@ interface InvoiceOption {
   otherCharges?: number;
 }
 
+interface TenantProfile {
+  _id: string;
+  user?: { name: string; email?: string; phone?: string };
+  room?: { roomNumber: string; floor?: { label?: string; floorNumber?: number } };
+  bedId: string;
+  monthlyRent: number;
+  depositPaid: number;
+  moveInDate?: string;
+  isActive: boolean;
+}
+
+interface TenantDuesData {
+  totalDue: number;
+  depositHeld: number;
+  unpaidInvoices?: Array<{ _id: string; invoiceNumber: string; totalAmount: number; remaining?: number }>;
+}
+
 function toIsoFromLocal(datetimeLocal: string): string {
   const d = new Date(datetimeLocal);
   if (Number.isNaN(d.getTime())) return new Date().toISOString();
@@ -89,6 +109,11 @@ function NewPaymentForm() {
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(null);
 
+  // Tenant overview state
+  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
+  const [tenantDues, setTenantDues] = useState<TenantDuesData | null>(null);
+  const [tenantLoading, setTenantLoading] = useState(false);
+
   // Skip clearing invoiceId on the first tenant-driven load when deep-linking with prefs.
   const skipInvoiceClearOnce = useRef(Boolean(prefillTenantId));
   const invoicePrefillApplied = useRef(false);
@@ -115,6 +140,25 @@ function NewPaymentForm() {
   const invoiceId = useWatch({ control, name: 'invoiceId' });
   const amount = useWatch({ control, name: 'amount' });
   const method = useWatch({ control, name: 'method' });
+
+  // Load tenant profile & dues for smart overview
+  useEffect(() => {
+    if (!tenantId) {
+      setTenantProfile(null);
+      setTenantDues(null);
+      return;
+    }
+    setTenantLoading(true);
+    Promise.all([
+      api.get(`tenants/${tenantId}`).json<{ success: boolean; data: TenantProfile }>().catch(() => null),
+      api.get(`tenants/${tenantId}/dues`).json<{ success: boolean; data: TenantDuesData }>().catch(() => null),
+    ])
+      .then(([pRes, dRes]) => {
+        if (pRes?.data) setTenantProfile(pRes.data);
+        if (dRes?.data) setTenantDues(dRes.data);
+      })
+      .finally(() => setTenantLoading(false));
+  }, [tenantId]);
 
   const loadInvoices = useCallback(async (tid: string) => {
     if (!tid) {
@@ -155,7 +199,7 @@ function NewPaymentForm() {
       setValue('invoiceId', prefillInvoiceId);
       invoicePrefillApplied.current = true;
     } else if (tenantId) {
-      // Loaded and invoice not payable / missing — do not retry forever.
+      // Loaded and invoice not payable / missing - do not retry forever.
       invoicePrefillApplied.current = true;
     }
   }, [invoices, invoicesLoading, prefillInvoiceId, prefillTenantId, tenantId, setValue]);
@@ -169,9 +213,8 @@ function NewPaymentForm() {
     const found = invoices.find((inv) => inv._id === invoiceId);
     setSelectedInvoice(found ?? null);
     if (found) {
-      const balance =
-        found.balance ?? Math.max(0, found.totalAmount - (found.paidAmount ?? 0));
-      setValue('amount', balance > 0 ? balance : 0);
+      const bal = found.balance ?? Math.max(0, found.totalAmount - (found.paidAmount ?? 0));
+      setValue('amount', bal > 0 ? bal : 0);
     }
   }, [invoiceId, invoices, setValue]);
 
@@ -179,15 +222,17 @@ function NewPaymentForm() {
     ? (selectedInvoice.balance ?? Math.max(0, selectedInvoice.totalAmount - (selectedInvoice.paidAmount ?? 0)))
     : null;
   const overpay = balance != null && (Number(amount) || 0) > balance + 0.001;
+  const remainingAfter = balance != null ? Math.max(0, balance - (Number(amount) || 0)) : 0;
 
-  const quickAmounts = balance != null && balance > 0
-    ? [
-        { label: 'Full balance', value: balance },
-        { label: '50%', value: Math.round((balance / 2) * 100) / 100 },
-        { label: '₹1,000', value: 1000 },
-        { label: '₹5,000', value: 5000 },
-      ].filter((q) => q.value > 0 && q.value <= balance)
-    : [];
+  const quickAmounts =
+    balance != null && balance > 0
+      ? [
+          { label: 'Full balance', value: balance },
+          { label: '50%', value: Math.round((balance / 2) * 100) / 100 },
+          { label: '₹1,000', value: 1000 },
+          { label: '₹5,000', value: 5000 },
+        ].filter((q) => q.value > 0 && q.value <= balance)
+      : [];
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -216,7 +261,7 @@ function NewPaymentForm() {
   return (
     <FormPage
       title="Record Offline Payment"
-      description="Cash, bank transfer, or other methods linked to an invoice"
+      description="Cash, bank transfer, or offline UPI collection linked to an invoice"
       backHref="/payments"
       error={submitError}
       maxWidth="5xl"
@@ -234,21 +279,22 @@ function NewPaymentForm() {
               />
             }
           >
+            {/* Section 1: Tenant & Financial Summary */}
             <FormSection
-              title="Payer & invoice"
+              title="Tenant & Obligation"
               icon={<UserRound />}
-              description="Tenant and the open invoice being settled"
+              description="Select the resident and the payable invoice being settled"
             >
               <Controller
                 name="tenantId"
                 control={control}
                 render={({ field }) => (
                   <ResourceSelect
-                    label="Tenant"
+                    label="Resident"
                     endpoint="tenants?isActive=true"
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Select tenant..."
+                    placeholder="Search tenant by name or room..."
                     error={err.tenantId?.message}
                     valueKey="_id"
                     labelKey={tenantLabel}
@@ -257,25 +303,84 @@ function NewPaymentForm() {
                   />
                 )}
               />
-              <div className="mt-4">
-                <label className="mb-1.5 block text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                  Invoice
+
+              {/* Intelligent Tenant Context Strip */}
+              {tenantLoading ? (
+                <div className={clsx(surfaceNestedClass, 'mt-3 animate-pulse rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted)')}>
+                  Loading resident financial profile and balance...
+                </div>
+              ) : tenantProfile ? (
+                <div className={clsx(surfaceNestedClass, 'mt-3 rounded-(--radius-lg) p-4 space-y-2')}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-color) pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-(--color-brand-600)" />
+                      <span className="text-xs font-bold text-(--color-text-primary)">
+                        Room {tenantProfile.room?.roomNumber ?? 'N/A'}
+                        {tenantProfile.room?.floor?.label ? ` (${tenantProfile.room.floor.label})` : ''} · Bed {tenantProfile.bedId}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-(--color-text-muted)">
+                      Rent: <strong className="text-(--color-text-primary)">{fmtMoney(tenantProfile.monthlyRent)}/mo</strong>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3 text-xs">
+                    <div>
+                      <span className="text-(--color-text-muted) block text-2xs">Deposit Held</span>
+                      <span className="font-bold text-(--color-text-primary) tabular-nums">
+                        {fmtMoney(tenantProfile.depositPaid)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-(--color-text-muted) block text-2xs">Total Unpaid Dues</span>
+                      <span className={clsx('font-bold tabular-nums', (tenantDues?.totalDue ?? 0) > 0 ? 'text-(--color-danger-600)' : 'text-(--color-success-600)')}>
+                        {fmtMoney(tenantDues?.totalDue ?? 0)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-(--color-text-muted) block text-2xs">Unpaid Invoices</span>
+                      <span className="font-bold text-(--color-text-primary)">
+                        {tenantDues?.unpaidInvoices?.length ?? invoices.length} open
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Invoice selection */}
+              <div className="mt-5">
+                <label className="mb-1.5 block text-13 font-semibold text-(--color-text-primary)">
+                  Select Payable Invoice
                 </label>
                 {invoicesLoading ? (
-                  <div className={clsx(surfaceNestedClass, 'px-3 py-2.5 text-sm text-[color:var(--color-text-muted)]')}>
-                    Loading invoices...
+                  <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted) text-center')}>
+                    Loading payable invoices...
                   </div>
                 ) : !tenantId ? (
-                  <div className={clsx(surfaceNestedClass, 'flex items-center gap-2 px-3 py-2.5 text-sm text-[color:var(--color-text-muted)]')}>
-                    <Info className="h-4 w-4" />
-                    Select a tenant first
+                  <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) flex items-center gap-2 p-4 text-xs font-medium text-(--color-text-muted)')}>
+                    <Info className="h-4 w-4 shrink-0 text-(--color-brand-600)" />
+                    Select a resident above to inspect payable invoices.
                   </div>
                 ) : invoices.length === 0 ? (
-                  <div className={clsx(surfaceNestedClass, 'px-3 py-2.5 text-sm text-[color:var(--color-text-muted)]')}>
-                    No payable invoices for this tenant
+                  <div className="rounded-(--radius-lg) border border-(--color-brand-300) bg-(--color-brand-50) p-4 text-xs space-y-2">
+                    <p className="font-bold text-(--color-brand-900)">
+                      No unpaid invoices found for this resident.
+                    </p>
+                    <p className="text-(--color-brand-700) leading-relaxed">
+                      All existing invoices are settled. If you need to collect for this month or extra charges, generate a new invoice first.
+                    </p>
+                    <div className="pt-1">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => router.push(`/invoices/new?tenantId=${tenantId}`)}
+                      >
+                        <FilePlus2 className="h-3.5 w-3.5 mr-1" />
+                        Generate New Invoice
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     {invoices.map((inv) => {
                       const bal = inv.balance ?? Math.max(0, inv.totalAmount - (inv.paidAmount ?? 0));
                       const active = invoiceId === inv._id;
@@ -285,14 +390,14 @@ function NewPaymentForm() {
                           type="button"
                           onClick={() => setValue('invoiceId', inv._id, { shouldValidate: true })}
                           className={clsx(
-                            'rounded-[var(--radius-lg)] border p-3 text-left transition-all',
+                            'rounded-(--radius-lg) border p-3.5 text-left transition-all relative overflow-hidden',
                             active
-                              ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)] shadow-[var(--shadow-sm)]'
-                              : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-300)]',
+                              ? 'border-(--color-brand-600) bg-(--color-brand-50) shadow-(--shadow-sm)'
+                              : 'border-(--border-color) bg-(--color-card-bg) hover:border-(--color-brand-300)',
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)]">
+                            <span className="font-mono text-xs font-bold text-(--color-text-primary)">
                               {inv.invoiceNumber}
                             </span>
                             <StatusBadge
@@ -300,13 +405,17 @@ function NewPaymentForm() {
                               label={inv.status.replace(/_/g, ' ')}
                             />
                           </div>
-                          <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                            <span className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                          <div className="mt-2 flex items-baseline justify-between gap-2 border-t border-(--border-color) pt-2">
+                            <span className="text-xs font-medium text-(--color-text-muted)">
                               {inv.month}
                             </span>
-                            <span className="text-sm font-bold text-[color:var(--color-text-primary)] tabular-nums">
+                            <span className="text-sm font-bold text-(--color-danger-700) tabular-nums">
                               {fmtMoney(bal)} due
                             </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between text-2xs text-(--color-text-muted)">
+                            <span>Total: {fmtMoney(inv.totalAmount)}</span>
+                            {inv.paidAmount ? <span>Paid: {fmtMoney(inv.paidAmount)}</span> : null}
                           </div>
                         </button>
                       );
@@ -314,26 +423,31 @@ function NewPaymentForm() {
                   </div>
                 )}
                 {err.invoiceId?.message && (
-                  <p className="mt-1.5 text-[12px] font-medium text-[color:var(--color-danger-600)]" role="alert">
+                  <p className="mt-1.5 text-12 font-medium text-(--color-danger-600)" role="alert">
                     {err.invoiceId.message}
                   </p>
                 )}
               </div>
             </FormSection>
 
+            {/* Section 2: Settlement Details */}
             <FormSection
-              title="Payment"
+              title="Settlement Details"
               icon={<Banknote />}
-              description="Amount defaults to the invoice balance"
+              description="Specify the collected amount and payment method"
               divided
             >
               <FormGrid>
                 <div>
                   <Input
-                    label="Amount (₹)"
+                    label="Collected Amount (₹)"
                     type="number"
                     step="0.01"
-                    error={overpay ? `Amount exceeds remaining balance of ${fmtMoney(balance)}` : err.amount?.message}
+                    error={
+                      overpay
+                        ? `Amount exceeds remaining balance of ${fmtMoney(balance)}`
+                        : err.amount?.message
+                    }
                     leftIcon={<Banknote className="h-4 w-4" />}
                     {...register('amount')}
                   />
@@ -345,20 +459,21 @@ function NewPaymentForm() {
                           type="button"
                           onClick={() => setValue('amount', q.value, { shouldValidate: true })}
                           className={clsx(
-                            'rounded-[var(--radius-full)] border px-2.5 py-1 text-[11px] font-bold transition-colors',
+                            'rounded-full border px-2.5 py-0.5 text-2xs font-bold transition-colors',
                             Number(amount) === q.value
-                              ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)]'
-                              : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-300)]',
+                              ? 'border-(--color-brand-500) bg-(--color-brand-100) text-(--color-brand-900)'
+                              : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--color-brand-300)',
                           )}
                         >
-                          {q.label}
+                          {q.label} ({fmtMoney(q.value)})
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
+
                 <Input
-                  label="Paid At"
+                  label="Payment Date & Time"
                   type="datetime-local"
                   error={err.paidAt?.message}
                   {...register('paidAt')}
@@ -366,8 +481,8 @@ function NewPaymentForm() {
               </FormGrid>
 
               <div className="mt-4">
-                <label className="mb-1.5 block text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                  Payment method
+                <label className="mb-1.5 block text-13 font-semibold text-(--color-text-primary)">
+                  Payment Method
                 </label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {METHODS.map((m) => {
@@ -379,10 +494,10 @@ function NewPaymentForm() {
                         type="button"
                         onClick={() => setValue('method', m.value, { shouldValidate: true })}
                         className={clsx(
-                          'flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] border p-3 transition-all',
+                          'flex flex-col items-center gap-1.5 rounded-(--radius-lg) border p-3 transition-all',
                           active
-                            ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)] shadow-[var(--shadow-sm)]'
-                            : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-300)]',
+                            ? 'border-(--color-brand-600) bg-(--color-brand-50) shadow-(--shadow-sm)'
+                            : 'border-(--border-color) bg-(--color-card-bg) hover:border-(--color-brand-300)',
                         )}
                         aria-pressed={active}
                       >
@@ -390,21 +505,21 @@ function NewPaymentForm() {
                           className={clsx(
                             'h-5 w-5',
                             active
-                              ? 'text-[color:var(--color-brand-600)]'
-                              : 'text-[color:var(--color-text-muted)]',
+                              ? 'text-(--color-brand-600)'
+                              : 'text-(--color-text-muted)',
                           )}
                         />
                         <span
                           className={clsx(
                             'text-xs font-bold',
                             active
-                              ? 'text-[color:var(--color-brand-800)]'
-                              : 'text-[color:var(--color-text-primary)]',
+                              ? 'text-(--color-brand-900)'
+                              : 'text-(--color-text-primary)',
                           )}
                         >
                           {m.label}
                         </span>
-                        <span className="text-center text-[10px] font-medium text-[color:var(--color-text-muted)]">
+                        <span className="text-center text-3xs font-medium text-(--color-text-muted)">
                           {m.hint}
                         </span>
                       </button>
@@ -412,85 +527,97 @@ function NewPaymentForm() {
                   })}
                 </div>
                 {err.method?.message && (
-                  <p className="mt-1.5 text-[12px] font-medium text-[color:var(--color-danger-600)]" role="alert">
+                  <p className="mt-1.5 text-12 font-medium text-(--color-danger-600)" role="alert">
                     {err.method.message}
                   </p>
                 )}
               </div>
             </FormSection>
 
+            {/* Section 3: Notes */}
             <FormSection
-              title="Notes"
+              title="Audit & Remarks"
               icon={<ReceiptText />}
-              description="Optional remarks for the record"
+              description="Optional remarks, cheque/counter references"
               divided
             >
               <FormFullWidth>
-                <Textarea label="Notes" rows={3} placeholder="Optional notes..." {...register('notes')} />
+                <Textarea
+                  label="Internal Notes"
+                  rows={2}
+                  placeholder="e.g., Paid via counter cash, verified against bank passbook..."
+                  {...register('notes')}
+                />
               </FormFullWidth>
             </FormSection>
           </FormCard>
         </div>
 
-        {/* Summary rail */}
+        {/* Live Reconciliation Rail */}
         <div className="space-y-4 xl:col-span-1">
           <div className={clsx(surfaceCardClass, 'sticky top-6 p-5')}>
-            <h3 className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
-              Payment summary
+            <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+              Reconciliation Preview
             </h3>
+
             {selectedInvoice ? (
-              <div className="mt-4 space-y-3">
-                <div className={clsx(surfaceNestedClass, 'space-y-2 p-3.5 text-[13px]')}>
+              <div className="mt-4 space-y-3.5">
+                <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) space-y-2 p-3.5 text-13')}>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Invoice</span>
-                    <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)]">
+                    <span className="font-medium text-(--color-text-muted)">Target Invoice</span>
+                    <span className="font-mono text-xs font-bold text-(--color-brand-700)">
                       {selectedInvoice.invoiceNumber}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Month</span>
-                    <span className="font-semibold text-[color:var(--color-text-primary)]">
+                    <span className="font-medium text-(--color-text-muted)">Billing Month</span>
+                    <span className="font-semibold text-(--color-text-primary)">
                       {selectedInvoice.month}
                     </span>
                   </div>
-                  <div className="border-t border-[color:var(--border-color)] pt-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-[color:var(--color-text-muted)]">Rent</span>
-                      <span className="tabular-nums">{fmtMoney(selectedInvoice.rentAmount ?? 0)}</span>
+                  <div className="border-t border-(--border-color) pt-2 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-(--color-text-muted)">Invoice Total</span>
+                      <span className="tabular-nums">{fmtMoney(selectedInvoice.totalAmount)}</span>
                     </div>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="font-medium text-[color:var(--color-text-muted)]">Electricity</span>
-                      <span className="tabular-nums">{fmtMoney(selectedInvoice.electricityAmount ?? 0)}</span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="font-medium text-[color:var(--color-text-muted)]">Other</span>
-                      <span className="tabular-nums">{fmtMoney(selectedInvoice.otherCharges ?? 0)}</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-(--color-text-muted)">Already Paid</span>
+                      <span className="tabular-nums">{fmtMoney(selectedInvoice.paidAmount ?? 0)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-2">
-                    <span className="font-medium text-[color:var(--color-text-muted)]">Balance due</span>
-                    <span className="font-display text-base font-bold text-[color:var(--color-danger-600)] tabular-nums">
+                  <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
+                    <span className="font-semibold text-(--color-text-muted)">Balance Before</span>
+                    <span className="font-display text-base font-bold text-(--color-danger-700) tabular-nums">
                       {fmtMoney(balance)}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-3.5 py-3">
-                  <span className="text-[13px] font-semibold text-[color:var(--color-success-800)]">
-                    Recording
-                  </span>
-                  <span className="font-display text-lg font-bold text-[color:var(--color-success-800)] tabular-nums">
-                    {fmtMoney(Number(amount) || 0)}
-                  </span>
+
+                <div className="rounded-(--radius-lg) border border-(--color-success-200) bg-(--color-success-50) p-3.5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-(--color-success-800)">
+                      This Payment
+                    </span>
+                    <span className="font-display text-lg font-bold text-(--color-success-800) tabular-nums">
+                      {fmtMoney(Number(amount) || 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-(--color-success-200) pt-1 text-xs">
+                    <span className="text-(--color-success-700)">Balance After</span>
+                    <span className="font-bold tabular-nums text-(--color-success-900)">
+                      {remainingAfter === 0 ? 'Zero Balance (Settled)' : fmtMoney(remainingAfter)}
+                    </span>
+                  </div>
                 </div>
-                <p className="flex items-start gap-1.5 text-[11px] font-medium leading-relaxed text-[color:var(--color-text-muted)]">
-                  <ArrowRight className="mt-0.5 h-3 w-3 shrink-0" />
-                  After saving, the invoice balance re-syncs automatically. Partial amounts leave the
-                  rest as a pending obligation.
+
+                <p className="flex items-start gap-1.5 text-2xs leading-relaxed font-medium text-(--color-text-muted)">
+                  <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                  Saving will record the payment and update the invoice status to {remainingAfter === 0 ? '"paid"' : '"partial"'}.
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-[13px] font-medium text-[color:var(--color-text-muted)]">
-                Select a tenant and invoice to see the balance breakdown here.
+              <p className="mt-3 text-xs font-medium text-(--color-text-muted) leading-relaxed">
+                Select a resident and payable invoice to view live settlement impact.
               </p>
             )}
           </div>
@@ -505,7 +632,7 @@ export default function NewPaymentPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >

@@ -45,7 +45,11 @@ export function AmenityCountStepper({
     <div className={clsx('flex flex-col gap-1.5', className)}>
       <div className="flex items-center justify-between gap-2">
         <label className={clsx(fieldLabelClass, 'inline-flex items-center gap-1.5')}>
-          {icon && <span className="[&_svg]:h-3.5 [&_svg]:w-3.5 text-[color:var(--color-text-muted)]">{icon}</span>}
+          {icon && (
+            <span className="text-[color:var(--color-text-muted)] [&_svg]:h-3.5 [&_svg]:w-3.5">
+              {icon}
+            </span>
+          )}
           {label}
         </label>
       </div>

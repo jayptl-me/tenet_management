@@ -352,22 +352,22 @@ export default function ExportPage() {
         <StatCard
           title="Supported Modules"
           value="10 Datasets"
-          icon={<Database className="h-5 w-5 text-[color:var(--color-brand-600)]" />}
+          icon={<Database className="h-5 w-5 text-(--color-brand-600)" />}
         />
         <StatCard
           title="File Format"
           value="RFC-4180 CSV"
-          icon={<FileSpreadsheet className="h-5 w-5 text-[color:var(--color-brand-600)]" />}
+          icon={<FileSpreadsheet className="h-5 w-5 text-(--color-brand-600)" />}
         />
         <StatCard
           title="Audit Trail"
           value="SOC-2 Logged"
-          icon={<ShieldCheck className="h-5 w-5 text-[color:var(--color-brand-600)]" />}
+          icon={<ShieldCheck className="h-5 w-5 text-(--color-brand-600)" />}
         />
         <StatCard
           title="Data Security"
           value="PII Sanitized"
-          icon={<Lock className="h-5 w-5 text-[color:var(--color-brand-600)]" />}
+          icon={<Lock className="h-5 w-5 text-(--color-brand-600)" />}
         />
       </div>
 
@@ -377,17 +377,17 @@ export default function ExportPage() {
         {exportOptions.map((option) => (
           <div
             key={option.resource}
-            className="flex flex-col rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-300)]"
+            className="flex flex-col rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-5 shadow-(--shadow-card) transition-all duration-(--transition-duration) hover:border-(--color-brand-300)"
           >
-            <div className="mb-4 flex items-center gap-2 text-[color:var(--color-brand-600)]">
-              <div className="rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-100)] p-2">
+            <div className="mb-4 flex items-center gap-2 text-(--color-brand-600)">
+              <div className="rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-brand-100) p-2">
                 {option.icon}
               </div>
-              <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+              <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
                 {option.label}
               </h3>
             </div>
-            <p className="mb-5 flex-1 text-sm font-body text-[color:var(--color-text-secondary)]">
+            <p className="font-body mb-5 flex-1 text-sm text-(--color-text-secondary)">
               {option.description}
             </p>
             <Button
@@ -406,7 +406,7 @@ export default function ExportPage() {
                 </>
               ) : success === option.resource ? (
                 <>
-                  <Check className="h-4 w-4 text-[color:var(--color-success-600)]" />
+                  <Check className="h-4 w-4 text-(--color-success-600)" />
                   Exported Successfully
                 </>
               ) : (
@@ -420,7 +420,7 @@ export default function ExportPage() {
         ))}
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-4 text-sm text-[color:var(--color-success-800)]">
+      <div className="rounded-(--radius-lg) border-[length:var(--bw-default)] border-(--color-success-300) bg-(--color-success-50) p-4 text-sm text-(--color-success-800)">
         <p className="font-body">
           <strong>Batch capacity:</strong> Up to 20,000 records per export batch. Datasets are
           extracted via client-side streaming pagination, preventing server memory spikes and
@@ -428,7 +428,7 @@ export default function ExportPage() {
         </p>
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-4 text-sm text-[color:var(--color-text-secondary)]">
+      <div className="rounded-(--radius-lg) border-[length:var(--bw-default)] border-(--border-color) bg-(--color-surface-100) p-4 text-sm text-(--color-text-secondary)">
         <p className="font-body">
           <strong>Compliance & Security:</strong> Generated CSV files strictly adhere to RFC-4180
           specifications. Sensitive authentication hashes, secrets, and internal MongoDB keys are

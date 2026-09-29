@@ -1,9 +1,11 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, Hash, Banknote } from 'lucide-react';
+import { AlertTriangle, Hash, Banknote, Link as LinkIcon, Plus, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { findInvalidPhotoLine, parsePhotoUrls } from '@/lib/photo-urls';
@@ -11,6 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { Button } from '@/components/ui/Button';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -92,6 +95,7 @@ export default function EditRoomPage() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -99,6 +103,38 @@ export default function EditRoomPage() {
 
   const watchedSharing = Number(watch('sharingType'));
   const isDownsizeBlocked = currentOccupancy > 0 && watchedSharing < currentOccupancy;
+
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoInput, setPhotoInput] = useState('');
+  const [photoError, setPhotoError] = useState('');
+
+  const handleAddPhoto = () => {
+    const trimmed = photoInput.trim();
+    if (!trimmed) return;
+    if (!/^https?:\/\/.+/i.test(trimmed)) {
+      setPhotoError('Must be a valid http:// or https:// URL');
+      return;
+    }
+    if (photos.includes(trimmed)) {
+      setPhotoError('This photo URL has already been added');
+      return;
+    }
+    if (photos.length >= 8) {
+      setPhotoError('Maximum 8 photos allowed');
+      return;
+    }
+    const updated = [...photos, trimmed];
+    setPhotos(updated);
+    setValue('photoUrls', updated.join('\n'), { shouldValidate: true });
+    setPhotoInput('');
+    setPhotoError('');
+  };
+
+  const handleRemovePhoto = (idx: number) => {
+    const updated = photos.filter((_, i) => i !== idx);
+    setPhotos(updated);
+    setValue('photoUrls', updated.join('\n'), { shouldValidate: true });
+  };
 
   useEffect(() => {
     if (!roomId) return;
@@ -116,6 +152,8 @@ export default function EditRoomPage() {
         const d = roomRes.data;
         const occ = d.beds?.filter((b) => b.isOccupied).length ?? d.occupancyCount ?? 0;
         setCurrentOccupancy(occ);
+
+        setPhotos(d.photos ?? []);
 
         const existingAmenities = d.roomAmenities ?? [];
 
@@ -256,8 +294,8 @@ export default function EditRoomPage() {
                 {...register('sharingType')}
               />
               {isDownsizeBlocked && (
-                <div className="mt-2 flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-2.5 text-xs text-[color:var(--color-warning-800)]">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-warning-600)]" />
+                <div className="mt-2 flex items-start gap-2 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-2.5 text-xs text-(--color-warning-800)">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-warning-600)" />
                   <div>
                     <span className="font-bold">Downsize Conflict:</span> Room currently has{' '}
                     {currentOccupancy} active occupant{currentOccupancy === 1 ? '' : 's'}. You
@@ -279,14 +317,82 @@ export default function EditRoomPage() {
           </FormGrid>
           <div className="mt-4 space-y-4">
             <Textarea label="Description" rows={2} {...register('description')} />
-            <Textarea
-              label="Photo URLs"
-              rows={3}
-              placeholder="Paste image URLs (one per line, e.g. https://...)"
-              helperText="Add public image links for this room. One URL per line."
-              error={err.photoUrls?.message}
-              {...register('photoUrls')}
-            />
+            <div>
+              <input type="hidden" {...register('photoUrls')} />
+              <label className="mb-1.5 block text-xs font-semibold text-(--color-text-primary)">
+                Room Photos {photos.length > 0 ? `(${photos.length}/8)` : ''}
+              </label>
+              <div className="space-y-3">
+                {photos.length < 8 && (
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="https://images.example.com/room-photo.jpg"
+                        value={photoInput}
+                        onChange={(e) => {
+                          setPhotoInput(e.target.value);
+                          if (photoError) setPhotoError('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddPhoto();
+                          }
+                        }}
+                        leftIcon={
+                          <LinkIcon className="h-4 w-4 text-(--color-text-muted)" />
+                        }
+                        error={photoError || err.photoUrls?.message}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddPhoto}
+                      className="shrink-0"
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Photo
+                    </Button>
+                  </div>
+                )}
+
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {photos.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="group relative flex flex-col items-center overflow-hidden rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-2"
+                      >
+                        <div className="relative h-24 w-full overflow-hidden rounded-sm bg-black/5">
+                          <img
+                            src={url}
+                            alt={`Room photo ${idx + 1}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src =
+                                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePhoto(idx)}
+                            className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                            title="Remove photo"
+                            aria-label={`Remove photo ${idx + 1}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <span className="mt-1.5 w-full truncate text-center font-mono text-2xs text-(--color-text-muted)">
+                          {url.split('/').pop() || `Photo ${idx + 1}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <Checkbox
               label="Active"
               description="Inactive rooms are hidden from new tenant assignment"

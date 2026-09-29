@@ -48,7 +48,7 @@ export function AttentionRequiredBanner({
         )}
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]">
             <CheckCircle2 className="h-4 w-4" />
           </div>
           <div>
@@ -60,7 +60,7 @@ export function AttentionRequiredBanner({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-success-700)]">
+        <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--badge-success-text)]">
           <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
           All Checks Passing
         </div>
@@ -79,7 +79,7 @@ export function AttentionRequiredBanner({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)]">
             <AlertCircle className="h-4 w-4" />
           </div>
           <div>
@@ -87,7 +87,7 @@ export function AttentionRequiredBanner({
               <span className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
                 Attention Required
               </span>
-              <span className="inline-flex items-center rounded-full bg-[color:var(--color-warning-100)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--color-warning-800)]">
+              <span className="inline-flex items-center rounded-full border border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--badge-warning-text)]">
                 {totalAlerts} {totalAlerts === 1 ? 'item' : 'items'}
               </span>
             </div>
@@ -105,11 +105,11 @@ export function AttentionRequiredBanner({
               onClick={() => onNavigate('/payments?status=pending_verification')}
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
-                'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
-                'transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-warning-400)] hover:bg-[color:var(--color-warning-100)]',
+                'border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)]',
+                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
               )}
             >
-              <CreditCard className="h-3.5 w-3.5 text-[color:var(--color-warning-600)]" />
+              <CreditCard className="h-3.5 w-3.5 opacity-80" />
               <span>
                 <strong>{pendingVerificationsCount}</strong> Verify UTR
               </span>
@@ -123,11 +123,11 @@ export function AttentionRequiredBanner({
               onClick={() => onNavigate('/complaints?status=open')}
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
-                'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]',
-                'transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-danger-400)] hover:bg-[color:var(--color-danger-100)]',
+                'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
+                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
               )}
             >
-              <AlertTriangle className="h-3.5 w-3.5 text-[color:var(--color-danger-600)]" />
+              <AlertTriangle className="h-3.5 w-3.5 opacity-80" />
               <span>
                 <strong>{agingComplaintsCount}</strong> Overdue Complaints
               </span>
@@ -141,11 +141,11 @@ export function AttentionRequiredBanner({
               onClick={() => onNavigate('/services')}
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
-                'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]',
-                'transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-danger-400)] hover:bg-[color:var(--color-danger-100)]',
+                'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
+                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
               )}
             >
-              <WifiOff className="h-3.5 w-3.5 text-[color:var(--color-danger-600)]" />
+              <WifiOff className="h-3.5 w-3.5 opacity-80" />
               <span>
                 <strong>{issuesServicesCount}</strong> Service Issues
               </span>
@@ -159,11 +159,11 @@ export function AttentionRequiredBanner({
               onClick={() => onNavigate('/enquiries?status=new')}
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
-                'border-[color:var(--color-info-300)] bg-[color:var(--color-info-50)] text-[color:var(--color-info-800)]',
-                'transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-info-400)] hover:bg-[color:var(--color-info-100)]',
+                'border-[color:var(--badge-info-border)] bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)]',
+                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
               )}
             >
-              <PhoneCall className="h-3.5 w-3.5 text-[color:var(--color-info-600)]" />
+              <PhoneCall className="h-3.5 w-3.5 opacity-80" />
               <span>
                 <strong>{newEnquiriesCount}</strong> New Leads
               </span>

@@ -42,6 +42,8 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { QuickResolveModal, type QuickResolveTarget } from '@/components/admin/QuickResolveModal';
+import { toast } from 'sonner';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -74,19 +76,19 @@ const KANBAN_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as cons
 const kanbanMeta: Record<string, { label: string; color: string }> = {
   open: {
     label: 'Open',
-    color: 'border-l-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)]',
+    color: 'border-l-(--color-brand-500) bg-(--color-brand-50)',
   },
   in_progress: {
     label: 'In Progress',
-    color: 'border-l-[color:var(--color-warning-500)] bg-[color:var(--color-warning-50)]',
+    color: 'border-l-(--color-warning-500) bg-(--color-warning-50)',
   },
   resolved: {
     label: 'Resolved',
-    color: 'border-l-[color:var(--color-success-500)] bg-[color:var(--color-success-50)]',
+    color: 'border-l-(--color-success-500) bg-(--color-success-50)',
   },
   dismissed: {
     label: 'Dismissed',
-    color: 'border-l-[color:var(--color-surface-400)] bg-[color:var(--color-field-bg)]',
+    color: 'border-l-(--color-surface-400) bg-(--color-field-bg)',
   },
 };
 
@@ -128,37 +130,39 @@ function KanbanColumn({
   status,
   complaints,
   onComplaintClick,
+  onQuickResolve,
 }: {
   status: string;
   complaints: ComplaintRow[];
   onComplaintClick: (row: ComplaintRow) => void;
+  onQuickResolve?: (row: ComplaintRow) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const meta = kanbanMeta[status] ?? {
     label: status,
-    color: 'border-l-[color:var(--color-surface-300)] bg-[color:var(--color-field-bg)]',
+    color: 'border-l-(--color-surface-300) bg-(--color-field-bg)',
   };
 
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)] transition-all duration-[var(--transition-duration)] ${isOver ? 'scale-[1.01] ring-2 ring-[color:var(--color-brand-500)] ring-offset-2 ring-offset-[color:var(--focus-ring-offset-bg)]' : ''}`}
+      className={`min-h-[200px] rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-card) transition-all duration-(--transition-duration) ${isOver ? 'scale-[1.01] ring-2 ring-(--color-brand-500) ring-offset-2 ring-offset-(--focus-ring-offset-bg)' : ''}`}
     >
       <div
-        className={`border-b-[length:var(--bw-strong)] border-b-[color:var(--border-color)] px-4 py-3 ${meta.color} rounded-t-md`}
+        className={`border-b-[length:var(--bw-strong)] border-b-(--border-color) px-4 py-3 ${meta.color} rounded-t-md`}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold text-[color:var(--color-text-primary)] capitalize">
+          <h3 className="font-display text-sm font-bold text-(--color-text-primary) capitalize">
             {meta.label}
           </h3>
-          <span className="rounded-full bg-[color:var(--color-text-primary)] px-2 py-0.5 font-mono text-xs font-bold text-[color:var(--color-card-bg)]">
+          <span className="rounded-full bg-(--color-text-primary) px-2 py-0.5 font-mono text-xs font-bold text-(--color-card-bg)">
             {complaints.length}
           </span>
         </div>
       </div>
       <div className="max-h-[500px] space-y-2 overflow-y-auto p-3">
         {complaints.length === 0 ? (
-          <p className="py-6 text-center text-xs text-[color:var(--color-text-muted)]">
+          <p className="py-6 text-center text-xs text-(--color-text-muted)">
             No complaints
           </p>
         ) : (
@@ -167,6 +171,7 @@ function KanbanColumn({
               key={complaint._id}
               complaint={complaint}
               onClick={() => onComplaintClick(complaint)}
+              onQuickResolve={onQuickResolve}
             />
           ))
         )}
@@ -175,10 +180,21 @@ function KanbanColumn({
   );
 }
 
-function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: () => void }) {
+function KanbanCard({
+  complaint,
+  onClick,
+  onQuickResolve,
+}: {
+  complaint: ComplaintRow;
+  onClick: () => void;
+  onQuickResolve?: (row: ComplaintRow) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: complaint._id,
   });
+
+  const canQuickResolve =
+    (complaint.status === 'open' || complaint.status === 'in_progress') && Boolean(onQuickResolve);
 
   return (
     <div
@@ -186,23 +202,43 @@ function KanbanCard({ complaint, onClick }: { complaint: ComplaintRow; onClick: 
       {...listeners}
       {...attributes}
       onClick={onClick}
-      className={`group cursor-grab rounded-md border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-3 shadow-sm transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-500)] active:cursor-grabbing ${
-        isDragging ? 'opacity-40 shadow-none' : 'hover:shadow-[var(--shadow-card)]'
+      className={`group cursor-grab rounded-md border-[length:var(--bw-default)] border-(--border-color) bg-(--color-card-bg) p-3 shadow-sm transition-all duration-(--transition-duration) hover:border-(--color-brand-500) active:cursor-grabbing ${
+        isDragging ? 'opacity-40 shadow-none' : 'hover:shadow-(--shadow-card)'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="font-display line-clamp-2 text-xs font-bold text-[color:var(--color-text-primary)] group-hover:text-[color:var(--color-brand-500)]">
+        <p className="font-display line-clamp-2 text-xs font-bold text-(--color-text-primary) group-hover:text-(--color-brand-500)">
           {complaint.title}
         </p>
         <StatusBadge
           variant={statusToVariant(complaint.priority)}
           label={complaint.priority}
-          className="shrink-0 text-[10px]"
+          size="xs"
+          className="shrink-0"
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11px] text-[color:var(--color-text-muted)]">
-        <span className="truncate">{complaint.tenant?.user?.name ?? 'Unknown'}</span>
-        <span className="capitalize">{complaint.category.replace(/_/g, ' ')}</span>
+      <div className="mt-2 flex items-center justify-between text-2xs text-(--color-text-muted)">
+        <span className="truncate">
+          {complaint.tenant?.user?.name ?? 'Unknown'}
+          {complaint.tenant?.room?.roomNumber ? ` · R-${complaint.tenant.room.roomNumber}` : ''}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="capitalize">{complaint.category.replace(/_/g, ' ')}</span>
+          {canQuickResolve && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickResolve?.(complaint);
+              }}
+              className="rounded p-0.5 text-(--color-text-muted) transition-colors hover:bg-(--color-success-50) hover:text-(--color-success-600)"
+              title="Quick Resolve"
+              aria-label="Quick Resolve"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -231,6 +267,31 @@ export default function ComplaintsPage() {
   const [deleting, setDeleting] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [quickResolveTarget, setQuickResolveTarget] = useState<QuickResolveTarget | null>(null);
+
+  const handleQuickResolve = async (
+    id: string,
+    status: 'resolved' | 'dismissed',
+    adminNotes: string,
+  ) => {
+    try {
+      await api
+        .put(`complaints/${id}/status`, {
+          json: { status, adminNotes },
+        })
+        .json();
+      toast.success(`Complaint marked as ${status.replace(/_/g, ' ')}`);
+      setQuickResolveTarget(null);
+      fetchStats();
+      if (viewMode === 'kanban') {
+        fetchAllForKanban();
+      } else {
+        fetchComplaints();
+      }
+    } catch (err) {
+      toast.error((await parseApiError(err)).message);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -567,7 +628,7 @@ export default function ComplaintsPage() {
     {
       header: 'Title',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.title}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.title}</span>
       ),
     },
     {
@@ -607,9 +668,32 @@ export default function ComplaintsPage() {
           onView={() => router.push(`/complaints/${row._id}`)}
           onEdit={() => router.push(`/complaints/${row._id}/edit`)}
           onDelete={() => setDeleteTarget(row)}
+          extra={
+            row.status === 'open' || row.status === 'in_progress'
+              ? [
+                  {
+                    label: 'Quick Resolve',
+                    icon: (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />
+                    ),
+                    onClick: () =>
+                      setQuickResolveTarget({
+                        _id: row._id,
+                        title: row.title,
+                        tenantName: row.tenant?.user?.name,
+                        roomNumber: row.tenant?.room?.roomNumber,
+                        category: row.category,
+                        priority: row.priority,
+                        status: row.status,
+                        adminNotes: row.adminNotes,
+                      }),
+                  },
+                ]
+              : undefined
+          }
         />
       ),
-      className: 'w-[130px]',
+      className: 'w-[160px]',
     },
   ];
 
@@ -620,13 +704,13 @@ export default function ComplaintsPage() {
         description="Track and resolve tenant complaints"
         action={
           <div className="flex items-center gap-2">
-            <div className="flex overflow-hidden rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]">
+            <div className="flex overflow-hidden rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color)">
               <button
                 onClick={() => setViewMode('table')}
-                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-(--transition-duration) ${
                   viewMode === 'table'
-                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                    ? 'bg-(--color-text-primary) text-(--color-card-bg)'
+                    : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                 }`}
                 aria-label="Table view mode"
               >
@@ -635,10 +719,10 @@ export default function ComplaintsPage() {
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-(--transition-duration) ${
                   viewMode === 'kanban'
-                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                    ? 'bg-(--color-text-primary) text-(--color-card-bg)'
+                    : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                 }`}
                 aria-label="Kanban view mode"
               >
@@ -677,9 +761,7 @@ export default function ComplaintsPage() {
           value={stats?.byStatus.open ?? 0}
           icon={<AlertCircle className="h-5 w-5" />}
           variant="warning"
-          className={`cursor-pointer transition-all ${
-            statusFilter === 'open' ? 'ring-2 ring-[color:var(--color-warning-500)]' : ''
-          }`}
+          selected={statusFilter === 'open'}
           onClick={() => handleStatusCardClick('open')}
         />
         <StatCard
@@ -687,9 +769,7 @@ export default function ComplaintsPage() {
           value={stats?.byStatus.in_progress ?? 0}
           icon={<Clock className="h-5 w-5" />}
           variant="brand"
-          className={`cursor-pointer transition-all ${
-            statusFilter === 'in_progress' ? 'ring-2 ring-[color:var(--color-brand-500)]' : ''
-          }`}
+          selected={statusFilter === 'in_progress'}
           onClick={() => handleStatusCardClick('in_progress')}
         />
         <StatCard
@@ -697,9 +777,7 @@ export default function ComplaintsPage() {
           value={stats?.byStatus.resolved ?? 0}
           icon={<CheckCircle2 className="h-5 w-5" />}
           variant="success"
-          className={`cursor-pointer transition-all ${
-            statusFilter === 'resolved' ? 'ring-2 ring-[color:var(--color-success-500)]' : ''
-          }`}
+          selected={statusFilter === 'resolved'}
           onClick={() => handleStatusCardClick('resolved')}
         />
         <StatCard
@@ -707,9 +785,7 @@ export default function ComplaintsPage() {
           value={stats?.byStatus.dismissed ?? 0}
           icon={<MessageSquareWarning className="h-5 w-5" />}
           variant="default"
-          className={`cursor-pointer transition-all ${
-            statusFilter === 'dismissed' ? 'ring-2 ring-[color:var(--color-text-primary)]' : ''
-          }`}
+          selected={statusFilter === 'dismissed'}
           onClick={() => handleStatusCardClick('dismissed')}
         />
       </div>
@@ -720,7 +796,7 @@ export default function ComplaintsPage() {
           role="group"
           aria-label="Filter by category"
         >
-          <span className="text-xs font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+          <span className="text-xs font-bold tracking-wider text-(--color-text-muted) uppercase">
             By category:
           </span>
           {Object.entries(stats.byCategory)
@@ -739,8 +815,8 @@ export default function ComplaintsPage() {
                   }}
                   className={
                     active
-                      ? 'rounded-full border border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-500)] px-3 py-1 text-xs font-bold text-white shadow-[var(--shadow-xs)]'
-                      : 'rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-300)]'
+                      ? 'rounded-full border border-(--color-brand-500) bg-(--color-brand-500) px-3 py-1 text-xs font-bold text-(--color-on-brand) shadow-(--shadow-xs)'
+                      : 'rounded-full border border-(--border-color) bg-(--color-card-bg) px-3 py-1 text-xs font-semibold text-(--color-text-secondary) hover:border-(--color-brand-300)'
                   }
                 >
                   {cat.replace(/_/g, ' ')} · {count}
@@ -751,14 +827,14 @@ export default function ComplaintsPage() {
       )}
 
       {isUpdatingStatus && (
-        <div className="flex items-center gap-2 rounded-lg border-[length:var(--bw-strong)] border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-100)] p-3 text-sm font-semibold text-[color:var(--color-brand-800)]">
+        <div className="flex items-center gap-2 rounded-lg border-[length:var(--bw-strong)] border-(--color-brand-500) bg-(--color-brand-100) p-3 text-sm font-semibold text-(--color-brand-800)">
           <Loader2 className="h-4 w-4 animate-spin" />
           Updating complaint status...
         </div>
       )}
 
       {/* ── Multi-Attribute Filter Bar ──────────────── */}
-      <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative min-w-[220px] flex-1">
             <Input
@@ -768,7 +844,7 @@ export default function ComplaintsPage() {
                 setSearchFilter(e.target.value);
                 setPage(1);
               }}
-              leftIcon={<Search className="h-4 w-4 text-[color:var(--color-text-muted)]" />}
+              leftIcon={<Search className="h-4 w-4 text-(--color-text-muted)" />}
               aria-label="Search complaints"
             />
           </div>
@@ -829,10 +905,10 @@ export default function ComplaintsPage() {
 
         {hasActiveFilters && (
           <Button
-            variant="ghost"
+            variant="muted"
             size="sm"
             onClick={handleClearFilters}
-            className="self-end text-xs text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)] sm:self-center"
+            className="self-end sm:self-center"
             aria-label="Clear all active filters"
           >
             <RotateCcw className="mr-1 h-3.5 w-3.5" />
@@ -841,12 +917,12 @@ export default function ComplaintsPage() {
         )}
       </div>
 
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-sm">
+      <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4 shadow-sm">
         <div className="mb-2">
-          <h3 className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-sm font-bold text-(--color-text-primary)">
             Complaint density
           </h3>
-          <p className="text-xs text-[color:var(--color-text-muted)]">
+          <p className="text-xs text-(--color-text-muted)">
             Filings per day from the loaded results. Select a day to filter the list.
           </p>
         </div>
@@ -902,7 +978,7 @@ export default function ComplaintsPage() {
           mobileCardRenderer={(row) => (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="max-w-[70%] truncate text-sm font-semibold text-[color:var(--color-text-primary)]">
+                <span className="max-w-[70%] truncate text-sm font-semibold text-(--color-text-primary)">
                   {row.title}
                 </span>
                 <StatusBadge
@@ -910,7 +986,7 @@ export default function ComplaintsPage() {
                   label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
                 />
               </div>
-              <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
                 <span>{row.tenant?.user?.name ?? 'N/A'}</span>
                 <span className="capitalize">{row.category.replace(/_/g, ' ')}</span>
                 <StatusBadge variant={statusToVariant(row.priority)} label={row.priority} />
@@ -920,6 +996,29 @@ export default function ComplaintsPage() {
                   onView={() => router.push(`/complaints/${row._id}`)}
                   onEdit={() => router.push(`/complaints/${row._id}/edit`)}
                   onDelete={() => setDeleteTarget(row)}
+                  extra={
+                    row.status === 'open' || row.status === 'in_progress'
+                      ? [
+                          {
+                            label: 'Quick Resolve',
+                            icon: (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />
+                            ),
+                            onClick: () =>
+                              setQuickResolveTarget({
+                                _id: row._id,
+                                title: row.title,
+                                tenantName: row.tenant?.user?.name,
+                                roomNumber: row.tenant?.room?.roomNumber,
+                                category: row.category,
+                                priority: row.priority,
+                                status: row.status,
+                                adminNotes: row.adminNotes,
+                              }),
+                          },
+                        ]
+                      : undefined
+                  }
                 />
               </div>
             </div>
@@ -929,7 +1028,7 @@ export default function ComplaintsPage() {
         <>
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+              <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
             </div>
           ) : (
             <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -940,16 +1039,28 @@ export default function ComplaintsPage() {
                     status={status}
                     complaints={kanbanColumns[status] ?? []}
                     onComplaintClick={(row) => router.push(`/complaints/${row._id}`)}
+                    onQuickResolve={(row) =>
+                      setQuickResolveTarget({
+                        _id: row._id,
+                        title: row.title,
+                        tenantName: row.tenant?.user?.name,
+                        roomNumber: row.tenant?.room?.roomNumber,
+                        category: row.category,
+                        priority: row.priority,
+                        status: row.status,
+                        adminNotes: row.adminNotes,
+                      })
+                    }
                   />
                 ))}
               </div>
               <DragOverlay>
                 {activeComplaint ? (
-                  <div className="w-64 rotate-2 rounded-md border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-brand-50)] p-3 shadow-[var(--shadow-card)]">
-                    <p className="font-display truncate text-sm font-bold text-[color:var(--color-text-primary)]">
+                  <div className="w-64 rotate-2 rounded-md border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-brand-50) p-3 shadow-(--shadow-card)">
+                    <p className="font-display truncate text-sm font-bold text-(--color-text-primary)">
                       {activeComplaint.title}
                     </p>
-                    <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
+                    <p className="mt-1 text-xs text-(--color-text-muted)">
                       {activeComplaint.tenant?.user?.name ?? 'N/A'}
                     </p>
                   </div>
@@ -967,6 +1078,12 @@ export default function ComplaintsPage() {
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <QuickResolveModal
+        target={quickResolveTarget}
+        onResolve={handleQuickResolve}
+        onClose={() => setQuickResolveTarget(null)}
       />
     </div>
   );

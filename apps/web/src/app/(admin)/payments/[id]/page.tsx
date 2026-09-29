@@ -30,8 +30,11 @@ import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { Modal } from '@/components/ui/Modal';
 import { ReceiptDocument } from '@/components/admin/ReceiptDocument';
-import { VerifyPaymentModal, type VerifyPaymentTarget } from '@/components/admin/VerifyPaymentModal';
-import { KpiHeader } from '@/components/ui/KpiHeader';
+import {
+  VerifyPaymentModal,
+  type VerifyPaymentTarget,
+} from '@/components/admin/VerifyPaymentModal';
+import { StatCard } from '@/components/ui/StatCard';
 import { surfaceCardClass, surfaceNestedClass } from '@/lib/field-styles';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { clsx } from 'clsx';
@@ -41,9 +44,19 @@ interface PaymentDetail {
   tenant?: {
     _id: string;
     bedId?: string | null;
-    user?: { name: string; phone?: string };
-    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
+    user?: { name: string; phone?: string; email?: string };
+    userId?: { name: string; phone?: string; email?: string };
+    room?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
+    roomId?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
   };
+  tenantId?: {
+    _id: string;
+    bedId?: string | null;
+    user?: { name: string; phone?: string; email?: string };
+    userId?: { name: string; phone?: string; email?: string };
+    room?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
+    roomId?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
+  } | string;
   amount: number;
   method: string;
   type: string;
@@ -52,7 +65,14 @@ interface PaymentDetail {
   paidAt?: string;
   createdAt: string;
   dueDate?: string;
-  invoiceId?: string;
+  invoiceId?:
+    | string
+    | {
+        _id: string;
+        invoiceNumber?: string;
+        month?: string;
+        totalAmount?: number;
+      };
   invoiceNumber?: string;
   screenshotUrl?: string;
   utrNumber?: string;
@@ -81,6 +101,16 @@ interface ReceiptData {
     _id?: string;
     userId?: { name?: string; phone?: string; email?: string };
     roomId?: { roomNumber?: string };
+  };
+  pgBranding?: {
+    pgName?: string;
+    tagline?: string;
+    address?: { line1?: string; line2?: string; city?: string; state?: string; pincode?: string };
+    phone?: string;
+    email?: string;
+    gstNumber?: string;
+    upiId?: string;
+    upiPayeeName?: string;
   };
 }
 
@@ -293,9 +323,7 @@ export default function PaymentDetailPage() {
   const statusVariant = payment ? statusToVariant(payment.status) : 'neutral';
   const isPaid =
     payment &&
-    (payment.status === 'paid' ||
-      payment.status === 'approved' ||
-      payment.status === 'completed');
+    (payment.status === 'paid' || payment.status === 'approved' || payment.status === 'completed');
   const canShowReceipt =
     payment &&
     (payment.status === 'paid' ||
@@ -303,21 +331,42 @@ export default function PaymentDetailPage() {
       payment.status === 'completed' ||
       payment.status === 'pending_verification');
 
-  const verifyTarget: VerifyPaymentTarget | null =
-    payment
-      ? {
-          _id: payment._id,
-          tenantName: payment.tenant?.user?.name,
-          roomNumber: payment.tenant?.room?.roomNumber,
-          amount: payment.amount,
-          utrNumber: payment.utrNumber,
-          screenshotUrl: payment.screenshotUrl,
-          paidAt: payment.paidAt,
-          createdAt: payment.createdAt,
-          status: payment.status,
-          invoiceNumber: payment.invoiceNumber,
-        }
-      : null;
+  const tenantRaw = payment?.tenantId ?? payment?.tenant;
+  const tenantObj = typeof tenantRaw === 'object' && tenantRaw !== null ? tenantRaw : undefined;
+  const tenantId = tenantObj?._id ?? (typeof tenantRaw === 'string' ? tenantRaw : undefined);
+  const tenantName = tenantObj?.userId?.name ?? tenantObj?.user?.name ?? 'N/A';
+  const tenantPhone = tenantObj?.userId?.phone ?? tenantObj?.user?.phone;
+  const roomData = tenantObj?.roomId ?? tenantObj?.room;
+  const roomId = roomData?._id;
+  const roomNumber = roomData?.roomNumber ?? 'N/A';
+  const floorLabel =
+    roomData?.floor?.label ??
+    (roomData?.floor?.floorNumber != null ? `Floor ${roomData.floor.floorNumber}` : undefined);
+  const bedId = tenantObj?.bedId;
+
+  const invoiceObj =
+    typeof payment?.invoiceId === 'object' && payment?.invoiceId !== null
+      ? payment.invoiceId
+      : undefined;
+  const invoiceId =
+    invoiceObj?._id ?? (typeof payment?.invoiceId === 'string' ? payment.invoiceId : undefined);
+  const invoiceNumber =
+    invoiceObj?.invoiceNumber ?? payment?.invoiceNumber ?? (invoiceId ? invoiceId.slice(-6) : undefined);
+
+  const verifyTarget: VerifyPaymentTarget | null = payment
+    ? {
+        _id: payment._id,
+        tenantName,
+        roomNumber,
+        amount: payment.amount,
+        utrNumber: payment.utrNumber,
+        screenshotUrl: payment.screenshotUrl,
+        paidAt: payment.paidAt,
+        createdAt: payment.createdAt,
+        status: payment.status,
+        invoiceNumber,
+      }
+    : null;
 
   return (
     <FormPage
@@ -342,53 +391,63 @@ export default function PaymentDetailPage() {
     >
       {payment && (
         <div className="space-y-6">
-          {/* Ledger KPI header */}
-          <KpiHeader
-            items={[
-              {
-                label: 'Amount',
-                value: formatCurrency(payment.amount),
-                sub: formatType(payment.type ?? ''),
-                tone: isPaid ? 'success' : statusVariant === 'danger' ? 'danger' : 'warning',
-              },
-              {
-                label: 'Method',
-                value: formatMethod(payment.method),
-                sub: payment.utrNumber ? 'UTR submitted' : 'no UTR',
-                tone: 'default',
-              },
-              {
-                label: 'Due date',
-                value: formatDate(payment.dueDate),
-                sub: payment.paidAt ? `paid ${formatDate(payment.paidAt)}` : 'unpaid',
-                tone: 'default',
-              },
-              {
-                label: 'Verified by',
-                value:
-                  typeof payment.verifiedBy === 'object' && payment.verifiedBy?.name
-                    ? payment.verifiedBy.name
-                    : payment.verifiedBy
-                      ? 'Admin'
-                      : '—',
-                sub: isPaid ? 'settled' : 'not settled',
-                tone: isPaid ? 'success' : 'default',
-              },
-            ]}
-          />
+          {/* Executive KPI Metric Row */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Collected Amount"
+              value={formatCurrency(payment.amount)}
+              subtitle={formatType(payment.type ?? '')}
+              tone={isPaid ? 'success' : statusVariant === 'danger' ? 'danger' : 'warning'}
+              icon={<CreditCard />}
+            />
+            <StatCard
+              title="Payment Method"
+              value={formatMethod(payment.method)}
+              subtitle={payment.utrNumber ? `UTR: ${payment.utrNumber}` : 'Direct transaction'}
+              tone="default"
+              icon={<Receipt />}
+            />
+            <StatCard
+              title="Due Date"
+              value={formatDate(payment.dueDate)}
+              subtitle={payment.paidAt ? `Paid on ${formatDate(payment.paidAt)}` : 'Unpaid obligation'}
+              tone={isPaid ? 'success' : 'default'}
+              icon={<Calendar />}
+            />
+            <StatCard
+              title="Settlement & Audit"
+              value={
+                typeof payment.verifiedBy === 'object' && payment.verifiedBy?.name
+                  ? payment.verifiedBy.name
+                  : payment.verifiedBy
+                    ? 'Admin'
+                    : isPaid
+                      ? 'System Verified'
+                      : 'Pending'
+              }
+              subtitle={isPaid ? 'Fully settled & reconciled' : 'Awaiting verification'}
+              tone={isPaid ? 'success' : 'warning'}
+              icon={<CheckCircle2 />}
+            />
+          </div>
 
           {/* UTR evidence */}
           {payment.utrNumber && (
-            <div className={clsx(surfaceCardClass, 'flex flex-wrap items-center justify-between gap-3 p-4')}>
+            <div
+              className={clsx(
+                surfaceCardClass,
+                'flex flex-wrap items-center justify-between gap-3 p-4',
+              )}
+            >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-(--color-brand-100) text-(--color-brand-700)">
                   <Hash className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold tracking-[0.08em] text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
                     UTR reference
                   </p>
-                  <p className="font-mono text-sm font-bold tracking-wide text-[color:var(--color-brand-700)]">
+                  <p className="font-mono text-sm font-bold tracking-wide text-(--color-brand-700)">
                     {payment.utrNumber}
                   </p>
                 </div>
@@ -398,12 +457,12 @@ export default function PaymentDetailPage() {
                   {copiedUtr ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copiedUtr ? 'Copied' : 'Copy UTR'}
                 </Button>
-                {payment.invoiceId && (
+                {invoiceId && (
                   <Link
-                    href={`/invoices/${payment.invoiceId}`}
-                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-3 py-1.5 text-[13px] font-semibold text-[color:var(--color-text-primary)] transition-colors hover:bg-[color:var(--color-field-bg)]"
+                    href={`/invoices/${invoiceId}`}
+                    className="inline-flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) px-3 py-1.5 text-13 font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-field-bg)"
                   >
-                    Invoice {payment.invoiceNumber}
+                    Invoice {invoiceNumber ?? invoiceId.slice(-6)}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
                 )}
@@ -432,7 +491,7 @@ export default function PaymentDetailPage() {
                   label="Transaction Date"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {formatDate(formattedDate)}
                     </span>
                   }
@@ -443,30 +502,51 @@ export default function PaymentDetailPage() {
 
             <DetailCard title="Tenant Information" icon={<User />}>
               <DetailList>
-                <DetailRow label="Name" value={payment.tenant?.user?.name ?? 'N/A'} />
+                <DetailRow
+                  label="Name"
+                  value={
+                    tenantId ? (
+                      <Link
+                        href={`/tenants/${tenantId}`}
+                        className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
+                      >
+                        {tenantName}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      tenantName
+                    )
+                  }
+                />
                 <DetailRow
                   label="Room"
                   value={
-                    <span className="inline-flex items-center gap-1">
-                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
-                      {payment.tenant?.room?.roomNumber ?? 'N/A'}
-                    </span>
+                    roomId ? (
+                      <Link
+                        href={`/rooms/${roomId}`}
+                        className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
+                      >
+                        <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                        Room {roomNumber}
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                        {roomNumber}
+                      </span>
+                    )
                   }
                 />
-                {payment.tenant?.bedId && <DetailRow label="Bed" value={payment.tenant.bedId} />}
-                {payment.tenant?.room?.floor?.label && (
-                  <DetailRow label="Floor" value={payment.tenant.room.floor.label} />
-                )}
-                {payment.tenant?.user?.phone && (
-                  <DetailRow label="Phone" value={payment.tenant.user.phone} />
-                )}
+                {bedId && <DetailRow label="Bed" value={bedId} />}
+                {floorLabel && <DetailRow label="Floor" value={floorLabel} />}
+                {tenantPhone && <DetailRow label="Phone" value={tenantPhone} />}
               </DetailList>
             </DetailCard>
           </div>
 
           {payment.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                 {payment.notes}
               </p>
             </DetailCard>
@@ -478,9 +558,8 @@ export default function PaymentDetailPage() {
                 href={payment.screenshotUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block max-w-sm overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)]"
+                className="block max-w-sm overflow-hidden rounded-(--radius-lg) border border-(--border-color) shadow-(--shadow-sm) transition-all duration-(--transition-duration)"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={payment.screenshotUrl}
                   alt="Payment Screenshot"
@@ -492,7 +571,7 @@ export default function PaymentDetailPage() {
                     if (parent) {
                       parent.classList.add('flex', 'items-center', 'justify-center', 'p-10');
                       parent.innerHTML =
-                        '<span class="text-[color:var(--color-text-muted)] flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
+                        '<span class="text-(--color-text-muted) flex flex-col items-center gap-2 text-sm font-semibold"><svg class="h-10 w-10" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image unavailable</span></span>';
                     }
                   }}
                 />
@@ -568,7 +647,7 @@ export default function PaymentDetailPage() {
 
           <DetailCard title="Activity" icon={<History />}>
             {eventsLoading ? (
-              <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+              <p className="text-sm font-medium text-(--color-text-muted)">
                 Loading activity...
               </p>
             ) : events.length > 0 ? (
@@ -589,13 +668,18 @@ export default function PaymentDetailPage() {
                 }))}
               />
             ) : (
-              <div className={clsx(surfaceNestedClass, 'p-4 text-sm font-medium text-[color:var(--color-text-muted)]')}>
+              <div
+                className={clsx(
+                  surfaceNestedClass,
+                  'p-4 text-sm font-medium text-(--color-text-muted)',
+                )}
+              >
                 No audit events recorded for this payment yet.
               </div>
             )}
           </DetailCard>
 
-          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+          <p className="text-right text-xs font-semibold text-(--color-text-muted)">
             Last updated: {formatDateTime(payment.paidAt || payment.createdAt)}
           </p>
         </div>

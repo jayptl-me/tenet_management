@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Select } from '@/components/ui/Select';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
@@ -63,6 +64,8 @@ export default function LeavesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [tenantFilter, setTenantFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<LeaveRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -77,6 +80,8 @@ export default function LeavesPage() {
       if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
       if (tenantFilter) params.set('tenantId', tenantFilter);
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
 
       const res = await api.get(`leaves?${params.toString()}`).json<{
         success: boolean;
@@ -90,7 +95,7 @@ export default function LeavesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, statusFilter, tenantFilter]);
+  }, [page, perPage, search, statusFilter, tenantFilter, fromDate, toDate]);
 
   useEffect(() => {
     fetchLeaves();
@@ -119,6 +124,8 @@ export default function LeavesPage() {
       if (search.trim()) params.set('search', search.trim());
       if (statusFilter) params.set('status', statusFilter);
       if (tenantFilter) params.set('tenantId', tenantFilter);
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
 
       const res = await api.get(`leaves?${params.toString()}`).json<{
         success: boolean;
@@ -182,7 +189,7 @@ export default function LeavesPage() {
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {row.tenant?.user?.name ?? 'N/A'}
         </span>
       ),
@@ -210,7 +217,7 @@ export default function LeavesPage() {
     {
       header: 'Reason',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-[color:var(--color-text-muted)]">
+        <span className="block max-w-[200px] truncate text-xs text-(--color-text-muted)">
           {row.reason ?? '—'}
         </span>
       ),
@@ -300,6 +307,19 @@ export default function LeavesPage() {
           }}
           className="max-w-[200px]"
         />
+        <DateRangePicker
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromChange={(val: string) => {
+            setFromDate(val);
+            setPage(1);
+          }}
+          onToChange={(val: string) => {
+            setToDate(val);
+            setPage(1);
+          }}
+          compact
+        />
       </div>
       <DataTable
         columns={columns}
@@ -328,7 +348,7 @@ export default function LeavesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.tenant?.user?.name ?? 'N/A'}
               </span>
               <StatusBadge
@@ -336,14 +356,14 @@ export default function LeavesPage() {
                 label={row.status?.replace(/_/g, ' ') ?? 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>
                 {new Date(row.startDate).toLocaleDateString('en-IN', {
                   day: '2-digit',
                   month: 'short',
                 })}
               </span>
-              <span className="text-[color:var(--color-text-secondary)]">{'→'}</span>
+              <span className="text-(--color-text-secondary)">{'→'}</span>
               <span>
                 {new Date(row.endDate).toLocaleDateString('en-IN', {
                   day: '2-digit',

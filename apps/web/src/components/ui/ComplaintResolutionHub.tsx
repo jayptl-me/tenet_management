@@ -1,24 +1,8 @@
 'use client';
 
 import { clsx } from 'clsx';
-import {
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  Flame,
-  ArrowRight,
-  ShieldAlert,
-  Wifi,
-  Droplets,
-  Zap,
-  Layers,
-  UtensilsCrossed,
-  Sparkles,
-  Volume2,
-  HelpCircle,
-} from 'lucide-react';
+import { CheckCircle2, Clock, AlertTriangle, Flame, ArrowRight, ShieldAlert } from 'lucide-react';
 import type { IComplaintSlaMetrics } from '@pg/types';
-import { surfaceNestedClass } from '@/lib/field-styles';
 import { chartTokens } from '@/lib/chart-theme';
 
 export interface ComplaintStatusCounts {
@@ -33,49 +17,24 @@ export interface ComplaintResolutionHubProps {
   totalComplaints: number;
   resolvedRate: number;
   slaMetrics?: IComplaintSlaMetrics;
-  categories?: Array<{ _id: string; count: number }>;
   onStatusClick?: (status: string) => void;
   onAgingClick?: (tier: 'under24h' | 'between24And48h' | 'over48h') => void;
   onManageClick?: () => void;
   className?: string;
 }
 
-function getCategoryIcon(cat: string) {
-  const lower = cat.toLowerCase();
-  if (lower.includes('wifi') || lower.includes('internet')) return <Wifi className="h-3.5 w-3.5" />;
-  if (lower.includes('water') || lower.includes('washroom') || lower.includes('plumb')) {
-    return <Droplets className="h-3.5 w-3.5" />;
-  }
-  if (lower.includes('electr') || lower.includes('light') || lower.includes('power')) {
-    return <Zap className="h-3.5 w-3.5" />;
-  }
-  if (lower.includes('wash') || lower.includes('laundry'))
-    return <Layers className="h-3.5 w-3.5" />;
-  if (lower.includes('food') || lower.includes('meal'))
-    return <UtensilsCrossed className="h-3.5 w-3.5" />;
-  if (lower.includes('clean')) return <Sparkles className="h-3.5 w-3.5" />;
-  if (lower.includes('noise')) return <Volume2 className="h-3.5 w-3.5" />;
-  return <HelpCircle className="h-3.5 w-3.5" />;
-}
-
-function formatCategoryLabel(cat: string): string {
-  return cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 /**
- * Modern Linear Triage & SLA Incident Command Matrix
- * Replaces legacy semi-circular gauges with actionable ticket pipeline,
- * SLA aging telemetry (<24h, 24-48h, >48h), MTTR indicators, and priority distribution.
+ * Linear-style Continuous Operational Command Console
+ * Zero nested card boxes: renders as a single seamless operational telemetry surface
+ * with an integrated lifecycle pipeline strip, SLA aging horizon rail, and priority distribution.
  */
 export function ComplaintResolutionHub({
   complaints,
   totalComplaints,
   resolvedRate,
   slaMetrics,
-  categories = [],
   onStatusClick,
   onAgingClick,
-  onManageClick,
   className,
 }: ComplaintResolutionHubProps) {
   const activeCount = complaints.open + complaints.inProgress;
@@ -89,11 +48,10 @@ export function ComplaintResolutionHub({
 
   return (
     <div className={clsx('space-y-4', className)}>
-      {/* ── Metric Bar: Resolution Rate & MTTR / SLA ────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]/60 px-3.5 py-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="relative flex h-9 w-9 items-center justify-center">
-            {/* Mini Circular Ring */}
+      {/* ── Top HUD: Metrics & SLA Telemetry Strip ────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-color)] pb-3.5">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
             <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36">
               <path
                 className="text-[color:var(--chart-track)]"
@@ -122,7 +80,7 @@ export function ComplaintResolutionHub({
             </span>
           </div>
           <div>
-            <p className="text-[12px] font-bold text-[color:var(--color-text-primary)]">
+            <p className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
               {complaints.resolved} of {totalComplaints} Resolved
             </p>
             <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
@@ -133,7 +91,7 @@ export function ComplaintResolutionHub({
 
         <div className="flex items-center gap-2">
           {avgResolutionHours != null && (
-            <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1 text-[11px]">
+            <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1 text-[11px]">
               <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-secondary)]" />
               <span className="font-medium text-[color:var(--color-text-secondary)]">
                 Avg MTTR:
@@ -148,8 +106,8 @@ export function ComplaintResolutionHub({
             className={clsx(
               'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
               slaComplianceRate >= 80
-                ? 'border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]'
-                : 'border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)]',
+                ? 'border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]'
+                : 'border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)]',
             )}
           >
             <ShieldAlert className="h-3.5 w-3.5" />
@@ -158,21 +116,25 @@ export function ComplaintResolutionHub({
         </div>
       </div>
 
-      {/* ── Interactive Ticket Pipeline Strip ───────────────── */}
+      {/* ── Continuous Segmented Pipeline Strip (Zero Nested Cards) ── */}
       <div>
-        <p className="mb-2 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-          Ticket Lifecycle Pipeline
-        </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+            Ticket Lifecycle Pipeline
+          </p>
+          <span className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+            Click segment to filter
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 divide-y divide-[color:var(--border-color)] overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]/40 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
           {/* Open */}
           <button
             type="button"
             onClick={() => onStatusClick?.('open')}
             className={clsx(
-              surfaceNestedClass,
-              'group relative flex flex-col items-start p-3 text-left transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-danger-300)] hover:bg-[color:var(--color-danger-50)]/40 hover:shadow-[var(--shadow-sm)]',
-              complaints.open > 0 && 'border-l-2 border-l-[color:var(--color-danger-500)]',
+              'group relative flex flex-col items-start p-3 text-left transition-colors duration-[var(--transition-duration)]',
+              'hover:bg-[color:var(--color-danger-500)]/10',
             )}
           >
             <div className="flex w-full items-center justify-between">
@@ -200,10 +162,8 @@ export function ComplaintResolutionHub({
             type="button"
             onClick={() => onStatusClick?.('in_progress')}
             className={clsx(
-              surfaceNestedClass,
-              'group relative flex flex-col items-start p-3 text-left transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-warning-300)] hover:bg-[color:var(--color-warning-50)]/40 hover:shadow-[var(--shadow-sm)]',
-              complaints.inProgress > 0 && 'border-l-2 border-l-[color:var(--color-warning-500)]',
+              'group relative flex flex-col items-start p-3 text-left transition-colors duration-[var(--transition-duration)]',
+              'hover:bg-[color:var(--color-warning-500)]/10',
             )}
           >
             <div className="flex w-full items-center justify-between">
@@ -226,10 +186,8 @@ export function ComplaintResolutionHub({
             type="button"
             onClick={() => onStatusClick?.('resolved')}
             className={clsx(
-              surfaceNestedClass,
-              'group relative flex flex-col items-start p-3 text-left transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-success-300)] hover:bg-[color:var(--color-success-50)]/40 hover:shadow-[var(--shadow-sm)]',
-              complaints.resolved > 0 && 'border-l-2 border-l-[color:var(--color-success-500)]',
+              'group relative flex flex-col items-start p-3 text-left transition-colors duration-[var(--transition-duration)]',
+              'hover:bg-[color:var(--color-success-500)]/10',
             )}
           >
             <div className="flex w-full items-center justify-between">
@@ -252,9 +210,8 @@ export function ComplaintResolutionHub({
             type="button"
             onClick={() => onStatusClick?.('dismissed')}
             className={clsx(
-              surfaceNestedClass,
-              'group relative flex flex-col items-start p-3 text-left transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--border-color)] hover:shadow-[var(--shadow-sm)]',
+              'group relative flex flex-col items-start p-3 text-left transition-colors duration-[var(--transition-duration)]',
+              'hover:bg-[color:var(--color-field-bg)]',
             )}
           >
             <div className="flex w-full items-center justify-between">
@@ -274,7 +231,7 @@ export function ComplaintResolutionHub({
         </div>
       </div>
 
-      {/* ── SLA Aging Urgency Matrix ────────────────────────── */}
+      {/* ── Continuous SLA Aging Horizon Rail (Zero Nested Cards) ── */}
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
@@ -285,54 +242,40 @@ export function ComplaintResolutionHub({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 divide-y divide-[color:var(--border-color)] overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]/40 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {/* < 24h Normal */}
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             onClick={() => onAgingClick?.('under24h')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onAgingClick?.('under24h');
-            }}
-            className={clsx(
-              surfaceNestedClass,
-              'group cursor-pointer p-3 transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-success-200)] hover:shadow-[var(--shadow-sm)]',
-            )}
+            className="group flex flex-col justify-between p-3 text-left transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-success-500)]/10"
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-success-700)]">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-success-600)]">
                 <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--color-success-500)]" />
                 <span>&lt; 24h</span>
               </div>
-              <span className="rounded-full bg-[color:var(--color-success-50)] px-2 py-0.5 font-mono text-[11px] font-bold text-[color:var(--color-success-700)]">
+              <span className="rounded-full border border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] px-2 py-0.5 font-mono text-[11px] font-bold text-[color:var(--badge-success-text)]">
                 {aging.under24h}
               </span>
             </div>
-            <p className="mt-2 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
               Within optimal SLA window
             </p>
-          </div>
+          </button>
 
           {/* 24-48h Aging */}
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             onClick={() => onAgingClick?.('between24And48h')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onAgingClick?.('between24And48h');
-            }}
             className={clsx(
-              surfaceNestedClass,
-              'group cursor-pointer p-3 transition-all duration-[var(--transition-duration)]',
+              'group flex flex-col justify-between p-3 text-left transition-colors duration-[var(--transition-duration)]',
               aging.between24And48h > 0
-                ? 'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)]/30'
-                : 'hover:border-[color:var(--border-color)]',
-              'hover:shadow-[var(--shadow-sm)]',
+                ? 'bg-[color:var(--color-warning-500)]/10 hover:bg-[color:var(--color-warning-500)]/15'
+                : 'hover:bg-[color:var(--color-field-bg)]',
             )}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-warning-700)]">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-warning-600)]">
                 <Clock className="h-3.5 w-3.5 text-[color:var(--color-warning-500)]" />
                 <span>24 - 48h</span>
               </div>
@@ -340,37 +283,31 @@ export function ComplaintResolutionHub({
                 className={clsx(
                   'rounded-full px-2 py-0.5 font-mono text-[11px] font-bold',
                   aging.between24And48h > 0
-                    ? 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-800)]'
+                    ? 'border border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)]'
                     : 'bg-[color:var(--chart-track)] text-[color:var(--color-text-muted)]',
                 )}
               >
                 {aging.between24And48h}
               </span>
             </div>
-            <p className="mt-2 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
               At risk of SLA breach
             </p>
-          </div>
+          </button>
 
           {/* > 48h Overdue */}
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             onClick={() => onAgingClick?.('over48h')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onAgingClick?.('over48h');
-            }}
             className={clsx(
-              surfaceNestedClass,
-              'group cursor-pointer p-3 transition-all duration-[var(--transition-duration)]',
+              'group flex flex-col justify-between p-3 text-left transition-colors duration-[var(--transition-duration)]',
               aging.over48h > 0
-                ? 'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)]/40'
-                : 'hover:border-[color:var(--border-color)]',
-              'hover:shadow-[var(--shadow-sm)]',
+                ? 'bg-[color:var(--color-danger-500)]/10 hover:bg-[color:var(--color-danger-500)]/15'
+                : 'hover:bg-[color:var(--color-field-bg)]',
             )}
           >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-danger-700)]">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[color:var(--color-danger-600)]">
                 <AlertTriangle
                   className={clsx(
                     'h-3.5 w-3.5 text-[color:var(--color-danger-500)]',
@@ -383,23 +320,23 @@ export function ComplaintResolutionHub({
                 className={clsx(
                   'rounded-full px-2 py-0.5 font-mono text-[11px] font-bold',
                   aging.over48h > 0
-                    ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-800)]'
+                    ? 'border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]'
                     : 'bg-[color:var(--chart-track)] text-[color:var(--color-text-muted)]',
                 )}
               >
                 {aging.over48h}
               </span>
             </div>
-            <p className="mt-2 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
               SLA Breached · Immediate action
             </p>
-          </div>
+          </button>
         </div>
       </div>
 
       {/* ── Priority Distribution Bar ──────────────────────── */}
       {activeCount > 0 && (
-        <div>
+        <div className="pt-1">
           <div className="mb-1.5 flex items-center justify-between text-[11px]">
             <span className="font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
               Active Priority Distribution
@@ -452,51 +389,6 @@ export function ComplaintResolutionHub({
                 title={`${priority.low} Low`}
               />
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Top Categories Telemetry Strip ─────────────────── */}
-      {categories.length > 0 && (
-        <div className="border-t border-[color:var(--border-color)]/60 pt-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-              Top Incident Categories
-            </span>
-            {onManageClick && (
-              <button
-                type="button"
-                onClick={onManageClick}
-                className="text-[11px] font-semibold text-[color:var(--color-brand-600)] hover:underline"
-              >
-                View All Categories
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {categories.slice(0, 4).map((cat) => {
-              const count = cat.count;
-              const pct = totalComplaints > 0 ? Math.round((count / totalComplaints) * 100) : 0;
-              return (
-                <div
-                  key={cat._id}
-                  className={clsx(surfaceNestedClass, 'flex items-center gap-2 p-2 text-left')}
-                >
-                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] text-[color:var(--color-brand-600)]">
-                    {getCategoryIcon(cat._id)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-[color:var(--color-text-primary)]">
-                      {formatCategoryLabel(cat._id)}
-                    </p>
-                    <p className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
-                      {count} ({pct}%)
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}

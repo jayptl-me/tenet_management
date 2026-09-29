@@ -231,7 +231,7 @@ export function AttendanceMonthCalendar({
                 className={clsx(
                   'flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold',
                   isToday
-                    ? 'bg-[color:var(--color-brand-500)] text-[color:var(--color-text-inverted)]'
+                    ? 'bg-[color:var(--color-brand-solid)] text-[color:var(--color-on-brand-solid)]'
                     : 'text-[color:var(--color-text-primary)]',
                 )}
               >

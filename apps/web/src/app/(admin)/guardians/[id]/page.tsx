@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, Mail, User, Pencil, Shield, Home, BedDouble, Building2 } from 'lucide-react';
+import { Phone, Mail, User, Pencil, Shield, Home, BedDouble, Building2, Calendar } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { TenantStayCalendar, type StayCalendarEvent } from '@/components/ui/TenantStayCalendar';
 
 interface GuardianDetail {
   _id: string;
@@ -27,6 +28,21 @@ interface GuardianDetail {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface WardTenantDetail {
+  _id: string;
+  moveInDate?: string;
+  leaseEndDate?: string;
+  status?: string;
+}
+
+interface InvoiceRecord {
+  _id: string;
+  dueDate?: string;
+  month?: string;
+  totalAmount?: number;
+  status?: string;
 }
 
 function formatDateTime(dateStr: string | null | undefined): string {
@@ -49,6 +65,8 @@ export default function GuardianDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const [guardian, setGuardian] = useState<GuardianDetail | null>(null);
+  const [wardTenant, setWardTenant] = useState<WardTenantDetail | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<StayCalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -59,7 +77,35 @@ export default function GuardianDetailPage() {
     api
       .get(`guardians/${id}`)
       .json<{ success: boolean; data: GuardianDetail }>()
-      .then((res) => setGuardian(res.data))
+      .then(async (res) => {
+        const g = res.data;
+        setGuardian(g);
+        if (g.tenant?._id) {
+          try {
+            const [tenantRes, invoicesRes] = await Promise.all([
+              api.get(`tenants/${g.tenant._id}`).json<{ success: boolean; data: WardTenantDetail }>().catch(() => null),
+              api.get(`invoices?tenantId=${g.tenant._id}`).json<{ success: boolean; data: InvoiceRecord[] }>().catch(() => null),
+            ]);
+            if (tenantRes?.data) {
+              setWardTenant(tenantRes.data);
+            }
+            if (Array.isArray(invoicesRes?.data)) {
+              const mapped: StayCalendarEvent[] = invoicesRes.data
+                .filter((inv) => inv.dueDate)
+                .map((inv) => ({
+                  date: String(inv.dueDate).slice(0, 10),
+                  type: 'invoice' as const,
+                  title: `Invoice ${inv.month ?? ''}`,
+                  meta: inv.totalAmount ? `₹${inv.totalAmount.toLocaleString('en-IN')}` : undefined,
+                  id: inv._id,
+                }));
+              setCalendarEvents(mapped);
+            }
+          } catch {
+            // Non-blocking for ward calendar
+          }
+        }
+      })
       .catch(async (err) => {
         setError((await parseApiError(err)).message);
       })
@@ -125,7 +171,7 @@ export default function GuardianDetailPage() {
                   label="Full Name"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {guardian.name}
                     </span>
                   }
@@ -134,7 +180,7 @@ export default function GuardianDetailPage() {
                   label="Phone"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {guardian.phone}
                     </span>
                   }
@@ -144,7 +190,7 @@ export default function GuardianDetailPage() {
                     label="Email"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Mail className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {guardian.email}
                       </span>
                     }
@@ -184,25 +230,25 @@ export default function GuardianDetailPage() {
                       <span className="flex flex-col items-end gap-0.5">
                         <Link
                           href={`/tenants/${guardian.tenant._id}`}
-                          className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                          className="font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                         >
                           {guardian.tenant.user?.name ?? 'View tenant'}
                         </Link>
                         {guardian.tenant.room && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-(--color-text-muted)">
                             <Home className="h-3 w-3" />
                             Room {guardian.tenant.room.roomNumber}
                             {guardian.tenant.bedId ? ` · Bed ${guardian.tenant.bedId}` : ''}
                           </span>
                         )}
                         {guardian.tenant.room?.floor?.label && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-(--color-text-muted)">
                             <Building2 className="h-3 w-3" />
                             {guardian.tenant.room.floor.label}
                           </span>
                         )}
                         {guardian.tenant.bedId && !guardian.tenant.room && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-(--color-text-muted)">
                             <BedDouble className="h-3 w-3" />
                             Bed {guardian.tenant.bedId}
                           </span>
@@ -215,7 +261,17 @@ export default function GuardianDetailPage() {
             </DetailCard>
           </div>
 
-          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+          {guardian.tenant && (
+            <DetailCard title="Ward Tenancy Calendar" icon={<Calendar />}>
+              <TenantStayCalendar
+                moveInDate={wardTenant?.moveInDate}
+                moveOutDate={wardTenant?.leaseEndDate}
+                events={calendarEvents}
+              />
+            </DetailCard>
+          )}
+
+          <p className="text-right text-xs font-semibold text-(--color-text-muted)">
             Created {formatDateTime(guardian.createdAt)} · Updated{' '}
             {formatDateTime(guardian.updatedAt)}
           </p>

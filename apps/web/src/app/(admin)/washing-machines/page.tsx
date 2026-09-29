@@ -155,10 +155,10 @@ export default function WashingMachinesPage() {
       header: 'Machine',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">
+          <span className="font-semibold text-(--color-text-primary)">
             {row.label || `Machine ${row.machineNumber}`}
           </span>
-          <p className="text-xs text-[color:var(--color-text-muted)]">#{row.machineNumber}</p>
+          <p className="text-xs text-(--color-text-muted)">#{row.machineNumber}</p>
         </div>
       ),
     },
@@ -166,7 +166,7 @@ export default function WashingMachinesPage() {
       header: 'Floor',
       accessor: (row) => (
         <span className="inline-flex items-center gap-1 text-sm">
-          <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+          <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
           {row.floorLabel ?? `Floor ${row.floorNumber ?? '—'}`}
         </span>
       ),
@@ -182,22 +182,22 @@ export default function WashingMachinesPage() {
       accessor: (row) =>
         row.currentUser ? (
           <div>
-            <span className="flex items-center gap-1 text-sm font-medium text-[color:var(--color-text-primary)]">
+            <span className="flex items-center gap-1 text-sm font-medium text-(--color-text-primary)">
               <User className="h-3 w-3" /> {row.currentUser.name}
             </span>
-            <p className="text-xs text-[color:var(--color-text-muted)]">
+            <p className="text-xs text-(--color-text-muted)">
               Room {row.currentUser.room}
             </p>
           </div>
         ) : (
-          <span className="text-sm text-[color:var(--color-text-muted)]">—</span>
+          <span className="text-sm text-(--color-text-muted)">—</span>
         ),
     },
     {
       header: 'Timer',
       accessor: (row) =>
         row.timerEndsAt ? (
-          <span className="inline-flex items-center gap-1 text-sm text-[color:var(--color-text-secondary)]">
+          <span className="inline-flex items-center gap-1 text-sm text-(--color-text-secondary)">
             <Timer className="h-3 w-3" />
             {new Date(row.timerEndsAt).toLocaleTimeString('en-IN', {
               hour: '2-digit',
@@ -205,7 +205,7 @@ export default function WashingMachinesPage() {
             })}
           </span>
         ) : (
-          <span className="text-sm text-[color:var(--color-text-muted)]">—</span>
+          <span className="text-sm text-(--color-text-muted)">—</span>
         ),
     },
     {
@@ -215,13 +215,12 @@ export default function WashingMachinesPage() {
           {row.status === 'in_use' && (
             <Button
               variant="outline"
-              size="sm"
+              size="xs"
               onClick={(e) => {
                 e.stopPropagation();
                 void handleRelease(row._id);
               }}
               title="Release machine"
-              className="h-7 px-2 text-xs"
             >
               <Timer className="h-3 w-3" />
               Release
@@ -304,7 +303,7 @@ export default function WashingMachinesPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.label || `Machine ${row.machineNumber}`}
               </span>
               <StatusBadge
@@ -312,7 +311,7 @@ export default function WashingMachinesPage() {
                 label={row.status.replace(/_/g, ' ')}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span className="flex items-center gap-1">
                 <Building2 className="h-3 w-3" />
                 {row.floorLabel ?? `Floor ${row.floorNumber ?? '—'}`}

@@ -125,7 +125,7 @@ export default function EditLaundrySlotPage() {
                 label="Room"
                 value={
                   <span className="inline-flex items-center gap-1.5">
-                    <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Hash className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {tenant.roomId?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
                   </span>
                 }

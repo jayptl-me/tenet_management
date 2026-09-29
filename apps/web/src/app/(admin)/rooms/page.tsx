@@ -1,7 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, DoorOpen, LayoutList, LayoutGrid, Download, Wrench, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import {
+  Plus,
+  DoorOpen,
+  LayoutList,
+  LayoutGrid,
+  Download,
+  Wrench,
+  X,
+  BedDouble,
+  Users,
+  IndianRupee,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
@@ -15,14 +26,26 @@ import { ServiceStatusIndicator } from '@/components/ui/ServiceStatusIndicator';
 import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { StatCard } from '@/components/ui/StatCard';
+import { OccupancyRing } from '@/components/ui/OccupancyRing';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BedOccupancyGrid } from '@/components/ui/BedOccupancyGrid';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { floorLabel } from '@/lib/resource-select-presets';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type ViewMode = 'table' | 'matrix';
 type AvailabilityFilter = '' | 'vacant' | 'full';
+
+interface RoomsStats {
+  totalRooms: number;
+  activeRooms: number;
+  totalBeds: number;
+  occupiedBeds: number;
+  vacantBeds: number;
+  occupancyPct: number;
+  potentialRent: number;
+}
 
 interface RoomRow {
   _id: string;
@@ -66,9 +89,11 @@ interface ReconcileReport {
   }>;
 }
 
-export default function RoomsPage() {
+function RoomsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rooms, setRooms] = useState<RoomRow[]>([]);
+  const [stats, setStats] = useState<RoomsStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [total, setTotal] = useState(0);
@@ -86,13 +111,21 @@ export default function RoomsPage() {
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState<ReconcileReport | null>(null);
 
+  // Deep-link support: /rooms?floorId=X (from floor detail "View all") seeds
+  // the floor filter once on mount.
+  useEffect(() => {
+    const floorParam = searchParams.get('floorId');
+    if (floorParam) setFloorFilter(floorParam);
+  }, [searchParams]);
+
   const fetchRooms = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
       params.set('page', String(page));
-      params.set('limit', String(perPage));
+      // Matrix view must show every matching room, not just the current page.
+      params.set('limit', viewMode === 'matrix' ? '500' : String(perPage));
       if (search) params.set('roomNumber', search);
       if (sharingFilter) params.set('sharingType', sharingFilter);
       if (statusFilter) params.set('isActive', statusFilter);
@@ -101,16 +134,17 @@ export default function RoomsPage() {
       const res = await api.get(`rooms?${params.toString()}`).json<{
         success: boolean;
         data: RoomRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
+        meta: { total: number; page: number; limit: number; totalPages: number; stats: RoomsStats };
       }>();
       setRooms(res.data);
       setTotal(res.meta.total);
+      setStats(res.meta.stats ?? null);
     } catch {
       setError('Failed to load rooms');
     } finally {
       setIsLoading(false);
     }
-  }, [page, perPage, search, sharingFilter, statusFilter, floorFilter]);
+  }, [page, perPage, search, sharingFilter, statusFilter, floorFilter, viewMode]);
 
   const visibleRooms = useMemo(() => {
     if (!availabilityFilter) return rooms;
@@ -197,7 +231,7 @@ export default function RoomsPage() {
     {
       header: 'Room',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {row.roomNumber}
         </span>
       ),
@@ -271,14 +305,14 @@ export default function RoomsPage() {
               <Wrench className="h-4 w-4" />
               Reconcile
             </Button>
-            <div className="flex overflow-hidden rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]">
+            <div className="flex overflow-hidden rounded-(--radius-md) border-[length:var(--bw-default)] border-(--border-color)">
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-(--transition-duration) ${
                   viewMode === 'table'
-                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                    ? 'bg-(--color-text-primary) text-(--color-card-bg)'
+                    : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                 }`}
                 aria-label="Table view"
               >
@@ -288,10 +322,10 @@ export default function RoomsPage() {
               <button
                 type="button"
                 onClick={() => setViewMode('matrix')}
-                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-[var(--transition-duration)] ${
+                className={`font-display px-3 py-1.5 text-xs font-semibold transition-colors duration-(--transition-duration) ${
                   viewMode === 'matrix'
-                    ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                    : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-100)]'
+                    ? 'bg-(--color-text-primary) text-(--color-card-bg)'
+                    : 'bg-(--color-field-bg) text-(--color-text-secondary) hover:bg-(--color-surface-100)'
                 }`}
                 aria-label="Bed Matrix view"
               >
@@ -308,15 +342,53 @@ export default function RoomsPage() {
       />
       <ErrorBanner message={error} />
 
+      {/* Filter-aware KPI strip — aggregates over the full filtered set */}
+      {!isLoading && stats && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_1fr]">
+          <div className="flex items-center justify-center gap-4 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) px-6 py-4 shadow-(--shadow-card)">
+            <OccupancyRing
+              value={stats.occupancyPct}
+              caption={`${stats.occupiedBeds} / ${stats.totalBeds} beds`}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title="Active Rooms"
+              value={stats.activeRooms}
+              icon={<DoorOpen className="h-4 w-4" />}
+              variant="brand"
+            />
+            <StatCard
+              title="Vacant Beds"
+              value={stats.vacantBeds}
+              icon={<BedDouble className="h-4 w-4" />}
+              variant="success"
+            />
+            <StatCard
+              title="Tenants Housed"
+              value={stats.occupiedBeds}
+              icon={<Users className="h-4 w-4" />}
+              variant="default"
+            />
+            <StatCard
+              title="Potential Rent /mo"
+              value={`\u20B9${stats.potentialRent.toLocaleString('en-IN')}`}
+              icon={<IndianRupee className="h-4 w-4" />}
+              variant="default"
+            />
+          </div>
+        </div>
+      )}
+
       {reconcileResult && (
-        <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4">
+        <div className="rounded-(--radius-lg) border border-(--color-brand-200) bg-(--color-brand-50) p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-[color:var(--color-text-primary)]">
+              <p className="text-sm font-bold text-(--color-text-primary)">
                 Occupancy reconciled — {reconcileResult.fixedRooms} room
                 {reconcileResult.fixedRooms === 1 ? '' : 's'} repaired
               </p>
-              <p className="mt-1 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+              <p className="mt-1 text-xs font-semibold text-(--color-text-secondary)">
                 Scanned {reconcileResult.scannedRooms} rooms · {reconcileResult.scannedTenants}{' '}
                 active tenants · {reconcileResult.occupiedBeds} beds occupied ·{' '}
                 {reconcileResult.freedBeds} stale beds freed
@@ -326,14 +398,14 @@ export default function RoomsPage() {
               type="button"
               aria-label="Dismiss reconcile result"
               onClick={() => setReconcileResult(null)}
-              className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] hover:bg-[color:var(--color-field-bg)]"
+              className="rounded-(--radius-md) p-1 text-(--color-text-muted) hover:bg-(--color-field-bg)"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
           {reconcileResult.conflicts.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-bold text-[color:var(--color-danger-700)]">
+              <p className="text-xs font-bold text-(--color-danger-700)">
                 Bed conflicts ({reconcileResult.conflicts.length}) — earliest move-in kept, transfer
                 the rest manually
               </p>
@@ -341,12 +413,12 @@ export default function RoomsPage() {
                 {reconcileResult.conflicts.map((cf) => (
                   <li
                     key={`${cf.roomId}-${cf.bedId}`}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-200)] bg-[color:var(--color-card-bg)] px-3 py-2 text-xs"
+                    className="rounded-(--radius-md) border border-(--color-danger-200) bg-(--color-card-bg) px-3 py-2 text-xs"
                   >
-                    <span className="font-bold text-[color:var(--color-text-primary)]">
+                    <span className="font-bold text-(--color-text-primary)">
                       Room {cf.roomNumber} · Bed {cf.bedId}
                     </span>
-                    <span className="ml-2 text-[color:var(--color-text-secondary)]">
+                    <span className="ml-2 text-(--color-text-secondary)">
                       {cf.tenantNames.join(', ')}
                     </span>
                     <span className="ml-2">
@@ -357,7 +429,7 @@ export default function RoomsPage() {
                             key={tid}
                             type="button"
                             onClick={() => router.push(`/tenants/${tid}`)}
-                            className="mr-1 font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                            className="mr-1 font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                           >
                             Move tenant
                           </button>
@@ -370,23 +442,23 @@ export default function RoomsPage() {
           )}
           {reconcileResult.orphans.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-bold text-[color:var(--color-warning-800)]">
+              <p className="text-xs font-bold text-(--color-warning-800)">
                 Orphaned tenants ({reconcileResult.orphans.length}) — no valid bed slot found
               </p>
               <ul className="mt-1.5 space-y-1.5">
                 {reconcileResult.orphans.map((o) => (
                   <li
                     key={o.tenantId}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-card-bg)] px-3 py-2 text-xs"
+                    className="rounded-(--radius-md) border border-(--color-warning-200) bg-(--color-card-bg) px-3 py-2 text-xs"
                   >
                     <button
                       type="button"
                       onClick={() => router.push(`/tenants/${o.tenantId}`)}
-                      className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      className="font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                     >
                       {o.tenantName}
                     </button>
-                    <span className="ml-2 text-[color:var(--color-text-secondary)]">
+                    <span className="ml-2 text-(--color-text-secondary)">
                       Bed {o.bedId} · {o.reason.replace(/_/g, ' ')}
                     </span>
                   </li>
@@ -396,7 +468,7 @@ export default function RoomsPage() {
           )}
           {reconcileResult.invalidRooms.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-bold text-[color:var(--color-warning-800)]">
+              <p className="text-xs font-bold text-(--color-warning-800)">
                 Invalid rooms ({reconcileResult.invalidRooms.length}) — bed count mismatches sharing
                 type
               </p>
@@ -404,16 +476,16 @@ export default function RoomsPage() {
                 {reconcileResult.invalidRooms.map((r) => (
                   <li
                     key={r.roomId}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-3 py-2 text-xs"
+                    className="rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) px-3 py-2 text-xs"
                   >
                     <button
                       type="button"
                       onClick={() => router.push(`/rooms/${r.roomId}`)}
-                      className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                      className="font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                     >
                       Room {r.roomNumber}
                     </button>
-                    <span className="ml-2 text-[color:var(--color-text-secondary)]">
+                    <span className="ml-2 text-(--color-text-secondary)">
                       {r.bedCount} beds for {r.sharingType} sharing
                     </span>
                   </li>
@@ -494,7 +566,6 @@ export default function RoomsPage() {
           variant="outline"
           onClick={handleExportCsv}
           disabled={visibleRooms.length === 0}
-          className="flex items-center gap-1.5"
         >
           <Download className="h-4 w-4" />
           Export CSV
@@ -531,7 +602,7 @@ export default function RoomsPage() {
           mobileCardRenderer={(row) => (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                <span className="text-sm font-semibold text-(--color-text-primary)">
                   Room {row.roomNumber}
                 </span>
                 <StatusBadge
@@ -539,7 +610,7 @@ export default function RoomsPage() {
                   label={row.isActive ? 'Active' : 'Inactive'}
                 />
               </div>
-              <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+              <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
                 <span>{row.floor?.label ?? 'N/A'}</span>
                 <span>{row.sharingType} Sharing</span>
                 <span>₹{row.monthlyRent.toLocaleString()}</span>
@@ -574,5 +645,19 @@ export default function RoomsPage() {
         onCancel={() => setReconcileConfirm(false)}
       />
     </div>
+  );
+}
+
+export default function RoomsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <RoomsContent />
+    </Suspense>
   );
 }

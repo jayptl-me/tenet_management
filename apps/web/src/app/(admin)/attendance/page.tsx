@@ -310,7 +310,7 @@ export default function AttendancePage() {
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {tenantNameOf(row)}
         </span>
       ),
@@ -379,7 +379,7 @@ export default function AttendancePage() {
 
       {showCalendar && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4">
+          <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4">
             <AttendanceMonthCalendar
               days={calendarDays}
               isLoading={calendarLoading}
@@ -509,7 +509,7 @@ export default function AttendancePage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {tenantNameOf(row)}
               </span>
               <StatusBadge
@@ -517,7 +517,7 @@ export default function AttendancePage() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>{roomNumberOf(row)}</span>
               <span>{formatYmd(row.date)}</span>
               {(row.checkInTime ?? row.checkIn) && (

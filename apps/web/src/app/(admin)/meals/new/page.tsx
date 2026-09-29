@@ -108,17 +108,31 @@ export default function NewMealFeedbackPage() {
           />
           <FormGrid cols={3}>
             <DatePicker label="Date" error={errors.date?.message} {...register('date')} />
-            <Select
-              label="Meal Type"
-              options={MEAL_OPTIONS}
-              error={errors.mealType?.message}
-              {...register('mealType')}
+            <Controller
+              name="mealType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Meal Type"
+                  options={MEAL_OPTIONS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.mealType?.message}
+                />
+              )}
             />
-            <Select
-              label="Rating"
-              options={RATING_OPTIONS}
-              error={errors.rating?.message}
-              {...register('rating')}
+            <Controller
+              name="rating"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label="Rating"
+                  options={RATING_OPTIONS}
+                  value={String(field.value ?? '')}
+                  onChange={(val) => field.onChange(Number(val))}
+                  error={errors.rating?.message}
+                />
+              )}
             />
           </FormGrid>
           <Controller

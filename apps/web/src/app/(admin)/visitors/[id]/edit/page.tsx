@@ -238,43 +238,43 @@ export default function EditVisitorPage() {
           description="This visit is pinned to the resident below and cannot be reassigned here"
         >
           {host ? (
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-3">
+            <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) p-3">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 <Link
                   href={`/tenants/${host.id}`}
-                  className="inline-flex items-center gap-1 font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                  className="inline-flex items-center gap-1 font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                 >
                   <UserRound className="h-3.5 w-3.5" />
                   {host.name}
                   <ExternalLink className="h-3 w-3" />
                 </Link>
-                <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                <span className="inline-flex items-center gap-1 font-semibold text-(--color-text-secondary)">
                   <DoorOpen className="h-3.5 w-3.5" />
                   Room {host.roomNumber ?? 'N/A'}
                   {host.bedId ? ` · Bed ${host.bedId}` : ''}
                 </span>
                 {host.floorLabel && (
-                  <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                  <span className="inline-flex items-center gap-1 font-semibold text-(--color-text-secondary)">
                     <Building2 className="h-3.5 w-3.5" />
                     {host.floorLabel}
                   </span>
                 )}
                 {host.bedId && (
-                  <span className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-text-secondary)]">
+                  <span className="inline-flex items-center gap-1 font-semibold text-(--color-text-secondary)">
                     <BedDouble className="h-3.5 w-3.5" />
                     Bed {host.bedId}
                   </span>
                 )}
               </div>
               {host.phone && (
-                <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[color:var(--color-text-muted)]">
+                <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-(--color-text-muted)">
                   <Phone className="h-3 w-3" />
                   {host.phone}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+            <p className="text-sm font-medium text-(--color-text-muted)">
               Host resident details unavailable.
             </p>
           )}
@@ -324,8 +324,8 @@ export default function EditVisitorPage() {
                     onClick={() => setValue('purpose', option, { shouldValidate: true })}
                     className={
                       selected
-                        ? 'rounded-full border border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-500)] px-3 py-1 text-xs font-bold text-white shadow-[var(--shadow-xs)]'
-                        : 'rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-300)] hover:text-[color:var(--color-text-primary)]'
+                        ? 'rounded-full border border-(--color-brand-500) bg-(--color-brand-500) px-3 py-1 text-xs font-bold text-(--color-on-brand) shadow-(--shadow-xs)'
+                        : 'rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1 text-xs font-semibold text-(--color-text-secondary) hover:border-(--color-brand-300) hover:text-(--color-text-primary)'
                     }
                   >
                     {option}
@@ -350,38 +350,38 @@ export default function EditVisitorPage() {
               {...register('expectedArrival')}
             />
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+              <p className="text-sm font-medium text-(--color-text-primary)">
                 Arrival summary
               </p>
               {summary ? (
                 <div
                   className={
                     summary.isPast
-                      ? 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] px-3 py-2 text-sm'
-                      : 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm'
+                      ? 'flex items-start gap-2 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) px-3 py-2 text-sm'
+                      : 'flex items-start gap-2 rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm'
                   }
                 >
                   {summary.isPast ? (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-warning-600)]" />
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-warning-600)" />
                   ) : (
-                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-brand-600)]" />
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-(--color-brand-600)" />
                   )}
                   <span>
-                    <span className="font-bold text-[color:var(--color-text-primary)]">
+                    <span className="font-bold text-(--color-text-primary)">
                       {summary.label}
                     </span>
-                    <span className="block text-xs font-medium text-[color:var(--color-text-secondary)]">
+                    <span className="block text-xs font-medium text-(--color-text-secondary)">
                       {summary.detail}
                     </span>
                     {changed && (
-                      <span className="mt-1 block text-xs font-semibold text-[color:var(--color-brand-700)]">
+                      <span className="mt-1 block text-xs font-semibold text-(--color-brand-700)">
                         Previously {formatDateTime(originalArrival)}
                       </span>
                     )}
                   </span>
                 </div>
               ) : (
-                <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm text-[color:var(--color-text-secondary)]">
+                <p className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm text-(--color-text-secondary)">
                   Pick a date and time to preview the visit window.
                 </p>
               )}
@@ -395,13 +395,13 @@ export default function EditVisitorPage() {
           divided
         >
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+            <p className="text-sm font-medium text-(--color-text-primary)">
               Current status
             </p>
-            <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm font-bold text-[color:var(--color-text-secondary)]">
+            <p className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm font-bold text-(--color-text-secondary)">
               {statusLabel}
             </p>
-            <p className="text-xs text-[color:var(--color-text-muted)]">
+            <p className="text-xs text-(--color-text-muted)">
               Use Arrive / Depart / Cancel on the visitor detail page. Status cannot be set freely
               here.
             </p>

@@ -24,9 +24,9 @@ import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Sparkline } from '@/components/ui/Sparkline';
-import { DonutChart } from '@/components/ui/DonutChart';
+import { ComplaintCategoryMatrix } from '@/components/ui/ComplaintCategoryMatrix';
+import { MealFeedbackLedger } from '@/components/ui/MealFeedbackLedger';
 import { FunnelChart } from '@/components/ui/FunnelChart';
-import { AmenityHealthGrid } from '@/components/ui/AmenityHealthGrid';
 import { RoomBedHeatmap, type RoomBedMatrixItem } from '@/components/ui/RoomBedHeatmap';
 import { ComplaintResolutionHub } from '@/components/ui/ComplaintResolutionHub';
 import type { IComplaintSlaMetrics } from '@pg/types';
@@ -127,35 +127,12 @@ const STATUS_PRIORITY: Record<string, number> = {
   dismissed: 3,
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  wifi: 'WiFi',
-  water: 'Water',
-  electricity: 'Electricity',
-  food_quality: 'Food',
-  cleaning_room: 'Room Cleaning',
-  cleaning_washroom: 'Washroom',
-  washing_machine: 'Washing Machine',
-  fridge: 'Fridge',
-  lights: 'Lights',
-  noise: 'Noise',
-  other: 'Other',
-};
-
-const CATEGORY_COLORS = [
-  'var(--color-danger-500)',
-  'var(--color-warning-500)',
-  'var(--color-brand-500)',
-  'var(--color-accent-500)',
-  'var(--color-info-500)',
-  'var(--color-success-500)',
-];
-
-const FUNNEL_COLORS: Record<string, string> = {
-  draft: chartTokens.barSecondary,
-  sent: 'var(--color-info-500)',
-  partial: chartTokens.warning,
-  paid: chartTokens.success,
-  overdue: chartTokens.danger,
+const FUNNEL_COLORS: Record<string, { color: string; ink?: string }> = {
+  draft: { color: chartTokens.barSecondary, ink: 'var(--chart-label)' },
+  sent: { color: 'var(--color-info-500)', ink: 'var(--color-on-info)' },
+  partial: { color: chartTokens.warning, ink: 'var(--color-on-warning)' },
+  paid: { color: chartTokens.success, ink: 'var(--color-on-success)' },
+  overdue: { color: chartTokens.danger, ink: 'var(--color-on-danger)' },
 };
 
 const FUNNEL_ORDER = ['paid', 'sent', 'partial', 'overdue', 'draft'];
@@ -194,7 +171,7 @@ function complaintStatusMeta(status: string): {
   }
 }
 
-// ── Section Header ─────────────────────────────────────
+// ── Refined Executive Section Header ───────────────────
 
 function SectionHeader({
   title,
@@ -210,26 +187,30 @@ function SectionHeader({
   return (
     <div className="mb-4 flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h3 className="font-display text-base font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-[17px]">
+        <h3 className="font-display text-15 sm:text-16 font-bold tracking-tight text-(--color-text-primary)">
           {title}
         </h3>
         {subtitle && (
-          <p className="mt-0.5 text-[12px] leading-snug font-medium text-[color:var(--color-text-secondary)]">
+          <p className="mt-0.5 text-2xs sm:text-12 leading-snug font-medium text-(--color-text-muted)">
             {subtitle}
           </p>
         )}
       </div>
       {actionLabel && onAction && (
-        <Button variant="outline" size="sm" className="flex-shrink-0" onClick={onAction}>
-          {actionLabel}
-          <ArrowRight className="ml-1 h-3.5 w-3.5" />
-        </Button>
+        <button
+          type="button"
+          onClick={onAction}
+          className="group inline-flex flex-shrink-0 items-center gap-1 text-12 font-semibold text-(--color-brand-600) transition-colors hover:text-(--color-brand-700) focus:outline-none"
+        >
+          <span>{actionLabel}</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+        </button>
       )}
     </div>
   );
 }
 
-/** Compact empty state for use inside Surface panels. */
+/** Compact empty state for inside Surface panels. */
 function PanelEmpty({
   icon,
   title,
@@ -243,10 +224,10 @@ function PanelEmpty({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-      <div className="mb-2 text-[color:var(--color-text-muted)]">{icon}</div>
-      <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">{title}</p>
+      <div className="mb-2 text-(--color-text-muted)">{icon}</div>
+      <p className="text-13 font-semibold text-(--color-text-primary)">{title}</p>
       {description && (
-        <p className="mt-1 max-w-xs text-[11px] leading-relaxed font-medium text-[color:var(--color-text-muted)]">
+        <p className="mt-1 max-w-xs text-2xs leading-relaxed font-medium text-(--color-text-muted)">
           {description}
         </p>
       )}
@@ -352,7 +333,6 @@ export default function DashboardPage() {
   const vacantBeds = Math.max(totalBeds - stats.occupancy.occupiedBeds, 0);
   const occupancyRate =
     totalBeds > 0 ? Math.round((stats.occupancy.occupiedBeds / totalBeds) * 100) : 0;
-  const actionableEnquiries = stats.enquiries.pending + (stats.enquiries.contacted ?? 0);
   const newEnquiriesThisWeek = stats.enquiries.newThisWeek ?? 0;
 
   // Aging open complaints (>3 days)
@@ -379,11 +359,9 @@ export default function DashboardPage() {
   const momDelta =
     lastMonthCollected > 0
       ? Math.round(((thisMonthCollected - lastMonthCollected) / lastMonthCollected) * 100)
-      : thisMonthCollected > 0
-        ? null
-        : null;
+      : null;
 
-  // Occupancy sparkline from real occupancyHistory (occupied beds)
+  // Occupancy sparkline from real occupancyHistory
   const occupancySparkline =
     (stats.occupancyHistory?.length ?? 0) > 0
       ? stats.occupancyHistory!.map((r) => r.occupied)
@@ -394,60 +372,46 @@ export default function DashboardPage() {
     breakfast:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-            (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
-              stats.mealFeedbackTrend.length) *
-              10,
-          ) / 10
+          (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
+            stats.mealFeedbackTrend.length) *
+          10,
+        ) / 10
         : 0,
     lunch:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-            (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
-              stats.mealFeedbackTrend.length) *
-              10,
-          ) / 10
+          (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
+            stats.mealFeedbackTrend.length) *
+          10,
+        ) / 10
         : 0,
     dinner:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-            (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
-              stats.mealFeedbackTrend.length) *
-              10,
-          ) / 10
+          (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
+            stats.mealFeedbackTrend.length) *
+          10,
+        ) / 10
         : 0,
   };
-
-  // Meal trend chart data
-  const mealChartData = stats.mealFeedbackTrend.map((d) => ({
-    breakfast: d.breakfast,
-    lunch: d.lunch,
-    dinner: d.dinner,
-  }));
-  const mealChartLabels = stats.mealFeedbackTrend.map((d) => {
-    const dt = new Date(d.date);
-    return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  });
 
   // Complaints sorted by priority (open first)
   const sortedComplaints = [...stats.recent.complaints].sort(
     (a, b) => (STATUS_PRIORITY[a.status] ?? 99) - (STATUS_PRIORITY[b.status] ?? 99),
   );
 
-  // Complaint categories for donut chart
-  const complaintCategoryDonut = (stats.complaintsByCategory ?? []).map((cat, i) => ({
-    label: CATEGORY_LABELS[cat._id] ?? cat._id,
-    value: cat.count,
-    color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-  }));
-
   // Payment funnel data
   const paymentFunnelStages = FUNNEL_ORDER.filter(
     (key) => (stats.paymentFunnel?.[key]?.count ?? 0) > 0,
-  ).map((key) => ({
-    label: key.charAt(0).toUpperCase() + key.slice(1),
-    value: stats.paymentFunnel?.[key]?.count ?? 0,
-    color: FUNNEL_COLORS[key] ?? chartTokens.barSecondary,
-  }));
+  ).map((key) => {
+    const stage = FUNNEL_COLORS[key];
+    return {
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      value: stats.paymentFunnel?.[key]?.count ?? 0,
+      color: stage?.color ?? chartTokens.barSecondary,
+      ink: stage?.ink,
+    };
+  });
 
   const todayLabel = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -461,7 +425,7 @@ export default function DashboardPage() {
       variants={staggerContainerFast}
       initial="hidden"
       animate="visible"
-      className="space-y-6"
+      className="space-y-7"
     >
       {/* ── Header ─────────────────────────────────── */}
       <PageHeader
@@ -474,7 +438,6 @@ export default function DashboardPage() {
               size="sm"
               disabled={isRefreshing}
               onClick={() => fetchStats(true)}
-              className="flex items-center gap-1.5"
             >
               <RotateCw className={clsx('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               <span>Refresh</span>
@@ -491,763 +454,668 @@ export default function DashboardPage() {
             <Button variant="outline" size="sm" onClick={() => router.push('/complaints/new')}>
               New Complaint
             </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/services')}>
-              Manage Services
-            </Button>
           </div>
         }
       />
 
-      {/* ── KPI Row: 5 Key Metrics (Stripe & Mercury Standard) ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {/* Card 1: Bed Occupancy */}
-        <motion.div variants={fadeScaleIn} className="h-full">
-          <StatCard
-            title="Bed Occupancy"
-            value={`${stats.occupancy.occupiedBeds} / ${totalBeds}`}
-            subtitle={`${vacantBeds} vacant beds available`}
-            icon={<Users className="h-4 w-4" />}
-            progress={{
-              value: stats.occupancy.occupiedBeds,
-              max: totalBeds || 1,
-              color: occupancyRate >= 80 ? 'var(--color-success-500)' : 'var(--color-brand-500)',
-              label: 'Fill rate',
-            }}
-            trend={
-              totalBeds === 0
-                ? { value: '—', direction: 'neutral', label: 'occupied' }
-                : {
+      {/* ═══════════════════════════════════════════════════
+          ZONE 1: Executive North Star & Operational Triage
+          ═══════════════════════════════════════════════════ */}
+      <section aria-label="Executive Key Performance Indicators" className="space-y-4">
+        {/* Metric Strip: 5 Executive Tiles (Stripe & Mercury Standard) */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {/* Card 1: Bed Occupancy */}
+          <motion.div variants={fadeScaleIn} className="h-full">
+            <StatCard
+              title="Bed Occupancy"
+              value={`${stats.occupancy.occupiedBeds} / ${totalBeds}`}
+              subtitle={`${vacantBeds} vacant beds available`}
+              icon={<Users />}
+              tone="brand"
+              progress={{
+                value: stats.occupancy.occupiedBeds,
+                max: totalBeds || 1,
+                color: occupancyRate >= 80 ? 'var(--color-success-500)' : 'var(--color-brand-500)',
+                label: 'Fill rate',
+              }}
+              trend={
+                totalBeds === 0
+                  ? { value: '0%', direction: 'neutral', label: 'occupied' }
+                  : {
                     value: `${occupancyRate}%`,
                     direction: occupancyRate >= 80 ? 'up' : 'down',
                     label: 'occupied',
                   }
-            }
-            tone={occupancyRate >= 80 ? 'success' : 'brand'}
-            onClick={() => router.push('/tenants')}
-          >
-            <div className="mt-1 w-full">
-              <Sparkline
-                data={occupancySparkline}
-                width="100%"
-                height={22}
-                color={chartTokens.brand}
-              />
-            </div>
-          </StatCard>
-        </motion.div>
+              }
+              onClick={() => router.push('/tenants')}
+            >
+              <div className="mt-1 w-full">
+                <Sparkline
+                  data={occupancySparkline}
+                  width="100%"
+                  height={22}
+                  color={chartTokens.brand}
+                />
+              </div>
+            </StatCard>
+          </motion.div>
 
-        {/* Card 2: Monthly Revenue */}
-        <motion.div variants={fadeScaleIn} className="h-full">
-          <StatCard
-            title="Monthly Revenue"
-            value={`₹${stats.revenue.collected.toLocaleString('en-IN')}`}
-            subtitle={
-              hasRevenueTarget
-                ? `Target: ₹${stats.revenue.expected.toLocaleString('en-IN')}`
-                : 'No billed invoices this month'
-            }
-            icon={<IndianRupee className="h-4 w-4" />}
-            progress={
-              hasRevenueTarget
-                ? {
+          {/* Card 2: Monthly Revenue */}
+          <motion.div variants={fadeScaleIn} className="h-full">
+            <StatCard
+              title="Monthly Revenue"
+              value={`₹${stats.revenue.collected.toLocaleString('en-IN')}`}
+              subtitle={
+                hasRevenueTarget
+                  ? `Target: ₹${stats.revenue.expected.toLocaleString('en-IN')}`
+                  : 'No billed invoices this month'
+              }
+              icon={<IndianRupee />}
+              tone="success"
+              progress={
+                hasRevenueTarget
+                  ? {
                     value: stats.revenue.collected,
                     max: stats.revenue.expected || 1,
                     color:
                       collectionRate >= 80
                         ? 'var(--color-success-500)'
                         : 'var(--color-warning-500)',
-                    label: 'Target goal',
+                    label: 'Collection goal',
                   }
-                : undefined
-            }
-            trend={
-              hasRevenueTarget
-                ? {
+                  : undefined
+              }
+              trend={
+                hasRevenueTarget
+                  ? {
                     value: `${collectionRate}%`,
                     direction: collectionRate >= 80 ? 'up' : 'down',
                     label: 'of target',
                   }
-                : { value: 'No target', direction: 'neutral', label: '—' }
-            }
-            delta={
-              momDelta != null
-                ? {
+                  : undefined
+              }
+              delta={
+                momDelta != null
+                  ? {
                     value: `${momDelta >= 0 ? '+' : ''}${momDelta}%`,
                     direction: momDelta >= 0 ? 'up' : 'down',
                     label: 'vs last mo',
                   }
-                : undefined
-            }
-            tone={!hasRevenueTarget ? 'default' : collectionRate >= 80 ? 'success' : 'warning'}
-            onClick={() => router.push('/payments')}
-          />
-        </motion.div>
+                  : undefined
+              }
+              onClick={() => router.push('/payments')}
+            />
+          </motion.div>
 
-        {/* Card 3: Active Complaints */}
-        <motion.div variants={fadeScaleIn} className="h-full">
-          <StatCard
-            title="Active Complaints"
-            value={activeComplaints}
-            subtitle={`${stats.complaints.open} open · ${stats.complaints.inProgress} in progress`}
-            icon={<AlertTriangle className="h-4 w-4" />}
-            progress={
-              totalComplaints > 0
-                ? {
-                    value: stats.complaints.resolved,
-                    max: totalComplaints,
-                    color:
-                      resolvedRate >= 70 ? 'var(--color-success-500)' : 'var(--color-warning-500)',
-                    label: 'Resolved ratio',
-                  }
-                : undefined
-            }
-            trend={
-              totalComplaints === 0
-                ? { value: '0', direction: 'neutral', label: 'logged' }
-                : {
+          {/* Card 3: Active Complaints */}
+          <motion.div variants={fadeScaleIn} className="h-full">
+            <StatCard
+              title="Active Complaints"
+              value={activeComplaints}
+              subtitle={`${stats.complaints.open} open · ${stats.complaints.inProgress} in progress`}
+              icon={<AlertTriangle />}
+              tone={activeComplaints > 0 ? 'warning' : 'success'}
+              trend={
+                totalComplaints === 0
+                  ? { value: '0', direction: 'neutral', label: 'logged' }
+                  : {
                     value: `${resolvedRate}%`,
                     direction: resolvedRate >= 70 ? 'up' : 'down',
                     label: 'resolved',
                   }
-            }
-            tone={
-              stats.complaints.open > 0 ? 'danger' : activeComplaints > 0 ? 'warning' : 'success'
-            }
-            onClick={() => router.push('/complaints?status=open')}
-          />
-        </motion.div>
+              }
+              onClick={() => router.push('/complaints?status=open')}
+            />
+          </motion.div>
 
-        {/* Card 4: Service Health */}
-        <motion.div variants={fadeScaleIn} className="h-full">
-          <StatCard
-            title="Service Health"
-            value={`${stats.services.operational} / ${serviceTotal}`}
-            subtitle={`${stats.services.operational} up · ${stats.services.degraded} degraded · ${stats.services.down} down`}
-            icon={<Wifi className="h-4 w-4" />}
-            progress={
-              serviceTotal > 0
-                ? {
-                    value: stats.services.operational,
-                    max: serviceTotal,
-                    color:
-                      stats.services.down > 0
-                        ? 'var(--color-danger-500)'
-                        : stats.services.degraded > 0
-                          ? 'var(--color-warning-500)'
-                          : 'var(--color-success-500)',
-                    label: 'Health ratio',
-                  }
-                : undefined
-            }
-            trend={
-              serviceTotal === 0
-                ? { value: '—', direction: 'neutral', label: 'operational' }
-                : {
+          {/* Card 4: Service Health */}
+          <motion.div variants={fadeScaleIn} className="h-full">
+            <StatCard
+              title="Service Health"
+              value={`${stats.services.operational} / ${serviceTotal}`}
+              subtitle={`${stats.services.operational} up · ${stats.services.degraded} degraded · ${stats.services.down} down`}
+              icon={<Wifi />}
+              tone={
+                stats.services.down > 0
+                  ? 'danger'
+                  : stats.services.degraded > 0
+                    ? 'warning'
+                    : 'success'
+              }
+              trend={
+                serviceTotal === 0
+                  ? { value: '100%', direction: 'neutral', label: 'operational' }
+                  : {
                     value: `${serviceHealthPct}%`,
                     direction: serviceHealthPct >= 90 ? 'up' : 'down',
                     label: 'healthy',
                   }
-            }
-            tone={
-              stats.services.down > 0
-                ? 'danger'
-                : stats.services.degraded > 0
-                  ? 'warning'
-                  : 'success'
-            }
-            onClick={() => router.push('/services')}
-          />
-        </motion.div>
-
-        {/* Card 5: New Enquiries */}
-        <motion.div variants={fadeScaleIn} className="h-full">
-          <StatCard
-            title="Lead Pipeline"
-            value={stats.enquiries.pending}
-            subtitle={`${stats.enquiries.contacted ?? 0} contacted · ${newEnquiriesThisWeek} this week`}
-            icon={<PhoneCall className="h-4 w-4" />}
-            trend={{
-              value: `+${newEnquiriesThisWeek}`,
-              direction: newEnquiriesThisWeek > 0 ? 'up' : 'neutral',
-              label: 'this week',
-            }}
-            tone={actionableEnquiries > 5 ? 'warning' : 'brand'}
-            onClick={() => router.push('/enquiries?status=new')}
-          />
-        </motion.div>
-      </div>
-
-      {/* ── Operational Triage: Attention Required Banner ── */}
-      <motion.div variants={fadeScaleIn}>
-        <AttentionRequiredBanner
-          pendingVerificationsCount={stats.pendingVerifications ?? 0}
-          agingComplaintsCount={agingOpenComplaints}
-          issuesServicesCount={stats.services.down + stats.services.degraded}
-          newEnquiriesCount={stats.enquiries.pending}
-          onNavigate={(href) => router.push(href)}
-        />
-      </motion.div>
-
-      {/* ── HUB 1: Financial & Capacity Pulse ────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Revenue Line Chart — 2/3 width */}
-        <motion.div variants={fadeScaleIn} className="lg:col-span-2">
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Revenue Trend"
-              subtitle={
-                momDelta != null
-                  ? `Last 6 months — collected vs expected · ${momDelta >= 0 ? '+' : ''}${momDelta}% MoM`
-                  : 'Last 6 months — collected vs expected'
               }
-              actionLabel="View Payments"
-              onAction={() => router.push('/payments')}
+              onClick={() => router.push('/services')}
             />
-            {stats.revenueHistory.length === 0 ? (
-              <PanelEmpty
-                icon={<IndianRupee className="h-10 w-10" />}
-                title="No revenue data yet"
-                description="Collection history will appear once payments are recorded."
-              />
-            ) : (
-              <LineChart
-                data={revenueChartData}
-                labels={revenueLabels}
-                height={240}
-                lines={[
-                  { key: 'collected', color: chartTokens.brand, label: 'Collected' },
-                  { key: 'expected', color: chartTokens.barSecondary, label: 'Expected' },
-                ]}
-                showGrid
-                showLegend
-                isCurrency
-              />
-            )}
-          </Surface>
-        </motion.div>
+          </motion.div>
 
-        {/* Payment Collection Funnel — 1/3 width */}
+          {/* Card 5: Lead Pipeline */}
+          <motion.div variants={fadeScaleIn} className="h-full">
+            <StatCard
+              title="Lead Pipeline"
+              value={stats.enquiries.pending}
+              subtitle={`${stats.enquiries.contacted ?? 0} contacted · ${newEnquiriesThisWeek} this week`}
+              icon={<PhoneCall />}
+              tone="brand"
+              trend={{
+                value: `+${newEnquiriesThisWeek}`,
+                direction: newEnquiriesThisWeek > 0 ? 'up' : 'neutral',
+                label: 'this week',
+              }}
+              onClick={() => router.push('/enquiries?status=new')}
+            />
+          </motion.div>
+        </div>
+
+        {/* Operational Triage Banner */}
         <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Payment Collection Pipeline"
-              subtitle="Current month invoice status breakdown"
-              actionLabel="View Invoices"
-              onAction={() => router.push('/invoices')}
-            />
-            {paymentFunnelStages.length === 0 ? (
-              <PanelEmpty
-                icon={<CreditCard className="h-10 w-10" />}
-                title="No invoices this month"
-                action={{ label: 'Create Invoice', onClick: () => router.push('/invoices/new') }}
-              />
-            ) : (
-              <FunnelChart stages={paymentFunnelStages} maxWidth={100} barHeight={28} barGap={8} />
-            )}
-          </Surface>
+          <AttentionRequiredBanner
+            pendingVerificationsCount={stats.pendingVerifications ?? 0}
+            agingComplaintsCount={agingOpenComplaints}
+            issuesServicesCount={stats.services.down + stats.services.degraded}
+            newEnquiriesCount={stats.enquiries.pending}
+            onNavigate={(href) => router.push(href)}
+          />
         </motion.div>
-      </div>
+      </section>
 
-      {/* ── Occupancy Trend Line ────────────────────────── */}
-      <motion.div variants={fadeScaleIn}>
-        <Surface as="section" variant="card" padding="md">
-          <SectionHeader
-            title="Occupancy Trend"
-            subtitle={
-              stats.occupancyHistory && stats.occupancyHistory.length > 0
-                ? 'Last 6 months — occupied vs total bed capacity'
-                : 'Occupancy data will appear as history is collected'
-            }
-            actionLabel="View Tenants"
-            onAction={() => router.push('/tenants')}
-          />
-          {!stats.occupancyHistory || stats.occupancyHistory.length === 0 ? (
-            <PanelEmpty
-              icon={<Users className="h-10 w-10" />}
-              title="No occupancy history yet"
-              description={
-                totalBeds === 0
-                  ? 'Real-time snapshot: no beds tracked yet'
-                  : `Real-time snapshot: ${stats.occupancy.occupiedBeds} of ${totalBeds} beds filled`
-              }
-            />
-          ) : (
-            <LineChart
-              data={stats.occupancyHistory.map((p) => ({ occupied: p.occupied, total: p.total }))}
-              labels={stats.occupancyHistory.map((p) => {
-                const [y, m] = p.month.split('-');
-                return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', {
-                  month: 'short',
-                });
-              })}
-              height={220}
-              lines={[
-                { key: 'occupied', color: chartTokens.brand, label: 'Occupied' },
-                { key: 'total', color: chartTokens.barSecondary, label: 'Total Capacity' },
-              ]}
-              showGrid
-              showLegend
-            />
-          )}
-        </Surface>
-      </motion.div>
-
-      {/* ── Building Rooms & Beds Occupancy Heatmap ─────── */}
-      <motion.div variants={fadeScaleIn}>
-        <Surface as="section" variant="card" padding="md">
-          <SectionHeader
-            title="Rooms & Beds Occupancy Heatmap"
-            subtitle="Interactive building floor map with live bed availability and tenant assignments"
-            actionLabel="Manage Rooms"
-            onAction={() => router.push('/rooms')}
-          />
-          <RoomBedHeatmap rooms={stats.roomOccupancyMatrix ?? []} />
-        </Surface>
-      </motion.div>
-
-      {/* ── HUB 2: Facility Health & Experience ─────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Service Health Gauge + Breakdown */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="flex h-full flex-col">
-            <SectionHeader
-              title="Facility Service Health"
-              subtitle={`${serviceTotal} monitored checks across floors`}
-              actionLabel="View Services"
-              onAction={() => router.push('/services')}
-            />
-            {serviceTotal === 0 ? (
-              <PanelEmpty
-                icon={<Wifi className="h-10 w-10" />}
-                title="No services configured"
-                action={{ label: 'Add Service', onClick: () => router.push('/services/new') }}
+      {/* ═══════════════════════════════════════════════════
+          ZONE 2: Space & Capacity Command
+          ═══════════════════════════════════════════════════ */}
+      <section aria-label="Building Space & Capacity Command" className="space-y-6">
+        {/* Heatmap & Capacity Velocity Grid: 2/3 + 1/3 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Main: Interactive Room & Bed Heatmap (2 cols) */}
+          <motion.div variants={fadeScaleIn} className="lg:col-span-2">
+            <Surface as="div" variant="card" padding="md" className="h-full">
+              <SectionHeader
+                title="Building Floor & Bed Heatmap"
+                subtitle="Live interactive floor occupancy matrix with bed availability and tenant tooltips"
+                actionLabel="Manage Rooms"
+                onAction={() => router.push('/rooms')}
               />
-            ) : (
-              <>
-                <div className="mb-5 flex justify-center">
-                  <GaugeChart
-                    value={stats.services.operational}
-                    max={serviceTotal}
-                    size={130}
-                    label="Operational"
-                    sublabel={`${stats.services.operational} of ${serviceTotal} up`}
-                    colorVar={
-                      serviceHealthPct === 100
-                        ? '--color-success-500'
-                        : serviceHealthPct >= 70
-                          ? '--color-warning-500'
-                          : '--color-danger-500'
-                    }
+              <RoomBedHeatmap rooms={stats.roomOccupancyMatrix ?? []} />
+            </Surface>
+          </motion.div>
+
+          {/* Side: Occupancy Trajectory (1 col) */}
+          <motion.div variants={fadeScaleIn}>
+            <Surface as="div" variant="card" padding="md" className="flex h-full flex-col">
+              <SectionHeader
+                title="Occupancy Trajectory"
+                subtitle="Last 6 months — filled vs capacity"
+                actionLabel="View Tenants"
+                onAction={() => router.push('/tenants')}
+              />
+              {!stats.occupancyHistory || stats.occupancyHistory.length === 0 ? (
+                <PanelEmpty
+                  icon={<Users className="h-10 w-10" />}
+                  title="No occupancy history yet"
+                  description={
+                    totalBeds === 0
+                      ? 'Real-time snapshot: no beds tracked yet'
+                      : `Real-time snapshot: ${stats.occupancy.occupiedBeds} of ${totalBeds} beds filled`
+                  }
+                />
+              ) : (
+                <div className="flex flex-1 flex-col justify-between">
+                  <LineChart
+                    data={stats.occupancyHistory.map((p) => ({
+                      occupied: p.occupied,
+                      total: p.total,
+                    }))}
+                    labels={stats.occupancyHistory.map((p) => {
+                      const [y, m] = p.month.split('-');
+                      return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', {
+                        month: 'short',
+                      });
+                    })}
+                    height={200}
+                    lines={[
+                      { key: 'occupied', color: chartTokens.brand, label: 'Occupied' },
+                      { key: 'total', color: chartTokens.barSecondary, label: 'Capacity' },
+                    ]}
+                    showGrid
+                    showLegend
                   />
-                </div>
-
-                <div className="mb-1 flex flex-wrap justify-center gap-2">
-                  <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-success-50)] px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
-                    <span className="text-[11px] font-bold text-[color:var(--color-success-700)]">
-                      {stats.services.operational} Up
+                  <div className="mt-4 flex items-center justify-between border-t border-(--border-color)/60 pt-3 text-12 font-medium text-(--color-text-muted)">
+                    <span>Current rate</span>
+                    <span className="font-bold text-(--color-text-primary)">
+                      {occupancyRate}% ({stats.occupancy.occupiedBeds} of {totalBeds} beds)
                     </span>
                   </div>
-                  {stats.services.degraded > 0 && (
-                    <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-warning-50)] px-3 py-1">
-                      <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
-                      <span className="text-[11px] font-bold text-[color:var(--color-warning-700)]">
-                        {stats.services.degraded} Degraded
-                      </span>
-                    </div>
-                  )}
-                  {stats.services.down > 0 && (
-                    <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-danger-50)] px-3 py-1">
-                      <span className="h-2 w-2 rounded-full bg-[color:var(--color-danger-500)]" />
-                      <span className="text-[11px] font-bold text-[color:var(--color-danger-700)]">
-                        {stats.services.down} Down
-                      </span>
-                    </div>
-                  )}
                 </div>
-              </>
-            )}
-          </Surface>
-        </motion.div>
+              )}
+            </Surface>
+          </motion.div>
+        </div>
+      </section>
 
-        {/* Amenity Health Breakdown */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Amenity Health Breakdown"
-              subtitle={`${Object.keys(stats.amenityHealth ?? {}).length} amenity categories tracked`}
-              actionLabel="View All"
-              onAction={() => router.push('/services')}
-            />
-            <AmenityHealthGrid
-              amenities={stats.amenityHealth ?? {}}
-              onManageClick={() => router.push('/services')}
-            />
-          </Surface>
-        </motion.div>
-      </div>
-
-      {/* ── Complaints Resolution & Heatmap ─────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Complaint Resolution & SLA Incident Command */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Complaint Resolution & SLA Command"
-              subtitle={`${totalComplaints} total · ${resolvedRate}% resolved`}
-              actionLabel="View All"
-              onAction={() => router.push('/complaints')}
-            />
-            {totalComplaints === 0 ? (
-              <PanelEmpty icon={<CheckCircle2 className="h-10 w-10" />} title="No complaints yet" />
-            ) : (
-              <ComplaintResolutionHub
-                complaints={stats.complaints}
-                totalComplaints={totalComplaints}
-                resolvedRate={resolvedRate}
-                slaMetrics={stats.complaintSla}
-                onStatusClick={(status) => router.push(`/complaints?status=${status}`)}
-                onAgingClick={() => router.push('/complaints?status=open')}
-                onManageClick={() => router.push('/complaints')}
-              />
-            )}
-          </Surface>
-        </motion.div>
-
-        {/* Complaint Categories Donut */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Complaint Categories"
-              subtitle={
-                totalComplaints > 0
-                  ? `Top ${complaintCategoryDonut.length} categories`
-                  : 'No complaints logged'
-              }
-              actionLabel="View All"
-              onAction={() => router.push('/complaints')}
-            />
-            {complaintCategoryDonut.length === 0 ? (
-              <PanelEmpty
-                icon={<CheckCircle2 className="h-10 w-10" />}
-                title="All clear"
-                description="No complaints logged in this period."
-              />
-            ) : (
-              <DonutChart
-                segments={complaintCategoryDonut}
-                centerLabel={String(totalComplaints)}
-                sublabel="total"
-                size={170}
-                thickness={32}
-              />
-            )}
-          </Surface>
-        </motion.div>
-      </div>
-
-      {/* ── Complaint Activity Heatmap ─────────────────── */}
-      <motion.div variants={fadeScaleIn}>
-        <Surface as="section" variant="card" padding="md">
-          <SectionHeader
-            title="Complaint Filing Heatmap"
-            subtitle="Daily complaint activity this month — click a day to filter complaints"
-            actionLabel="View Complaints"
-            onAction={() => router.push('/complaints')}
-          />
-          {!stats.complaintHeatmap || Object.keys(stats.complaintHeatmap).length === 0 ? (
-            <PanelEmpty
-              icon={<CheckCircle2 className="h-10 w-10" />}
-              title="No complaints this month"
-            />
-          ) : (
-            <div className="flex justify-center py-2">
-              <HeatmapCalendar
-                data={stats.complaintHeatmap}
-                year={new Date().getFullYear()}
-                month={new Date().getMonth()}
-                colorScale="danger"
-                size={15}
-                onDayClick={(date, count) => {
-                  if (count > 0) router.push(`/complaints?date=${date}`);
-                }}
-              />
-            </div>
-          )}
-        </Surface>
-      </motion.div>
-
-      {/* ── Meal Feedback Trend ─────────────────────────── */}
-      <motion.div variants={fadeScaleIn}>
-        <Surface as="section" variant="card" padding="md">
-          <SectionHeader
-            title="Resident Meal Feedback"
-            subtitle="14-day rolling average per meal type"
-            actionLabel="View Menu & Meals"
-            onAction={() => router.push('/meals')}
-          />
-          {stats.mealFeedbackTrend.length === 0 ? (
-            <PanelEmpty
-              icon={<UtensilsCrossed className="h-10 w-10" />}
-              title="No meal feedback recorded"
-            />
-          ) : (
-            <>
-              <LineChart
-                data={mealChartData}
-                labels={
-                  mealChartLabels.length > 7
-                    ? mealChartLabels.filter(
-                        (_, i) => i % Math.ceil(mealChartLabels.length / 6) === 0,
-                      )
-                    : mealChartLabels
+      {/* ═══════════════════════════════════════════════════
+          ZONE 3: Financial Velocity & Service Command
+          ═══════════════════════════════════════════════════ */}
+      <section aria-label="Financial Velocity & Service Operations" className="space-y-6">
+        {/* Financial Flow: Revenue Area Spline (2 cols) + Funnel (1 col) */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Revenue Line Chart — 2/3 width */}
+          <motion.div variants={fadeScaleIn} className="lg:col-span-2">
+            <Surface as="div" variant="card" padding="md" className="h-full">
+              <SectionHeader
+                title="Revenue Velocity"
+                subtitle={
+                  momDelta != null
+                    ? `Last 6 months collected vs billed · ${momDelta >= 0 ? '+' : ''}${momDelta}% MoM`
+                    : 'Last 6 months collected vs billed'
                 }
-                height={150}
-                lines={[
-                  { key: 'breakfast', color: chartTokens.warning, label: 'Breakfast' },
-                  { key: 'lunch', color: chartTokens.brand, label: 'Lunch' },
-                  { key: 'dinner', color: chartTokens.success, label: 'Dinner' },
-                ]}
-                showGrid={false}
-                showLegend
+                actionLabel="View Payments"
+                onAction={() => router.push('/payments')}
               />
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => {
-                  const score = mealAvg[meal];
-                  const pct = (score / 5) * 100;
-                  return (
-                    <div key={meal} className={clsx(surfaceNestedClass, 'p-3.5 text-center')}>
-                      <p className="text-[12px] font-semibold text-[color:var(--color-text-secondary)] capitalize">
-                        {meal}
-                      </p>
-                      <p
-                        className={clsx(
-                          'mt-1 text-2xl font-bold tabular-nums',
-                          pct >= 60
-                            ? 'text-[color:var(--color-success-600)]'
-                            : pct >= 30
-                              ? 'text-[color:var(--color-warning-600)]'
-                              : 'text-[color:var(--color-danger-600)]',
-                        )}
-                      >
-                        {score}
-                      </p>
-                      <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
-                        out of 5.0
-                      </p>
-                      <div className="mt-1.5 flex justify-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <svg
-                            key={i}
-                            className={clsx(
-                              'h-3.5 w-3.5',
-                              i < Math.round(score)
-                                ? 'text-[color:var(--color-warning-500)]'
-                                : 'text-[color:var(--chart-track)]',
-                            )}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </Surface>
-      </motion.div>
+              {stats.revenueHistory.length === 0 ? (
+                <PanelEmpty
+                  icon={<IndianRupee className="h-10 w-10" />}
+                  title="No revenue data yet"
+                  description="Collection history will appear once payments are recorded."
+                />
+              ) : (
+                <LineChart
+                  data={revenueChartData}
+                  labels={revenueLabels}
+                  height={220}
+                  lines={[
+                    { key: 'collected', color: chartTokens.brand, label: 'Collected' },
+                    { key: 'expected', color: chartTokens.barSecondary, label: 'Expected' },
+                  ]}
+                  showGrid
+                  showLegend
+                  isCurrency
+                />
+              )}
+            </Surface>
+          </motion.div>
 
-      {/* ── HUB 3: Operational Streams & Activity ────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Complaints */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Recent Complaints"
-              subtitle={`${activeComplaints} active · ${stats.complaints.resolved} resolved`}
-              actionLabel="View All"
-              onAction={() => router.push('/complaints')}
-            />
-            {sortedComplaints.length === 0 ? (
-              <PanelEmpty
-                icon={<CheckCircle2 className="h-10 w-10" />}
-                title="All clear"
-                description="No recent complaints."
-                action={{ label: 'New Complaint', onClick: () => router.push('/complaints/new') }}
+          {/* Payment Collection Funnel — 1/3 width */}
+          <motion.div variants={fadeScaleIn}>
+            <Surface as="div" variant="card" padding="md" className="h-full">
+              <SectionHeader
+                title="Invoicing Pipeline"
+                subtitle="Current billing cycle status breakdown"
+                actionLabel="View Invoices"
+                onAction={() => router.push('/invoices')}
               />
-            ) : (
-              <div className="space-y-2">
-                {sortedComplaints.map((c) => {
-                  const meta = complaintStatusMeta(c.status);
-                  const isActive = c.status === 'open' || c.status === 'in_progress';
-                  const daysAgo = getDaysAgo(c.createdAt);
-                  const showAgeBadge = isActive && daysAgo >= 3;
+              {paymentFunnelStages.length === 0 ? (
+                <PanelEmpty
+                  icon={<CreditCard className="h-10 w-10" />}
+                  title="No invoices this month"
+                  action={{ label: 'Create Invoice', onClick: () => router.push('/invoices/new') }}
+                />
+              ) : (
+                <FunnelChart
+                  stages={paymentFunnelStages}
+                  maxWidth={100}
+                  barHeight={26}
+                  barGap={8}
+                />
+              )}
+            </Surface>
+          </motion.div>
+        </div>
 
-                  return (
-                    <div
-                      key={c._id}
-                      role="button"
-                      tabIndex={0}
-                      className={clsx(
-                        surfaceNestedClass,
-                        'group flex cursor-pointer items-center gap-3 p-3 transition-all duration-[var(--transition-duration)]',
-                        'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)]',
-                      )}
-                      onClick={() => router.push(`/complaints/${c._id}`)}
-                      onKeyDown={(ev) => {
-                        if (ev.key === 'Enter' || ev.key === ' ') {
-                          ev.preventDefault();
-                          router.push(`/complaints/${c._id}`);
-                        }
-                      }}
-                    >
-                      <div
-                        className={clsx(
-                          'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                          c.status === 'open' && 'animate-pulse bg-[color:var(--color-danger-500)]',
-                          c.status === 'in_progress' && 'bg-[color:var(--color-warning-500)]',
-                          c.status === 'resolved' && 'bg-[color:var(--color-success-500)]',
-                          c.status !== 'open' &&
-                            c.status !== 'in_progress' &&
-                            c.status !== 'resolved' &&
-                            'bg-[color:var(--chart-bar-secondary)]',
-                        )}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)] transition-colors group-hover:text-[color:var(--color-brand-600)]">
-                            {c.title}
-                          </p>
-                          {showAgeBadge && (
-                            <span
-                              className={clsx(
-                                'flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                                daysAgo > 7
-                                  ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
-                                  : 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]',
-                              )}
-                            >
-                              {daysAgo}d
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-0.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
-                          {c.tenantId?.userId?.name ?? 'Unknown'} · {formatDate(c.createdAt)}
-                        </p>
-                      </div>
-                      <div className="flex flex-shrink-0 items-center gap-1.5">
-                        <StatusBadge variant={meta.variant} label={meta.label} />
-                        {isActive && (
-                          <ArrowRight className="h-3.5 w-3.5 text-[color:var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Surface>
-        </motion.div>
+        {/* Operational Incident & Facility Command Grid: 2-Column Split */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Column A: Complaint Incident Command & Impact Matrix */}
+          <div className="space-y-6">
+            {/* Incident Pipeline */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Complaint SLA Command"
+                  subtitle={`${totalComplaints} complaints · ${resolvedRate}% resolved rate`}
+                  actionLabel="View Complaints"
+                  onAction={() => router.push('/complaints')}
+                />
+                {totalComplaints === 0 ? (
+                  <PanelEmpty
+                    icon={<CheckCircle2 className="h-10 w-10" />}
+                    title="No complaints logged"
+                  />
+                ) : (
+                  <ComplaintResolutionHub
+                    complaints={stats.complaints}
+                    totalComplaints={totalComplaints}
+                    resolvedRate={resolvedRate}
+                    slaMetrics={stats.complaintSla}
+                    onStatusClick={(status) => router.push(`/complaints?status=${status}`)}
+                    onAgingClick={() => router.push('/complaints?status=open')}
+                    onManageClick={() => router.push('/complaints')}
+                  />
+                )}
+              </Surface>
+            </motion.div>
 
-        {/* Recent Enquiries */}
-        <motion.div variants={fadeScaleIn}>
-          <Surface as="section" variant="card" padding="md" className="h-full">
-            <SectionHeader
-              title="Recent Enquiries"
-              subtitle={`${stats.enquiries.pending} pending follow-up`}
-              actionLabel="View All"
-              onAction={() => router.push('/enquiries')}
-            />
-            {stats.recent.enquiries.length === 0 ? (
-              <PanelEmpty icon={<PhoneCall className="h-10 w-10" />} title="No recent enquiries" />
-            ) : (
-              <div className="space-y-2">
-                {stats.recent.enquiries.map((e) => (
-                  <div
-                    key={e._id}
-                    role="button"
-                    tabIndex={0}
-                    className={clsx(
-                      surfaceNestedClass,
-                      'flex cursor-pointer items-center justify-between p-3 transition-all duration-[var(--transition-duration)]',
-                      'hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)]',
-                    )}
-                    onClick={() => router.push(`/enquiries/${e._id}`)}
-                    onKeyDown={(ev) => {
-                      if (ev.key === 'Enter' || ev.key === ' ') {
-                        ev.preventDefault();
-                        router.push(`/enquiries/${e._id}`);
-                      }
+            {/* Category Impact Matrix */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Complaint Impact Categories"
+                  subtitle={
+                    totalComplaints > 0
+                      ? `Top ${stats.complaintsByCategory?.length ?? 0} issue categories by volume`
+                      : 'No issues logged'
+                  }
+                  actionLabel="Manage"
+                  onAction={() => router.push('/complaints')}
+                />
+                <ComplaintCategoryMatrix
+                  categories={stats.complaintsByCategory ?? []}
+                  totalComplaints={totalComplaints}
+                  onCategoryClick={(cat) => router.push(`/complaints?category=${cat}`)}
+                />
+              </Surface>
+            </motion.div>
+
+            {/* Recent Complaints Stream */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Recent Complaints"
+                  subtitle={`${activeComplaints} active triage cases`}
+                  actionLabel="All Cases"
+                  onAction={() => router.push('/complaints')}
+                />
+                {sortedComplaints.length === 0 ? (
+                  <PanelEmpty
+                    icon={<CheckCircle2 className="h-10 w-10" />}
+                    title="All clear"
+                    description="No unresolved complaints."
+                    action={{
+                      label: 'New Complaint',
+                      onClick: () => router.push('/complaints/new'),
                     }}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-[color:var(--color-text-primary)]">
-                        {e.name}
-                      </p>
-                      <p className="mt-0.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
-                        {e.phone} · {formatDate(e.createdAt)}
-                      </p>
-                    </div>
-                    <StatusBadge
-                      variant={
-                        e.status === 'new'
-                          ? 'warning'
-                          : e.status === 'contacted'
-                            ? 'info'
-                            : 'success'
-                      }
-                      label={e.status.replace(/_/g, ' ')}
-                    />
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {sortedComplaints.slice(0, 4).map((c) => {
+                      const meta = complaintStatusMeta(c.status);
+                      const isActive = c.status === 'open' || c.status === 'in_progress';
+                      const daysAgo = getDaysAgo(c.createdAt);
+                      const showAgeBadge = isActive && daysAgo >= 3;
+
+                      return (
+                        <div
+                          key={c._id}
+                          role="button"
+                          tabIndex={0}
+                          className={clsx(
+                            surfaceNestedClass,
+                            'group flex cursor-pointer items-center gap-3 p-3 transition-all duration-(--transition-duration)',
+                            'hover:border-(--color-brand-200) hover:shadow-(--shadow-sm)',
+                          )}
+                          onClick={() => router.push(`/complaints/${c._id}`)}
+                          onKeyDown={(ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                              ev.preventDefault();
+                              router.push(`/complaints/${c._id}`);
+                            }
+                          }}
+                        >
+                          <div
+                            className={clsx(
+                              'h-2.5 w-2.5 flex-shrink-0 rounded-full',
+                              c.status === 'open' &&
+                              'animate-pulse bg-(--color-danger-500)',
+                              c.status === 'in_progress' && 'bg-(--color-warning-500)',
+                              c.status === 'resolved' && 'bg-(--color-success-500)',
+                              c.status !== 'open' &&
+                              c.status !== 'in_progress' &&
+                              c.status !== 'resolved' &&
+                              'bg-(--chart-bar-secondary)',
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-13 font-semibold text-(--color-text-primary) transition-colors group-hover:text-(--color-brand-600)">
+                                {c.title}
+                              </p>
+                              {showAgeBadge && (
+                                <span
+                                  className={clsx(
+                                    'flex-shrink-0 rounded-full border px-1.5 py-0.5 text-3xs font-bold',
+                                    daysAgo > 7
+                                      ? 'border-(--badge-danger-border) bg-(--badge-danger-bg) text-(--badge-danger-text)'
+                                      : 'border-(--badge-warning-border) bg-(--badge-warning-bg) text-(--badge-warning-text)',
+                                  )}
+                                >
+                                  {daysAgo}d
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-2xs font-medium text-(--color-text-muted)">
+                              {c.tenantId?.userId?.name ?? 'Unknown'} · {formatDate(c.createdAt)}
+                            </p>
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-1.5">
+                            <StatusBadge variant={meta.variant} label={meta.label} />
+                            {isActive && (
+                              <ArrowRight className="h-3.5 w-3.5 text-(--color-text-muted) opacity-0 transition-opacity group-hover:opacity-100" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
-          </Surface>
-        </motion.div>
-      </div>
+                )}
+              </Surface>
+            </motion.div>
+          </div>
 
-      {/* ── Service Health History Timeline ─────────────── */}
-      <motion.div variants={fadeScaleIn}>
-        <Surface as="section" variant="card" padding="md">
-          <SectionHeader
-            title="Service Health History"
-            subtitle={
-              stats.serviceHistory && stats.serviceHistory.length > 0
-                ? 'Last 14 days of service status changes across floors'
-                : 'Service status change tracking will appear here'
-            }
-            actionLabel="View Services"
-            onAction={() => router.push('/services')}
-          />
-          {!stats.serviceHistory || stats.serviceHistory.length === 0 ? (
-            <PanelEmpty
-              icon={<Wifi className="h-10 w-10" />}
-              title="No service events yet"
-              description={`Currently ${stats.services.operational} operational, ${stats.services.degraded} degraded, ${stats.services.down} down`}
-            />
-          ) : (
-            <div className="max-h-[300px] overflow-y-auto pr-1">
-              <Timeline
-                events={stats.serviceHistory.map((e) => ({
-                  id: e.id,
-                  date: e.date,
-                  title: e.title,
-                  description: e.description,
-                  status: e.status as 'success' | 'warning' | 'danger',
-                }))}
-                maxHeight={280}
+          {/* Column B: Resident Living Standards & Facility Health */}
+          <div className="space-y-6">
+            {/* Meal Quality Ledger */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Meal Quality & Resident Feedback"
+                  subtitle="14-day rolling satisfaction score with SLA target benchmark"
+                  actionLabel="View Menus"
+                  onAction={() => router.push('/meals')}
+                />
+                {stats.mealFeedbackTrend.length === 0 ? (
+                  <PanelEmpty
+                    icon={<UtensilsCrossed className="h-10 w-10" />}
+                    title="No meal feedback recorded"
+                  />
+                ) : (
+                  <MealFeedbackLedger
+                    trend={stats.mealFeedbackTrend}
+                    averages={mealAvg}
+                    onManageClick={() => router.push('/meals')}
+                  />
+                )}
+              </Surface>
+            </motion.div>
+
+            {/* Facility Health & Timeline */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Facility Service Status & Activity"
+                  subtitle={`${serviceTotal} checks monitored · ${stats.services.operational} operational`}
+                  actionLabel="View Services"
+                  onAction={() => router.push('/services')}
+                />
+                {serviceTotal === 0 ? (
+                  <PanelEmpty
+                    icon={<Wifi className="h-10 w-10" />}
+                    title="No services configured"
+                    action={{ label: 'Add Service', onClick: () => router.push('/services/new') }}
+                  />
+                ) : (
+                  <div className="space-y-5">
+                    <div className="flex flex-col items-center justify-between gap-4 sm:flex-row sm:px-4">
+                      <GaugeChart
+                        value={stats.services.operational}
+                        max={serviceTotal}
+                        size={120}
+                        label="Operational"
+                        sublabel={`${stats.services.operational} of ${serviceTotal} up`}
+                        colorVar={
+                          serviceHealthPct === 100
+                            ? '--color-success-500'
+                            : serviceHealthPct >= 70
+                              ? '--color-warning-500'
+                              : '--color-danger-500'
+                        }
+                      />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--badge-success-border) bg-(--badge-success-bg) px-3 py-1.5">
+                          <span className="h-2 w-2 rounded-full bg-(--color-success-500)" />
+                          <span className="text-12 font-bold text-(--badge-success-text)">
+                            {stats.services.operational} Operational
+                          </span>
+                        </div>
+                        {stats.services.degraded > 0 && (
+                          <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--badge-warning-border) bg-(--badge-warning-bg) px-3 py-1.5">
+                            <span className="h-2 w-2 rounded-full bg-(--color-warning-500)" />
+                            <span className="text-12 font-bold text-(--badge-warning-text)">
+                              {stats.services.degraded} Degraded
+                            </span>
+                          </div>
+                        )}
+                        {stats.services.down > 0 && (
+                          <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-3 py-1.5">
+                            <span className="h-2 w-2 rounded-full bg-(--color-danger-500)" />
+                            <span className="text-12 font-bold text-(--badge-danger-text)">
+                              {stats.services.down} Outages
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {stats.serviceHistory && stats.serviceHistory.length > 0 && (
+                      <div className="border-t border-(--border-color)/60 pt-3">
+                        <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-(--color-text-muted)">
+                          Recent Status Events (14 Days)
+                        </p>
+                        <div className="max-h-[160px] overflow-y-auto pr-1">
+                          <Timeline
+                            events={stats.serviceHistory.slice(0, 5).map((e) => ({
+                              id: e.id,
+                              date: e.date,
+                              title: e.title,
+                              description: e.description,
+                              status: e.status as 'success' | 'warning' | 'danger',
+                            }))}
+                            maxHeight={160}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Surface>
+            </motion.div>
+
+            {/* Recent Enquiries */}
+            <motion.div variants={fadeScaleIn}>
+              <Surface as="div" variant="card" padding="md">
+                <SectionHeader
+                  title="Lead Inquiries Pipeline"
+                  subtitle={`${stats.enquiries.pending} pending follow-up`}
+                  actionLabel="View Pipeline"
+                  onAction={() => router.push('/enquiries')}
+                />
+                {stats.recent.enquiries.length === 0 ? (
+                  <PanelEmpty
+                    icon={<PhoneCall className="h-10 w-10" />}
+                    title="No recent enquiries"
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {stats.recent.enquiries.slice(0, 3).map((e) => (
+                      <div
+                        key={e._id}
+                        role="button"
+                        tabIndex={0}
+                        className={clsx(
+                          surfaceNestedClass,
+                          'flex cursor-pointer items-center justify-between p-3 transition-all duration-(--transition-duration)',
+                          'hover:border-(--color-brand-200) hover:shadow-(--shadow-sm)',
+                        )}
+                        onClick={() => router.push(`/enquiries/${e._id}`)}
+                        onKeyDown={(ev) => {
+                          if (ev.key === 'Enter' || ev.key === ' ') {
+                            ev.preventDefault();
+                            router.push(`/enquiries/${e._id}`);
+                          }
+                        }}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-13 font-semibold text-(--color-text-primary)">
+                            {e.name}
+                          </p>
+                          <p className="mt-0.5 text-2xs font-medium text-(--color-text-muted)">
+                            {e.phone} · {formatDate(e.createdAt)}
+                          </p>
+                        </div>
+                        <StatusBadge
+                          variant={
+                            e.status === 'new'
+                              ? 'warning'
+                              : e.status === 'contacted'
+                                ? 'info'
+                                : 'success'
+                          }
+                          label={e.status.replace(/_/g, ' ')}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Surface>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Complaint Filing Heatmap Calendar (Clean, low-profile monthly calendar) */}
+        {stats.complaintHeatmap && Object.keys(stats.complaintHeatmap).length > 0 && (
+          <motion.div variants={fadeScaleIn}>
+            <Surface as="div" variant="card" padding="md">
+              <SectionHeader
+                title="Monthly Incident Density Heatmap"
+                subtitle="Click any active calendar date to jump directly to filtered complaints"
+                actionLabel="View Calendar"
+                onAction={() => router.push('/complaints')}
               />
-            </div>
-          )}
-        </Surface>
-      </motion.div>
+              <div className="flex justify-center py-2">
+                <HeatmapCalendar
+                  data={stats.complaintHeatmap}
+                  year={new Date().getFullYear()}
+                  month={new Date().getMonth()}
+                  colorScale="danger"
+                  size={15}
+                  onDayClick={(date, count) => {
+                    if (count > 0) router.push(`/complaints?date=${date}`);
+                  }}
+                />
+              </div>
+            </Surface>
+          </motion.div>
+        )}
+      </section>
 
-      {/* ── Quick Navigation Links ───────────────────────── */}
-      <motion.div variants={fadeScaleIn} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* ── Quick Jump Links ─────────────────────────────── */}
+      <motion.nav
+        aria-label="Quick management links"
+        variants={fadeScaleIn}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
         {[
           { label: 'Tenants Directory', icon: <Users className="h-4 w-4" />, href: '/tenants' },
           { label: 'Payments & Dues', icon: <CreditCard className="h-4 w-4" />, href: '/payments' },
@@ -1259,19 +1127,27 @@ export default function DashboardPage() {
             type="button"
             onClick={() => router.push(link.href)}
             className={clsx(
-              'group flex items-center gap-2 px-4 py-3 text-[13px] font-semibold',
-              'text-[color:var(--color-text-secondary)]',
-              'rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-xs)]',
-              'transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-sm)]',
+              'group flex items-center gap-2.5 px-4 py-3 text-13 font-semibold',
+              'text-(--color-text-secondary)',
+              'rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-xs)',
+              'transition-all duration-(--transition-duration)',
+              'hover:border-(--border-color-hover) hover:text-(--color-brand-600) hover:shadow-(--shadow-sm) focus:outline-none',
             )}
           >
-            {link.icon}
-            {link.label}
-            <ArrowRight className="ml-auto h-3 w-3 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+            <span
+              className="text-(--color-text-muted) transition-colors group-hover:text-(--color-brand-600)"
+              aria-hidden="true"
+            >
+              {link.icon}
+            </span>
+            <span>{link.label}</span>
+            <ArrowRight
+              className="ml-auto h-3.5 w-3.5 -translate-x-1 opacity-0 transition-all duration-150 group-hover:translate-x-0 group-hover:opacity-100"
+              aria-hidden="true"
+            />
           </button>
         ))}
-      </motion.div>
+      </motion.nav>
     </motion.div>
   );
 }

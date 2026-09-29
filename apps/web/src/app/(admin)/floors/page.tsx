@@ -1,7 +1,17 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, Building2, Search, LayoutGrid, List, ArrowUpDown, DoorOpen, IndianRupee, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Building2,
+  Search,
+  LayoutGrid,
+  List,
+  ArrowUpDown,
+  DoorOpen,
+  IndianRupee,
+  AlertTriangle,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { DataTable } from '@/components/ui/DataTable';
@@ -25,27 +35,23 @@ import { useRouter } from 'next/navigation';
 
 // ── Types ──────────────────────────────────────────────
 
+interface FloorStats {
+  activeRooms: number;
+  totalBeds: number;
+  occupiedBeds: number;
+  vacantBeds: number;
+  occupancyPct: number;
+  potentialRent: number;
+  services: FloorCardServiceSummary;
+}
+
 interface FloorRow {
   _id: string;
   label: string;
   floorNumber: number;
   totalRooms: number;
-}
-
-interface RoomLite {
-  _id: string;
-  floorId: string;
-  roomNumber: string;
-  monthlyRent: number;
-  isActive: boolean;
-  beds?: Array<{ bedId: string; isOccupied: boolean; tenantName?: string }>;
-}
-
-interface ServiceLite {
-  _id: string;
-  floorId: string | { _id?: string };
-  status: 'operational' | 'degraded' | 'down';
-  openComplaintCount?: number;
+  stats: FloorStats;
+  beds: Array<{ bedId: string; isOccupied: boolean }>;
 }
 
 type SortKey = 'floor_asc' | 'floor_desc' | 'label' | 'occupancy' | 'rooms';
@@ -58,55 +64,11 @@ const SORT_OPTIONS = [
   { value: 'rooms', label: 'Most rooms' },
 ];
 
-// ── Per-floor computed stats ───────────────────────────
-
-interface FloorStats {
-  activeRooms: number;
-  beds: NonNullable<RoomLite['beds']>;
-  occupiedBeds: number;
-  occupancyPct: number;
-  potentialRent: number;
-  services: FloorCardServiceSummary;
-}
-
-function computeStats(
-  floor: FloorRow,
-  roomsByFloor: Map<string, RoomLite[]>,
-  servicesByFloor: Map<string, ServiceLite[]>,
-): FloorStats {
-  const rooms = (roomsByFloor.get(floor._id) ?? []).filter((r) => r.isActive);
-  const beds = rooms.flatMap((r) => r.beds ?? []);
-  const occupiedBeds = beds.filter((b) => b.isOccupied).length;
-  const services = servicesByFloor.get(floor._id) ?? [];
-  return {
-    activeRooms: rooms.length,
-    beds,
-    occupiedBeds,
-    occupancyPct: beds.length > 0 ? Math.round((occupiedBeds / beds.length) * 100) : 0,
-    potentialRent: rooms.reduce((sum, r) => sum + (r.monthlyRent ?? 0), 0),
-    services: {
-      operational: services.filter((s) => s.status === 'operational').length,
-      degraded: services.filter((s) => s.status === 'degraded').length,
-      down: services.filter((s) => s.status === 'down').length,
-      openComplaints: services.reduce((sum, s) => sum + (s.openComplaintCount ?? 0), 0),
-    },
-  };
-}
-
-function floorIdOf(svc: ServiceLite): string {
-  if (typeof svc.floorId === 'object' && svc.floorId !== null && '_id' in svc.floorId) {
-    return String(svc.floorId._id ?? '');
-  }
-  return String(svc.floorId ?? '');
-}
-
 // ── Page ───────────────────────────────────────────────
 
 export default function FloorsPage() {
   const router = useRouter();
   const [floors, setFloors] = useState<FloorRow[]>([]);
-  const [rooms, setRooms] = useState<RoomLite[]>([]);
-  const [services, setServices] = useState<ServiceLite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
@@ -121,18 +83,11 @@ export default function FloorsPage() {
     setIsLoading(true);
     setError('');
     try {
-      const [floorsRes, roomsRes, servicesRes] = await Promise.all([
-        api.get('floors').json<{ success: boolean; data: FloorRow[] }>(),
-        api
-          .get('rooms', { searchParams: { limit: '500' } })
-          .json<{ success: boolean; data: RoomLite[] }>(),
-        api
-          .get('services', { searchParams: { limit: '100' } })
-          .json<{ success: boolean; data: ServiceLite[] }>(),
-      ]);
-      setFloors(floorsRes.data);
-      setRooms(roomsRes.data ?? []);
-      setServices(servicesRes.data ?? []);
+      // Single server-aggregated call: per-floor stats + beds + service health.
+      // Replaces the old rooms?limit=500 + services?limit=100 client joins,
+      // which truncated on larger datasets.
+      const res = await api.get('floors/overview').json<{ success: boolean; data: FloorRow[] }>();
+      setFloors(res.data ?? []);
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -144,32 +99,9 @@ export default function FloorsPage() {
     fetchFloors();
   }, [fetchFloors]);
 
-  const roomsByFloor = useMemo(() => {
-    const map = new Map<string, RoomLite[]>();
-    for (const room of rooms) {
-      const key = String(room.floorId ?? '');
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)?.push(room);
-    }
-    return map;
-  }, [rooms]);
+  const statsFor = useCallback((floor: FloorRow) => floor.stats, []);
 
-  const servicesByFloor = useMemo(() => {
-    const map = new Map<string, ServiceLite[]>();
-    for (const svc of services) {
-      const key = floorIdOf(svc);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)?.push(svc);
-    }
-    return map;
-  }, [services]);
-
-  const statsFor = useCallback(
-    (floor: FloorRow) => computeStats(floor, roomsByFloor, servicesByFloor),
-    [roomsByFloor, servicesByFloor],
-  );
-
-    // Aggregates for the stat strip
+  // Aggregates for the stat strip
   const totals = useMemo(() => {
     let activeRooms = 0;
     let totalBeds = 0;
@@ -179,7 +111,7 @@ export default function FloorsPage() {
     for (const floor of floors) {
       const s = statsFor(floor);
       activeRooms += s.activeRooms;
-      totalBeds += s.beds.length;
+      totalBeds += s.totalBeds;
       occupiedBeds += s.occupiedBeds;
       potentialRent += s.potentialRent;
       serviceIssues += s.services.degraded + s.services.down;
@@ -235,18 +167,18 @@ export default function FloorsPage() {
     }
   };
 
-    const viewToggle = (
-    <div className="flex items-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-0.5 shadow-[var(--shadow-xs)]">
+  const viewToggle = (
+    <div className="flex items-center rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-0.5 shadow-(--shadow-xs)">
       <button
         type="button"
         aria-label="Grid view"
         aria-pressed={view === 'grid'}
         onClick={() => setView('grid')}
         className={clsx(
-          'flex h-8 w-9 items-center justify-center rounded-[var(--radius-sm)] transition-colors duration-200',
+          'flex h-8 w-9 items-center justify-center rounded-(--radius-sm) transition-colors duration-200',
           view === 'grid'
-            ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)]'
-            : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]',
+            ? 'bg-(--color-card-bg) text-(--color-brand-600) shadow-(--shadow-xs)'
+            : 'text-(--color-text-muted) hover:text-(--color-text-primary)',
         )}
       >
         <LayoutGrid className="h-4 w-4" />
@@ -257,10 +189,10 @@ export default function FloorsPage() {
         aria-pressed={view === 'table'}
         onClick={() => setView('table')}
         className={clsx(
-          'flex h-8 w-9 items-center justify-center rounded-[var(--radius-sm)] transition-colors duration-200',
+          'flex h-8 w-9 items-center justify-center rounded-(--radius-sm) transition-colors duration-200',
           view === 'table'
-            ? 'bg-[color:var(--color-card-bg)] text-[color:var(--color-brand-600)] shadow-[var(--shadow-xs)]'
-            : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]',
+            ? 'bg-(--color-card-bg) text-(--color-brand-600) shadow-(--shadow-xs)'
+            : 'text-(--color-text-muted) hover:text-(--color-text-primary)',
         )}
       >
         <List className="h-4 w-4" />
@@ -272,7 +204,7 @@ export default function FloorsPage() {
     {
       header: 'Floor',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">{row.label}</span>
+        <span className="font-semibold text-(--color-text-primary)">{row.label}</span>
       ),
     },
     { header: 'Floor #', accessor: (row) => row.floorNumber },
@@ -287,13 +219,13 @@ export default function FloorsPage() {
       header: 'Occupancy',
       accessor: (row) => {
         const s = statsFor(row);
-        return <OccupancyBar occupied={s.occupiedBeds} total={s.beds.length} />;
+        return <OccupancyBar occupied={s.occupiedBeds} total={s.totalBeds} />;
       },
     },
     {
       header: 'Potential /mo',
       accessor: (row) => (
-        <span className="tabular-nums text-[color:var(--color-text-secondary)]">
+        <span className="text-(--color-text-secondary) tabular-nums">
           {'\u20B9'}
           {statsFor(row).potentialRent.toLocaleString('en-IN')}
         </span>
@@ -305,11 +237,11 @@ export default function FloorsPage() {
         const s = statsFor(row).services;
         const issues = s.degraded + s.down;
         return issues > 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] px-2 py-0.5 text-[11px] font-bold text-[color:var(--color-danger-700)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-(--color-danger-200) bg-(--color-danger-50) px-2 py-0.5 text-2xs font-bold text-(--color-danger-700)">
             {issues} issue{issues !== 1 ? 's' : ''}
           </span>
         ) : (
-          <span className="text-[11px] font-semibold text-[color:var(--color-success-600)]">
+          <span className="text-2xs font-semibold text-(--color-success-600)">
             All operational
           </span>
         );
@@ -328,7 +260,7 @@ export default function FloorsPage() {
     },
   ];
 
-    return (
+  return (
     <div className="space-y-6">
       <PageHeader
         title="Floors"
@@ -345,21 +277,32 @@ export default function FloorsPage() {
 
       {/* Stat strip */}
       {isLoading ? (
-        <div className={clsx(surfaceCardClass, 'grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4')}>
+        <div
+          className={clsx(
+            surfaceCardClass,
+            'grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4',
+          )}
+        >
           {Array.from({ length: 4 }).map((_, i) => (
             <ShimmerBlock key={i} className="h-16" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_1fr]">
-          <div className={clsx(surfaceCardClass, 'flex items-center justify-center gap-4 px-6 py-4')}>
+          <div
+            className={clsx(surfaceCardClass, 'flex items-center justify-center gap-4 px-6 py-4')}
+          >
             <OccupancyRing
               value={totals.occupancyPct}
               caption={`${totals.occupiedBeds} / ${totals.totalBeds} beds`}
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="Floors" value={floors.length} icon={<Building2 className="h-4 w-4" />} />
+            <StatCard
+              title="Floors"
+              value={floors.length}
+              icon={<Building2 className="h-4 w-4" />}
+            />
             <StatCard
               title="Active rooms"
               value={totals.activeRooms}
@@ -387,7 +330,6 @@ export default function FloorsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative max-w-xs flex-1">
-            <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
             <Input
               placeholder="Search floors by name or number..."
               aria-label="Search floors"
@@ -396,7 +338,7 @@ export default function FloorsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-8"
+              leftIcon={<Search className="h-4 w-4" />}
             />
           </div>
           <div className="w-full sm:w-72">
@@ -441,7 +383,7 @@ export default function FloorsPage() {
                   floorNumber={floor.floorNumber}
                   totalRooms={floor.totalRooms}
                   activeRooms={s.activeRooms}
-                  beds={s.beds}
+                  beds={floor.beds}
                   potentialRent={s.potentialRent}
                   services={s.services}
                   onView={() => router.push(`/floors/${floor._id}`)}
@@ -482,14 +424,14 @@ export default function FloorsPage() {
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  <span className="text-sm font-semibold text-(--color-text-primary)">
                     {row.label}
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 text-xs font-medium text-[color:var(--color-text-muted)]">
+                  <span className="inline-flex items-center rounded-full bg-(--color-surface-100) px-2 py-0.5 text-xs font-medium text-(--color-text-muted)">
                     Floor #{row.floorNumber}
                   </span>
                 </div>
-                <OccupancyBar occupied={s.occupiedBeds} total={s.beds.length} />
+                <OccupancyBar occupied={s.occupiedBeds} total={s.totalBeds} />
                 <div className="flex items-center gap-1 pt-1">
                   <TableActions
                     onView={() => router.push(`/floors/${row._id}`)}

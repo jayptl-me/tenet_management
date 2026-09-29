@@ -187,14 +187,14 @@ export default function AssetsPage() {
       header: 'Asset',
       accessor: (row) => (
         <span className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] [&_svg]:h-4 [&_svg]:w-4">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) [&_svg]:h-4 [&_svg]:w-4">
             <AssetCategoryIcon category={row.category} />
           </span>
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-[color:var(--color-text-primary)]">
+            <span className="block truncate font-semibold text-(--color-text-primary)">
               {row.name}
             </span>
-            <span className="block text-xs font-medium text-[color:var(--color-text-muted)]">
+            <span className="block text-xs font-medium text-(--color-text-muted)">
               {assetCategoryLabel(row.category)}
             </span>
           </span>
@@ -207,9 +207,9 @@ export default function AssetsPage() {
         const floor = floorText(row.floorId);
         const room =
           row.roomId && typeof row.roomId === 'object' ? (row.roomId.roomNumber ?? null) : null;
-        if (!floor && !room) return <span className="text-[color:var(--color-text-muted)]">—</span>;
+        if (!floor && !room) return <span className="text-(--color-text-muted)">—</span>;
         return (
-          <span className="text-[13px] font-medium text-[color:var(--color-text-secondary)]">
+          <span className="text-13 font-medium text-(--color-text-secondary)">
             {[floor, room ? `Room ${room}` : null].filter(Boolean).join(' · ')}
           </span>
         );
@@ -302,8 +302,8 @@ export default function AssetsPage() {
       <LowStockBanner onFilterLowStock={handleFilterLowStock} />
       <ServiceDueBanner onFilterServiceDue={handleFilterServiceDue} />
       {alertMode !== 'all' && (
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm">
-          <span className="font-semibold text-[color:var(--color-text-secondary)]">
+        <div className="flex items-center justify-between gap-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm">
+          <span className="font-semibold text-(--color-text-secondary)">
             {alertMode === 'low'
               ? `Showing low-stock assets only (${total} total)`
               : `Showing assets due for service (${total} total)`}
@@ -396,10 +396,10 @@ export default function AssetsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="flex min-w-0 items-center gap-2 text-sm font-semibold text-(--color-text-primary)">
                 <AssetCategoryIcon
                   category={row.category}
-                  className="h-4 w-4 shrink-0 text-[color:var(--color-text-muted)]"
+                  className="h-4 w-4 shrink-0 text-(--color-text-muted)"
                 />
                 <span className="truncate">{row.name}</span>
               </span>
@@ -409,7 +409,7 @@ export default function AssetsPage() {
               />
             </div>
             <AssetStockMeter quantity={row.quantity} threshold={row.lowStockThreshold} />
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>{assetCategoryLabel(row.category)}</span>
               <span>{row.location ?? '—'}</span>
               <span>Qty {row.quantity ?? '—'}</span>
