@@ -296,8 +296,7 @@ export default function EditAttendancePage() {
 
               {computedHours !== '' && (
                 <div className="mt-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm font-semibold text-(--color-text-secondary)">
-                  Duration:{' '}
-                  <span className="text-(--color-text-primary)">{computedHours}</span>
+                  Duration: <span className="text-(--color-text-primary)">{computedHours}</span>
                   {' · '}
                   In: {checkIn || '--:--'} · Out: {checkOut || '--:--'}
                 </div>

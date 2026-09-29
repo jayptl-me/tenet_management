@@ -71,9 +71,7 @@ function ResetPasswordForm() {
           <h1 className="text-xl font-bold text-(--color-text-primary)">
             Password Reset Successful
           </h1>
-          <p className="mt-2 text-sm text-(--color-text-secondary)">
-            Redirecting you to login...
-          </p>
+          <p className="mt-2 text-sm text-(--color-text-secondary)">Redirecting you to login...</p>
         </motion.div>
       </div>
     );
@@ -88,9 +86,7 @@ function ResetPasswordForm() {
       >
         <div className="text-center">
           <KeyRound className="mx-auto mb-3 h-10 w-10 text-(--color-brand-500)" />
-          <h1 className="text-xl font-bold text-(--color-text-primary)">
-            Reset Your Password
-          </h1>
+          <h1 className="text-xl font-bold text-(--color-text-primary)">Reset Your Password</h1>
           <p className="mt-1 text-sm text-(--color-text-secondary)">
             Enter your new password below.
           </p>

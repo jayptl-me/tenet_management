@@ -181,7 +181,7 @@ export default function NotificationDetailPage() {
                     {notification.targetIds.map((tid) => (
                       <span
                         key={tid}
-                        className="rounded-md border border-(--border-color) bg-(--color-field-bg) px-2 py-0.5 font-mono text-2xs text-(--color-text-secondary)"
+                        className="text-2xs rounded-md border border-(--border-color) bg-(--color-field-bg) px-2 py-0.5 font-mono text-(--color-text-secondary)"
                       >
                         {tid}
                       </span>
@@ -215,9 +215,7 @@ export default function NotificationDetailPage() {
                 <p className="mt-1 text-2xl font-extrabold text-(--color-success-600)">
                   {readCount}
                 </p>
-                <p className="text-2xs text-(--color-text-muted)">
-                  {readPercent}% completion rate
-                </p>
+                <p className="text-2xs text-(--color-text-muted)">{readPercent}% completion rate</p>
               </div>
 
               <div className="rounded-lg border border-(--border-color) bg-(--color-field-bg) p-3">
@@ -228,9 +226,7 @@ export default function NotificationDetailPage() {
                 <p className="mt-1 text-2xl font-extrabold text-(--color-warning-600)">
                   {unreadCount}
                 </p>
-                <p className="text-2xs text-(--color-text-muted)">
-                  Tenants yet to acknowledge
-                </p>
+                <p className="text-2xs text-(--color-text-muted)">Tenants yet to acknowledge</p>
               </div>
             </div>
           </DetailCard>
@@ -321,12 +317,12 @@ export default function NotificationDetailPage() {
                           href={value}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="break-all font-mono text-xs text-(--color-brand-600) underline underline-offset-2"
+                          className="font-mono text-xs break-all text-(--color-brand-600) underline underline-offset-2"
                         >
                           {value}
                         </a>
                       ) : (
-                        <span className="break-all font-mono text-xs">{String(value)}</span>
+                        <span className="font-mono text-xs break-all">{String(value)}</span>
                       )
                     }
                   />

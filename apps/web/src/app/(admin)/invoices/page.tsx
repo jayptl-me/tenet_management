@@ -899,7 +899,7 @@ function InvoicesContent() {
 
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
-                      <span className="block text-2xs text-(--color-text-muted)">
+                      <span className="text-2xs block text-(--color-text-muted)">
                         Active Tenants
                       </span>
                       <span className="text-base font-bold text-(--color-text-primary)">
@@ -907,7 +907,7 @@ function InvoicesContent() {
                       </span>
                     </div>
                     <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
-                      <span className="block text-2xs text-(--color-text-muted)">
+                      <span className="text-2xs block text-(--color-text-muted)">
                         Already Invoiced
                       </span>
                       <span className="text-base font-bold text-(--color-warning-600)">
@@ -915,9 +915,7 @@ function InvoicesContent() {
                       </span>
                     </div>
                     <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
-                      <span className="block text-2xs text-(--color-text-muted)">
-                        To Generate
-                      </span>
+                      <span className="text-2xs block text-(--color-text-muted)">To Generate</span>
                       <span className="text-base font-bold text-(--color-success-600)">
                         {bulkPreview.toGenerateCount}
                       </span>

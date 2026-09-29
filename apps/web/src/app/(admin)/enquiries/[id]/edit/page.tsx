@@ -256,16 +256,16 @@ export default function EditEnquiryPage() {
                     error={err.status?.message}
                     disabled={isConverted}
                     helperText={
-                      isConverted ? 'Pinned to the converted tenant; status cannot change' : undefined
+                      isConverted
+                        ? 'Pinned to the converted tenant; status cannot change'
+                        : undefined
                     }
                   />
                 )}
               />
               <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--color-info-200) bg-(--color-info-50) px-3 py-2">
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 text-(--color-info-500)" />
-                <p className="text-xs font-medium text-(--color-info-700)">
-                  {nextStatusHint}
-                </p>
+                <p className="text-xs font-medium text-(--color-info-700)">{nextStatusHint}</p>
               </div>
             </div>
             <FormFullWidth>

@@ -216,9 +216,7 @@ export default function NewVisitorPage() {
           {tenantIdWatch ? (
             <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-(--color-brand-700)">
-                  Loading host stay…
-                </p>
+                <p className="text-xs font-semibold text-(--color-brand-700)">Loading host stay…</p>
               ) : hostPreview ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
@@ -323,9 +321,7 @@ export default function NewVisitorPage() {
               {...register('expectedArrival')}
             />
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-(--color-text-primary)">
-                Arrival summary
-              </p>
+              <p className="text-sm font-medium text-(--color-text-primary)">Arrival summary</p>
               {summary ? (
                 <div
                   className={
@@ -340,9 +336,7 @@ export default function NewVisitorPage() {
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-(--color-brand-600)" />
                   )}
                   <span>
-                    <span className="font-bold text-(--color-text-primary)">
-                      {summary.label}
-                    </span>
+                    <span className="font-bold text-(--color-text-primary)">{summary.label}</span>
                     <span className="block text-xs font-medium text-(--color-text-secondary)">
                       {summary.detail}
                     </span>

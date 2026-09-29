@@ -106,7 +106,7 @@ export function AttentionRequiredBanner({
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
                 'border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)]',
-                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
+                'transition-all duration-[var(--transition-duration)] hover:opacity-90 hover:shadow-[var(--shadow-xs)]',
               )}
             >
               <CreditCard className="h-3.5 w-3.5 opacity-80" />
@@ -124,7 +124,7 @@ export function AttentionRequiredBanner({
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
                 'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
-                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
+                'transition-all duration-[var(--transition-duration)] hover:opacity-90 hover:shadow-[var(--shadow-xs)]',
               )}
             >
               <AlertTriangle className="h-3.5 w-3.5 opacity-80" />
@@ -142,7 +142,7 @@ export function AttentionRequiredBanner({
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
                 'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
-                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
+                'transition-all duration-[var(--transition-duration)] hover:opacity-90 hover:shadow-[var(--shadow-xs)]',
               )}
             >
               <WifiOff className="h-3.5 w-3.5 opacity-80" />
@@ -160,7 +160,7 @@ export function AttentionRequiredBanner({
               className={clsx(
                 'group inline-flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold',
                 'border-[color:var(--badge-info-border)] bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)]',
-                'transition-all duration-[var(--transition-duration)] hover:shadow-[var(--shadow-xs)] hover:opacity-90',
+                'transition-all duration-[var(--transition-duration)] hover:opacity-90 hover:shadow-[var(--shadow-xs)]',
               )}
             >
               <PhoneCall className="h-3.5 w-3.5 opacity-80" />

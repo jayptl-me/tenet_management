@@ -46,17 +46,35 @@ interface PaymentDetail {
     bedId?: string | null;
     user?: { name: string; phone?: string; email?: string };
     userId?: { name: string; phone?: string; email?: string };
-    room?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
-    roomId?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
+    room?: {
+      _id: string;
+      roomNumber: string;
+      floor?: { label?: string; floorNumber?: number } | null;
+    };
+    roomId?: {
+      _id: string;
+      roomNumber: string;
+      floor?: { label?: string; floorNumber?: number } | null;
+    };
   };
-  tenantId?: {
-    _id: string;
-    bedId?: string | null;
-    user?: { name: string; phone?: string; email?: string };
-    userId?: { name: string; phone?: string; email?: string };
-    room?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
-    roomId?: { _id: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
-  } | string;
+  tenantId?:
+    | {
+        _id: string;
+        bedId?: string | null;
+        user?: { name: string; phone?: string; email?: string };
+        userId?: { name: string; phone?: string; email?: string };
+        room?: {
+          _id: string;
+          roomNumber: string;
+          floor?: { label?: string; floorNumber?: number } | null;
+        };
+        roomId?: {
+          _id: string;
+          roomNumber: string;
+          floor?: { label?: string; floorNumber?: number } | null;
+        };
+      }
+    | string;
   amount: number;
   method: string;
   type: string;
@@ -351,7 +369,9 @@ export default function PaymentDetailPage() {
   const invoiceId =
     invoiceObj?._id ?? (typeof payment?.invoiceId === 'string' ? payment.invoiceId : undefined);
   const invoiceNumber =
-    invoiceObj?.invoiceNumber ?? payment?.invoiceNumber ?? (invoiceId ? invoiceId.slice(-6) : undefined);
+    invoiceObj?.invoiceNumber ??
+    payment?.invoiceNumber ??
+    (invoiceId ? invoiceId.slice(-6) : undefined);
 
   const verifyTarget: VerifyPaymentTarget | null = payment
     ? {
@@ -410,7 +430,9 @@ export default function PaymentDetailPage() {
             <StatCard
               title="Due Date"
               value={formatDate(payment.dueDate)}
-              subtitle={payment.paidAt ? `Paid on ${formatDate(payment.paidAt)}` : 'Unpaid obligation'}
+              subtitle={
+                payment.paidAt ? `Paid on ${formatDate(payment.paidAt)}` : 'Unpaid obligation'
+              }
               tone={isPaid ? 'success' : 'default'}
               icon={<Calendar />}
             />
@@ -444,7 +466,7 @@ export default function PaymentDetailPage() {
                   <Hash className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                  <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
                     UTR reference
                   </p>
                   <p className="font-mono text-sm font-bold tracking-wide text-(--color-brand-700)">
@@ -460,7 +482,7 @@ export default function PaymentDetailPage() {
                 {invoiceId && (
                   <Link
                     href={`/invoices/${invoiceId}`}
-                    className="inline-flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) px-3 py-1.5 text-13 font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-field-bg)"
+                    className="text-13 inline-flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) px-3 py-1.5 font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-field-bg)"
                   >
                     Invoice {invoiceNumber ?? invoiceId.slice(-6)}
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -647,9 +669,7 @@ export default function PaymentDetailPage() {
 
           <DetailCard title="Activity" icon={<History />}>
             {eventsLoading ? (
-              <p className="text-sm font-medium text-(--color-text-muted)">
-                Loading activity...
-              </p>
+              <p className="text-sm font-medium text-(--color-text-muted)">Loading activity...</p>
             ) : events.length > 0 ? (
               <Timeline
                 events={events.map((e) => ({

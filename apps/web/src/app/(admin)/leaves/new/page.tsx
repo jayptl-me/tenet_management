@@ -196,9 +196,7 @@ export default function NewLeavePage() {
           {tenantIdWatch ? (
             <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-(--color-brand-700)">
-                  Loading host stay…
-                </p>
+                <p className="text-xs font-semibold text-(--color-brand-700)">Loading host stay…</p>
               ) : hostPreview ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
@@ -301,7 +299,7 @@ export default function NewLeavePage() {
                 );
               })}
             </div>
-            <p className="shrink-0 text-2xs font-medium text-(--color-text-muted)">
+            <p className="text-2xs shrink-0 font-medium text-(--color-text-muted)">
               {(reasonWatch ?? '').length}/500
             </p>
           </div>

@@ -1,12 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Wallet,
-  Smartphone,
-  Landmark,
-  CircleDollarSign,
-} from 'lucide-react';
+import { Wallet, Smartphone, Landmark, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -106,16 +101,18 @@ export function RecordPaymentModal({
       const d = new Date(paidAt);
       const paidAtIso = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 
-      await api.post('payments/offline', {
-        json: {
-          tenantId: target.tenantId,
-          invoiceId: target.invoiceId,
-          amount,
-          method,
-          paidAt: paidAtIso,
-          notes: notes.trim() || undefined,
-        },
-      }).json();
+      await api
+        .post('payments/offline', {
+          json: {
+            tenantId: target.tenantId,
+            invoiceId: target.invoiceId,
+            amount,
+            method,
+            paidAt: paidAtIso,
+            notes: notes.trim() || undefined,
+          },
+        })
+        .json();
 
       toast.success(`Payment of ${fmtMoney(amount)} recorded successfully`);
       onSuccess?.();
@@ -144,7 +141,7 @@ export function RecordPaymentModal({
         )}
 
         {/* Invoice context card */}
-        <div className={clsx(surfaceNestedClass, 'rounded-[var(--radius-lg)] p-4 space-y-2')}>
+        <div className={clsx(surfaceNestedClass, 'space-y-2 rounded-[var(--radius-lg)] p-4')}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
@@ -157,7 +154,7 @@ export function RecordPaymentModal({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] font-bold text-[color:var(--color-text-muted)] uppercase tracking-wider">
+              <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                 Balance Due
               </p>
               <p className="font-display text-base font-bold text-[color:var(--color-danger-700)] tabular-nums">
@@ -169,7 +166,7 @@ export function RecordPaymentModal({
 
         {/* Payment method selector */}
         <div>
-          <label className="block text-xs font-semibold text-[color:var(--color-text-secondary)] mb-1.5">
+          <label className="mb-1.5 block text-xs font-semibold text-[color:var(--color-text-secondary)]">
             Payment Method
           </label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -185,10 +182,17 @@ export function RecordPaymentModal({
                     'flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] border p-2.5 text-center transition-all',
                     isSelected
                       ? 'border-[color:var(--color-brand-600)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-900)]'
-                      : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] hover:bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]',
+                      : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]',
                   )}
                 >
-                  <Icon className={clsx('h-4 w-4', isSelected ? 'text-[color:var(--color-brand-600)]' : 'text-[color:var(--color-text-muted)]')} />
+                  <Icon
+                    className={clsx(
+                      'h-4 w-4',
+                      isSelected
+                        ? 'text-[color:var(--color-brand-600)]'
+                        : 'text-[color:var(--color-text-muted)]',
+                    )}
+                  />
                   <span className="text-xs font-semibold">{m.label}</span>
                 </button>
               );
@@ -198,7 +202,10 @@ export function RecordPaymentModal({
 
         {/* Amount input & quick chips */}
         <div>
-          <label htmlFor="modal-payment-amount" className="block text-xs font-semibold text-[color:var(--color-text-secondary)] mb-1">
+          <label
+            htmlFor="modal-payment-amount"
+            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+          >
             Amount (₹)
           </label>
           <Input
@@ -234,14 +241,18 @@ export function RecordPaymentModal({
 
           {isOverpay && (
             <p className="mt-1 text-[11px] text-[color:var(--color-warning-700)]">
-              Note: Payment amount exceeds current balance ({fmtMoney(balance)}). Excess will be credited.
+              Note: Payment amount exceeds current balance ({fmtMoney(balance)}). Excess will be
+              credited.
             </p>
           )}
         </div>
 
         {/* Payment date */}
         <div>
-          <label htmlFor="modal-payment-date" className="block text-xs font-semibold text-[color:var(--color-text-secondary)] mb-1">
+          <label
+            htmlFor="modal-payment-date"
+            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+          >
             Payment Date & Time
           </label>
           <Input
@@ -255,7 +266,10 @@ export function RecordPaymentModal({
 
         {/* Notes */}
         <div>
-          <label htmlFor="modal-payment-notes" className="block text-xs font-semibold text-[color:var(--color-text-secondary)] mb-1">
+          <label
+            htmlFor="modal-payment-notes"
+            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+          >
             Notes (optional)
           </label>
           <Textarea
@@ -269,14 +283,23 @@ export function RecordPaymentModal({
 
         {/* Live balance reconciliation summary */}
         <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-3 text-xs">
-          <span className="text-[color:var(--color-text-muted)] font-medium">Remaining balance after:</span>
-          <span className={clsx('font-bold tabular-nums', remainingAfter === 0 ? 'text-[color:var(--color-success-600)]' : 'text-[color:var(--color-text-primary)]')}>
+          <span className="font-medium text-[color:var(--color-text-muted)]">
+            Remaining balance after:
+          </span>
+          <span
+            className={clsx(
+              'font-bold tabular-nums',
+              remainingAfter === 0
+                ? 'text-[color:var(--color-success-600)]'
+                : 'text-[color:var(--color-text-primary)]',
+            )}
+          >
             {remainingAfter === 0 ? 'Fully settled (₹0)' : fmtMoney(remainingAfter)}
           </span>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-[color:var(--border-color)]">
+        <div className="flex justify-end gap-2 border-t border-[color:var(--border-color)] pt-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>

@@ -95,7 +95,7 @@ export function FunnelChart({
                 y={y + barHeight / 2}
                 textAnchor={width > 44 ? 'end' : 'start'}
                 dominantBaseline="middle"
-                fill={width > 44 ? stage.ink ?? chartTokens.onFill : chartTokens.axis}
+                fill={width > 44 ? (stage.ink ?? chartTokens.onFill) : chartTokens.axis}
                 fontSize={11}
                 fontFamily={chartTokens.fontMono}
                 fontWeight={700}

@@ -394,7 +394,7 @@ function NotificationsContent() {
           <div className="grid gap-5">
             {/* Target Type */}
             <div>
-              <label className="mb-2 block text-13 font-semibold text-(--color-text-primary)">
+              <label className="text-13 mb-2 block font-semibold text-(--color-text-primary)">
                 Target Audience
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -491,7 +491,7 @@ function NotificationsContent() {
 
             {/* Type */}
             <div>
-              <label className="mb-2 block text-13 font-semibold text-(--color-text-primary)">
+              <label className="text-13 mb-2 block font-semibold text-(--color-text-primary)">
                 Notification Type
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -697,9 +697,7 @@ function NotificationsContent() {
                     <StatusBadge variant="success" label="All read" />
                   )}
                 </div>
-                <p className="line-clamp-2 text-xs text-(--color-text-secondary)">
-                  {row.body}
-                </p>
+                <p className="line-clamp-2 text-xs text-(--color-text-secondary)">{row.body}</p>
                 <div className="flex items-center gap-3 text-xs text-(--color-text-muted)">
                   <span className="inline-flex items-center gap-1 capitalize">
                     {typeIconsMap[row.type] ?? <Bell className="h-3.5 w-3.5" />}

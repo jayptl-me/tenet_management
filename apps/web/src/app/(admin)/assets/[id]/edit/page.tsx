@@ -251,7 +251,9 @@ export default function EditAssetPage() {
                     onChange={field.onChange}
                     error={err.category?.message}
                     helperText={
-                      watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
+                      watchedCategory
+                        ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
+                        : undefined
                     }
                   />
                 )}
@@ -330,7 +332,9 @@ export default function EditAssetPage() {
                     value={field.value ?? ''}
                     onChange={field.onChange}
                     error={err.status?.message}
-                    helperText={isRetired ? 'Retired is terminal: service schedule closes' : undefined}
+                    helperText={
+                      isRetired ? 'Retired is terminal: service schedule closes' : undefined
+                    }
                   />
                 )}
               />

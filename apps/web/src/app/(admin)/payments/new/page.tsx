@@ -78,7 +78,12 @@ interface TenantProfile {
 interface TenantDuesData {
   totalDue: number;
   depositHeld: number;
-  unpaidInvoices?: Array<{ _id: string; invoiceNumber: string; totalAmount: number; remaining?: number }>;
+  unpaidInvoices?: Array<{
+    _id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    remaining?: number;
+  }>;
 }
 
 function toIsoFromLocal(datetimeLocal: string): string {
@@ -150,8 +155,14 @@ function NewPaymentForm() {
     }
     setTenantLoading(true);
     Promise.all([
-      api.get(`tenants/${tenantId}`).json<{ success: boolean; data: TenantProfile }>().catch(() => null),
-      api.get(`tenants/${tenantId}/dues`).json<{ success: boolean; data: TenantDuesData }>().catch(() => null),
+      api
+        .get(`tenants/${tenantId}`)
+        .json<{ success: boolean; data: TenantProfile }>()
+        .catch(() => null),
+      api
+        .get(`tenants/${tenantId}/dues`)
+        .json<{ success: boolean; data: TenantDuesData }>()
+        .catch(() => null),
     ])
       .then(([pRes, dRes]) => {
         if (pRes?.data) setTenantProfile(pRes.data);
@@ -219,7 +230,8 @@ function NewPaymentForm() {
   }, [invoiceId, invoices, setValue]);
 
   const balance = selectedInvoice
-    ? (selectedInvoice.balance ?? Math.max(0, selectedInvoice.totalAmount - (selectedInvoice.paidAmount ?? 0)))
+    ? (selectedInvoice.balance ??
+      Math.max(0, selectedInvoice.totalAmount - (selectedInvoice.paidAmount ?? 0)))
     : null;
   const overpay = balance != null && (Number(amount) || 0) > balance + 0.001;
   const remainingAfter = balance != null ? Math.max(0, balance - (Number(amount) || 0)) : 0;
@@ -306,38 +318,62 @@ function NewPaymentForm() {
 
               {/* Intelligent Tenant Context Strip */}
               {tenantLoading ? (
-                <div className={clsx(surfaceNestedClass, 'mt-3 animate-pulse rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted)')}>
+                <div
+                  className={clsx(
+                    surfaceNestedClass,
+                    'mt-3 animate-pulse rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted)',
+                  )}
+                >
                   Loading resident financial profile and balance...
                 </div>
               ) : tenantProfile ? (
-                <div className={clsx(surfaceNestedClass, 'mt-3 rounded-(--radius-lg) p-4 space-y-2')}>
+                <div
+                  className={clsx(surfaceNestedClass, 'mt-3 space-y-2 rounded-(--radius-lg) p-4')}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-color) pb-2.5">
                     <div className="flex items-center gap-2">
                       <Home className="h-4 w-4 text-(--color-brand-600)" />
                       <span className="text-xs font-bold text-(--color-text-primary)">
                         Room {tenantProfile.room?.roomNumber ?? 'N/A'}
-                        {tenantProfile.room?.floor?.label ? ` (${tenantProfile.room.floor.label})` : ''} · Bed {tenantProfile.bedId}
+                        {tenantProfile.room?.floor?.label
+                          ? ` (${tenantProfile.room.floor.label})`
+                          : ''}{' '}
+                        · Bed {tenantProfile.bedId}
                       </span>
                     </div>
                     <span className="text-xs font-semibold text-(--color-text-muted)">
-                      Rent: <strong className="text-(--color-text-primary)">{fmtMoney(tenantProfile.monthlyRent)}/mo</strong>
+                      Rent:{' '}
+                      <strong className="text-(--color-text-primary)">
+                        {fmtMoney(tenantProfile.monthlyRent)}/mo
+                      </strong>
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-xs sm:grid-cols-3">
                     <div>
-                      <span className="text-(--color-text-muted) block text-2xs">Deposit Held</span>
+                      <span className="text-2xs block text-(--color-text-muted)">Deposit Held</span>
                       <span className="font-bold text-(--color-text-primary) tabular-nums">
                         {fmtMoney(tenantProfile.depositPaid)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-(--color-text-muted) block text-2xs">Total Unpaid Dues</span>
-                      <span className={clsx('font-bold tabular-nums', (tenantDues?.totalDue ?? 0) > 0 ? 'text-(--color-danger-600)' : 'text-(--color-success-600)')}>
+                      <span className="text-2xs block text-(--color-text-muted)">
+                        Total Unpaid Dues
+                      </span>
+                      <span
+                        className={clsx(
+                          'font-bold tabular-nums',
+                          (tenantDues?.totalDue ?? 0) > 0
+                            ? 'text-(--color-danger-600)'
+                            : 'text-(--color-success-600)',
+                        )}
+                      >
                         {fmtMoney(tenantDues?.totalDue ?? 0)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-(--color-text-muted) block text-2xs">Unpaid Invoices</span>
+                      <span className="text-2xs block text-(--color-text-muted)">
+                        Unpaid Invoices
+                      </span>
                       <span className="font-bold text-(--color-text-primary)">
                         {tenantDues?.unpaidInvoices?.length ?? invoices.length} open
                       </span>
@@ -348,25 +384,36 @@ function NewPaymentForm() {
 
               {/* Invoice selection */}
               <div className="mt-5">
-                <label className="mb-1.5 block text-13 font-semibold text-(--color-text-primary)">
+                <label className="text-13 mb-1.5 block font-semibold text-(--color-text-primary)">
                   Select Payable Invoice
                 </label>
                 {invoicesLoading ? (
-                  <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted) text-center')}>
+                  <div
+                    className={clsx(
+                      surfaceNestedClass,
+                      'rounded-(--radius-lg) p-4 text-center text-xs font-medium text-(--color-text-muted)',
+                    )}
+                  >
                     Loading payable invoices...
                   </div>
                 ) : !tenantId ? (
-                  <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) flex items-center gap-2 p-4 text-xs font-medium text-(--color-text-muted)')}>
+                  <div
+                    className={clsx(
+                      surfaceNestedClass,
+                      'flex items-center gap-2 rounded-(--radius-lg) p-4 text-xs font-medium text-(--color-text-muted)',
+                    )}
+                  >
                     <Info className="h-4 w-4 shrink-0 text-(--color-brand-600)" />
                     Select a resident above to inspect payable invoices.
                   </div>
                 ) : invoices.length === 0 ? (
-                  <div className="rounded-(--radius-lg) border border-(--color-brand-300) bg-(--color-brand-50) p-4 text-xs space-y-2">
+                  <div className="space-y-2 rounded-(--radius-lg) border border-(--color-brand-300) bg-(--color-brand-50) p-4 text-xs">
                     <p className="font-bold text-(--color-brand-900)">
                       No unpaid invoices found for this resident.
                     </p>
-                    <p className="text-(--color-brand-700) leading-relaxed">
-                      All existing invoices are settled. If you need to collect for this month or extra charges, generate a new invoice first.
+                    <p className="leading-relaxed text-(--color-brand-700)">
+                      All existing invoices are settled. If you need to collect for this month or
+                      extra charges, generate a new invoice first.
                     </p>
                     <div className="pt-1">
                       <Button
@@ -374,7 +421,7 @@ function NewPaymentForm() {
                         variant="primary"
                         onClick={() => router.push(`/invoices/new?tenantId=${tenantId}`)}
                       >
-                        <FilePlus2 className="h-3.5 w-3.5 mr-1" />
+                        <FilePlus2 className="mr-1 h-3.5 w-3.5" />
                         Generate New Invoice
                       </Button>
                     </div>
@@ -382,7 +429,8 @@ function NewPaymentForm() {
                 ) : (
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {invoices.map((inv) => {
-                      const bal = inv.balance ?? Math.max(0, inv.totalAmount - (inv.paidAmount ?? 0));
+                      const bal =
+                        inv.balance ?? Math.max(0, inv.totalAmount - (inv.paidAmount ?? 0));
                       const active = invoiceId === inv._id;
                       return (
                         <button
@@ -390,7 +438,7 @@ function NewPaymentForm() {
                           type="button"
                           onClick={() => setValue('invoiceId', inv._id, { shouldValidate: true })}
                           className={clsx(
-                            'rounded-(--radius-lg) border p-3.5 text-left transition-all relative overflow-hidden',
+                            'relative overflow-hidden rounded-(--radius-lg) border p-3.5 text-left transition-all',
                             active
                               ? 'border-(--color-brand-600) bg-(--color-brand-50) shadow-(--shadow-sm)'
                               : 'border-(--border-color) bg-(--color-card-bg) hover:border-(--color-brand-300)',
@@ -413,7 +461,7 @@ function NewPaymentForm() {
                               {fmtMoney(bal)} due
                             </span>
                           </div>
-                          <div className="mt-1 flex items-center justify-between text-2xs text-(--color-text-muted)">
+                          <div className="text-2xs mt-1 flex items-center justify-between text-(--color-text-muted)">
                             <span>Total: {fmtMoney(inv.totalAmount)}</span>
                             {inv.paidAmount ? <span>Paid: {fmtMoney(inv.paidAmount)}</span> : null}
                           </div>
@@ -423,7 +471,7 @@ function NewPaymentForm() {
                   </div>
                 )}
                 {err.invoiceId?.message && (
-                  <p className="mt-1.5 text-12 font-medium text-(--color-danger-600)" role="alert">
+                  <p className="text-12 mt-1.5 font-medium text-(--color-danger-600)" role="alert">
                     {err.invoiceId.message}
                   </p>
                 )}
@@ -459,7 +507,7 @@ function NewPaymentForm() {
                           type="button"
                           onClick={() => setValue('amount', q.value, { shouldValidate: true })}
                           className={clsx(
-                            'rounded-full border px-2.5 py-0.5 text-2xs font-bold transition-colors',
+                            'text-2xs rounded-full border px-2.5 py-0.5 font-bold transition-colors',
                             Number(amount) === q.value
                               ? 'border-(--color-brand-500) bg-(--color-brand-100) text-(--color-brand-900)'
                               : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--color-brand-300)',
@@ -481,7 +529,7 @@ function NewPaymentForm() {
               </FormGrid>
 
               <div className="mt-4">
-                <label className="mb-1.5 block text-13 font-semibold text-(--color-text-primary)">
+                <label className="text-13 mb-1.5 block font-semibold text-(--color-text-primary)">
                   Payment Method
                 </label>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -504,22 +552,18 @@ function NewPaymentForm() {
                         <Icon
                           className={clsx(
                             'h-5 w-5',
-                            active
-                              ? 'text-(--color-brand-600)'
-                              : 'text-(--color-text-muted)',
+                            active ? 'text-(--color-brand-600)' : 'text-(--color-text-muted)',
                           )}
                         />
                         <span
                           className={clsx(
                             'text-xs font-bold',
-                            active
-                              ? 'text-(--color-brand-900)'
-                              : 'text-(--color-text-primary)',
+                            active ? 'text-(--color-brand-900)' : 'text-(--color-text-primary)',
                           )}
                         >
                           {m.label}
                         </span>
-                        <span className="text-center text-3xs font-medium text-(--color-text-muted)">
+                        <span className="text-3xs text-center font-medium text-(--color-text-muted)">
                           {m.hint}
                         </span>
                       </button>
@@ -527,7 +571,7 @@ function NewPaymentForm() {
                   })}
                 </div>
                 {err.method?.message && (
-                  <p className="mt-1.5 text-12 font-medium text-(--color-danger-600)" role="alert">
+                  <p className="text-12 mt-1.5 font-medium text-(--color-danger-600)" role="alert">
                     {err.method.message}
                   </p>
                 )}
@@ -562,7 +606,12 @@ function NewPaymentForm() {
 
             {selectedInvoice ? (
               <div className="mt-4 space-y-3.5">
-                <div className={clsx(surfaceNestedClass, 'rounded-(--radius-lg) space-y-2 p-3.5 text-13')}>
+                <div
+                  className={clsx(
+                    surfaceNestedClass,
+                    'text-13 space-y-2 rounded-(--radius-lg) p-3.5',
+                  )}
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Target Invoice</span>
                     <span className="font-mono text-xs font-bold text-(--color-brand-700)">
@@ -575,14 +624,16 @@ function NewPaymentForm() {
                       {selectedInvoice.month}
                     </span>
                   </div>
-                  <div className="border-t border-(--border-color) pt-2 space-y-1">
+                  <div className="space-y-1 border-t border-(--border-color) pt-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-(--color-text-muted)">Invoice Total</span>
                       <span className="tabular-nums">{fmtMoney(selectedInvoice.totalAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-(--color-text-muted)">Already Paid</span>
-                      <span className="tabular-nums">{fmtMoney(selectedInvoice.paidAmount ?? 0)}</span>
+                      <span className="tabular-nums">
+                        {fmtMoney(selectedInvoice.paidAmount ?? 0)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
@@ -593,7 +644,7 @@ function NewPaymentForm() {
                   </div>
                 </div>
 
-                <div className="rounded-(--radius-lg) border border-(--color-success-200) bg-(--color-success-50) p-3.5 space-y-1">
+                <div className="space-y-1 rounded-(--radius-lg) border border-(--color-success-200) bg-(--color-success-50) p-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-(--color-success-800)">
                       This Payment
@@ -604,19 +655,20 @@ function NewPaymentForm() {
                   </div>
                   <div className="flex items-center justify-between border-t border-(--color-success-200) pt-1 text-xs">
                     <span className="text-(--color-success-700)">Balance After</span>
-                    <span className="font-bold tabular-nums text-(--color-success-900)">
+                    <span className="font-bold text-(--color-success-900) tabular-nums">
                       {remainingAfter === 0 ? 'Zero Balance (Settled)' : fmtMoney(remainingAfter)}
                     </span>
                   </div>
                 </div>
 
-                <p className="flex items-start gap-1.5 text-2xs leading-relaxed font-medium text-(--color-text-muted)">
+                <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-text-muted)">
                   <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
-                  Saving will record the payment and update the invoice status to {remainingAfter === 0 ? '"paid"' : '"partial"'}.
+                  Saving will record the payment and update the invoice status to{' '}
+                  {remainingAfter === 0 ? '"paid"' : '"partial"'}.
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-xs font-medium text-(--color-text-muted) leading-relaxed">
+              <p className="mt-3 text-xs leading-relaxed font-medium text-(--color-text-muted)">
                 Select a resident and payable invoice to view live settlement impact.
               </p>
             )}

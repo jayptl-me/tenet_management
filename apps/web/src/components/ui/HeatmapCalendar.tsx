@@ -2,12 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { clsx } from 'clsx';
-import {
-  chartTooltipClass,
-  heatmapLevel,
-  heatmapRamp,
-  type HeatmapScale,
-} from '@/lib/chart-theme';
+import { chartTooltipClass, heatmapLevel, heatmapRamp, type HeatmapScale } from '@/lib/chart-theme';
 
 export interface HeatmapCalendarProps {
   data: Record<string, number>;
@@ -111,7 +106,7 @@ export function HeatmapCalendar({
 
   return (
     <div
-      className={clsx('relative w-full max-w-lg select-none space-y-3.5', className)}
+      className={clsx('relative w-full max-w-lg space-y-3.5 select-none', className)}
       role="region"
       aria-label={`Incident Heatmap for ${monthLabel}. ${totalActivity} total incidents.`}
     >
@@ -123,10 +118,10 @@ export function HeatmapCalendar({
           </span>
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-[color:var(--color-surface-100)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--color-text-secondary)]">
-          <span className="tabular-nums font-bold text-[color:var(--color-text-primary)]">
+          <span className="font-bold text-[color:var(--color-text-primary)] tabular-nums">
             {totalActivity}
           </span>
-          <span className="text-[color:var(--color-text-muted)] font-normal">
+          <span className="font-normal text-[color:var(--color-text-muted)]">
             {totalActivity === 1 ? 'incident' : 'incidents'}
           </span>
         </div>
@@ -141,8 +136,8 @@ export function HeatmapCalendar({
               <span
                 key={label}
                 className={clsx(
-                  'h-6 flex items-center justify-end pr-1 text-[10px]',
-                  (idx === 1 || idx === 3 || idx === 5) ? 'invisible' : '',
+                  'flex h-6 items-center justify-end pr-1 text-[10px]',
+                  idx === 1 || idx === 3 || idx === 5 ? 'invisible' : '',
                 )}
                 aria-hidden="true"
               >
@@ -196,18 +191,23 @@ export function HeatmapCalendar({
                       className={clsx(
                         'relative flex h-6 w-6 items-center justify-center rounded-[4px] text-[10px] font-semibold transition-all duration-150',
                         isEmpty
-                          ? 'border border-[color:var(--border-color)]/80 bg-[color:var(--color-surface-100)] text-[color:var(--color-text-muted)] cursor-default'
+                          ? 'cursor-default border border-[color:var(--border-color)]/80 bg-[color:var(--color-surface-100)] text-[color:var(--color-text-muted)]'
                           : clsx(
                               colorScale === 'danger'
                                 ? 'text-[color:var(--color-on-danger)]'
                                 : 'text-[color:var(--color-on-brand)]',
-                              'shadow-[var(--shadow-xs)] hover:scale-110 hover:shadow-[var(--shadow-sm)] cursor-pointer focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none',
+                              'cursor-pointer shadow-[var(--shadow-xs)] hover:scale-110 hover:shadow-[var(--shadow-sm)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none',
                             ),
                       )}
                       style={{ backgroundColor: fillColor }}
                       aria-label={`${cell.formattedDate}: ${cell.count} incidents`}
                     >
-                      <span className={clsx('text-[9px] tabular-nums', isEmpty ? 'opacity-40' : 'opacity-90 font-bold')}>
+                      <span
+                        className={clsx(
+                          'text-[9px] tabular-nums',
+                          isEmpty ? 'opacity-40' : 'font-bold opacity-90',
+                        )}
+                      >
                         {cell.day}
                       </span>
                     </button>

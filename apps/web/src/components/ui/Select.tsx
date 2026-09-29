@@ -185,7 +185,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             onChange?.(e);
           }}
           onBlur={onBlur}
-          className="sr-only select-none pointer-events-none"
+          className="pointer-events-none sr-only select-none"
           style={{ userSelect: 'none' }}
           tabIndex={-1}
           aria-hidden="true"

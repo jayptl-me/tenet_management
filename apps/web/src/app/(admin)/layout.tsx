@@ -130,11 +130,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Cmd+K hint */}
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden items-center gap-1.5 rounded-lg border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-2xs font-medium text-(--color-text-muted) shadow-(--shadow-xs) transition-all duration-(--transition-duration) hover:border-(--color-brand-200) hover:text-(--color-text-secondary) hover:shadow-(--shadow-sm) sm:flex"
+              className="text-2xs hidden items-center gap-1.5 rounded-lg border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 font-medium text-(--color-text-muted) shadow-(--shadow-xs) transition-all duration-(--transition-duration) hover:border-(--color-brand-200) hover:text-(--color-text-secondary) hover:shadow-(--shadow-sm) sm:flex"
             >
               <Search className="h-3 w-3" />
               <span>Search</span>
-              <kbd className="ml-1 rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5 text-3xs font-semibold">
+              <kbd className="text-3xs ml-1 rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5 font-semibold">
                 ⌘K
               </kbd>
             </button>

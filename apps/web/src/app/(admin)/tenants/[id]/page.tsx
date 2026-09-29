@@ -530,7 +530,7 @@ export default function TenantDetailPage() {
                   loading={downloadingPolicePdf}
                   onClick={handleDownloadPolicePdf}
                 >
-                  <Printer className="h-3.5 w-3.5 mr-1" />
+                  <Printer className="mr-1 h-3.5 w-3.5" />
                   Print Police PDF
                 </Button>
                 <Button
@@ -538,7 +538,7 @@ export default function TenantDetailPage() {
                   variant="ghost"
                   onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
                 >
-                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
                   Edit Profile
                 </Button>
               </div>
@@ -671,10 +671,7 @@ export default function TenantDetailPage() {
                             ...prev.documents,
                             idUrl: url,
                             idType: docType as
-                              | 'aadhaar'
-                              | 'passport'
-                              | 'voter_id'
-                              | 'driving_license',
+                              'aadhaar' | 'passport' | 'voter_id' | 'driving_license',
                             idNumberMasked,
                             isVerified: false,
                           },
@@ -859,9 +856,7 @@ export default function TenantDetailPage() {
                 <p className="text-sm text-(--color-text-muted)">{relatedError}</p>
               ) : guardians.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-(--color-text-muted)">
-                    No guardians linked.
-                  </p>
+                  <p className="text-sm text-(--color-text-muted)">No guardians linked.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -880,9 +875,7 @@ export default function TenantDetailPage() {
                       onClick={() => router.push(`/guardians/${g._id}`)}
                     >
                       <span>
-                        <span className="font-semibold text-(--color-text-primary)">
-                          {g.name}
-                        </span>
+                        <span className="font-semibold text-(--color-text-primary)">{g.name}</span>
                         <span className="ml-2 text-xs text-(--color-text-muted) capitalize">
                           {g.relation ?? ''}
                         </span>
@@ -961,17 +954,15 @@ export default function TenantDetailPage() {
                       className="group flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-color) px-3 py-2 text-left text-sm transition-all hover:border-(--border-color-hover) hover:bg-(--color-field-bg)"
                       onClick={() => router.push(`/invoices/${inv._id}`)}
                     >
-                      <span className="flex items-center gap-2 min-w-0">
+                      <span className="flex min-w-0 items-center gap-2">
                         <span className="font-mono text-xs font-bold text-(--color-brand-700) group-hover:underline">
                           {inv.invoiceNumber ?? inv._id.slice(-6)}
                         </span>
                         {inv.month && (
-                          <span className="text-xs text-(--color-text-muted)">
-                            {inv.month}
-                          </span>
+                          <span className="text-xs text-(--color-text-muted)">{inv.month}</span>
                         )}
                       </span>
-                      <div className="flex items-center gap-2.5 shrink-0">
+                      <div className="flex shrink-0 items-center gap-2.5">
                         <span className="font-semibold text-(--color-text-primary) tabular-nums">
                           {formatCurrency(inv.totalAmount ?? 0)}
                         </span>
@@ -1072,7 +1063,7 @@ export default function TenantDetailPage() {
                 </span>
               </div>
             ) : checkoutError ? (
-              <div className="rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-13 font-semibold text-(--color-danger-700)">
+              <div className="text-13 rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 font-semibold text-(--color-danger-700)">
                 {checkoutError}
               </div>
             ) : duesData ? (
@@ -1086,7 +1077,7 @@ export default function TenantDetailPage() {
                       {formatCurrency(duesData.totalDue)}
                     </span>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-12 font-semibold text-(--color-text-muted)">
+                  <div className="text-12 mt-2 grid grid-cols-2 gap-2 font-semibold text-(--color-text-muted)">
                     <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
                     <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
                     <div>Unresolved Payments: {duesData.pendingPayments}</div>
@@ -1109,9 +1100,7 @@ export default function TenantDetailPage() {
                             <span className="font-mono text-xs font-bold text-(--color-brand-600) group-hover:underline">
                               {inv.invoiceNumber}
                             </span>
-                            <span className="text-xs text-(--color-text-muted)">
-                              {inv.month}
-                            </span>
+                            <span className="text-xs text-(--color-text-muted)">{inv.month}</span>
                           </div>
                           <div className="flex items-center gap-2.5">
                             <div className="text-right">
@@ -1138,13 +1127,13 @@ export default function TenantDetailPage() {
                   </div>
                 )}
                 {checkoutBlocked ? (
-                  <div className="rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-13 font-semibold text-(--color-danger-700)">
+                  <div className="text-13 rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 font-semibold text-(--color-danger-700)">
                     {duesData.totalDue > 0 || duesData.unpaidInvoices.length > 0
                       ? 'Clear all unpaid invoice balances before checkout.'
                       : 'Resolve pending or overdue payments before checkout.'}
                   </div>
                 ) : (
-                  <div className="rounded-(--radius-lg) border border-(--color-success-300) bg-(--color-success-50) p-3 text-13 font-semibold text-(--color-success-700)">
+                  <div className="text-13 rounded-(--radius-lg) border border-(--color-success-300) bg-(--color-success-50) p-3 font-semibold text-(--color-success-700)">
                     No pending dues. Safe to checkout.
                   </div>
                 )}

@@ -162,9 +162,7 @@ function KanbanColumn({
       </div>
       <div className="max-h-[500px] space-y-2 overflow-y-auto p-3">
         {complaints.length === 0 ? (
-          <p className="py-6 text-center text-xs text-(--color-text-muted)">
-            No complaints
-          </p>
+          <p className="py-6 text-center text-xs text-(--color-text-muted)">No complaints</p>
         ) : (
           complaints.map((complaint) => (
             <KanbanCard
@@ -217,7 +215,7 @@ function KanbanCard({
           className="shrink-0"
         />
       </div>
-      <div className="mt-2 flex items-center justify-between text-2xs text-(--color-text-muted)">
+      <div className="text-2xs mt-2 flex items-center justify-between text-(--color-text-muted)">
         <span className="truncate">
           {complaint.tenant?.user?.name ?? 'Unknown'}
           {complaint.tenant?.room?.roomNumber ? ` · R-${complaint.tenant.room.roomNumber}` : ''}
@@ -673,9 +671,7 @@ export default function ComplaintsPage() {
               ? [
                   {
                     label: 'Quick Resolve',
-                    icon: (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />
-                    ),
+                    icon: <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />,
                     onClick: () =>
                       setQuickResolveTarget({
                         _id: row._id,

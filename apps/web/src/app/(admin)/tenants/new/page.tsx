@@ -175,19 +175,17 @@ function TenantForm() {
       }
       const hasPermanent = Boolean(
         data.permanentStreet?.trim() ||
-          data.permanentCity?.trim() ||
-          data.permanentPoliceStation?.trim(),
+        data.permanentCity?.trim() ||
+        data.permanentPoliceStation?.trim(),
       );
-      const hasOccupation = Boolean(
-        data.occupationCategory || data.organizationName?.trim(),
-      );
+      const hasOccupation = Boolean(data.occupationCategory || data.organizationName?.trim());
       const hasVp = Boolean(
         data.fatherOrSpouseName?.trim() ||
-          data.dob ||
-          data.gender ||
-          hasPermanent ||
-          hasOccupation ||
-          data.stayPurpose?.trim(),
+        data.dob ||
+        data.gender ||
+        hasPermanent ||
+        hasOccupation ||
+        data.stayPurpose?.trim(),
       );
 
       const payload: Record<string, unknown> = {
@@ -274,7 +272,7 @@ function TenantForm() {
                         Room {selectedRoom.roomNumber}
                         {bedIdWatch ? ` · Bed ${bedIdWatch}` : ''}
                       </span>
-                      <span className="rounded-full bg-(--color-brand-100) px-2.5 py-0.5 text-3xs font-bold tracking-wider text-(--color-brand-800) uppercase">
+                      <span className="text-3xs rounded-full bg-(--color-brand-100) px-2.5 py-0.5 font-bold tracking-wider text-(--color-brand-800) uppercase">
                         Assigned Unit
                       </span>
                     </div>
@@ -420,14 +418,14 @@ function TenantForm() {
                         <button
                           type="button"
                           onClick={() => setValue('depositPaid', selectedRoom.monthlyRent)}
-                          className="rounded bg-(--color-field-bg) px-1.5 py-0.5 text-3xs font-semibold text-(--color-brand-600) hover:bg-(--color-brand-50)"
+                          className="text-3xs rounded bg-(--color-field-bg) px-1.5 py-0.5 font-semibold text-(--color-brand-600) hover:bg-(--color-brand-50)"
                         >
                           1 Mo (₹{selectedRoom.monthlyRent.toLocaleString()})
                         </button>
                         <button
                           type="button"
                           onClick={() => setValue('depositPaid', 0)}
-                          className="rounded bg-(--color-field-bg) px-1.5 py-0.5 text-3xs font-semibold text-(--color-text-muted) hover:bg-(--color-surface-200)"
+                          className="text-3xs rounded bg-(--color-field-bg) px-1.5 py-0.5 font-semibold text-(--color-text-muted) hover:bg-(--color-surface-200)"
                         >
                           No Deposit
                         </button>
@@ -511,11 +509,7 @@ function TenantForm() {
                     placeholder="City"
                     {...register('permanentCity')}
                   />
-                  <Input
-                    label="Native State"
-                    placeholder="State"
-                    {...register('permanentState')}
-                  />
+                  <Input label="Native State" placeholder="State" {...register('permanentState')} />
                   <Input
                     label="Native Police Station"
                     placeholder="Police Station jurisdiction"

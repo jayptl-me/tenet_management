@@ -313,7 +313,7 @@ export default function FloorDetailPage() {
                           label={room.isActive ? 'Active' : 'Inactive'}
                         />
                       </div>
-                      <p className="mt-1 text-2xs font-medium text-(--color-text-muted)">
+                      <p className="text-2xs mt-1 font-medium text-(--color-text-muted)">
                         {room.sharingType} sharing - {formatCurrency(room.monthlyRent)}/mo
                       </p>
                       <div className="mt-3 space-y-1.5">
@@ -360,7 +360,7 @@ export default function FloorDetailPage() {
                     >
                       <Building className="h-3.5 w-3.5 text-(--color-brand-500)" />
                       {label}
-                      <span className="rounded-full bg-(--color-brand-100) px-1.5 text-3xs font-bold text-(--color-brand-700) tabular-nums">
+                      <span className="text-3xs rounded-full bg-(--color-brand-100) px-1.5 font-bold text-(--color-brand-700) tabular-nums">
                         x{ac.count}
                       </span>
                     </span>

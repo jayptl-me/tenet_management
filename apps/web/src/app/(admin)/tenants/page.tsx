@@ -156,9 +156,7 @@ export default function TenantsPage() {
     {
       header: 'Name',
       accessor: (row) => (
-        <span className="font-semibold text-(--color-text-primary)">
-          {row.user?.name ?? 'N/A'}
-        </span>
+        <span className="font-semibold text-(--color-text-primary)">{row.user?.name ?? 'N/A'}</span>
       ),
     },
     {
@@ -260,11 +258,7 @@ export default function TenantsPage() {
           dataPath="data"
           className="max-w-[200px]"
         />
-        <Button
-          variant="outline"
-          onClick={handleExportCsv}
-          disabled={tenants.length === 0}
-        >
+        <Button variant="outline" onClick={handleExportCsv} disabled={tenants.length === 0}>
           <Download className="h-4 w-4" />
           Export CSV
         </Button>

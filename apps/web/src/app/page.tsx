@@ -304,7 +304,7 @@ export default function LandingPage() {
               <a
                 key={link}
                 href={`#${link}`}
-                className="rounded-lg px-3 py-1.5 text-13 font-medium text-(--color-text-secondary) transition-colors duration-(--transition-duration) hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
+                className="text-13 rounded-lg px-3 py-1.5 font-medium text-(--color-text-secondary) transition-colors duration-(--transition-duration) hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
               >
                 {link.charAt(0).toUpperCase() + link.slice(1)}
               </a>
@@ -334,7 +334,7 @@ export default function LandingPage() {
               <a
                 key={link}
                 href={`#${link}`}
-                className="block rounded-lg px-3 py-2.5 text-13 font-medium text-(--color-text-secondary) transition-colors hover:bg-(--color-surface-50) hover:text-(--color-text-primary)"
+                className="text-13 block rounded-lg px-3 py-2.5 font-medium text-(--color-text-secondary) transition-colors hover:bg-(--color-surface-50) hover:text-(--color-text-primary)"
                 onClick={() => setMobileOpen(false)}
               >
                 {link.charAt(0).toUpperCase() + link.slice(1)}
@@ -396,7 +396,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto mt-4 max-w-xl text-15 leading-relaxed text-(--color-brand-100) md:text-base"
+            className="text-15 mx-auto mt-4 max-w-xl leading-relaxed text-(--color-brand-100) md:text-base"
           >
             {subline}
           </motion.p>
@@ -414,19 +414,12 @@ export default function LandingPage() {
               </Button>
             </a>
             <a href="#rooms">
-              <Button
-                variant="hero"
-                size="lg"
-              >
+              <Button variant="hero" size="lg">
                 View Rooms & Pricing
               </Button>
             </a>
             {TENANT_APP_URL && (
-              <Button
-                variant="hero"
-                size="lg"
-                onClick={handleTenantApp}
-              >
+              <Button variant="hero" size="lg" onClick={handleTenantApp}>
                 <ExternalLink className="h-4 w-4" />
                 App Login
               </Button>
@@ -462,11 +455,11 @@ export default function LandingPage() {
       {/* ── Amenities ─────────────────────────────── */}
       <Section id="amenities" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+          <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
             Amenities
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything included</h2>
-          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
+          <p className="text-15 mx-auto mt-3 max-w-lg leading-relaxed text-(--color-text-secondary)">
             Everything you need for a comfortable, stress-free stay at {pgName}.
           </p>
         </motion.div>
@@ -494,13 +487,13 @@ export default function LandingPage() {
       >
         <div className="mx-auto max-w-6xl px-4">
           <motion.div variants={fadeInUp} className="mb-12 text-center">
-            <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+            <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
               Pricing
             </p>
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Transparent, affordable plans
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
+            <p className="text-15 mx-auto mt-3 max-w-lg leading-relaxed text-(--color-text-secondary)">
               Flexible sharing options designed around your budget and comfort.
             </p>
           </motion.div>
@@ -532,14 +525,14 @@ export default function LandingPage() {
                   }`}
                 >
                   {isPopular && (
-                    <span className="absolute -top-3 right-6 rounded-full border border-(--color-brand-400) bg-(--color-brand-500) px-3 py-0.5 text-3xs font-bold tracking-wider text-white uppercase shadow-(--shadow-sm)">
+                    <span className="text-3xs absolute -top-3 right-6 rounded-full border border-(--color-brand-400) bg-(--color-brand-500) px-3 py-0.5 font-bold tracking-wider text-white uppercase shadow-(--shadow-sm)">
                       Most Popular
                     </span>
                   )}
 
                   <div>
                     <h3 className="text-lg font-bold">{share} Sharing</h3>
-                    <p className="mt-1 text-13 leading-relaxed text-(--color-text-muted)">
+                    <p className="text-13 mt-1 leading-relaxed text-(--color-text-muted)">
                       {share === 2
                         ? 'Double sharing occupancy'
                         : share === 3
@@ -559,7 +552,7 @@ export default function LandingPage() {
                       {features.map((f, i) => (
                         <li
                           key={i}
-                          className="flex items-center gap-2 text-13 font-medium text-(--color-text-secondary)"
+                          className="text-13 flex items-center gap-2 font-medium text-(--color-text-secondary)"
                         >
                           <Check className="h-4 w-4 flex-shrink-0 text-(--color-success-500)" />
                           {f}
@@ -585,11 +578,11 @@ export default function LandingPage() {
       {/* ── Gallery ──────────────────────────────── */}
       <Section id="gallery" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+          <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
             Gallery
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">See it for yourself</h2>
-          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
+          <p className="text-15 mx-auto mt-3 max-w-lg leading-relaxed text-(--color-text-secondary)">
             Take a virtual tour of our rooms, dining area, and facilities.
           </p>
         </motion.div>
@@ -637,10 +630,8 @@ export default function LandingPage() {
                 )}
               </div>
               <div className="border-t border-t-(--border-color) p-4">
-                <h3 className="text-15 font-bold text-(--color-text-primary)">
-                  {item.title}
-                </h3>
-                <p className="mt-1 text-13 leading-relaxed text-(--color-text-muted)">
+                <h3 className="text-15 font-bold text-(--color-text-primary)">{item.title}</h3>
+                <p className="text-13 mt-1 leading-relaxed text-(--color-text-muted)">
                   {item.desc}
                 </p>
               </div>
@@ -657,21 +648,21 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp}>
-              <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+              <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
                 About Us
               </p>
               <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why {pgName}?</h2>
-              <p className="mt-4 text-15 leading-relaxed text-(--color-text-secondary)">
+              <p className="text-15 mt-4 leading-relaxed text-(--color-text-secondary)">
                 We provide premium paying guest accommodations designed for working professionals
                 and students who value comfort, convenience, and community. Our properties are
                 strategically located near major business hubs and educational institutions.
               </p>
-              <p className="mt-3 text-15 leading-relaxed text-(--color-text-secondary)">
+              <p className="text-15 mt-3 leading-relaxed text-(--color-text-secondary)">
                 Every room is fully furnished with modern amenities including high-speed internet,
                 attached bathrooms, and 24/7 power backup. We take pride in our transparent billing
                 and responsive management.
               </p>
-              <div className="mt-6 flex items-center gap-6 text-13 font-semibold text-(--color-text-muted)">
+              <div className="text-13 mt-6 flex items-center gap-6 font-semibold text-(--color-text-muted)">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4 text-(--color-brand-500)" />
                   Prime Location
@@ -688,9 +679,7 @@ export default function LandingPage() {
               className="rounded-xl border border-(--color-brand-400) bg-(--color-brand-500) p-8 text-center text-white shadow-(--shadow-lg)"
             >
               <p className="text-5xl font-bold">500+</p>
-              <p className="mt-1 text-13 font-medium text-(--color-brand-100)">
-                Happy Residents
-              </p>
+              <p className="text-13 mt-1 font-medium text-(--color-brand-100)">Happy Residents</p>
               <div className="mt-8 grid grid-cols-2 gap-3">
                 {[
                   { val: '99%', label: 'Occupancy' },
@@ -714,11 +703,11 @@ export default function LandingPage() {
       {/* ── Testimonials ──────────────────────────── */}
       <Section id="testimonials" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
         <motion.div variants={fadeInUp} className="mb-12 text-center">
-          <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+          <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
             Testimonials
           </p>
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Loved by residents</h2>
-          <p className="mx-auto mt-3 max-w-lg text-15 leading-relaxed text-(--color-text-secondary)">
+          <p className="text-15 mx-auto mt-3 max-w-lg leading-relaxed text-(--color-text-secondary)">
             Real feedback from working professionals and students at {pgName}.
           </p>
         </motion.div>
@@ -735,13 +724,11 @@ export default function LandingPage() {
                   <Star key={idx} className="h-4 w-4" fill="currentColor" />
                 ))}
               </div>
-              <p className="flex-1 text-15 leading-relaxed text-(--color-text-secondary) italic">
+              <p className="text-15 flex-1 leading-relaxed text-(--color-text-secondary) italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-t-(--color-surface-200) pt-4">
-                <span className="text-13 font-bold text-(--color-text-primary)">
-                  {t.name}
-                </span>
+                <span className="text-13 font-bold text-(--color-text-primary)">{t.name}</span>
                 {t.occupation && (
                   <span className="text-12 font-medium text-(--color-text-muted)">
                     {t.occupation}
@@ -762,11 +749,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             <motion.div variants={fadeInUp} className="space-y-6">
               <div>
-                <p className="mb-2 text-2xs font-bold tracking-widest text-(--color-brand-500) uppercase">
+                <p className="text-2xs mb-2 font-bold tracking-widest text-(--color-brand-500) uppercase">
                   Contact
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight">Get in touch</h2>
-                <p className="mt-2 text-15 leading-relaxed text-(--color-text-secondary)">
+                <p className="text-15 mt-2 leading-relaxed text-(--color-text-secondary)">
                   Drop by for a visit! We are centrally located and easy to reach.
                 </p>
               </div>
@@ -786,14 +773,14 @@ export default function LandingPage() {
                     <span className="text-13 font-semibold text-(--color-text-primary)">
                       {address.line1}
                     </span>
-                    <span className="mt-1 text-12 text-(--color-text-muted)">
+                    <span className="text-12 mt-1 text-(--color-text-muted)">
                       {address.city}, {address.state} - {address.pincode}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col gap-2 text-13 font-medium text-(--color-text-secondary)">
+              <div className="text-13 flex flex-col gap-2 font-medium text-(--color-text-secondary)">
                 <span className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-(--color-brand-500)" />
                   {phone}
@@ -809,10 +796,8 @@ export default function LandingPage() {
               {formSent ? (
                 <div className="rounded-xl border border-(--color-success-200) bg-(--color-success-50) p-8 text-center shadow-(--shadow-md)">
                   <Check className="mx-auto h-10 w-10 text-(--color-success-500)" />
-                  <h3 className="mt-3 text-lg font-bold text-(--color-success-700)">
-                    Thank You!
-                  </h3>
-                  <p className="mt-1 text-13 leading-relaxed text-(--color-success-600)">
+                  <h3 className="mt-3 text-lg font-bold text-(--color-success-700)">Thank You!</h3>
+                  <p className="text-13 mt-1 leading-relaxed text-(--color-success-600)">
                     We have received your enquiry and will get back to you shortly.
                   </p>
                 </div>
@@ -872,9 +857,7 @@ export default function LandingPage() {
                     />
                   </div>
                   {formError && (
-                    <p className="text-12 font-medium text-(--color-danger-600)">
-                      {formError}
-                    </p>
+                    <p className="text-12 font-medium text-(--color-danger-600)">{formError}</p>
                   )}
                   <Button type="submit" loading={isSubmitting} size="lg" className="w-full">
                     <Send className="h-4 w-4" />
@@ -892,7 +875,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <span className="text-lg font-bold tracking-tight text-white">{pgName}</span>
-            <nav className="flex items-center gap-6 text-13 font-medium">
+            <nav className="text-13 flex items-center gap-6 font-medium">
               {['amenities', 'rooms', 'gallery', 'testimonials'].map((link) => (
                 <a
                   key={link}

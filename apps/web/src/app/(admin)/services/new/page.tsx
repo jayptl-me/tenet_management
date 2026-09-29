@@ -48,9 +48,8 @@ export default function NewServicePage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
   const [applyToAllFloors, setApplyToAllFloors] = useState(false);
-  const [typeOptions, setTypeOptions] = useState<Array<{ value: string; label: string }>>(
-    DEFAULT_SERVICE_TYPES,
-  );
+  const [typeOptions, setTypeOptions] =
+    useState<Array<{ value: string; label: string }>>(DEFAULT_SERVICE_TYPES);
 
   useEffect(() => {
     api
@@ -121,7 +120,10 @@ export default function NewServicePage() {
           } catch (err) {
             // If already exists on this floor, continue without failing batch
             const parsed = await parseApiError(err);
-            if (!parsed.message.toLowerCase().includes('already exists') && !parsed.code?.includes('DUPLICATE')) {
+            if (
+              !parsed.message.toLowerCase().includes('already exists') &&
+              !parsed.code?.includes('DUPLICATE')
+            ) {
               // Ignore duplicate
             }
           }
@@ -166,14 +168,16 @@ export default function NewServicePage() {
             onChange={(e) => setApplyToAllFloors(e.target.checked)}
           />
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-3 text-xs text-(--color-text-secondary)">
+          <div className="flex flex-col justify-between gap-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-3 text-xs text-(--color-text-secondary) sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <WashingMachine className="h-4 w-4 shrink-0 text-(--color-brand-600)" />
-              <span>Looking to add physical washing machines for resident laundry slot bookings?</span>
+              <span>
+                Looking to add physical washing machines for resident laundry slot bookings?
+              </span>
             </div>
             <Link
               href="/washing-machines/new"
-              className="font-semibold text-(--color-brand-600) hover:underline shrink-0"
+              className="shrink-0 font-semibold text-(--color-brand-600) hover:underline"
             >
               Add Washing Machine Unit &rarr;
             </Link>

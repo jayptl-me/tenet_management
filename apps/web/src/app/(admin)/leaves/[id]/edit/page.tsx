@@ -267,7 +267,7 @@ export default function EditLeavePage() {
                     onChange={(e) => setAdminNotes(e.target.value)}
                     maxLength={500}
                   />
-                  <p className="mt-1 text-right text-2xs text-(--color-text-muted)">
+                  <p className="text-2xs mt-1 text-right text-(--color-text-muted)">
                     {adminNotes.length}/500
                   </p>
                 </FormFullWidth>

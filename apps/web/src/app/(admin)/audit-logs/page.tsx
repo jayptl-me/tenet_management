@@ -277,10 +277,8 @@ export default function AuditLogsPage() {
       header: 'Resource',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-(--color-text-primary)">
-            {row.resource}
-          </span>
-          <p className="font-mono text-3xs text-(--color-text-muted)">
+          <span className="font-semibold text-(--color-text-primary)">{row.resource}</span>
+          <p className="text-3xs font-mono text-(--color-text-muted)">
             {row.resourceId?.slice(0, 12)}…
           </p>
         </div>
@@ -323,9 +321,7 @@ export default function AuditLogsPage() {
     {
       header: 'IP',
       accessor: (row) => (
-        <span className="font-mono text-2xs text-(--color-text-muted)">
-          {row.ip ?? '—'}
-        </span>
+        <span className="text-2xs font-mono text-(--color-text-muted)">{row.ip ?? '—'}</span>
       ),
     },
     {
@@ -354,12 +350,7 @@ export default function AuditLogsPage() {
         title="Audit Logs"
         description="Track all admin actions across the system"
         action={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={isExporting}
-          >
+          <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={isExporting}>
             {isExporting ? (
               <Loader2 className="h-4 w-4 animate-spin text-(--color-brand-600)" />
             ) : (
@@ -433,12 +424,7 @@ export default function AuditLogsPage() {
         />
 
         {(fromDate || toDate) && (
-          <Button
-            variant="muted"
-            size="sm"
-            onClick={handleClearDates}
-            title="Reset date bounds"
-          >
+          <Button variant="muted" size="sm" onClick={handleClearDates} title="Reset date bounds">
             <RotateCcw className="h-3.5 w-3.5" />
             <span>Clear Dates</span>
           </Button>
@@ -475,7 +461,7 @@ export default function AuditLogsPage() {
                 variant={formatActionVariant(row.action)}
                 label={formatAction(row.action)}
               />
-              <span className="font-mono text-2xs text-(--color-text-muted)">
+              <span className="text-2xs font-mono text-(--color-text-muted)">
                 {new Date(row.timestamp).toLocaleDateString('en-IN', {
                   day: '2-digit',
                   month: 'short',
@@ -485,10 +471,8 @@ export default function AuditLogsPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-(--color-text-muted)">
-              <span className="font-semibold text-(--color-text-primary)">
-                {row.resource}
-              </span>
-              <span className="font-mono text-3xs">{row.resourceId?.slice(0, 12)}…</span>
+              <span className="font-semibold text-(--color-text-primary)">{row.resource}</span>
+              <span className="text-3xs font-mono">{row.resourceId?.slice(0, 12)}…</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-(--color-text-muted)">
               <span>{row.userId?.name ?? 'System'}</span>
@@ -589,9 +573,7 @@ export default function AuditLogsPage() {
 
                 {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
                   <div>
-                    <span className="text-xs text-(--color-text-muted)">
-                      Action Details
-                    </span>
+                    <span className="text-xs text-(--color-text-muted)">Action Details</span>
                     <pre className="mt-1 max-h-48 overflow-auto rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-100) p-3 font-mono text-xs text-(--color-text-primary)">
                       {JSON.stringify(selectedLog.details, null, 2)}
                     </pre>

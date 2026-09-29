@@ -191,7 +191,7 @@ function SectionHeader({
           {title}
         </h3>
         {subtitle && (
-          <p className="mt-0.5 text-2xs sm:text-12 leading-snug font-medium text-(--color-text-muted)">
+          <p className="text-2xs sm:text-12 mt-0.5 leading-snug font-medium text-(--color-text-muted)">
             {subtitle}
           </p>
         )}
@@ -200,7 +200,7 @@ function SectionHeader({
         <button
           type="button"
           onClick={onAction}
-          className="group inline-flex flex-shrink-0 items-center gap-1 text-12 font-semibold text-(--color-brand-600) transition-colors hover:text-(--color-brand-700) focus:outline-none"
+          className="group text-12 inline-flex flex-shrink-0 items-center gap-1 font-semibold text-(--color-brand-600) transition-colors hover:text-(--color-brand-700) focus:outline-none"
         >
           <span>{actionLabel}</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -227,7 +227,7 @@ function PanelEmpty({
       <div className="mb-2 text-(--color-text-muted)">{icon}</div>
       <p className="text-13 font-semibold text-(--color-text-primary)">{title}</p>
       {description && (
-        <p className="mt-1 max-w-xs text-2xs leading-relaxed font-medium text-(--color-text-muted)">
+        <p className="text-2xs mt-1 max-w-xs leading-relaxed font-medium text-(--color-text-muted)">
           {description}
         </p>
       )}
@@ -372,26 +372,26 @@ export default function DashboardPage() {
     breakfast:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-          (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
-            stats.mealFeedbackTrend.length) *
-          10,
-        ) / 10
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.breakfast, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
         : 0,
     lunch:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-          (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
-            stats.mealFeedbackTrend.length) *
-          10,
-        ) / 10
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.lunch, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
         : 0,
     dinner:
       stats.mealFeedbackTrend.length > 0
         ? Math.round(
-          (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
-            stats.mealFeedbackTrend.length) *
-          10,
-        ) / 10
+            (stats.mealFeedbackTrend.reduce((s, d) => s + d.dinner, 0) /
+              stats.mealFeedbackTrend.length) *
+              10,
+          ) / 10
         : 0,
   };
 
@@ -482,10 +482,10 @@ export default function DashboardPage() {
                 totalBeds === 0
                   ? { value: '0%', direction: 'neutral', label: 'occupied' }
                   : {
-                    value: `${occupancyRate}%`,
-                    direction: occupancyRate >= 80 ? 'up' : 'down',
-                    label: 'occupied',
-                  }
+                      value: `${occupancyRate}%`,
+                      direction: occupancyRate >= 80 ? 'up' : 'down',
+                      label: 'occupied',
+                    }
               }
               onClick={() => router.push('/tenants')}
             >
@@ -515,32 +515,32 @@ export default function DashboardPage() {
               progress={
                 hasRevenueTarget
                   ? {
-                    value: stats.revenue.collected,
-                    max: stats.revenue.expected || 1,
-                    color:
-                      collectionRate >= 80
-                        ? 'var(--color-success-500)'
-                        : 'var(--color-warning-500)',
-                    label: 'Collection goal',
-                  }
+                      value: stats.revenue.collected,
+                      max: stats.revenue.expected || 1,
+                      color:
+                        collectionRate >= 80
+                          ? 'var(--color-success-500)'
+                          : 'var(--color-warning-500)',
+                      label: 'Collection goal',
+                    }
                   : undefined
               }
               trend={
                 hasRevenueTarget
                   ? {
-                    value: `${collectionRate}%`,
-                    direction: collectionRate >= 80 ? 'up' : 'down',
-                    label: 'of target',
-                  }
+                      value: `${collectionRate}%`,
+                      direction: collectionRate >= 80 ? 'up' : 'down',
+                      label: 'of target',
+                    }
                   : undefined
               }
               delta={
                 momDelta != null
                   ? {
-                    value: `${momDelta >= 0 ? '+' : ''}${momDelta}%`,
-                    direction: momDelta >= 0 ? 'up' : 'down',
-                    label: 'vs last mo',
-                  }
+                      value: `${momDelta >= 0 ? '+' : ''}${momDelta}%`,
+                      direction: momDelta >= 0 ? 'up' : 'down',
+                      label: 'vs last mo',
+                    }
                   : undefined
               }
               onClick={() => router.push('/payments')}
@@ -559,10 +559,10 @@ export default function DashboardPage() {
                 totalComplaints === 0
                   ? { value: '0', direction: 'neutral', label: 'logged' }
                   : {
-                    value: `${resolvedRate}%`,
-                    direction: resolvedRate >= 70 ? 'up' : 'down',
-                    label: 'resolved',
-                  }
+                      value: `${resolvedRate}%`,
+                      direction: resolvedRate >= 70 ? 'up' : 'down',
+                      label: 'resolved',
+                    }
               }
               onClick={() => router.push('/complaints?status=open')}
             />
@@ -586,10 +586,10 @@ export default function DashboardPage() {
                 serviceTotal === 0
                   ? { value: '100%', direction: 'neutral', label: 'operational' }
                   : {
-                    value: `${serviceHealthPct}%`,
-                    direction: serviceHealthPct >= 90 ? 'up' : 'down',
-                    label: 'healthy',
-                  }
+                      value: `${serviceHealthPct}%`,
+                      direction: serviceHealthPct >= 90 ? 'up' : 'down',
+                      label: 'healthy',
+                    }
               }
               onClick={() => router.push('/services')}
             />
@@ -684,7 +684,7 @@ export default function DashboardPage() {
                     showGrid
                     showLegend
                   />
-                  <div className="mt-4 flex items-center justify-between border-t border-(--border-color)/60 pt-3 text-12 font-medium text-(--color-text-muted)">
+                  <div className="text-12 mt-4 flex items-center justify-between border-t border-(--border-color)/60 pt-3 font-medium text-(--color-text-muted)">
                     <span>Current rate</span>
                     <span className="font-bold text-(--color-text-primary)">
                       {occupancyRate}% ({stats.occupancy.occupiedBeds} of {totalBeds} beds)
@@ -867,25 +867,24 @@ export default function DashboardPage() {
                           <div
                             className={clsx(
                               'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                              c.status === 'open' &&
-                              'animate-pulse bg-(--color-danger-500)',
+                              c.status === 'open' && 'animate-pulse bg-(--color-danger-500)',
                               c.status === 'in_progress' && 'bg-(--color-warning-500)',
                               c.status === 'resolved' && 'bg-(--color-success-500)',
                               c.status !== 'open' &&
-                              c.status !== 'in_progress' &&
-                              c.status !== 'resolved' &&
-                              'bg-(--chart-bar-secondary)',
+                                c.status !== 'in_progress' &&
+                                c.status !== 'resolved' &&
+                                'bg-(--chart-bar-secondary)',
                             )}
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="truncate text-13 font-semibold text-(--color-text-primary) transition-colors group-hover:text-(--color-brand-600)">
+                              <p className="text-13 truncate font-semibold text-(--color-text-primary) transition-colors group-hover:text-(--color-brand-600)">
                                 {c.title}
                               </p>
                               {showAgeBadge && (
                                 <span
                                   className={clsx(
-                                    'flex-shrink-0 rounded-full border px-1.5 py-0.5 text-3xs font-bold',
+                                    'text-3xs flex-shrink-0 rounded-full border px-1.5 py-0.5 font-bold',
                                     daysAgo > 7
                                       ? 'border-(--badge-danger-border) bg-(--badge-danger-bg) text-(--badge-danger-text)'
                                       : 'border-(--badge-warning-border) bg-(--badge-warning-bg) text-(--badge-warning-text)',
@@ -895,7 +894,7 @@ export default function DashboardPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="mt-0.5 text-2xs font-medium text-(--color-text-muted)">
+                            <p className="text-2xs mt-0.5 font-medium text-(--color-text-muted)">
                               {c.tenantId?.userId?.name ?? 'Unknown'} · {formatDate(c.createdAt)}
                             </p>
                           </div>
@@ -1000,7 +999,7 @@ export default function DashboardPage() {
 
                     {stats.serviceHistory && stats.serviceHistory.length > 0 && (
                       <div className="border-t border-(--border-color)/60 pt-3">
-                        <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-(--color-text-muted)">
+                        <p className="text-2xs mb-2 font-bold tracking-wider text-(--color-text-muted) uppercase">
                           Recent Status Events (14 Days)
                         </p>
                         <div className="max-h-[160px] overflow-y-auto pr-1">
@@ -1057,10 +1056,10 @@ export default function DashboardPage() {
                         }}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-13 font-semibold text-(--color-text-primary)">
+                          <p className="text-13 truncate font-semibold text-(--color-text-primary)">
                             {e.name}
                           </p>
-                          <p className="mt-0.5 text-2xs font-medium text-(--color-text-muted)">
+                          <p className="text-2xs mt-0.5 font-medium text-(--color-text-muted)">
                             {e.phone} · {formatDate(e.createdAt)}
                           </p>
                         </div>
@@ -1127,7 +1126,7 @@ export default function DashboardPage() {
             type="button"
             onClick={() => router.push(link.href)}
             className={clsx(
-              'group flex items-center gap-2.5 px-4 py-3 text-13 font-semibold',
+              'group text-13 flex items-center gap-2.5 px-4 py-3 font-semibold',
               'text-(--color-text-secondary)',
               'rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-xs)',
               'transition-all duration-(--transition-duration)',

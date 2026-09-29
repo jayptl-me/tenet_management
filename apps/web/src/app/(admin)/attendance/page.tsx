@@ -310,9 +310,7 @@ export default function AttendancePage() {
     {
       header: 'Tenant',
       accessor: (row) => (
-        <span className="font-semibold text-(--color-text-primary)">
-          {tenantNameOf(row)}
-        </span>
+        <span className="font-semibold text-(--color-text-primary)">{tenantNameOf(row)}</span>
       ),
     },
     { header: 'Room', accessor: (row) => roomNumberOf(row) },

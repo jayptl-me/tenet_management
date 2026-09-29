@@ -2,11 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Home,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Home, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { surfaceCardClass } from '@/lib/field-styles';
 
@@ -47,8 +43,7 @@ function FloorScrollRow({
 
   const floorTotalBeds = group.rooms.reduce((s, r) => s + r.totalBeds, 0);
   const floorOccupied = group.rooms.reduce((s, r) => s + r.occupiedBeds, 0);
-  const floorFillRate =
-    floorTotalBeds > 0 ? Math.round((floorOccupied / floorTotalBeds) * 100) : 0;
+  const floorFillRate = floorTotalBeds > 0 ? Math.round((floorOccupied / floorTotalBeds) * 100) : 0;
 
   const updateScrollState = () => {
     const el = scrollRef.current;
@@ -76,7 +71,7 @@ function FloorScrollRow({
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
-            <span className="tabular-nums font-semibold text-[color:var(--color-text-secondary)]">
+            <span className="font-semibold text-[color:var(--color-text-secondary)] tabular-nums">
               {floorOccupied}/{floorTotalBeds}
             </span>{' '}
             beds ({floorFillRate}%)
@@ -89,7 +84,7 @@ function FloorScrollRow({
               disabled={!canScrollLeft}
               onClick={() => scrollBy(-240)}
               aria-label={`Scroll ${group.label} left`}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-30"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -98,7 +93,7 @@ function FloorScrollRow({
               disabled={!canScrollRight}
               onClick={() => scrollBy(240)}
               aria-label={`Scroll ${group.label} right`}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-30"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -110,7 +105,7 @@ function FloorScrollRow({
       <div
         ref={scrollRef}
         onScroll={updateScrollState}
-        className="flex items-stretch gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x snap-mandatory"
+        className="flex snap-x snap-mandatory scrollbar-none items-stretch gap-3 overflow-x-auto pt-1 pb-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {group.rooms.map((room) => {
@@ -132,14 +127,14 @@ function FloorScrollRow({
               }}
               className={clsx(
                 surfaceCardClass,
-                'group relative flex w-[220px] flex-shrink-0 flex-col justify-between rounded-[var(--radius-lg)] p-3 text-left transition-all duration-200 snap-start cursor-pointer',
+                'group relative flex w-[220px] flex-shrink-0 cursor-pointer snap-start flex-col justify-between rounded-[var(--radius-lg)] p-3 text-left transition-all duration-200',
                 'hover:border-[color:var(--color-brand-400)] hover:shadow-[var(--shadow-sm)]',
               )}
             >
               {/* Room Title + Occupancy Tag */}
               <div>
                 <div className="flex items-center justify-between gap-1.5">
-                  <span className="font-display text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)] group-hover:text-[color:var(--color-brand-600)] transition-colors">
+                  <span className="font-display text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)] transition-colors group-hover:text-[color:var(--color-brand-600)]">
                     Room {room.roomNumber}
                   </span>
                   <span
@@ -192,7 +187,7 @@ function FloorScrollRow({
                 <span>
                   {room.occupiedBeds} of {room.totalBeds} filled
                 </span>
-                <span className="font-semibold text-[color:var(--color-brand-600)] opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="font-semibold text-[color:var(--color-brand-600)] opacity-0 transition-opacity group-hover:opacity-100">
                   View →
                 </span>
               </div>
@@ -330,16 +325,27 @@ export function RoomBedHeatmap({ rooms, isLoading, className }: RoomBedHeatmapPr
         {/* Minimalist Capacity Status & Legend */}
         <div className="flex items-center gap-4 text-[11px] font-medium text-[color:var(--color-text-muted)]">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]" aria-hidden="true" />
+            <span
+              className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]"
+              aria-hidden="true"
+            />
             <span>Occupied</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full border border-dashed border-[color:var(--color-surface-400)]" aria-hidden="true" />
+            <span
+              className="h-2 w-2 rounded-full border border-dashed border-[color:var(--color-surface-400)]"
+              aria-hidden="true"
+            />
             <span>Available</span>
           </div>
-          <div className="hidden sm:block border-l border-[color:var(--border-color)] pl-3 font-semibold text-[color:var(--color-text-secondary)]">
-            <span className="text-[color:var(--color-brand-600)] tabular-nums">{stats.occupiedBeds}</span>
-            <span className="text-[color:var(--color-text-muted)] font-normal"> / {stats.totalBeds} beds ({stats.fillRate}%)</span>
+          <div className="hidden border-l border-[color:var(--border-color)] pl-3 font-semibold text-[color:var(--color-text-secondary)] sm:block">
+            <span className="text-[color:var(--color-brand-600)] tabular-nums">
+              {stats.occupiedBeds}
+            </span>
+            <span className="font-normal text-[color:var(--color-text-muted)]">
+              {' '}
+              / {stats.totalBeds} beds ({stats.fillRate}%)
+            </span>
           </div>
         </div>
       </div>

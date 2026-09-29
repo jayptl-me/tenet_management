@@ -3,7 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, Mail, User, Pencil, Shield, Home, BedDouble, Building2, Calendar } from 'lucide-react';
+import {
+  Phone,
+  Mail,
+  User,
+  Pencil,
+  Shield,
+  Home,
+  BedDouble,
+  Building2,
+  Calendar,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
@@ -83,8 +93,14 @@ export default function GuardianDetailPage() {
         if (g.tenant?._id) {
           try {
             const [tenantRes, invoicesRes] = await Promise.all([
-              api.get(`tenants/${g.tenant._id}`).json<{ success: boolean; data: WardTenantDetail }>().catch(() => null),
-              api.get(`invoices?tenantId=${g.tenant._id}`).json<{ success: boolean; data: InvoiceRecord[] }>().catch(() => null),
+              api
+                .get(`tenants/${g.tenant._id}`)
+                .json<{ success: boolean; data: WardTenantDetail }>()
+                .catch(() => null),
+              api
+                .get(`invoices?tenantId=${g.tenant._id}`)
+                .json<{ success: boolean; data: InvoiceRecord[] }>()
+                .catch(() => null),
             ]);
             if (tenantRes?.data) {
               setWardTenant(tenantRes.data);

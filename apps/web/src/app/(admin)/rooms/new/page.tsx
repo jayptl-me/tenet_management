@@ -306,9 +306,7 @@ function NewRoomForm() {
                           handleAddPhoto();
                         }
                       }}
-                      leftIcon={
-                        <LinkIcon className="h-4 w-4 text-(--color-text-muted)" />
-                      }
+                      leftIcon={<LinkIcon className="h-4 w-4 text-(--color-text-muted)" />}
                       error={photoError || err.photoUrls?.message}
                     />
                   </div>
@@ -351,7 +349,7 @@ function NewRoomForm() {
                           <X className="h-3 w-3" />
                         </button>
                       </div>
-                      <span className="mt-1.5 w-full truncate text-center font-mono text-2xs text-(--color-text-muted)">
+                      <span className="text-2xs mt-1.5 w-full truncate text-center font-mono text-(--color-text-muted)">
                         {url.split('/').pop() || `Photo ${idx + 1}`}
                       </span>
                     </div>

@@ -95,7 +95,8 @@ const FEATURE_MODULES: FeatureModule[] = [
     key: 'laundryEnabled',
     label: 'Laundry & Washing Machines',
     category: 'Operations & Facilities',
-    description: 'Washing machine slot bookings, cycle timer tracking, and machine hardware controls.',
+    description:
+      'Washing machine slot bookings, cycle timer tracking, and machine hardware controls.',
     icon: Shirt,
     routeGuard: '/laundry, /washing-machines',
   },
@@ -111,7 +112,8 @@ const FEATURE_MODULES: FeatureModule[] = [
     key: 'guardianPortalEnabled',
     label: 'Guardian Ward Portal',
     category: 'Resident Services',
-    description: 'Dedicated portal for parents and guardians to monitor resident status and billing.',
+    description:
+      'Dedicated portal for parents and guardians to monitor resident status and billing.',
     icon: Shield,
     routeGuard: '/guardians',
   },
@@ -233,7 +235,6 @@ function featureLabel(key: string): string {
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 }
-
 
 const CONFIRM_OFF_FLAGS: (keyof IFeatureFlags)[] = [
   'attendanceEnabled',
@@ -602,9 +603,7 @@ export default function SettingsPage() {
   const renderSection = (title: string, description: string, content: React.ReactNode) => (
     <section className="space-y-4 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-6 shadow-(--shadow-card)">
       <div>
-        <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
-          {title}
-        </h3>
+        <h3 className="font-display text-lg font-bold text-(--color-text-primary)">{title}</h3>
         <p className="mt-0.5 text-sm text-(--color-text-muted)">{description}</p>
       </div>
       {content}
@@ -939,12 +938,14 @@ export default function SettingsPage() {
                   </div>
                   <div
                     className="mt-2 h-8 rounded border-[length:var(--bw-default)] border-(--border-color) bg-(--preview-bg)"
-                    style={{
-                      '--preview-bg':
-                        config.primaryColorLight && config.primaryColorLight.trim() !== ''
-                          ? config.primaryColorLight
-                          : 'transparent',
-                    } as CSSProperties}
+                    style={
+                      {
+                        '--preview-bg':
+                          config.primaryColorLight && config.primaryColorLight.trim() !== ''
+                            ? config.primaryColorLight
+                            : 'transparent',
+                      } as CSSProperties
+                    }
                   />
                 </div>
               </div>
@@ -1048,10 +1049,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
               {amenityError && (
-                <p
-                  role="alert"
-                  className="text-xs font-semibold text-(--color-danger-700)"
-                >
+                <p role="alert" className="text-xs font-semibold text-(--color-danger-700)">
                   {amenityError}
                 </p>
               )}
@@ -1066,9 +1064,7 @@ export default function SettingsPage() {
                       key={i}
                       className="flex items-center justify-between rounded-md border-[length:var(--bw-default)] border-(--border-color) bg-(--color-field-bg) px-4 py-2"
                     >
-                      <span className="text-sm font-semibold text-(--color-text-primary)">
-                        {a}
-                      </span>
+                      <span className="text-sm font-semibold text-(--color-text-primary)">{a}</span>
                       <button
                         onClick={() => removeAmenity(i)}
                         className="rounded-md p-1 text-(--color-danger-500) transition-colors duration-(--transition-duration) hover:bg-(--color-danger-50)"
@@ -1176,7 +1172,7 @@ export default function SettingsPage() {
                   return (
                     <div key={category} className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-display text-xs font-bold uppercase tracking-wider text-(--color-text-muted)">
+                        <span className="font-display text-xs font-bold tracking-wider text-(--color-text-muted) uppercase">
                           {category}
                         </span>
                         <div className="h-px flex-1 bg-(--border-color)" />
@@ -1210,7 +1206,7 @@ export default function SettingsPage() {
                                       <h4 className="font-display text-sm font-bold text-(--color-text-primary)">
                                         {mod.label}
                                       </h4>
-                                      <span className="rounded border border-(--border-color) bg-(--color-surface-100) px-1.5 py-0.5 font-mono text-3xs text-(--color-text-muted)">
+                                      <span className="text-3xs rounded border border-(--border-color) bg-(--color-surface-100) px-1.5 py-0.5 font-mono text-(--color-text-muted)">
                                         403
                                       </span>
                                     </div>
@@ -1227,7 +1223,7 @@ export default function SettingsPage() {
                                 />
                               </div>
 
-                              <div className="mt-4 flex items-center justify-between border-t border-(--border-color) pt-3 text-2xs">
+                              <div className="text-2xs mt-4 flex items-center justify-between border-t border-(--border-color) pt-3">
                                 <span className="font-mono text-(--color-text-muted)">
                                   {mod.routeGuard}
                                 </span>

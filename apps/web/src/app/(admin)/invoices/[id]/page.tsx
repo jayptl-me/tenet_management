@@ -183,18 +183,13 @@ const paymentColumns: DataTableColumn<PaymentRecord>[] = [
   {
     header: 'Method',
     accessor: (p) => (
-      <span className="capitalize text-(--color-text-secondary)">
-        {p.method.replace('_', ' ')}
-      </span>
+      <span className="text-(--color-text-secondary) capitalize">{p.method.replace('_', ' ')}</span>
     ),
   },
   {
     header: 'Status',
     accessor: (p) => (
-      <StatusBadge
-        variant={statusToVariant(p.status)}
-        label={p.status.replace('_', ' ')}
-      />
+      <StatusBadge variant={statusToVariant(p.status)} label={p.status.replace('_', ' ')} />
     ),
     className: 'text-right',
   },
@@ -206,7 +201,9 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [recordTarget, setRecordTarget] = useState<import('@/components/admin/RecordPaymentModal').RecordPaymentTarget | null>(null);
+  const [recordTarget, setRecordTarget] = useState<
+    import('@/components/admin/RecordPaymentModal').RecordPaymentTarget | null
+  >(null);
 
   const fetchInvoice = useCallback(async () => {
     setIsLoading(true);
@@ -369,9 +366,7 @@ export default function InvoiceDetailPage() {
               title="Due Date"
               value={formatDate(invoice.dueDate)}
               subtitle={
-                isOverdue && overdueDays != null
-                  ? `${overdueDays} days past due`
-                  : 'on schedule'
+                isOverdue && overdueDays != null ? `${overdueDays} days past due` : 'on schedule'
               }
               tone={isOverdue ? 'danger' : 'default'}
               icon={<Clock />}
@@ -400,13 +395,13 @@ export default function InvoiceDetailPage() {
                       </span>
                     </div>
                     {formatAddress(branding.address) ? (
-                      <p className="mt-0.5 flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                      <p className="text-2xs mt-0.5 flex items-center gap-1 text-(--color-text-muted)">
                         <MapPin className="h-3 w-3" />
                         {formatAddress(branding.address)}
                       </p>
                     ) : null}
                   </div>
-                  <div className="space-y-0.5 text-right text-2xs text-(--color-text-secondary)">
+                  <div className="text-2xs space-y-0.5 text-right text-(--color-text-secondary)">
                     {branding.phone && (
                       <p className="flex items-center justify-end gap-1">
                         <Phone className="h-3 w-3" />
@@ -420,7 +415,7 @@ export default function InvoiceDetailPage() {
                       </p>
                     )}
                     {branding.gstNumber && (
-                      <p className="font-mono text-3xs text-(--color-text-muted)">
+                      <p className="text-3xs font-mono text-(--color-text-muted)">
                         GSTIN: {branding.gstNumber}
                       </p>
                     )}
@@ -439,13 +434,13 @@ export default function InvoiceDetailPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                  <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
                     Billing month
                   </p>
                   <p className="text-sm font-bold text-(--color-text-primary)">
                     {formatMonth(invoice.month)}
                   </p>
-                  <p className="mt-1 text-2xs font-medium text-(--color-text-muted)">
+                  <p className="text-2xs mt-1 font-medium text-(--color-text-muted)">
                     Due {formatDate(invoice.dueDate)}
                   </p>
                 </div>
@@ -454,7 +449,7 @@ export default function InvoiceDetailPage() {
               {/* Bill-to */}
               <div className="grid grid-cols-1 gap-4 border-b border-(--border-color) px-6 py-4 sm:grid-cols-2">
                 <div>
-                  <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                  <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
                     Billed to
                   </p>
                   {tenantId ? (
@@ -504,7 +499,7 @@ export default function InvoiceDetailPage() {
                 </div>
                 {tenantPhone && (
                   <div className="sm:text-right">
-                    <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                    <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
                       Contact
                     </p>
                     <p className="mt-1 text-sm font-semibold text-(--color-text-primary)">
@@ -516,7 +511,7 @@ export default function InvoiceDetailPage() {
 
               {/* Line items */}
               <div className="w-full text-sm">
-                <div className="flex items-center justify-between border-b border-(--border-color) bg-(--color-field-bg) px-6 py-3 text-2xs font-bold tracking-wider text-(--color-text-muted) uppercase">
+                <div className="text-2xs flex items-center justify-between border-b border-(--border-color) bg-(--color-field-bg) px-6 py-3 font-bold tracking-wider text-(--color-text-muted) uppercase">
                   <span>Description</span>
                   <span className="text-right">Amount</span>
                 </div>
@@ -538,20 +533,18 @@ export default function InvoiceDetailPage() {
                       className="flex items-center justify-between px-6 py-3 font-semibold text-(--color-text-primary)"
                     >
                       <span>{item.description}</span>
-                      <span className="text-right tabular-nums">
-                        {formatCurrency(item.amount)}
-                      </span>
+                      <span className="text-right tabular-nums">{formatCurrency(item.amount)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="border-t border-(--border-color)">
-                  <div className="flex items-center justify-between px-6 py-2.5 text-13 font-semibold text-(--color-text-secondary)">
+                  <div className="text-13 flex items-center justify-between px-6 py-2.5 font-semibold text-(--color-text-secondary)">
                     <span>Subtotal</span>
                     <span className="text-right font-semibold text-(--color-text-primary) tabular-nums">
                       {formatCurrency(invoice.totalAmount)}
                     </span>
                   </div>
-                  <div className="font-display flex items-center justify-between border-t border-(--border-color) bg-(--color-field-bg) px-6 py-3 text-15 font-bold text-(--color-text-primary)">
+                  <div className="font-display text-15 flex items-center justify-between border-t border-(--border-color) bg-(--color-field-bg) px-6 py-3 font-bold text-(--color-text-primary)">
                     <span>Amount due</span>
                     <span className="text-right tabular-nums">
                       {formatCurrency(invoice.balance)}
@@ -563,7 +556,7 @@ export default function InvoiceDetailPage() {
               {/* Payment stub */}
               <div className="border-t border-(--border-color) px-6 py-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                  <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
                     Payment progress
                   </p>
                   <p className="text-xs font-bold text-(--color-text-primary) tabular-nums">
@@ -600,10 +593,7 @@ export default function InvoiceDetailPage() {
                       </Button>
                     )}
                   {tenantId && (
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push(`/tenants/${tenantId}`)}
-                    >
+                    <Button variant="outline" onClick={() => router.push(`/tenants/${tenantId}`)}>
                       <User className="h-4 w-4" />
                       View Tenant Profile
                     </Button>

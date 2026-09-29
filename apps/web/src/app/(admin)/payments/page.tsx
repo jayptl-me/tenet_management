@@ -1,14 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import {
-  Plus,
-  Receipt,
-  CheckCircle2,
-  ShieldCheck,
-  Download,
-  IndianRupee,
-} from 'lucide-react';
+import { Plus, Receipt, CheckCircle2, ShieldCheck, Download, IndianRupee } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { toast } from 'sonner';
@@ -468,9 +461,7 @@ export default function PaymentsPage() {
               <span className="block text-xs text-(--color-text-muted)">No UTR</span>
             )}
             {inv && (
-              <span className="block font-mono text-2xs text-(--color-text-muted)">
-                {inv}
-              </span>
+              <span className="text-2xs block font-mono text-(--color-text-muted)">{inv}</span>
             )}
           </div>
         );
@@ -507,9 +498,7 @@ export default function PaymentsPage() {
               ? [
                   {
                     label: 'Verify UTR',
-                    icon: (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />
-                    ),
+                    icon: <CheckCircle2 className="h-3.5 w-3.5 text-(--color-success-600)" />,
                     onClick: () => {
                       const inv = row.invoiceId;
                       setVerifyTarget({
@@ -682,11 +671,7 @@ export default function PaymentsPage() {
               }}
               compact
             />
-            <Button
-              variant="outline"
-              onClick={handleExportCsv}
-              disabled={payments.length === 0}
-            >
+            <Button variant="outline" onClick={handleExportCsv} disabled={payments.length === 0}>
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
@@ -741,7 +726,7 @@ export default function PaymentsPage() {
               </span>
             </div>
             {row.utrNumber && (
-              <p className="font-mono text-2xs font-bold text-(--color-brand-700)">
+              <p className="text-2xs font-mono font-bold text-(--color-brand-700)">
                 {row.utrNumber}
               </p>
             )}

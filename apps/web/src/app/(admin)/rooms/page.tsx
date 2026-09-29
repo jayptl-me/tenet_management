@@ -231,9 +231,7 @@ function RoomsContent() {
     {
       header: 'Room',
       accessor: (row) => (
-        <span className="font-semibold text-(--color-text-primary)">
-          {row.roomNumber}
-        </span>
+        <span className="font-semibold text-(--color-text-primary)">{row.roomNumber}</span>
       ),
     },
     {
@@ -562,11 +560,7 @@ function RoomsContent() {
           }}
           className="w-full sm:w-[195px]"
         />
-        <Button
-          variant="outline"
-          onClick={handleExportCsv}
-          disabled={visibleRooms.length === 0}
-        >
+        <Button variant="outline" onClick={handleExportCsv} disabled={visibleRooms.length === 0}>
           <Download className="h-4 w-4" />
           Export CSV
         </Button>

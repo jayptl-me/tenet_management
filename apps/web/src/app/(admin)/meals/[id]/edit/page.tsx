@@ -181,9 +181,7 @@ export default function EditMealFeedbackPage() {
                 )}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-13 font-semibold text-(--color-text-primary)">
-                  Rating
-                </label>
+                <label className="text-13 font-semibold text-(--color-text-primary)">Rating</label>
                 <Controller
                   name="rating"
                   control={control}

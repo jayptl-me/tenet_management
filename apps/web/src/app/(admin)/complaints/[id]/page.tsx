@@ -263,9 +263,7 @@ export default function ComplaintDetailPage() {
                 </DetailList>
 
                 <div className="mt-4 border-t border-(--border-color) pt-4">
-                  <p className="mb-2 text-xs font-medium text-(--color-text-muted)">
-                    Description
-                  </p>
+                  <p className="mb-2 text-xs font-medium text-(--color-text-muted)">Description</p>
                   <p className="text-sm font-medium whitespace-pre-wrap text-(--color-text-secondary)">
                     {complaint.description}
                   </p>
@@ -301,7 +299,7 @@ export default function ComplaintDetailPage() {
 
                 {complaint.adminNotes ? (
                   <div className="mt-4 rounded-(--radius-lg) border border-(--border-color) bg-(--color-surface-50) p-4">
-                    <p className="mb-1 text-2xs font-bold tracking-wider text-(--color-text-muted) uppercase">
+                    <p className="text-2xs mb-1 font-bold tracking-wider text-(--color-text-muted) uppercase">
                       Admin notes
                     </p>
                     <p className="text-sm font-medium whitespace-pre-wrap text-(--color-text-secondary)">
@@ -325,7 +323,7 @@ export default function ComplaintDetailPage() {
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : (
-                        complaint.tenant?.user?.name ?? 'N/A'
+                        (complaint.tenant?.user?.name ?? 'N/A')
                       )
                     }
                   />

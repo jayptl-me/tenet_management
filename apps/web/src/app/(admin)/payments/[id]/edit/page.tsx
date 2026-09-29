@@ -267,7 +267,7 @@ export default function EditPaymentPage() {
                       {...register('status')}
                     />
                     {watched.status && STATUS_HELP[watched.status] && (
-                      <p className="mt-1.5 flex items-start gap-1.5 text-12 font-medium text-(--color-text-secondary)">
+                      <p className="text-12 mt-1.5 flex items-start gap-1.5 font-medium text-(--color-text-secondary)">
                         <History className="mt-0.5 h-3 w-3 shrink-0" />
                         {STATUS_HELP[watched.status]}
                       </p>
@@ -334,14 +334,14 @@ export default function EditPaymentPage() {
                   </span>
                 )}
                 {context.utrNumber && (
-                  <span className="block font-mono text-2xs font-bold text-(--color-text-muted)">
+                  <span className="text-2xs block font-mono font-bold text-(--color-text-muted)">
                     UTR {context.utrNumber}
                   </span>
                 )}
               </div>
 
               <div>
-                <p className="mb-1.5 text-2xs font-bold tracking-label text-(--color-text-muted) uppercase">
+                <p className="text-2xs tracking-label mb-1.5 font-bold text-(--color-text-muted) uppercase">
                   Current status
                 </p>
                 <StatusBadge

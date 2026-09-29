@@ -68,9 +68,7 @@ const occupiedBedColumns: DataTableColumn<BedDetail>[] = [
   {
     header: 'Bed',
     accessor: (bed) => (
-      <span className="font-mono text-sm font-bold text-(--color-text-primary)">
-        {bed.bedId}
-      </span>
+      <span className="font-mono text-sm font-bold text-(--color-text-primary)">{bed.bedId}</span>
     ),
     className: 'w-[120px]',
   },
@@ -85,9 +83,7 @@ const occupiedBedColumns: DataTableColumn<BedDetail>[] = [
           {bed.tenantName ?? 'View tenant'}
         </Link>
       ) : (
-        <span className="font-semibold text-(--color-text-primary)">
-          {bed.tenantName ?? 'N/A'}
-        </span>
+        <span className="font-semibold text-(--color-text-primary)">{bed.tenantName ?? 'N/A'}</span>
       ),
   },
   {
@@ -251,7 +247,7 @@ export default function RoomDetailPage() {
                         {availableBeds} Available
                       </span>
                     </div>
-                    <div className="pt-2 text-2xs font-bold tracking-wider text-(--color-text-muted) uppercase">
+                    <div className="text-2xs pt-2 font-bold tracking-wider text-(--color-text-muted) uppercase">
                       {totalBeds} Total Beds
                     </div>
                   </div>

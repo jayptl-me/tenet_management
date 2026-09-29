@@ -96,12 +96,10 @@ export function DocumentUpload({
         formData.append('consentGiven', 'true');
       }
 
-      const res = await api
-        .post(`tenants/${tenantId}/documents`, { body: formData })
-        .json<{
-          success: boolean;
-          data: { url: string; docType: string; idNumberMasked?: string; message: string };
-        }>();
+      const res = await api.post(`tenants/${tenantId}/documents`, { body: formData }).json<{
+        success: boolean;
+        data: { url: string; docType: string; idNumberMasked?: string; message: string };
+      }>();
 
       toast.success(res.data?.message || 'Document uploaded securely');
       onUploaded({
@@ -143,7 +141,7 @@ export function DocumentUpload({
     <div
       className={clsx(
         surfaceNestedClass,
-        'p-4 rounded-[var(--radius-lg)] border border-[color:var(--border-color)]',
+        'rounded-[var(--radius-lg)] border border-[color:var(--border-color)] p-4',
       )}
     >
       <div className="mb-3 flex items-center justify-between">
@@ -156,7 +154,7 @@ export function DocumentUpload({
           {title}
         </p>
         {isVerified && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-success-50)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-success-700)] border border-[color:var(--color-success-200)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-success-700)]">
             <ShieldCheck className="h-3 w-3" />
             Verified
           </span>
@@ -191,14 +189,15 @@ export function DocumentUpload({
                 value={maskedId}
                 onChange={(e) => setMaskedId(e.target.value)}
                 placeholder={selectedIdType === 'aadhaar' ? 'XXXX-XXXX-1234' : 'Masked ID #'}
-                className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1.5 text-xs font-mono text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1.5 font-mono text-xs text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none"
               />
             </div>
           </div>
 
           {selectedIdType === 'aadhaar' && (
             <div className="rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/70 p-2 text-[11px] text-[color:var(--color-brand-900)]">
-              <span className="font-semibold">UIDAI Advisory:</span> Upload a Masked Aadhaar (first 8 digits hidden). Residents can download this at{' '}
+              <span className="font-semibold">UIDAI Advisory:</span> Upload a Masked Aadhaar (first
+              8 digits hidden). Residents can download this at{' '}
               <a
                 href="https://myaadhaar.uidai.gov.in"
                 target="_blank"
@@ -211,7 +210,7 @@ export function DocumentUpload({
             </div>
           )}
 
-          <label className="flex items-start gap-2 pt-0.5 text-[11px] text-[color:var(--color-text-secondary)] cursor-pointer">
+          <label className="flex cursor-pointer items-start gap-2 pt-0.5 text-[11px] text-[color:var(--color-text-secondary)]">
             <input
               type="checkbox"
               checked={consentGiven}
@@ -219,7 +218,8 @@ export function DocumentUpload({
               className="mt-0.5 rounded border-[color:var(--border-color)] text-[color:var(--color-brand-600)] focus:ring-[color:var(--color-brand-500)]"
             />
             <span>
-              Resident provided statutory consent under Aadhaar Act & DPDP Act 2023 for police verification records.
+              Resident provided statutory consent under Aadhaar Act & DPDP Act 2023 for police
+              verification records.
             </span>
           </label>
         </div>
@@ -229,7 +229,7 @@ export function DocumentUpload({
         <div className="mb-3 flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-2">
           <div className="flex items-center gap-2 overflow-hidden">
             <FileText className="h-4 w-4 shrink-0 text-[color:var(--color-brand-600)]" />
-            <span className="truncate text-xs font-mono font-medium text-[color:var(--color-text-primary)]">
+            <span className="truncate font-mono text-xs font-medium text-[color:var(--color-text-primary)]">
               {maskedId ? `${maskedId}` : isPhoto ? 'Profile Photo' : 'Identity Document'}
             </span>
           </div>
@@ -239,9 +239,9 @@ export function DocumentUpload({
             size="sm"
             loading={isViewing}
             onClick={handleViewSecureDocument}
-            className="text-xs shrink-0 text-[color:var(--color-brand-600)] hover:text-[color:var(--color-brand-700)]"
+            className="shrink-0 text-xs text-[color:var(--color-brand-600)] hover:text-[color:var(--color-brand-700)]"
           >
-            <ExternalLink className="h-3.5 w-3.5 mr-1" />
+            <ExternalLink className="mr-1 h-3.5 w-3.5" />
             View Secure
           </Button>
         </div>
@@ -270,12 +270,12 @@ export function DocumentUpload({
       >
         {isUploading ? (
           <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
             Encrypting & Uploading...
           </>
         ) : (
           <>
-            <FileUp className="h-3.5 w-3.5 mr-1.5" />
+            <FileUp className="mr-1.5 h-3.5 w-3.5" />
             {currentUrl ? 'Replace Document' : 'Upload Document'}
           </>
         )}

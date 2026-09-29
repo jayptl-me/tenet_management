@@ -68,7 +68,12 @@ const addressSchema = z.strictObject({
   city: z.string().trim().max(100).optional(),
   district: z.string().trim().max(100).optional(),
   state: z.string().trim().max(100).optional(),
-  pincode: z.string().trim().regex(/^\d{6}$/, 'Must be a 6-digit Indian PIN code').optional().or(z.literal('')),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Must be a 6-digit Indian PIN code')
+    .optional()
+    .or(z.literal('')),
   policeStation: z.string().trim().max(100).optional(),
 });
 
@@ -1045,12 +1050,8 @@ async function handleKycUpload(
     // Notify all active admins so uploaded KYC documents get reviewed
     if (isSelfService) {
       try {
-        const { createNotification } = await import(
-          '../services/notification.service.js'
-        );
-        const adminUsers = await User.find({ role: 'admin', isActive: true })
-          .select('_id')
-          .lean();
+        const { createNotification } = await import('../services/notification.service.js');
+        const adminUsers = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
         const adminIds = adminUsers.map((a) => String(a._id));
         if (adminIds.length > 0) {
           const docLabel =
@@ -1271,7 +1272,10 @@ router.get('/:id/documents/:docType', authGuard, async (c) => {
     return c.json(
       {
         success: false,
-        error: { code: 'SIGNED_URL_FAILED', message: 'Failed to generate secure access URL for document.' },
+        error: {
+          code: 'SIGNED_URL_FAILED',
+          message: 'Failed to generate secure access URL for document.',
+        },
       },
       500,
     );
@@ -1367,7 +1371,9 @@ router.get('/:id/police-verification.pdf', authGuard, async (c) => {
     profile: t.verificationProfile
       ? {
           fatherOrSpouseName: t.verificationProfile.fatherOrSpouseName,
-          dob: t.verificationProfile.dob ? new Date(t.verificationProfile.dob).toISOString() : undefined,
+          dob: t.verificationProfile.dob
+            ? new Date(t.verificationProfile.dob).toISOString()
+            : undefined,
           gender: t.verificationProfile.gender,
           bloodGroup: t.verificationProfile.bloodGroup,
           identificationMark: t.verificationProfile.identificationMark,
@@ -1380,7 +1386,9 @@ router.get('/:id/police-verification.pdf', authGuard, async (c) => {
     emergencyContact: t.emergencyContact,
     documentInfo: {
       type: t.documents?.idType || (t.documents?.aadhaarUrl ? 'aadhaar' : 'None'),
-      numberMasked: t.documents?.idNumberMasked || (t.documents?.aadhaarUrl ? 'XXXX-XXXX-Verified' : 'Pending Verification'),
+      numberMasked:
+        t.documents?.idNumberMasked ||
+        (t.documents?.aadhaarUrl ? 'XXXX-XXXX-Verified' : 'Pending Verification'),
       isVerified: Boolean(t.documents?.isVerified),
     },
   };
@@ -1390,11 +1398,11 @@ router.get('/:id/police-verification.pdf', authGuard, async (c) => {
       ReactPDF as never as {
         renderToBuffer: (el: unknown) => Promise<Buffer>;
       }
-    ).renderToBuffer(
-      React.createElement(PoliceVerificationPdf as never, pdfProps),
-    );
+    ).renderToBuffer(React.createElement(PoliceVerificationPdf as never, pdfProps));
 
-    const safeTenantName = (tenantUser?.name || 'resident').toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const safeTenantName = (tenantUser?.name || 'resident')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-');
     const fileName = `police-verification-${safeTenantName}-${String(tenant._id).slice(-4)}.pdf`;
 
     return new Response(new Uint8Array(pdfBuffer), {
@@ -1409,7 +1417,10 @@ router.get('/:id/police-verification.pdf', authGuard, async (c) => {
     return c.json(
       {
         success: false,
-        error: { code: 'PDF_GENERATION_FAILED', message: 'Failed to generate police verification PDF.' },
+        error: {
+          code: 'PDF_GENERATION_FAILED',
+          message: 'Failed to generate police verification PDF.',
+        },
       },
       500,
     );
@@ -1641,7 +1652,10 @@ router.patch('/me/profile', authGuard, zValidator('json', selfProfileSchema), as
       return c.json(
         {
           success: false,
-          error: { code: 'DUPLICATE_PHONE', message: 'A user with this phone number already exists.' },
+          error: {
+            code: 'DUPLICATE_PHONE',
+            message: 'A user with this phone number already exists.',
+          },
         },
         409,
       );
@@ -1661,10 +1675,7 @@ router.patch('/me/profile', authGuard, zValidator('json', selfProfileSchema), as
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Profile update failed';
-    return c.json(
-      { success: false, error: { code: 'PROFILE_UPDATE_FAILED', message: msg } },
-      400,
-    );
+    return c.json({ success: false, error: { code: 'PROFILE_UPDATE_FAILED', message: msg } }, 400);
   } finally {
     session.endSession();
   }
