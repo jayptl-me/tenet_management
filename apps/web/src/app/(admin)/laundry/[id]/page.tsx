@@ -163,7 +163,7 @@ export default function LaundryDetailPage() {
                     slot.tenant?._id ? (
                       <Link
                         href={`/tenants/${slot.tenant._id}`}
-                        className="font-bold text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
                       >
                         {tenantName}
                       </Link>
@@ -176,7 +176,7 @@ export default function LaundryDetailPage() {
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {roomNumber}
                     </span>
                   }
@@ -186,7 +186,7 @@ export default function LaundryDetailPage() {
                     label="Bed"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {slot.tenant.bedId}
                       </span>
                     }
@@ -197,7 +197,7 @@ export default function LaundryDetailPage() {
                     label="Floor"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {slot.tenant.room.floor.label}
                       </span>
                     }
@@ -208,7 +208,7 @@ export default function LaundryDetailPage() {
                     label="Phone"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {slot.tenant.user.phone}
                       </span>
                     }
@@ -223,7 +223,7 @@ export default function LaundryDetailPage() {
                   label="Date"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {formatDate(slot.slotDate)}
                     </span>
                   }
@@ -232,7 +232,7 @@ export default function LaundryDetailPage() {
                   label="Time"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Clock className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {slot.slotTime}
                     </span>
                   }
@@ -241,7 +241,7 @@ export default function LaundryDetailPage() {
                   label="Items"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Hash className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {itemsCount}
                     </span>
                   }
@@ -258,7 +258,7 @@ export default function LaundryDetailPage() {
 
           {slot.notes && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                 {slot.notes}
               </p>
             </DetailCard>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus,
@@ -9,8 +9,13 @@ import {
   Download,
   Send,
   Trash2,
-  LayoutGrid,
   TrendingUp,
+  IndianRupee,
+  CheckCircle2,
+  Clock,
+  TriangleAlert,
+  Users,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -23,7 +28,8 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Modal } from '@/components/ui/Modal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FilterChips } from '@/components/ui/FilterChips';
-import { KpiHeader } from '@/components/ui/KpiHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { StatusTabs } from '@/components/ui/StatusTabs';
 import { AgingBars, type AgingBucket } from '@/components/ui/AgingBars';
 import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -66,18 +72,21 @@ interface TrendPoint {
   expected: number;
 }
 
+interface BulkPreviewData {
+  activeTenantsCount: number;
+  alreadyInvoicedCount: number;
+  toGenerateCount: number;
+  estimatedTotalAmount: number;
+}
 
-const STATUS_META: Array<{
-  value: string;
-  label: string;
-}> = [
-  { value: '', label: 'All' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'sent', label: 'Sent' },
-  { value: 'partial', label: 'Partial' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'cancelled', label: 'Cancelled' },
+const STATUS_TABS = [
+  { key: '', label: 'All' },
+  { key: 'draft', label: 'Draft' },
+  { key: 'sent', label: 'Sent' },
+  { key: 'partial', label: 'Partial' },
+  { key: 'paid', label: 'Paid' },
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 const AGING_LABELS: Record<string, string> = {
@@ -119,19 +128,29 @@ function InvoicesContent() {
   const [statusFilter, setStatusFilter] = useState('');
   const [tenantFilter, setTenantFilter] = useState('');
   const [tenantFilterLabel, setTenantFilterLabel] = useState('');
-  // Deep link from electricity detail ("View Invoices") and other month-scoped flows
   const [monthFilter, setMonthFilter] = useState(() => searchParams.get('month') ?? '');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Status Counts
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+
+  // Bulk Generate state & preview
   const [bulkMonth, setBulkMonth] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<BulkPreviewData | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Bulk Actions
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  // Executive Analytics
   const [summary, setSummary] = useState<SummaryMonth | null>(null);
   const [prevSummary, setPrevSummary] = useState<SummaryMonth | null>(null);
   const [aging, setAging] = useState<AgingData | null>(null);
@@ -144,6 +163,20 @@ function InvoicesContent() {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => window.clearTimeout(t);
   }, [search]);
+
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const res = await api.get('invoices/status-counts').json<{
+        success: boolean;
+        data: Record<string, number>;
+      }>();
+      if (res.success && res.data) {
+        setStatusCounts(res.data);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, []);
 
   const fetchInvoices = useCallback(async () => {
     setIsLoading(true);
@@ -173,7 +206,8 @@ function InvoicesContent() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [fetchInvoices]);
+    fetchStatusCounts();
+  }, [fetchInvoices, fetchStatusCounts]);
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -213,18 +247,32 @@ function InvoicesContent() {
     fetchAnalytics();
   }, [fetchAnalytics]);
 
-  // Client-side search fallback when API doesn't support `search` yet
-  const visibleInvoices = useMemo(() => {
-    if (!debouncedSearch) return invoices;
-    const q = debouncedSearch.toLowerCase();
-    return invoices.filter(
-      (inv) =>
-        inv.invoiceNumber.toLowerCase().includes(q) ||
-        (inv.tenantId?.userId?.name ?? '').toLowerCase().includes(q) ||
-        (inv.tenantId?.roomId?.roomNumber ?? '').toLowerCase().includes(q) ||
-        inv.month.includes(q),
-    );
-  }, [invoices, debouncedSearch]);
+  // Fetch pre-flight preview when bulkMonth changes
+  useEffect(() => {
+    if (!bulkGenerateOpen || !bulkMonth) {
+      setBulkPreview(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    api
+      .get(`invoices/preview-bulk?month=${bulkMonth}`)
+      .json<{ success: boolean; data: BulkPreviewData }>()
+      .then((res) => {
+        if (!cancelled && res.success) {
+          setBulkPreview(res.data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setBulkPreview(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bulkMonth, bulkGenerateOpen]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -234,6 +282,7 @@ function InvoicesContent() {
       setDeleteTarget(null);
       toast.success('Invoice deleted');
       fetchInvoices();
+      fetchStatusCounts();
       fetchAnalytics();
     } catch (err) {
       const parsed = await parseApiError(err);
@@ -261,6 +310,7 @@ function InvoicesContent() {
     toast.success(`Marked ${ok} invoice(s) sent${failed ? `, ${failed} failed` : ''}.`);
     setSelectedKeys(new Set());
     fetchInvoices();
+    fetchStatusCounts();
   };
 
   const handleBulkDelete = async () => {
@@ -278,9 +328,12 @@ function InvoicesContent() {
     }
     setBulkDeleteLoading(false);
     setBulkDeleteOpen(false);
-    toast.success(`Deleted ${ok} invoice(s)${failed ? `, ${failed} skipped (paid or has payments)` : ''}.`);
+    toast.success(
+      `Deleted ${ok} invoice(s)${failed ? `, ${failed} skipped (paid or has payments)` : ''}.`,
+    );
     setSelectedKeys(new Set());
     fetchInvoices();
+    fetchStatusCounts();
     fetchAnalytics();
   };
 
@@ -298,6 +351,8 @@ function InvoicesContent() {
         setBulkMonth('');
         setBulkGenerateOpen(false);
         fetchInvoices();
+        fetchStatusCounts();
+        fetchAnalytics();
       }
     } catch (err) {
       toast.error((await parseApiError(err)).message);
@@ -365,7 +420,10 @@ function InvoicesContent() {
     }
   };
 
-  const delta = (cur: number, prev: number | undefined): { percent: number | null; label: string } => {
+  const delta = (
+    cur: number,
+    prev: number | undefined,
+  ): { percent: number | null; label: string } => {
     if (prev == null || prev === 0) return { percent: null, label: 'no prior month' };
     const pct = ((cur - prev) / prev) * 100;
     return { percent: pct, label: `vs ${fmtCompact(prev)} last month` };
@@ -383,7 +441,20 @@ function InvoicesContent() {
   const trendData = trend.map((t) => ({ collected: t.collected, expected: t.expected }));
   const trendLabels = trend.map((t) => {
     const [, m] = t.month.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return monthNames[Number(m) - 1] ?? t.month;
   });
 
@@ -420,7 +491,7 @@ function InvoicesContent() {
           {
             key: 'status',
             label: 'Status',
-            value: STATUS_META.find((s) => s.value === statusFilter)?.label ?? statusFilter,
+            value: STATUS_TABS.find((s) => s.key === statusFilter)?.label ?? statusFilter,
             onRemove: () => {
               setStatusFilter('');
               setPage(1);
@@ -454,7 +525,6 @@ function InvoicesContent() {
   };
 
   const onAgingSelect = (bucket: AgingBucket) => {
-    // Aging maps to overdue-ish statuses; 90d+ and 61-90d usually overdue, current -> sent
     if (bucket.key === 'current') {
       setStatusFilter('sent');
     } else {
@@ -467,7 +537,7 @@ function InvoicesContent() {
     {
       header: 'Invoice #',
       accessor: (row) => (
-        <span className="font-mono font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-mono font-semibold text-(--color-text-primary)">
           {row.invoiceNumber}
         </span>
       ),
@@ -476,10 +546,10 @@ function InvoicesContent() {
       header: 'Tenant',
       accessor: (row) => (
         <div>
-          <span className="font-semibold text-[color:var(--color-text-primary)]">
+          <span className="font-semibold text-(--color-text-primary)">
             {row.tenantId?.userId?.name ?? 'N/A'}
           </span>
-          <span className="block text-xs text-[color:var(--color-text-muted)]">
+          <span className="block text-xs text-(--color-text-muted)">
             {row.tenantId?.roomId?.roomNumber ? `Room ${row.tenantId.roomId.roomNumber}` : '—'}
           </span>
         </div>
@@ -492,7 +562,7 @@ function InvoicesContent() {
     {
       header: 'Amount',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)] tabular-nums">
+        <span className="font-semibold text-(--color-text-primary) tabular-nums">
           {fmtMoney(row.totalAmount)}
         </span>
       ),
@@ -520,11 +590,13 @@ function InvoicesContent() {
     },
   ];
 
+  const openInvoicesCount = agingBuckets.reduce((s, b) => s + b.count, 0);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Invoices"
-        description="Generate, track, and collect tenant invoices"
+        description="Generate, track, and reconcile tenant invoices"
         action={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setBulkGenerateOpen(true)}>
@@ -541,42 +613,61 @@ function InvoicesContent() {
 
       <ErrorBanner message={error} />
 
-      {/* KPI strip */}
-      <KpiHeader
-        items={[
-          {
-            label: `Collected · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.collected ?? 0),
-            delta: delta(summary?.collected ?? 0, prevSummary?.collected),
-            tone: 'success',
-          },
-          {
-            label: `Expected · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.expected ?? 0),
-            delta: delta(summary?.expected ?? 0, prevSummary?.expected),
-            tone: 'brand',
-          },
-          {
-            label: 'Outstanding balance',
-            value: agingLoading ? '—' : fmtMoney(aging?.totalOutstanding ?? 0),
-            sub: agingLoading
-              ? undefined
-              : `${agingBuckets.reduce((s, b) => s + b.count, 0)} open invoice(s)`,
-            tone: 'warning',
-          },
-          {
-            label: `Pending · ${summary?.month ?? 'this month'}`,
-            value: fmtMoney(summary?.pending ?? 0),
-            sub:
-              summary && summary.expected > 0
-                ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
-                : undefined,
-            tone: (summary?.pending ?? 0) > 0 ? 'danger' : 'success',
-          },
-        ]}
-      />
+      {/* Executive Metric Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title={`Collected · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.collected ?? 0)}
+          delta={
+            summary
+              ? {
+                  value: delta(summary.collected, prevSummary?.collected).label,
+                  direction:
+                    (summary.collected ?? 0) >= (prevSummary?.collected ?? 0) ? 'up' : 'down',
+                  label: '',
+                }
+              : undefined
+          }
+          tone="success"
+          icon={<CheckCircle2 />}
+        />
+        <StatCard
+          title={`Expected · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.expected ?? 0)}
+          delta={
+            summary
+              ? {
+                  value: delta(summary.expected, prevSummary?.expected).label,
+                  direction:
+                    (summary.expected ?? 0) >= (prevSummary?.expected ?? 0) ? 'up' : 'down',
+                  label: '',
+                }
+              : undefined
+          }
+          tone="brand"
+          icon={<IndianRupee />}
+        />
+        <StatCard
+          title="Outstanding Balance"
+          value={agingLoading ? '—' : fmtMoney(aging?.totalOutstanding ?? 0)}
+          subtitle={agingLoading ? undefined : `${openInvoicesCount} open invoice(s)`}
+          tone="warning"
+          icon={<TriangleAlert />}
+        />
+        <StatCard
+          title={`Pending · ${summary?.month ?? 'This Month'}`}
+          value={fmtMoney(summary?.pending ?? 0)}
+          subtitle={
+            summary && summary.expected > 0
+              ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
+              : undefined
+          }
+          tone={(summary?.pending ?? 0) > 0 ? 'danger' : 'success'}
+          icon={<Clock />}
+        />
+      </div>
 
-      {/* Aging + trend row */}
+      {/* Aging + collection trend row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <AgingBars
@@ -589,18 +680,18 @@ function InvoicesContent() {
         <div className={clsx(surfaceCardClass, 'p-5 lg:col-span-2')}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
-                <TrendingUp className="mr-1.5 inline h-4 w-4 text-[color:var(--color-brand-500)]" />
+              <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+                <TrendingUp className="mr-1.5 inline h-4 w-4 text-(--color-brand-500)" />
                 Collection trend
               </h3>
-              <p className="mt-0.5 text-xs text-[color:var(--color-text-muted)]">
+              <p className="mt-0.5 text-xs text-(--color-text-muted)">
                 Collected vs expected, last 6 months
               </p>
             </div>
           </div>
           <div className="mt-4">
             {trendLoading ? (
-              <div className="flex h-[160px] items-center justify-center text-xs font-medium text-[color:var(--color-text-muted)]">
+              <div className="flex h-[160px] items-center justify-center text-xs font-medium text-(--color-text-muted)">
                 Loading trend...
               </div>
             ) : (
@@ -620,9 +711,23 @@ function InvoicesContent() {
         </div>
       </div>
 
+      {/* Status Tabs with live counts */}
+      <StatusTabs
+        tabs={STATUS_TABS.map((t) => ({
+          key: t.key,
+          label: t.label,
+          count: statusCounts[t.key || 'all'] ?? (t.key === '' ? total : undefined),
+        }))}
+        active={statusFilter}
+        onChange={(key) => {
+          setStatusFilter(key);
+          setPage(1);
+        }}
+      />
+
       <DataTable
         columns={columns}
-        data={visibleInvoices}
+        data={invoices}
         keyExtractor={(row: InvoiceRow) => row._id}
         isLoading={isLoading}
         searchable
@@ -702,7 +807,7 @@ function InvoicesContent() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="font-mono text-sm font-semibold text-(--color-text-primary)">
                 {row.invoiceNumber}
               </span>
               <StatusBadge
@@ -710,7 +815,7 @@ function InvoicesContent() {
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
               <span>{row.tenantId?.userId?.name ?? 'N/A'}</span>
               <span>{row.month}</span>
               <span>{fmtMoney(row.totalAmount)}</span>
@@ -727,45 +832,114 @@ function InvoicesContent() {
         )}
       />
 
-      {/* Bulk generate modal */}
+      {/* Bulk generate modal with pre-flight intelligence */}
       <Modal
         open={bulkGenerateOpen}
-        onClose={() => setBulkGenerateOpen(false)}
+        onClose={() => {
+          setBulkGenerateOpen(false);
+          setBulkPreview(null);
+        }}
         title="Bulk generate invoices"
-        description="Creates invoices for every active tenant for the selected month. Existing invoices are skipped."
+        description="Creates invoices for all eligible active tenants for the selected month. Existing invoices are automatically skipped."
         loading={bulkLoading}
         footer={
           <>
-            <Button variant="outline" disabled={bulkLoading} onClick={() => setBulkGenerateOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={bulkLoading}
+              onClick={() => {
+                setBulkGenerateOpen(false);
+                setBulkPreview(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
               variant="primary"
               loading={bulkLoading}
-              disabled={!bulkMonth}
+              disabled={!bulkMonth || previewLoading || (bulkPreview?.toGenerateCount ?? 0) === 0}
               onClick={handleBulkGenerate}
             >
               <Wand2 className="h-4 w-4" />
-              Generate All
+              Generate All {bulkPreview?.toGenerateCount ? `(${bulkPreview.toGenerateCount})` : ''}
             </Button>
           </>
         }
       >
-        <div className={clsx(surfaceNestedClass, 'flex items-center gap-3 p-4')}>
-          <LayoutGrid className="h-4 w-4 shrink-0 text-[color:var(--color-brand-500)]" />
-          <DatePicker
-            type="month"
-            aria-label="Bulk invoice month"
-            value={bulkMonth}
-            onChange={(val: string) => setBulkMonth(val)}
-            placeholder="Select month..."
-            className="w-full"
-          />
+        <div className="space-y-4">
+          <div className={clsx(surfaceNestedClass, 'flex items-center gap-3 p-4')}>
+            <DatePicker
+              type="month"
+              aria-label="Bulk invoice month"
+              value={bulkMonth}
+              onChange={(val: string) => setBulkMonth(val)}
+              placeholder="Select month..."
+              className="w-full"
+            />
+          </div>
+
+          {/* Pre-flight summary */}
+          {bulkMonth && (
+            <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-surface) p-4">
+              {previewLoading ? (
+                <div className="flex items-center justify-center py-4 text-xs text-(--color-text-muted)">
+                  Calculating eligible tenants and billing estimates...
+                </div>
+              ) : bulkPreview ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-(--color-text-primary)">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-(--color-brand-500)" />
+                      Pre-flight Analysis for {bulkMonth}
+                    </span>
+                    <span className="font-mono text-(--color-brand-600)">
+                      Est. Total: {fmtMoney(bulkPreview.estimatedTotalAmount)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
+                      <span className="block text-2xs text-(--color-text-muted)">
+                        Active Tenants
+                      </span>
+                      <span className="text-base font-bold text-(--color-text-primary)">
+                        {bulkPreview.activeTenantsCount}
+                      </span>
+                    </div>
+                    <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
+                      <span className="block text-2xs text-(--color-text-muted)">
+                        Already Invoiced
+                      </span>
+                      <span className="text-base font-bold text-(--color-warning-600)">
+                        {bulkPreview.alreadyInvoicedCount}
+                      </span>
+                    </div>
+                    <div className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-2.5">
+                      <span className="block text-2xs text-(--color-text-muted)">
+                        To Generate
+                      </span>
+                      <span className="text-base font-bold text-(--color-success-600)">
+                        {bulkPreview.toGenerateCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  {bulkPreview.toGenerateCount === 0 ? (
+                    <div className="flex items-center gap-2 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-3 text-xs text-(--color-warning-800)">
+                      <AlertCircle className="h-4 w-4 shrink-0 text-(--color-warning-600)" />
+                      <span>All active tenants already have an invoice for this month.</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-(--color-text-muted)">
+                      Invoices will be seeded from each tenant&apos;s base rent plus any finalized
+                      electricity meter share.
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
-        <p className="mt-3 text-xs font-medium text-[color:var(--color-text-muted)]">
-          Line items are seeded from each tenant&apos;s monthly rent plus any finalized electricity
-          share for the month.
-        </p>
       </Modal>
 
       {/* Bulk delete confirm */}
@@ -797,7 +971,7 @@ export default function InvoicesPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-[color:var(--border-color)] border-t-[color:var(--color-brand-500)]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
         </div>
       }
     >
@@ -805,4 +979,3 @@ export default function InvoicesPage() {
     </Suspense>
   );
 }
-

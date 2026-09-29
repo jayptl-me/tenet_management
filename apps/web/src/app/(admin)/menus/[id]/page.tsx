@@ -141,16 +141,16 @@ export default function MenuDetailPage() {
                   icon={icon}
                 >
                   {items.length === 0 ? (
-                    <p className="text-sm text-[color:var(--color-text-muted)] italic">Not set</p>
+                    <p className="text-sm text-(--color-text-muted) italic">Not set</p>
                   ) : (
                     <ul className="space-y-2.5">
                       {items.map((item, i) => (
                         <li key={i} className="text-sm leading-relaxed">
-                          <span className="font-semibold text-[color:var(--color-text-primary)]">
+                          <span className="font-semibold text-(--color-text-primary)">
                             {item.name}
                           </span>
                           {item.description && (
-                            <span className="ml-1.5 text-xs text-[color:var(--color-text-muted)]">
+                            <span className="ml-1.5 text-xs text-(--color-text-muted)">
                               — {item.description}
                             </span>
                           )}
@@ -190,7 +190,7 @@ export default function MenuDetailPage() {
             </div>
           </DetailCard>
 
-          <p className="text-right text-xs font-semibold text-[color:var(--color-text-muted)]">
+          <p className="text-right text-xs font-semibold text-(--color-text-muted)">
             <Calendar className="mr-1 inline h-3 w-3" />
             Created{' '}
             {new Date(menu.createdAt).toLocaleDateString('en-IN', {

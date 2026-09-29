@@ -144,7 +144,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-          <h3 className="text-base font-display font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-base font-bold text-[color:var(--color-text-primary)]">
             Week of {formatDayLabel(monday)}
           </h3>
         </div>
@@ -187,7 +187,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                   <p className="text-[11px] font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
                     {DAY_NAMES[idx]}
                   </p>
-                  <p className="text-sm font-display font-bold text-[color:var(--color-text-primary)]">
+                  <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
                     {formatDayLabel(date)}
                   </p>
                 </div>

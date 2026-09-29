@@ -12,6 +12,23 @@ export interface ReceiptLine {
   mono?: boolean;
 }
 
+export interface PgBranding {
+  pgName?: string;
+  tagline?: string;
+  address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  phone?: string;
+  email?: string;
+  gstNumber?: string;
+  upiId?: string;
+  upiPayeeName?: string;
+}
+
 export interface ReceiptDocumentProps {
   title: string;
   reference: string;
@@ -21,6 +38,7 @@ export interface ReceiptDocumentProps {
   notes?: string;
   footerNote?: string;
   className?: string;
+  pgBranding?: PgBranding | null;
   /** Hides on-screen action buttons (used when embedded elsewhere). */
   showActions?: boolean;
   onPrint?: () => void;
@@ -42,20 +60,41 @@ export function ReceiptDocument({
   notes,
   footerNote,
   className,
+  pgBranding,
   showActions = true,
   onPrint,
   onClose,
 }: ReceiptDocumentProps) {
+  const addressParts = [
+    pgBranding?.address?.line1,
+    pgBranding?.address?.line2,
+    pgBranding?.address?.city,
+    pgBranding?.address?.state,
+    pgBranding?.address?.pincode,
+  ].filter(Boolean);
+
   return (
     <div className={clsx('receipt-print-area', className)}>
-      <div
-        className={clsx(
-          surfaceCardClass,
-          'overflow-hidden',
-        )}
-      >
+      <div className={clsx(surfaceCardClass, 'overflow-hidden')}>
         {/* Receipt head */}
         <div className="border-b border-[color:var(--border-color)] px-6 pt-6 pb-4 text-center">
+          {pgBranding?.pgName && (
+            <div className="mb-3 space-y-0.5 border-b border-[color:var(--border-color)] pb-3">
+              <p className="font-display text-base font-bold tracking-tight text-[color:var(--color-text-primary)]">
+                {pgBranding.pgName}
+              </p>
+              {addressParts.length > 0 && (
+                <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                  {addressParts.join(', ')}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-[color:var(--color-text-muted)]">
+                {pgBranding.phone && <span>Tel: {pgBranding.phone}</span>}
+                {pgBranding.email && <span>Email: {pgBranding.email}</span>}
+                {pgBranding.gstNumber && <span>GSTIN: {pgBranding.gstNumber}</span>}
+              </div>
+            </div>
+          )}
           <p className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {title}
           </p>

@@ -199,7 +199,7 @@ export default function EditAttendancePage() {
                 label="Room"
                 value={
                   <span className="inline-flex items-center gap-1.5">
-                    <Hash className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Hash className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {roomNumber} · Bed {bedId}
                   </span>
                 }
@@ -211,7 +211,7 @@ export default function EditAttendancePage() {
                     <button
                       type="button"
                       onClick={() => router.push(`/tenants/${tenantIdForCheck}`)}
-                      className="inline-flex items-center gap-1 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
                     >
                       View tenant
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -228,7 +228,7 @@ export default function EditAttendancePage() {
                         variant={statusToVariant(attendanceData.status)}
                         label={attendanceData.status.replace(/_/g, ' ')}
                       />
-                      <span className="text-xs text-[color:var(--color-text-muted)]">
+                      <span className="text-xs text-(--color-text-muted)">
                         {String(attendanceData.date).slice(0, 10)}
                       </span>
                     </span>
@@ -253,11 +253,7 @@ export default function EditAttendancePage() {
           <div className="space-y-6">
             <FormSection title="Record" description="Date and presence status">
               <FormGrid>
-                <DatePicker
-                  label="Date"
-                  error={err.date?.message}
-                  {...register('date')}
-                />
+                <DatePicker label="Date" error={err.date?.message} {...register('date')} />
                 <Select
                   label="Status"
                   options={statusOptions}
@@ -266,14 +262,14 @@ export default function EditAttendancePage() {
                 />
               </FormGrid>
               {dateChanged && (
-                <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-[color:var(--color-warning-700)]">
+                <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-(--color-warning-700)">
                   <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   Date changed — duplicate check runs on save. Another record for this tenant on the
                   new date will block the update.
                 </p>
               )}
               {status === 'on_leave' && (
-                <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+                <p className="mt-2 text-xs text-(--color-text-muted)">
                   On-leave rows are normally created by leave approval. Editing to on-leave should
                   reference the covering leave in notes.
                 </p>
@@ -299,9 +295,9 @@ export default function EditAttendancePage() {
               </FormGrid>
 
               {computedHours !== '' && (
-                <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                <div className="mt-3 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm font-semibold text-(--color-text-secondary)">
                   Duration:{' '}
-                  <span className="text-[color:var(--color-text-primary)]">{computedHours}</span>
+                  <span className="text-(--color-text-primary)">{computedHours}</span>
                   {' · '}
                   In: {checkIn || '--:--'} · Out: {checkOut || '--:--'}
                 </div>
@@ -319,7 +315,7 @@ export default function EditAttendancePage() {
                 />
               </FormFullWidth>
               {attendanceData?.recordedBy && (
-                <p className="text-xs text-[color:var(--color-text-muted)]">
+                <p className="text-xs text-(--color-text-muted)">
                   Recorded by {attendanceData.recordedBy.name ?? 'System'}
                   {attendanceData.updatedAt
                     ? ` · Updated ${String(attendanceData.updatedAt).slice(0, 10)}`

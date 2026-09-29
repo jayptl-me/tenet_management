@@ -21,12 +21,32 @@ import { useRouter } from 'next/navigation';
 interface TenantRow {
   _id: string;
   user?: { name: string; email: string; phone: string; _id: string };
-  room?: { roomNumber: string };
+  room?: { roomNumber: string; floor?: { label?: string; floorNumber?: number } | null };
   bedId: string;
   monthlyRent: number;
   depositPaid: number;
   isActive: boolean;
   moveInDate: string;
+  documents?: {
+    aadhaarUrl?: string;
+    photoUrl?: string;
+    isVerified?: boolean;
+  };
+}
+
+function tenantRoomLabel(t: TenantRow): string {
+  const room = t.room?.roomNumber ?? 'N/A';
+  const floor = t.room?.floor?.label;
+  return floor ? `${floor} - ${room}` : room;
+}
+
+/** KYC review state derived from the tenant document record. */
+function kycStatus(t: TenantRow): { label: string; variant: 'success' | 'warning' | 'neutral' } {
+  if (t.documents?.isVerified) return { label: 'KYC Verified', variant: 'success' };
+  if (t.documents?.aadhaarUrl || t.documents?.photoUrl) {
+    return { label: 'KYC Pending', variant: 'warning' };
+  }
+  return { label: 'No Docs', variant: 'neutral' };
 }
 
 export default function TenantsPage() {
@@ -98,6 +118,7 @@ export default function TenantsPage() {
       'Monthly Rent',
       'Deposit Paid',
       'Status',
+      'KYC',
       'Move-in Date',
     ];
     const escapeCsv = (val: unknown) => {
@@ -116,6 +137,7 @@ export default function TenantsPage() {
       escapeCsv(t.monthlyRent),
       escapeCsv(t.depositPaid),
       escapeCsv(t.isActive ? 'Active' : 'Checked Out'),
+      escapeCsv(kycStatus(t).label),
       escapeCsv(t.moveInDate ? new Date(t.moveInDate).toISOString().slice(0, 10) : '—'),
     ]);
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
@@ -134,21 +156,28 @@ export default function TenantsPage() {
     {
       header: 'Name',
       accessor: (row) => (
-        <span className="font-semibold text-[color:var(--color-text-primary)]">
+        <span className="font-semibold text-(--color-text-primary)">
           {row.user?.name ?? 'N/A'}
         </span>
       ),
     },
     {
       header: 'Room',
-      accessor: (row) => `${row.room?.roomNumber ?? 'N/A'} (Bed ${row.bedId})`,
+      accessor: (row) => `${tenantRoomLabel(row)} (Bed ${row.bedId})`,
+    },
+    {
+      header: 'KYC',
+      accessor: (row) => {
+        const kyc = kycStatus(row);
+        return <StatusBadge variant={kyc.variant} label={kyc.label} />;
+      },
     },
     {
       header: 'Contact',
       accessor: (row) => (
         <div className="flex flex-col text-xs">
           <span>{row.user?.email ?? 'N/A'}</span>
-          <span className="text-[color:var(--color-text-muted)]">{row.user?.phone ?? 'N/A'}</span>
+          <span className="text-(--color-text-muted)">{row.user?.phone ?? 'N/A'}</span>
         </div>
       ),
     },
@@ -235,7 +264,6 @@ export default function TenantsPage() {
           variant="outline"
           onClick={handleExportCsv}
           disabled={tenants.length === 0}
-          className="flex items-center gap-1.5"
         >
           <Download className="h-4 w-4" />
           Export CSV
@@ -269,7 +297,7 @@ export default function TenantsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+              <span className="text-sm font-semibold text-(--color-text-primary)">
                 {row.user?.name ?? 'N/A'}
               </span>
               <StatusBadge
@@ -277,9 +305,10 @@ export default function TenantsPage() {
                 label={row.isActive ? 'Active' : 'Checked Out'}
               />
             </div>
-            <div className="flex items-center gap-4 text-xs text-[color:var(--color-text-muted)]">
-              <span>{row.room?.roomNumber ? `Room ${row.room.roomNumber}` : 'No Room'}</span>
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
+              <span>{row.room?.roomNumber ? `Room ${tenantRoomLabel(row)}` : 'No Room'}</span>
               <span>₹{row.monthlyRent.toLocaleString()}</span>
+              <StatusBadge variant={kycStatus(row).variant} label={kycStatus(row).label} />
             </div>
             <div className="flex items-center gap-1 pt-1">
               <TableActions
@@ -294,12 +323,13 @@ export default function TenantsPage() {
 
       <ConfirmModal
         open={!!deleteTarget}
-        title="Delete Tenant"
+        title="Delete Tenant Permanently"
         message={
           deleteTarget?.user?.name
-            ? `Are you sure you want to delete "${deleteTarget.user.name}"? This action cannot be undone.`
-            : 'Are you sure you want to delete this tenant? This action cannot be undone.'
+            ? `Permanently delete "${deleteTarget.user.name}" and ALL associated records: payments, invoices, complaints, visitors, guardians (including their portal logins), laundry slots, meal feedback, attendance, and leaves. Their bed is freed and their login is disabled. This cannot be undone - prefer Check Out for normal move-outs.`
+            : 'Permanently delete this tenant and ALL associated records (payments, invoices, complaints, visitors, guardians, attendance, leaves)? Their bed is freed and their login is disabled. This cannot be undone.'
         }
+        confirmLabel="Delete Permanently"
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

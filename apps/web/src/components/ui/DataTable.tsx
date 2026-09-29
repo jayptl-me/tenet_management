@@ -251,7 +251,10 @@ export function DataTable<T>({
               ))
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-16 text-center">
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-16 text-center"
+                >
                   {emptyState ?? (
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">

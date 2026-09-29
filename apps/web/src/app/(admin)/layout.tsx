@@ -111,13 +111,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [logout, router]);
 
   return (
-    <div className="flex min-h-screen bg-[color:var(--color-page-bg)]">
+    <div className="flex min-h-screen bg-(--color-page-bg)">
       <GlobalLoadingBar />
       <Sidebar />
 
       <main className="flex min-w-0 flex-1 flex-col">
         {/* ── Top Bar (Glass morphism) ────────────── */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-b-[color:var(--border-color)] bg-[color:var(--glass-bg)] px-6 py-3 backdrop-blur-[var(--glass-blur)]">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-b-(--border-color) bg-(--glass-bg) px-6 py-3 backdrop-blur-(--glass-blur)">
           <div className="flex items-center gap-3">
             {/* Mobile spacer for hamburger */}
             <div className="w-8 md:hidden" />
@@ -130,11 +130,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Cmd+K hint */}
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden items-center gap-1.5 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)] shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-200)] hover:text-[color:var(--color-text-secondary)] hover:shadow-[var(--shadow-sm)] sm:flex"
+              className="hidden items-center gap-1.5 rounded-lg border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-2xs font-medium text-(--color-text-muted) shadow-(--shadow-xs) transition-all duration-(--transition-duration) hover:border-(--color-brand-200) hover:text-(--color-text-secondary) hover:shadow-(--shadow-sm) sm:flex"
             >
               <Search className="h-3 w-3" />
               <span>Search</span>
-              <kbd className="ml-1 rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1 py-0.5 text-[10px] font-semibold">
+              <kbd className="ml-1 rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5 text-3xs font-semibold">
                 ⌘K
               </kbd>
             </button>

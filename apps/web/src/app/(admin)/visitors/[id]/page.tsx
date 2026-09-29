@@ -237,7 +237,7 @@ export default function VisitorDetailPage() {
 
           <DetailCard title="Lifecycle progress" icon={<ListChecks />}>
             <VisitorLifecycleStepper status={status} />
-            <div className="mt-4 border-t border-[color:var(--border-color)] pt-4">
+            <div className="mt-4 border-t border-(--border-color) pt-4">
               <VisitorLifecycleActions
                 visitorId={visitor._id}
                 status={status}
@@ -277,7 +277,7 @@ export default function VisitorDetailPage() {
                   label="Name"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {visitor.name}
                     </span>
                   }
@@ -286,7 +286,7 @@ export default function VisitorDetailPage() {
                   label="Phone"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {visitor.phone}
                     </span>
                   }
@@ -321,9 +321,9 @@ export default function VisitorDetailPage() {
                     visitor.tenant?._id ? (
                       <Link
                         href={`/tenants/${visitor.tenant._id}`}
-                        className="inline-flex items-center gap-1 text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 text-(--color-brand-600) underline-offset-2 hover:underline"
                       >
-                        <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {visitor.tenant?.user?.name ?? 'View tenant'}
                       </Link>
                     ) : (
@@ -336,7 +336,7 @@ export default function VisitorDetailPage() {
                     label="Tenant phone"
                     value={
                       <span className="inline-flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                        <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                         {visitor.tenant.user.phone}
                       </span>
                     }
@@ -346,7 +346,7 @@ export default function VisitorDetailPage() {
                   label="Room"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Home className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {hostRoom ?? 'N/A'}
                     </span>
                   }
@@ -355,7 +355,7 @@ export default function VisitorDetailPage() {
                   label="Bed"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <BedDouble className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {hostBed ?? 'N/A'}
                     </span>
                   }
@@ -364,7 +364,7 @@ export default function VisitorDetailPage() {
                   label="Floor"
                   value={
                     <span className="inline-flex items-center gap-1">
-                      <Building2 className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {hostFloor ?? 'N/A'}
                     </span>
                   }
@@ -400,7 +400,7 @@ export default function VisitorDetailPage() {
                 label="Expected Arrival"
                 value={
                   <span className="inline-flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {formatDateTime(visitor.expectedArrival)}
                   </span>
                 }
@@ -409,7 +409,7 @@ export default function VisitorDetailPage() {
                 label="Check In"
                 value={
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Clock className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {formatDateTime(visitor.actualArrival)}
                   </span>
                 }
@@ -418,7 +418,7 @@ export default function VisitorDetailPage() {
                 label="Check Out"
                 value={
                   <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Clock className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {formatDateTime(visitor.actualDeparture)}
                   </span>
                 }
@@ -452,7 +452,7 @@ export default function VisitorDetailPage() {
                   label="Re-approved by"
                   value={
                     <span className="inline-flex items-center gap-1 font-mono text-xs">
-                      <CheckCircle className="h-3.5 w-3.5 text-[color:var(--color-success-600)]" />
+                      <CheckCircle className="h-3.5 w-3.5 text-(--color-success-600)" />
                       {String(visitor.approvedBy)}
                     </span>
                   }
@@ -463,7 +463,7 @@ export default function VisitorDetailPage() {
                 value={
                   <button
                     type="button"
-                    className="font-mono text-xs text-[color:var(--color-text-secondary)] underline-offset-2 hover:underline"
+                    className="font-mono text-xs text-(--color-text-secondary) underline-offset-2 hover:underline"
                     onClick={() => void copyToClipboard(visitor._id)}
                     title="Copy record ID"
                   >

@@ -214,13 +214,13 @@ export default function NewVisitorPage() {
             )}
           />
           {tenantIdWatch ? (
-            <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
+            <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-[color:var(--color-brand-700)]">
+                <p className="text-xs font-semibold text-(--color-brand-700)">
                   Loading host stay…
                 </p>
               ) : hostPreview ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-[color:var(--color-brand-800)]">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
                     <UserRound className="h-3.5 w-3.5" />
                     {hostPreview.name}
@@ -244,7 +244,7 @@ export default function NewVisitorPage() {
                   )}
                 </div>
               ) : (
-                <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+                <p className="text-xs font-semibold text-(--color-text-muted)">
                   Select a tenant to preview their room and bed placement.
                 </p>
               )}
@@ -296,8 +296,8 @@ export default function NewVisitorPage() {
                     onClick={() => setValue('purpose', option, { shouldValidate: true })}
                     className={
                       selected
-                        ? 'rounded-full border border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-500)] px-3 py-1 text-xs font-bold text-white shadow-[var(--shadow-xs)]'
-                        : 'rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-300)] hover:text-[color:var(--color-text-primary)]'
+                        ? 'rounded-full border border-(--color-brand-500) bg-(--color-brand-500) px-3 py-1 text-xs font-bold text-(--color-on-brand) shadow-(--shadow-xs)'
+                        : 'rounded-full border border-(--border-color) bg-(--color-field-bg) px-3 py-1 text-xs font-semibold text-(--color-text-secondary) hover:border-(--color-brand-300) hover:text-(--color-text-primary)'
                     }
                   >
                     {option}
@@ -323,33 +323,33 @@ export default function NewVisitorPage() {
               {...register('expectedArrival')}
             />
             <div className="space-y-1.5">
-              <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+              <p className="text-sm font-medium text-(--color-text-primary)">
                 Arrival summary
               </p>
               {summary ? (
                 <div
                   className={
                     summary.isPast
-                      ? 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] px-3 py-2 text-sm'
-                      : 'flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm'
+                      ? 'flex items-start gap-2 rounded-(--radius-md) border border-(--color-danger-300) bg-(--color-danger-50) px-3 py-2 text-sm'
+                      : 'flex items-start gap-2 rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm'
                   }
                 >
                   {summary.isPast ? (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-danger-600)]" />
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-danger-600)" />
                   ) : (
-                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-brand-600)]" />
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-(--color-brand-600)" />
                   )}
                   <span>
-                    <span className="font-bold text-[color:var(--color-text-primary)]">
+                    <span className="font-bold text-(--color-text-primary)">
                       {summary.label}
                     </span>
-                    <span className="block text-xs font-medium text-[color:var(--color-text-secondary)]">
+                    <span className="block text-xs font-medium text-(--color-text-secondary)">
                       {summary.detail}
                     </span>
                   </span>
                 </div>
               ) : (
-                <p className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2 text-sm text-[color:var(--color-text-secondary)]">
+                <p className="rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50) px-3 py-2 text-sm text-(--color-text-secondary)">
                   Pick a date and time to preview the visit window.
                 </p>
               )}

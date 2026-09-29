@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="font-display mb-2 text-xl font-bold text-[color:var(--color-danger-800)]">
               Something went wrong
             </h2>
-            <p className="mb-6 text-sm leading-relaxed font-body text-[color:var(--color-danger-600)]">
+            <p className="font-body mb-6 text-sm leading-relaxed text-[color:var(--color-danger-600)]">
               An unexpected error occurred while rendering this section. You can try refreshing the
               page, or go back to the dashboard.
             </p>
@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </button>
               <Link
                 href="/dashboard"
-                className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-white transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
+                className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-[color:var(--color-on-brand)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:translate-[var(--hover-lift)] active:scale-[var(--active-press-scale)]"
               >
                 <Home className="h-4 w-4" />
                 Go to Dashboard
@@ -113,13 +113,13 @@ export function PageErrorFallback({ reset }: { error: Error; reset: () => void }
         <h2 className="font-display mb-2 text-xl font-bold text-[color:var(--color-surface-900)]">
           Page Error
         </h2>
-        <p className="mb-6 text-sm leading-relaxed font-body text-[color:var(--color-surface-500)]">
+        <p className="font-body mb-6 text-sm leading-relaxed text-[color:var(--color-surface-500)]">
           This page encountered an error and could not load. Other sections of the admin panel are
           still working.
         </p>
         <button
           onClick={reset}
-          className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-white transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]"
+          className="font-display inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-brand-500)] px-5 py-2.5 text-sm font-bold text-[color:var(--color-on-brand)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)]"
         >
           <RefreshCw className="h-4 w-4" />
           Try Again

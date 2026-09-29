@@ -59,10 +59,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const handleClear = () => {
       const el = (ref as { current?: HTMLInputElement | null })?.current ?? null;
       if (el) {
-        const setter = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          'value',
-        )?.set;
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
         setter?.call(el, '');
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }

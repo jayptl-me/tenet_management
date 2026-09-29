@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -29,6 +30,19 @@ interface RoomEntry {
   amount: number;
 }
 
+interface LinkedInvoice {
+  _id: string;
+  invoiceNumber: string;
+  tenantId: string;
+  tenantName: string;
+  tenantPhone: string;
+  roomNumber: string;
+  electricityAmount: number;
+  totalAmount: number;
+  status: string;
+  dueDate?: string;
+}
+
 interface ElectricityBillDetail {
   _id: string;
   month: string;
@@ -42,6 +56,7 @@ interface ElectricityBillDetail {
   billImageUrl?: string;
   billImagePublicId?: string | null;
   createdAt: string;
+  linkedInvoices?: LinkedInvoice[];
 }
 
 function roomNumberOf(entry: RoomEntry): string {
@@ -61,6 +76,112 @@ function floorOf(entry: RoomEntry): string {
   if (!f || typeof f === 'string') return '—';
   return f.label ?? (f.floorNumber != null ? `Floor ${f.floorNumber}` : '—');
 }
+
+const roomEntryColumns: DataTableColumn<RoomEntry>[] = [
+  {
+    header: 'Room',
+    accessor: (entry) => {
+      const href = roomHref(entry);
+      return href ? (
+        <Link
+          href={href}
+          className="font-semibold text-(--color-brand-600) hover:underline"
+        >
+          {roomNumberOf(entry)}
+        </Link>
+      ) : (
+        <span className="font-semibold text-(--color-text-primary)">
+          {roomNumberOf(entry)}
+        </span>
+      );
+    },
+  },
+  {
+    header: 'Floor',
+    accessor: (entry) => (
+      <span className="text-(--color-text-secondary)">{floorOf(entry)}</span>
+    ),
+  },
+  {
+    header: 'Previous',
+    accessor: (entry) => entry.previousReading,
+  },
+  {
+    header: 'Current',
+    accessor: (entry) => entry.currentReading,
+  },
+  {
+    header: 'Units',
+    accessor: (entry) => entry.unitsConsumed,
+  },
+  {
+    header: 'Rate',
+    accessor: (entry) => `₹${entry.ratePerUnit}`,
+  },
+  {
+    header: 'Amount',
+    accessor: (entry) => (
+      <span className="font-semibold tabular-nums">
+        ₹{(entry.amount ?? 0).toLocaleString('en-IN')}
+      </span>
+    ),
+  },
+];
+
+const linkedInvoiceColumns: DataTableColumn<LinkedInvoice>[] = [
+  {
+    header: 'Invoice #',
+    accessor: (inv) => (
+      <Link
+        href={`/invoices/${inv._id}`}
+        className="font-semibold text-(--color-brand-600) hover:underline"
+      >
+        {inv.invoiceNumber}
+      </Link>
+    ),
+  },
+  {
+    header: 'Tenant',
+    accessor: (inv) => (
+      <Link
+        href={`/tenants/${inv.tenantId}`}
+        className="font-medium text-(--color-text-primary) hover:text-(--color-brand-600) hover:underline"
+      >
+        {inv.tenantName}
+      </Link>
+    ),
+  },
+  {
+    header: 'Room',
+    accessor: (inv) => (
+      <span className="font-medium text-(--color-text-secondary)">
+        {inv.roomNumber ? `Room ${inv.roomNumber}` : '—'}
+      </span>
+    ),
+  },
+  {
+    header: 'Electricity Share',
+    accessor: (inv) => (
+      <span className="font-semibold tabular-nums text-(--color-brand-600)">
+        ₹{inv.electricityAmount.toLocaleString('en-IN')}
+      </span>
+    ),
+  },
+  {
+    header: 'Total Invoice',
+    accessor: (inv) => (
+      <span className="font-semibold tabular-nums text-(--color-text-primary)">
+        ₹{inv.totalAmount.toLocaleString('en-IN')}
+      </span>
+    ),
+  },
+  {
+    header: 'Status',
+    accessor: (inv) => (
+      <StatusBadge variant={statusToVariant(inv.status)} label={inv.status} />
+    ),
+  },
+];
 
 export default function ElectricityBillDetailPage() {
   const params = useParams<{ id: string }>();
@@ -232,7 +353,7 @@ export default function ElectricityBillDetailPage() {
         <div className="space-y-6">
           {actionError && <ErrorBanner message={actionError} />}
           {actionMsg && (
-            <div className="rounded-lg border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-sm font-medium text-[color:var(--color-success-800)]">
+            <div className="rounded-lg border border-(--color-success-300) bg-(--color-success-50) p-3 text-sm font-medium text-(--color-success-800)">
               {actionMsg}
             </div>
           )}
@@ -264,7 +385,7 @@ export default function ElectricityBillDetailPage() {
 
           {showVariance && (
             <div
-              className="rounded-lg border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-3 text-sm font-medium text-[color:var(--color-warning-800)]"
+              className="rounded-lg border border-(--color-warning-300) bg-(--color-warning-50) p-3 text-sm font-medium text-(--color-warning-800)"
               role="status"
             >
               Room readings total ₹{roomTotal.toLocaleString('en-IN')} vs bill total ₹
@@ -277,7 +398,7 @@ export default function ElectricityBillDetailPage() {
           {bill.billImageUrl ? (
             <DetailCard title="Bill image" icon={<Zap />}>
               <div className="space-y-3">
-                <div className="max-w-sm overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)]">
+                <div className="max-w-sm overflow-hidden rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-50)">
                   {/\.(pdf)(\?|$)/i.test(bill.billImageUrl) ? (
                     <div className="flex items-center gap-2 p-4 text-sm">
                       <FileText className="h-4 w-4" />
@@ -285,13 +406,12 @@ export default function ElectricityBillDetailPage() {
                         href={bill.billImageUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                        className="font-semibold text-(--color-brand-600) hover:underline"
                       >
                         Open bill PDF in new tab
                       </a>
                     </div>
                   ) : (
-                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={bill.billImageUrl}
                       alt={`Electricity bill for ${bill.month}`}
@@ -304,7 +424,7 @@ export default function ElectricityBillDetailPage() {
                     href={bill.billImageUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-semibold break-all text-[color:var(--color-brand-600)] hover:underline"
+                    className="text-xs font-semibold break-all text-(--color-brand-600) hover:underline"
                   >
                     Open original in new tab
                   </a>
@@ -335,7 +455,7 @@ export default function ElectricityBillDetailPage() {
             bill.status === 'draft' && (
               <DetailCard title="Bill image" icon={<Zap />}>
                 <div className="flex flex-col items-start gap-3">
-                  <p className="text-sm text-[color:var(--color-text-muted)]">
+                  <p className="text-sm text-(--color-text-muted)">
                     Upload a photo or PDF of the utility bill as proof. Stored on Cloudinary when
                     configured.
                   </p>
@@ -371,60 +491,35 @@ export default function ElectricityBillDetailPage() {
           />
 
           <DetailCard title="Room Entries" icon={<Zap />}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[color:var(--border-color)] text-left text-xs font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
-                    <th className="pr-4 pb-3">Room</th>
-                    <th className="pr-4 pb-3">Floor</th>
-                    <th className="pr-4 pb-3">Previous</th>
-                    <th className="pr-4 pb-3">Current</th>
-                    <th className="pr-4 pb-3">Units</th>
-                    <th className="pr-4 pb-3">Rate</th>
-                    <th className="pr-4 pb-3">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(bill.roomEntries ?? []).map((entry, i) => {
-                    const href = roomHref(entry);
-                    return (
-                      <tr
-                        key={i}
-                        className="border-b border-[color:var(--border-color)] last:border-b-0"
-                      >
-                        <td className="py-3 pr-4 font-semibold text-[color:var(--color-text-primary)]">
-                          {href ? (
-                            <Link
-                              href={href}
-                              className="text-[color:var(--color-brand-600)] hover:underline"
-                            >
-                              {roomNumberOf(entry)}
-                            </Link>
-                          ) : (
-                            roomNumberOf(entry)
-                          )}
-                        </td>
-                        <td className="py-3 pr-4 text-[color:var(--color-text-secondary)]">
-                          {floorOf(entry)}
-                        </td>
-                        <td className="py-3 pr-4">{entry.previousReading}</td>
-                        <td className="py-3 pr-4">{entry.currentReading}</td>
-                        <td className="py-3 pr-4">{entry.unitsConsumed}</td>
-                        <td className="py-3 pr-4">₹{entry.ratePerUnit}</td>
-                        <td className="py-3 pr-4 font-semibold">
-                          ₹{(entry.amount ?? 0).toLocaleString('en-IN')}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={roomEntryColumns}
+              data={bill.roomEntries ?? []}
+              keyExtractor={(entry: RoomEntry) => {
+                const id =
+                  typeof entry.roomId === 'object' && entry.roomId
+                    ? entry.roomId._id
+                    : String(entry.roomId ?? 'room');
+                return `${id}-${entry.currentReading}-${entry.previousReading}`;
+              }}
+            />
           </DetailCard>
+
+          {bill.linkedInvoices && bill.linkedInvoices.length > 0 && (
+            <DetailCard
+              title={`Distributed Tenant Invoices (${bill.linkedInvoices.length})`}
+              icon={<FileText />}
+            >
+              <DataTable
+                columns={linkedInvoiceColumns}
+                data={bill.linkedInvoices}
+                keyExtractor={(inv: LinkedInvoice) => inv._id}
+              />
+            </DetailCard>
+          )}
 
           {bill.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
-              <p className="text-sm text-[color:var(--color-text-primary)]">{bill.notes}</p>
+              <p className="text-sm text-(--color-text-primary)">{bill.notes}</p>
             </DetailCard>
           )}
         </div>

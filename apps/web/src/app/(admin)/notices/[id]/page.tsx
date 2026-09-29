@@ -159,7 +159,7 @@ export default function NoticeDetailPage() {
       {notice && (
         <div className="space-y-6">
           <DetailCard title="Notice Content" icon={<Megaphone />}>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
               {notice.content}
             </p>
           </DetailCard>
@@ -179,7 +179,7 @@ export default function NoticeDetailPage() {
                 label="Created"
                 value={
                   <span className="inline-flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     {formatDate(notice.createdAt)}
                   </span>
                 }
@@ -188,8 +188,8 @@ export default function NoticeDetailPage() {
                 <DetailRow
                   label="Author"
                   value={
-                    <span className="inline-flex items-center gap-1 font-medium text-[color:var(--color-text-primary)]">
-                      <User className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                    <span className="inline-flex items-center gap-1 font-medium text-(--color-text-primary)">
+                      <User className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {notice.author.name} {notice.author.email ? `(${notice.author.email})` : ''}
                     </span>
                   }
@@ -200,7 +200,7 @@ export default function NoticeDetailPage() {
                   label="Target Type"
                   value={
                     <span className="inline-flex items-center gap-1 capitalize">
-                      <Target className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Target className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {notice.targetType}
                     </span>
                   }
@@ -215,7 +215,7 @@ export default function NoticeDetailPage() {
                         <span
                           key={tid}
                           title={tid}
-                          className="rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-text-secondary)]"
+                          className="rounded-md border border-(--border-color) bg-(--color-field-bg) px-2 py-0.5 text-xs font-semibold text-(--color-text-secondary)"
                         >
                           {targetNames[tid] ?? tid}
                         </span>

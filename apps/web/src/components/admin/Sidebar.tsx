@@ -224,7 +224,7 @@ function saveCollapsed(collapsed: boolean) {
 function BadgePill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold text-white">
+    <span className="ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono text-[10px] leading-none font-bold text-[color:var(--color-on-danger)]">
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -386,7 +386,7 @@ export function Sidebar() {
           className={clsx(
             'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
             isActive
-              ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-white shadow-[var(--shadow-xs)]'
+              ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)] shadow-[var(--shadow-xs)]'
               : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)] group-hover:border-[color:var(--color-brand-200)] group-hover:bg-[color:var(--color-brand-50)] group-hover:text-[color:var(--color-brand-600)]',
           )}
         >
@@ -450,7 +450,7 @@ export function Sidebar() {
       <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4">
         <Link href="/dashboard" className="group flex items-center gap-2.5">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
-            <span className="text-sm font-semibold tracking-tight text-white">A</span>
+            <span className="text-sm font-semibold tracking-tight text-[color:var(--color-on-brand)]">A</span>
           </div>
           {!collapsed && (
             <span className="text-lg font-semibold tracking-tight text-[color:var(--color-text-primary)]">
@@ -595,7 +595,7 @@ export function Sidebar() {
             className={clsx(
               'flex h-6 w-6 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
               pathname === '/settings' || pathname.startsWith('/settings/')
-                ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-white'
+                ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]'
                 : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]',
             )}
           >

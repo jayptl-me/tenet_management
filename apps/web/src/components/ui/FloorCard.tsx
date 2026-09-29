@@ -80,10 +80,10 @@ export function FloorCard({
       onClick={onView}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 px-5 pb-3 pt-4">
+      <div className="flex items-start justify-between gap-2 px-5 pt-4 pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-1.5 text-xs font-bold tabular-nums text-[color:var(--color-text-secondary)]">
+            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-1.5 text-xs font-bold text-[color:var(--color-text-secondary)] tabular-nums">
               F{floorNumber}
             </span>
             <h3 className="truncate text-[15px] font-bold tracking-tight text-[color:var(--color-text-primary)]">
@@ -131,7 +131,7 @@ export function FloorCard({
 
       {/* Footer stats */}
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-5 py-2.5">
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold tabular-nums text-[color:var(--color-text-secondary)]">
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[color:var(--color-text-secondary)] tabular-nums">
           <IndianRupee className="h-3 w-3 text-[color:var(--color-success-600)]" />
           {formatCurrency(potentialRent)}
           <span className="font-medium text-[color:var(--color-text-muted)]">/mo potential</span>

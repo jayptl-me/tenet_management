@@ -23,6 +23,7 @@ import {
   Receipt,
   RotateCcw,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -37,6 +38,7 @@ import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { OccupancyBedPicker } from '@/components/ui/OccupancyBedPicker';
+import { Modal } from '@/components/ui/Modal';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 
 interface UnpaidInvoiceRow {
@@ -76,12 +78,46 @@ interface TenantDetail {
   moveOutDate: string | null;
   isActive: boolean;
   documents?: {
-    aadhaarUrl?: string;
+    idType?: 'aadhaar' | 'passport' | 'voter_id' | 'driving_license';
+    idNumberMasked?: string;
+    idUrl?: string;
     photoUrl?: string;
     isVerified?: boolean;
     verifiedAt?: string;
+    consentGiven?: boolean;
+    consentTimestamp?: string;
+    aadhaarUrl?: string;
   };
   emergencyContact?: { name?: string; phone?: string; relation?: string };
+  verificationProfile?: {
+    fatherOrSpouseName?: string;
+    dob?: string;
+    gender?: 'male' | 'female' | 'other';
+    bloodGroup?: string;
+    identificationMark?: string;
+    permanentAddress?: {
+      street?: string;
+      city?: string;
+      district?: string;
+      state?: string;
+      pincode?: string;
+      policeStation?: string;
+    };
+    occupation?: {
+      category?: 'salaried' | 'student' | 'business' | 'other';
+      organizationName?: string;
+      officeAddress?: string;
+      idNumber?: string;
+      contactPhone?: string;
+    };
+    localReferences?: Array<{
+      name?: string;
+      phone?: string;
+      address?: string;
+      relation?: string;
+    }>;
+    stayPurpose?: string;
+  };
   createdAt: string;
 }
 
@@ -145,6 +181,7 @@ export default function TenantDetailPage() {
     Array<{ _id: string; title: string; status: string; priority?: string }>
   >([]);
   const [calendarEvents, setCalendarEvents] = useState<StayCalendarEvent[]>([]);
+  const [statementLoading, setStatementLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -304,6 +341,29 @@ export default function TenantDetailPage() {
   };
 
   const [verifyingKyc, setVerifyingKyc] = useState(false);
+  const [downloadingPolicePdf, setDownloadingPolicePdf] = useState(false);
+
+  const handleDownloadPolicePdf = async () => {
+    if (!tenant) return;
+    setDownloadingPolicePdf(true);
+    try {
+      const response = await api.get(`tenants/${tenant._id}/police-verification.pdf`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `police-verification-${(tenant.user?.name || 'resident').toLowerCase().replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Police verification PDF generated successfully');
+    } catch {
+      toast.error('Failed to generate police verification PDF');
+    } finally {
+      setDownloadingPolicePdf(false);
+    }
+  };
 
   const handleVerifyKyc = async () => {
     if (!tenant) return;
@@ -361,14 +421,25 @@ export default function TenantDetailPage() {
       }
       actions={
         tenant ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
-          >
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              loading={downloadingPolicePdf}
+              onClick={handleDownloadPolicePdf}
+            >
+              <FileText className="h-4 w-4 text-(--color-brand-600)" />
+              Police Form
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          </div>
         ) : undefined
       }
     >
@@ -408,7 +479,7 @@ export default function TenantDetailPage() {
                   label="Email"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Mail className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenant.user?.email ?? 'N/A'}
                     </span>
                   }
@@ -417,7 +488,7 @@ export default function TenantDetailPage() {
                   label="Phone"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {tenant.user?.phone ?? 'N/A'}
                     </span>
                   }
@@ -447,15 +518,132 @@ export default function TenantDetailPage() {
             </DetailCard>
           )}
 
+          {/* ── Statutory Police Verification & Legal Profile ── */}
+          <DetailCard
+            title="Police Verification & Legal Profile"
+            icon={<Shield />}
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={downloadingPolicePdf}
+                  onClick={handleDownloadPolicePdf}
+                >
+                  <Printer className="h-3.5 w-3.5 mr-1" />
+                  Print Police PDF
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  Edit Profile
+                </Button>
+              </div>
+            }
+          >
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <DetailList>
+                <DetailRow
+                  label="Father / Spouse Name"
+                  value={tenant.verificationProfile?.fatherOrSpouseName ?? '—'}
+                />
+                <DetailRow
+                  label="Date of Birth"
+                  value={
+                    tenant.verificationProfile?.dob
+                      ? formatDate(tenant.verificationProfile.dob)
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Gender & Blood Group"
+                  value={
+                    [
+                      tenant.verificationProfile?.gender
+                        ? tenant.verificationProfile.gender.toUpperCase()
+                        : null,
+                      tenant.verificationProfile?.bloodGroup
+                        ? `Blood Group: ${tenant.verificationProfile.bloodGroup}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—'
+                  }
+                />
+                <DetailRow
+                  label="Identification Mark"
+                  value={tenant.verificationProfile?.identificationMark ?? '—'}
+                />
+                <DetailRow
+                  label="Purpose of Stay"
+                  value={tenant.verificationProfile?.stayPurpose ?? 'Employment / Education'}
+                />
+              </DetailList>
+
+              <DetailList>
+                <DetailRow
+                  label="Permanent Address"
+                  value={
+                    tenant.verificationProfile?.permanentAddress?.city
+                      ? [
+                          tenant.verificationProfile.permanentAddress.street,
+                          tenant.verificationProfile.permanentAddress.city,
+                          tenant.verificationProfile.permanentAddress.state,
+                          tenant.verificationProfile.permanentAddress.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Native Police Station"
+                  value={
+                    tenant.verificationProfile?.permanentAddress?.policeStation ? (
+                      <span className="font-semibold text-(--color-brand-700)">
+                        {tenant.verificationProfile.permanentAddress.policeStation}
+                      </span>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
+                <DetailRow
+                  label="Occupation / Institute"
+                  value={
+                    tenant.verificationProfile?.occupation?.organizationName
+                      ? `${tenant.verificationProfile.occupation.organizationName} (${tenant.verificationProfile.occupation.category ?? 'employed'})`
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Local References (City)"
+                  value={
+                    tenant.verificationProfile?.localReferences &&
+                    tenant.verificationProfile.localReferences.length > 0
+                      ? tenant.verificationProfile.localReferences
+                          .map((r) => `${r.name || 'Reference'} (${r.phone || 'No phone'})`)
+                          .join('; ')
+                      : '—'
+                  }
+                />
+              </DetailList>
+            </div>
+          </DetailCard>
+
           <DetailCard
             title="Documents & KYC"
             icon={<FileText />}
             action={
               tenant.documents?.isVerified ? (
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <span className="rounded-full bg-(--color-success-50) px-2.5 py-1 text-xs font-semibold text-(--color-success-700)">
                   KYC Verified
                 </span>
-              ) : tenant.documents?.aadhaarUrl && tenant.documents?.photoUrl ? (
+              ) : (tenant.documents?.idUrl || tenant.documents?.aadhaarUrl) &&
+                tenant.documents?.photoUrl ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -470,14 +658,26 @@ export default function TenantDetailPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DocumentUpload
                 tenantId={tenant._id}
-                docType="aadhaar"
-                currentUrl={tenant.documents?.aadhaarUrl}
-                onUploaded={(url) =>
+                docType={tenant.documents?.idType || 'aadhaar'}
+                currentUrl={tenant.documents?.idUrl || tenant.documents?.aadhaarUrl}
+                idNumberMasked={tenant.documents?.idNumberMasked}
+                isVerified={tenant.documents?.isVerified}
+                onUploaded={({ url, docType, idNumberMasked }) =>
                   setTenant((prev) =>
                     prev
                       ? {
                           ...prev,
-                          documents: { ...prev.documents, aadhaarUrl: url },
+                          documents: {
+                            ...prev.documents,
+                            idUrl: url,
+                            idType: docType as
+                              | 'aadhaar'
+                              | 'passport'
+                              | 'voter_id'
+                              | 'driving_license',
+                            idNumberMasked,
+                            isVerified: false,
+                          },
                         }
                       : prev,
                   )
@@ -487,12 +687,13 @@ export default function TenantDetailPage() {
                 tenantId={tenant._id}
                 docType="photo"
                 currentUrl={tenant.documents?.photoUrl}
-                onUploaded={(url) =>
+                isVerified={tenant.documents?.isVerified}
+                onUploaded={({ url }) =>
                   setTenant((prev) =>
                     prev
                       ? {
                           ...prev,
-                          documents: { ...prev.documents, photoUrl: url },
+                          documents: { ...prev.documents, photoUrl: url, isVerified: false },
                         }
                       : prev,
                   )
@@ -530,6 +731,39 @@ export default function TenantDetailPage() {
               >
                 <Copy className="h-4 w-4" /> Copy Info
               </Button>
+              <Button
+                variant="outline"
+                loading={statementLoading}
+                onClick={async () => {
+                  if (!tenant) return;
+                  setStatementLoading(true);
+                  try {
+                    // Must use the authenticated ky client — window.open omits the JWT.
+                    const blob = await api.get(`tenants/${tenant._id}/statement.pdf`).blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `statement-${tenant.user?.name?.replace(/\s+/g, '-').toLowerCase() ?? 'tenant'}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    toast.error('Failed to download statement. Ensure you are logged in.');
+                  } finally {
+                    setStatementLoading(false);
+                  }
+                }}
+              >
+                <Printer className="h-4 w-4" /> Statement of Account
+              </Button>
+              <Button
+                variant="outline"
+                loading={downloadingPolicePdf}
+                onClick={handleDownloadPolicePdf}
+              >
+                <FileText className="h-4 w-4 text-(--color-brand-600)" /> Police Verification Form
+              </Button>
               {tenant.isActive && (
                 <Button variant="danger" onClick={handleCheckoutClick}>
                   <LogOut className="h-4 w-4" /> Check Out
@@ -546,15 +780,15 @@ export default function TenantDetailPage() {
               )}
             </div>
             {!tenant.isActive && (showReinstatePlacement || reinstateError) && (
-              <div className="mt-4 space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
+              <div className="mt-4 space-y-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-4">
                 {reinstateError && (
-                  <p className="text-[13px] font-semibold text-[color:var(--color-danger-700)]">
+                  <p className="text-13 font-semibold text-(--color-danger-700)">
                     {reinstateError}
                   </p>
                 )}
                 {showReinstatePlacement && (
                   <>
-                    <p className="text-sm font-bold text-[color:var(--color-text-primary)]">
+                    <p className="text-sm font-bold text-(--color-text-primary)">
                       Place on a different bed
                     </p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -622,10 +856,10 @@ export default function TenantDetailPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <DetailCard title="Guardians" icon={<Users />}>
               {relatedError && guardians.length === 0 ? (
-                <p className="text-sm text-[color:var(--color-text-muted)]">{relatedError}</p>
+                <p className="text-sm text-(--color-text-muted)">{relatedError}</p>
               ) : guardians.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-[color:var(--color-text-muted)]">
+                  <p className="text-sm text-(--color-text-muted)">
                     No guardians linked.
                   </p>
                   <Button
@@ -642,18 +876,18 @@ export default function TenantDetailPage() {
                     <button
                       key={g._id}
                       type="button"
-                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      className="flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-color) px-3 py-2 text-left text-sm hover:bg-(--color-field-bg)"
                       onClick={() => router.push(`/guardians/${g._id}`)}
                     >
                       <span>
-                        <span className="font-semibold text-[color:var(--color-text-primary)]">
+                        <span className="font-semibold text-(--color-text-primary)">
                           {g.name}
                         </span>
-                        <span className="ml-2 text-xs text-[color:var(--color-text-muted)] capitalize">
+                        <span className="ml-2 text-xs text-(--color-text-muted) capitalize">
                           {g.relation ?? ''}
                         </span>
                       </span>
-                      <ExternalLink className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <ExternalLink className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     </button>
                   ))}
                   <Button
@@ -670,7 +904,7 @@ export default function TenantDetailPage() {
             <DetailCard title="Recent payments" icon={<CreditCard />}>
               {recentPayments.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-[color:var(--color-text-muted)]">No payments yet.</p>
+                  <p className="text-sm text-(--color-text-muted)">No payments yet.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -685,7 +919,7 @@ export default function TenantDetailPage() {
                     <button
                       key={p._id}
                       type="button"
-                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      className="flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-color) px-3 py-2 text-left text-sm hover:bg-(--color-field-bg)"
                       onClick={() => router.push(`/payments/${p._id}`)}
                     >
                       <span className="font-semibold">{formatCurrency(p.amount)}</span>
@@ -709,7 +943,7 @@ export default function TenantDetailPage() {
             <DetailCard title="Recent invoices" icon={<Receipt />}>
               {recentInvoices.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-[color:var(--color-text-muted)]">No invoices yet.</p>
+                  <p className="text-sm text-(--color-text-muted)">No invoices yet.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -724,18 +958,29 @@ export default function TenantDetailPage() {
                     <button
                       key={inv._id}
                       type="button"
-                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      className="group flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-color) px-3 py-2 text-left text-sm transition-all hover:border-(--border-color-hover) hover:bg-(--color-field-bg)"
                       onClick={() => router.push(`/invoices/${inv._id}`)}
                     >
-                      <span>
-                        <span className="font-mono text-xs font-bold">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-xs font-bold text-(--color-brand-700) group-hover:underline">
                           {inv.invoiceNumber ?? inv._id.slice(-6)}
                         </span>
-                        <span className="ml-2 text-xs text-[color:var(--color-text-muted)]">
-                          {inv.month ?? ''}
-                        </span>
+                        {inv.month && (
+                          <span className="text-xs text-(--color-text-muted)">
+                            {inv.month}
+                          </span>
+                        )}
                       </span>
-                      <span className="font-semibold">{formatCurrency(inv.totalAmount ?? 0)}</span>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="font-semibold text-(--color-text-primary) tabular-nums">
+                          {formatCurrency(inv.totalAmount ?? 0)}
+                        </span>
+                        <StatusBadge
+                          variant={statusToVariant(inv.status ?? 'pending')}
+                          label={inv.status ?? 'pending'}
+                        />
+                        <ExternalLink className="h-3.5 w-3.5 text-(--color-text-muted) opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
                     </button>
                   ))}
                   <Button
@@ -751,14 +996,14 @@ export default function TenantDetailPage() {
 
             <DetailCard title="Recent complaints" icon={<AlertTriangle />}>
               {recentComplaints.length === 0 ? (
-                <p className="text-sm text-[color:var(--color-text-muted)]">No complaints.</p>
+                <p className="text-sm text-(--color-text-muted)">No complaints.</p>
               ) : (
                 <div className="space-y-2">
                   {recentComplaints.map((c) => (
                     <button
                       key={c._id}
                       type="button"
-                      className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm hover:bg-[color:var(--color-field-bg)]"
+                      className="flex w-full items-center justify-between rounded-(--radius-md) border border-(--border-color) px-3 py-2 text-left text-sm hover:bg-(--color-field-bg)"
                       onClick={() => router.push(`/complaints/${c._id}`)}
                     >
                       <span className="truncate font-semibold">{c.title}</span>
@@ -784,118 +1029,128 @@ export default function TenantDetailPage() {
             </DetailCard>
           </div>
 
-          {showCheckoutModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-              <div className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]">
-                <div className="mb-4 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-[color:var(--color-warning-500)]" />
-                  <h3 className="text-lg font-bold text-[color:var(--color-text-primary)]">
-                    Checkout {tenant.user?.name ?? 'Tenant'}
-                  </h3>
-                </div>
-                {duesLoading ? (
-                  <div className="flex items-center justify-center gap-2 py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-[color:var(--color-warning-500)]" />
-                    <span className="text-[13px] font-semibold text-[color:var(--color-text-muted)]">
-                      Loading dues...
+          <Modal
+            open={showCheckoutModal}
+            onClose={() => {
+              setShowCheckoutModal(false);
+              setDuesData(null);
+              setCheckoutError('');
+            }}
+            title={`Checkout ${tenant.user?.name ?? 'Tenant'}`}
+            description="All dues must be cleared before a tenant can be checked out"
+            size="lg"
+            loading={checkingOut}
+            footer={
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCheckoutModal(false);
+                    setDuesData(null);
+                    setCheckoutError('');
+                  }}
+                  disabled={checkingOut}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => void handleConfirmCheckout()}
+                  loading={checkingOut}
+                  disabled={duesLoading || !duesData || checkoutBlocked}
+                >
+                  <LogOut className="h-4 w-4" /> Confirm Checkout
+                </Button>
+              </>
+            }
+          >
+            {duesLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-(--color-warning-500)" />
+                <span className="text-13 font-semibold text-(--color-text-muted)">
+                  Loading dues...
+                </span>
+              </div>
+            ) : checkoutError ? (
+              <div className="rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-13 font-semibold text-(--color-danger-700)">
+                {checkoutError}
+              </div>
+            ) : duesData ? (
+              <div className="space-y-4">
+                <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-(--color-text-primary)">
+                      Total Pending Dues
+                    </span>
+                    <span className="text-lg font-extrabold text-(--color-text-primary)">
+                      {formatCurrency(duesData.totalDue)}
                     </span>
                   </div>
-                ) : checkoutError ? (
-                  <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-[13px] font-semibold text-[color:var(--color-danger-700)]">
-                    {checkoutError}
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-12 font-semibold text-(--color-text-muted)">
+                    <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
+                    <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
+                    <div>Unresolved Payments: {duesData.pendingPayments}</div>
                   </div>
-                ) : duesData ? (
-                  <div className="space-y-4">
-                    <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-[color:var(--color-text-primary)]">
-                          Total Pending Dues
-                        </span>
-                        <span className="text-lg font-extrabold text-[color:var(--color-text-primary)]">
-                          {formatCurrency(duesData.totalDue)}
-                        </span>
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-[12px] font-semibold text-[color:var(--color-text-muted)]">
-                        <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
-                        <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
-                        <div>Unresolved Payments: {duesData.pendingPayments}</div>
-                      </div>
-                    </div>
-                    {duesData.unpaidInvoices.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-sm font-bold text-[color:var(--color-text-primary)]">
-                          Unpaid Invoices ({duesData.unpaidInvoices.length})
-                        </p>
-                        <div className="max-h-40 space-y-1 overflow-y-auto">
-                          {duesData.unpaidInvoices.map((inv) => (
-                            <button
-                              key={inv._id}
-                              type="button"
-                              onClick={() => router.push(`/invoices/${inv._id}`)}
-                              className="flex w-full items-center justify-between rounded-[var(--radius-lg)] border border-[color:var(--border-color)] px-3 py-2 text-left text-sm transition-colors hover:bg-[color:var(--color-field-bg)]"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-bold text-[color:var(--color-brand-600)]">
-                                  {inv.invoiceNumber}
-                                </span>
-                                <span className="text-xs text-[color:var(--color-text-muted)]">
-                                  {inv.month}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <span className="font-bold text-[color:var(--color-text-primary)]">
-                                  {formatCurrency(
-                                    inv.remaining != null ? inv.remaining : inv.totalAmount,
-                                  )}
-                                </span>
-                                {inv.remaining != null && inv.remaining !== inv.totalAmount && (
-                                  <p className="text-[10px] font-semibold text-[color:var(--color-text-muted)]">
-                                    of {formatCurrency(inv.totalAmount)}
-                                  </p>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {checkoutBlocked ? (
-                      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-[13px] font-semibold text-[color:var(--color-danger-700)]">
-                        {duesData.totalDue > 0 || duesData.unpaidInvoices.length > 0
-                          ? 'Clear all unpaid invoice balances before checkout.'
-                          : 'Resolve pending or overdue payments before checkout.'}
-                      </div>
-                    ) : (
-                      <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] p-3 text-[13px] font-semibold text-[color:var(--color-success-700)]">
-                        No pending dues. Safe to checkout.
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-                <div className="mt-6 flex justify-end gap-3 border-t border-[color:var(--border-color)] pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowCheckoutModal(false);
-                      setDuesData(null);
-                      setCheckoutError('');
-                    }}
-                    disabled={checkingOut}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => void handleConfirmCheckout()}
-                    loading={checkingOut}
-                    disabled={duesLoading || !duesData || checkoutBlocked}
-                  >
-                    <LogOut className="h-4 w-4" /> Confirm Checkout
-                  </Button>
                 </div>
+                {duesData.unpaidInvoices.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-sm font-bold text-(--color-text-primary)">
+                      Unpaid Invoices ({duesData.unpaidInvoices.length})
+                    </p>
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                      {duesData.unpaidInvoices.map((inv) => (
+                        <button
+                          key={inv._id}
+                          type="button"
+                          onClick={() => router.push(`/invoices/${inv._id}`)}
+                          className="group flex w-full items-center justify-between rounded-(--radius-lg) border border-(--border-color) px-3 py-2 text-left text-sm transition-all hover:border-(--border-color-hover) hover:bg-(--color-field-bg)"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-(--color-brand-600) group-hover:underline">
+                              {inv.invoiceNumber}
+                            </span>
+                            <span className="text-xs text-(--color-text-muted)">
+                              {inv.month}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <div className="text-right">
+                              <span className="font-bold text-(--color-text-primary) tabular-nums">
+                                {formatCurrency(
+                                  inv.remaining != null ? inv.remaining : inv.totalAmount,
+                                )}
+                              </span>
+                              {inv.remaining != null && inv.remaining !== inv.totalAmount && (
+                                <p className="text-3xs font-semibold text-(--color-text-muted) tabular-nums">
+                                  of {formatCurrency(inv.totalAmount)}
+                                </p>
+                              )}
+                            </div>
+                            <StatusBadge
+                              variant={statusToVariant(inv.status ?? 'unpaid')}
+                              label={inv.status ?? 'unpaid'}
+                            />
+                            <ExternalLink className="h-3.5 w-3.5 text-(--color-text-muted) opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {checkoutBlocked ? (
+                  <div className="rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-13 font-semibold text-(--color-danger-700)">
+                    {duesData.totalDue > 0 || duesData.unpaidInvoices.length > 0
+                      ? 'Clear all unpaid invoice balances before checkout.'
+                      : 'Resolve pending or overdue payments before checkout.'}
+                  </div>
+                ) : (
+                  <div className="rounded-(--radius-lg) border border-(--color-success-300) bg-(--color-success-50) p-3 text-13 font-semibold text-(--color-success-700)">
+                    No pending dues. Safe to checkout.
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            ) : null}
+          </Modal>
 
           <DetailCard title="Tenancy Calendar" icon={<Calendar />}>
             <TenantStayCalendar

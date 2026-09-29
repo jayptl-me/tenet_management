@@ -180,7 +180,7 @@ export default function ServiceDetailPage() {
                   label="Floor"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Building className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {floorLabel}
                       {service.floor?.floorNumber != null ? ` #${service.floor.floorNumber}` : ''}
                     </span>
@@ -190,7 +190,7 @@ export default function ServiceDetailPage() {
                   label="Last Updated"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {formatDateTime(service.lastUpdatedAt || service.updatedAt)}
                     </span>
                   }
@@ -205,7 +205,7 @@ export default function ServiceDetailPage() {
                   label="Timestamp"
                   value={
                     <span className="inline-flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                      <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                       {formatDateTime(service.lastUpdatedAt || service.updatedAt)}
                     </span>
                   }
@@ -220,7 +220,7 @@ export default function ServiceDetailPage() {
               icon={<AlertTriangle />}
               variant="danger"
             >
-              <p className="text-sm font-medium text-[color:var(--color-text-secondary)]">
+              <p className="text-sm font-medium text-(--color-text-secondary)">
                 There {openCount === 1 ? 'is' : 'are'} currently {openCount} unresolved complaint
                 {openCount > 1 ? 's' : ''} related to this service on this floor.
               </p>
@@ -229,7 +229,7 @@ export default function ServiceDetailPage() {
 
           {service.note && (
             <DetailCard title="Notes" icon={<FileText />} variant="warning">
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                 {service.note}
               </p>
             </DetailCard>

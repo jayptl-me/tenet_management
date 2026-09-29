@@ -237,7 +237,7 @@ export default function NewElectricityPage() {
               />
             </FormGrid>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-semibold text-[color:var(--color-text-primary)] hover:border-[color:var(--color-brand-400)]">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-sm font-semibold text-(--color-text-primary) hover:border-(--color-brand-400)">
                 <FileUp className="h-4 w-4" />
                 {billImage ? billImage.name : 'Upload bill image (optional)'}
                 <input
@@ -380,18 +380,18 @@ export default function NewElectricityPage() {
                       </Button>
                     </div>
 
-                    <div className="col-span-full flex items-center gap-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface-50)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)]">
+                    <div className="col-span-full flex items-center gap-4 rounded-(--radius-md) bg-(--color-surface-50) px-3 py-1.5 text-xs font-semibold text-(--color-text-secondary)">
                       <Calculator className="h-3.5 w-3.5" />
                       <span>
                         Units:{' '}
-                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                        <strong className="font-mono text-(--color-text-primary)">
                           {units}
                         </strong>
                       </span>
-                      <span className="text-[color:var(--border-color)]">|</span>
+                      <span className="text-(--border-color)">|</span>
                       <span>
                         Amount:{' '}
-                        <strong className="font-mono text-[color:var(--color-text-primary)]">
+                        <strong className="font-mono text-(--color-text-primary)">
                           ₹{amount.toLocaleString('en-IN')}
                         </strong>
                       </span>
@@ -405,11 +405,11 @@ export default function NewElectricityPage() {
               <div
                 className={clsx(surfaceNestedClass, 'mt-4 flex items-center justify-between p-4')}
               >
-                <span className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-text-secondary)]">
+                <span className="flex items-center gap-2 text-sm font-semibold text-(--color-text-secondary)">
                   <Zap className="h-4 w-4" />
                   Computed total from readings
                 </span>
-                <span className="font-mono text-xl font-bold text-[color:var(--color-text-primary)] tabular-nums">
+                <span className="font-mono text-xl font-bold text-(--color-text-primary) tabular-nums">
                   ₹{autoTotal.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -418,10 +418,10 @@ export default function NewElectricityPage() {
             {showReconcileWarning && (
               <div
                 className={clsx(
-                  'mt-4 flex items-start gap-3 rounded-[var(--radius-lg)] border p-4',
+                  'mt-4 flex items-start gap-3 rounded-(--radius-lg) border p-4',
                   blockReconcile
-                    ? 'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]'
-                    : 'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
+                    ? 'border-(--color-danger-300) bg-(--color-danger-50) text-(--color-danger-800)'
+                    : 'border-(--color-warning-300) bg-(--color-warning-50) text-(--color-warning-800)',
                 )}
                 role="status"
               >
