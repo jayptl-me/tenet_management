@@ -447,9 +447,7 @@ electricity.get('/:id', authGuard, async (c) => {
     .map((rId) => new mongoose.Types.ObjectId(rId));
 
   if (roomIds.length > 0 && bill.month) {
-    const tenants = (await Tenant.find(
-      safeFilter({ roomId: { $in: roomIds } }),
-    )
+    const tenants = (await Tenant.find(safeFilter({ roomId: { $in: roomIds } }))
       .select('_id userId roomId')
       .populate('userId', 'name phone email')
       .populate('roomId', 'roomNumber')

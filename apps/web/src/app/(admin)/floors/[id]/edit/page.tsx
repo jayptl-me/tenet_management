@@ -179,7 +179,10 @@ export default function EditFloorPage() {
         .catch(() => null),
       api
         .get(`floors/${id}/rooms`)
-        .json<{ success: boolean; data: { floor: FloorDetail; rooms: RoomListing[]; stats: FloorStats } }>()
+        .json<{
+          success: boolean;
+          data: { floor: FloorDetail; rooms: RoomListing[]; stats: FloorStats };
+        }>()
         .catch(() => null),
       api
         .get(`washing-machines?floorId=${id}`)
@@ -428,7 +431,7 @@ export default function EditFloorPage() {
                             setValue('label', preset, { shouldValidate: true, shouldDirty: true })
                           }
                           className={clsx(
-                            'rounded-full border px-2.5 py-1 text-2xs font-semibold transition-all duration-150',
+                            'text-2xs rounded-full border px-2.5 py-1 font-semibold transition-all duration-150',
                             isActive
                               ? 'border-(--badge-info-border) bg-(--badge-info-bg) text-(--badge-info-text) shadow-(--shadow-xs)'
                               : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--border-color-hover) hover:text-(--color-text-primary)',
@@ -460,7 +463,7 @@ export default function EditFloorPage() {
                       {...register('floorNumber')}
                     />
                     {collidingFloor && (
-                      <p className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 text-2xs font-semibold text-(--badge-danger-text)">
+                      <p className="text-2xs flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
                         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                         Floor number {watchedFloorNumber} is already used by &quot;
                         {collidingFloor.label}&quot;.
@@ -470,7 +473,7 @@ export default function EditFloorPage() {
                 </FormGrid>
 
                 {/* Live Capacity Telemetry Banner */}
-                <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5">
+                <div className="mt-4 flex flex-col justify-between gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 sm:flex-row sm:items-center">
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--color-brand-100) text-(--color-brand-700)">
                       <DoorOpen className="h-4 w-4" />
@@ -478,18 +481,20 @@ export default function EditFloorPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-(--color-text-primary)">
-                          Active Capacity: {totalRooms} Room{totalRooms !== 1 ? 's' : ''} ({stats.bedsCount} Total Beds)
+                          Active Capacity: {totalRooms} Room{totalRooms !== 1 ? 's' : ''} (
+                          {stats.bedsCount} Total Beds)
                         </span>
                         <StatusBadge variant="info" label="Auto-Synced" />
                       </div>
                       <p className="text-2xs text-(--color-text-muted)">
-                        Room count and capacity are calculated automatically from active rooms assigned to this floor.
+                        Room count and capacity are calculated automatically from active rooms
+                        assigned to this floor.
                       </p>
                     </div>
                   </div>
                   <Link
                     href={`/rooms?floorId=${id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-(--color-brand-600) hover:text-(--color-brand-700) hover:underline self-start sm:self-center shrink-0"
+                    className="inline-flex shrink-0 items-center gap-1 self-start text-xs font-medium text-(--color-brand-600) hover:text-(--color-brand-700) hover:underline sm:self-center"
                   >
                     Manage Rooms <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -531,27 +536,21 @@ export default function EditFloorPage() {
                 description="Structural consequences of updating or renumbering this level"
                 divided
               >
-                <div className="space-y-2 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 text-12 leading-relaxed font-medium text-(--color-text-secondary)">
+                <div className="text-12 space-y-2 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 leading-relaxed font-medium text-(--color-text-secondary)">
                   <p>
-                    <strong className="text-(--color-text-primary)">
-                      Level Numbering:
-                    </strong>{' '}
+                    <strong className="text-(--color-text-primary)">Level Numbering:</strong>{' '}
                     Renumbering this floor updates its building elevation index across all{' '}
                     {stats.activeRooms.length} room(s) and {machines.length} machine(s). Existing
                     room numbers (e.g., Room 101) and active lease contracts remain unaltered.
                   </p>
                   <p>
-                    <strong className="text-(--color-text-primary)">
-                      Capacity Management:
-                    </strong>{' '}
+                    <strong className="text-(--color-text-primary)">Capacity Management:</strong>{' '}
                     Room capacity on this floor is maintained dynamically. To create new rooms, use
                     the &quot;Add Room to Floor&quot; button.
                   </p>
                   <p>
-                    <strong className="text-(--color-text-primary)">
-                      Deletion Rules:
-                    </strong>{' '}
-                    A floor cannot be deleted while it houses active rooms or washing machines.
+                    <strong className="text-(--color-text-primary)">Deletion Rules:</strong> A floor
+                    cannot be deleted while it houses active rooms or washing machines.
                   </p>
                 </div>
               </FormSection>
@@ -676,11 +675,15 @@ export default function EditFloorPage() {
                           Room {room.roomNumber}
                         </button>
                         <StatusBadge
-                          variant={isFull ? 'danger' : hasVacancy && occupied > 0 ? 'warning' : 'success'}
-                          label={isFull ? 'Full' : hasVacancy && occupied > 0 ? 'Available' : 'Vacant'}
+                          variant={
+                            isFull ? 'danger' : hasVacancy && occupied > 0 ? 'warning' : 'success'
+                          }
+                          label={
+                            isFull ? 'Full' : hasVacancy && occupied > 0 ? 'Available' : 'Vacant'
+                          }
                         />
                       </div>
-                      <p className="mt-1 text-2xs font-medium text-(--color-text-muted)">
+                      <p className="text-2xs mt-1 font-medium text-(--color-text-muted)">
                         {room.sharingType}-sharing · {formatCurrency(room.monthlyRent)}/mo
                       </p>
 
@@ -765,9 +768,7 @@ export default function EditFloorPage() {
                         Machine #{m.machineNumber}
                       </p>
                       {m.label && (
-                        <p className="text-2xs font-medium text-(--color-text-muted)">
-                          {m.label}
-                        </p>
+                        <p className="text-2xs font-medium text-(--color-text-muted)">{m.label}</p>
                       )}
                     </div>
                   </div>
@@ -790,4 +791,3 @@ export default function EditFloorPage() {
     </FormPage>
   );
 }
-

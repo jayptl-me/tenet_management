@@ -19,24 +19,38 @@
     "shadcn/require-static-classes": "error",
     "shadcn/no-raw-colors": "error",
     "shadcn/no-inline-styles": ["error", { "allow": ["backgroundImage"] }],
-    "shadcn/no-restyle": ["error", {
-      "allow": ["layout"],
-      "contracts": [
-        {
-          "pattern": "^ShimmerBlock$",
-          "allow": ["layout", "shape"]
-        },
-        {
-          "pattern": "^AssetCategoryIcon$",
-          "allow": ["layout", "color"]
-        },
-        {
-          "pattern": "^Input$",
-          "allow": ["layout", "font-mono", "text-xs"]
-        }
-      ]
-    }],
-    "shadcn/no-arbitrary-values": ["error", { "allow": ["layout", "border-[length:var(--bw-default)]", "border-[length:var(--bw-strong)]", "border-b-[length:var(--bw-strong)]", "border-t-[length:var(--bw-strong)]"] }]
+    "shadcn/no-restyle": [
+      "error",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          {
+            "pattern": "^ShimmerBlock$",
+            "allow": ["layout", "shape"]
+          },
+          {
+            "pattern": "^AssetCategoryIcon$",
+            "allow": ["layout", "color"]
+          },
+          {
+            "pattern": "^Input$",
+            "allow": ["layout", "font-mono", "text-xs"]
+          }
+        ]
+      }
+    ],
+    "shadcn/no-arbitrary-values": [
+      "error",
+      {
+        "allow": [
+          "layout",
+          "border-[length:var(--bw-default)]",
+          "border-[length:var(--bw-strong)]",
+          "border-b-[length:var(--bw-strong)]",
+          "border-t-[length:var(--bw-strong)]"
+        ]
+      }
+    ]
   },
   "overrides": [
     {

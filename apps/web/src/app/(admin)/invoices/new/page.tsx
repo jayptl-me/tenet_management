@@ -254,9 +254,7 @@ function NewInvoiceForm() {
   };
 
   const updateLineItem = (id: string, updates: Partial<LineItemInput>) => {
-    setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
-    );
+    setLineItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   };
 
   const removeLineItem = (id: string) => {
@@ -372,7 +370,7 @@ function NewInvoiceForm() {
                         type="button"
                         onClick={() => setMonth(chip.value)}
                         className={clsx(
-                          'rounded-(--radius-full) border px-2.5 py-1 text-2xs font-bold transition-colors',
+                          'text-2xs rounded-(--radius-full) border px-2.5 py-1 font-bold transition-colors',
                           month === chip.value
                             ? 'border-(--color-brand-500) bg-(--color-brand-100) text-(--color-brand-800)'
                             : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--color-brand-300)',
@@ -397,7 +395,7 @@ function NewInvoiceForm() {
                         type="button"
                         onClick={() => setDueDate(chip.value)}
                         className={clsx(
-                          'rounded-(--radius-full) border px-2.5 py-1 text-2xs font-bold transition-colors',
+                          'text-2xs rounded-(--radius-full) border px-2.5 py-1 font-bold transition-colors',
                           dueDate === chip.value
                             ? 'border-(--color-brand-500) bg-(--color-brand-100) text-(--color-brand-800)'
                             : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--color-brand-300)',
@@ -441,7 +439,9 @@ function NewInvoiceForm() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => addLineItem(`Room Rent (${month})`, tenantDetail?.monthlyRent ?? 0)}
+                    onClick={() =>
+                      addLineItem(`Room Rent (${month})`, tenantDetail?.monthlyRent ?? 0)
+                    }
                   >
                     + Rent
                   </Button>
@@ -450,10 +450,7 @@ function NewInvoiceForm() {
                     size="sm"
                     variant={elecShare && !isElecAdded ? 'primary' : 'outline'}
                     onClick={() =>
-                      addLineItem(
-                        `Electricity Charges (${month})`,
-                        elecShare?.tenantShare ?? 0,
-                      )
+                      addLineItem(`Electricity Charges (${month})`, elecShare?.tenantShare ?? 0)
                     }
                   >
                     {elecShare ? `+ Electricity (₹${elecShare.tenantShare})` : '+ Electricity'}
@@ -483,7 +480,9 @@ function NewInvoiceForm() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => addLineItem(`Room Rent (${month})`, tenantDetail?.monthlyRent ?? 0)}
+                  onClick={() =>
+                    addLineItem(`Room Rent (${month})`, tenantDetail?.monthlyRent ?? 0)
+                  }
                 >
                   + Rent
                 </Button>
@@ -491,9 +490,7 @@ function NewInvoiceForm() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    addLineItem(`Electricity (${month})`, elecShare?.tenantShare ?? 0)
-                  }
+                  onClick={() => addLineItem(`Electricity (${month})`, elecShare?.tenantShare ?? 0)}
                 >
                   {elecShare ? `+ Elec (₹${elecShare.tenantShare})` : '+ Electricity'}
                 </Button>
@@ -512,7 +509,9 @@ function NewInvoiceForm() {
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 shrink-0 text-(--color-brand-600)" />
                     <p className="text-xs font-semibold text-(--color-brand-900)">
-                      Electricity bill for {month} is ready: {elecShare.unitsConsumed} units consumed in Room {elecShare.roomNumber}. Tenant share is ₹{elecShare.tenantShare.toLocaleString('en-IN')}.
+                      Electricity bill for {month} is ready: {elecShare.unitsConsumed} units
+                      consumed in Room {elecShare.roomNumber}. Tenant share is ₹
+                      {elecShare.tenantShare.toLocaleString('en-IN')}.
                     </p>
                   </div>
                   <Button
@@ -584,7 +583,7 @@ function NewInvoiceForm() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="relative w-36">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-(--color-text-muted)">
+                          <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs font-bold text-(--color-text-muted)">
                             ₹
                           </span>
                           <input
@@ -595,7 +594,7 @@ function NewInvoiceForm() {
                               updateLineItem(item.id, { amount: parseFloat(e.target.value) || 0 })
                             }
                             placeholder="0"
-                            className="w-full rounded-(--radius-md) border border-(--border-color) bg-(--color-surface) py-1.5 pl-7 pr-3 text-right font-mono text-xs font-bold text-(--color-text-primary) focus:border-(--color-brand-500) focus:outline-none"
+                            className="w-full rounded-(--radius-md) border border-(--border-color) bg-(--color-surface) py-1.5 pr-3 pl-7 text-right font-mono text-xs font-bold text-(--color-text-primary) focus:border-(--color-brand-500) focus:outline-none"
                           />
                         </div>
                         <button
@@ -661,7 +660,7 @@ function NewInvoiceForm() {
 
                   <div className="grid grid-cols-2 gap-2 rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-3 text-xs">
                     <div>
-                      <span className="block text-2xs text-(--color-text-muted)">
+                      <span className="text-2xs block text-(--color-text-muted)">
                         Assigned Room
                       </span>
                       <span className="font-bold text-(--color-text-primary)">
@@ -671,9 +670,7 @@ function NewInvoiceForm() {
                       </span>
                     </div>
                     <div>
-                      <span className="block text-2xs text-(--color-text-muted)">
-                        Agreed Rent
-                      </span>
+                      <span className="text-2xs block text-(--color-text-muted)">Agreed Rent</span>
                       <span className="font-bold text-(--color-brand-600)">
                         {fmtMoney(tenantDetail.monthlyRent)}/mo
                       </span>
@@ -732,7 +729,7 @@ function NewInvoiceForm() {
                       {fmtMoney(totalInvoiceAmount)}
                     </span>
                   </div>
-                  <p className="mt-1 flex items-center gap-1 text-2xs text-(--color-text-muted)">
+                  <p className="text-2xs mt-1 flex items-center gap-1 text-(--color-text-muted)">
                     <Clock className="h-3 w-3" />
                     Invoice will be issued in Draft status.
                   </p>

@@ -385,9 +385,7 @@ export default function LeaveDetailPage() {
           <DetailCard title="Reason" icon={<FileText />}>
             <p className="text-sm leading-relaxed text-(--color-text-secondary)">
               {leave.reason || (
-                <span className="text-(--color-text-muted) italic">
-                  No reason provided
-                </span>
+                <span className="text-(--color-text-muted) italic">No reason provided</span>
               )}
             </p>
           </DetailCard>
@@ -433,9 +431,7 @@ export default function LeaveDetailPage() {
                     </Button>
                   )}
                   {actionError && (
-                    <p className="text-sm font-semibold text-(--color-danger-600)">
-                      {actionError}
-                    </p>
+                    <p className="text-sm font-semibold text-(--color-danger-600)">{actionError}</p>
                   )}
                 </div>
 

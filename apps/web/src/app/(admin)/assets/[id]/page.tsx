@@ -321,7 +321,7 @@ export default function AssetDetailPage() {
                 <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                   Purchase Date
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                <p className="text-13 mt-0.5 flex items-center gap-1 font-semibold text-(--color-text-primary)">
                   <Calendar className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.purchasedDate)}
                 </p>
@@ -330,7 +330,7 @@ export default function AssetDetailPage() {
                 <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
                   Last Service
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                <p className="text-13 mt-0.5 flex items-center gap-1 font-semibold text-(--color-text-primary)">
                   <Wrench className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.lastServicedDate)}
                 </p>
@@ -341,12 +341,12 @@ export default function AssetDetailPage() {
                     Next Service
                   </p>
                   {health?.variant === 'danger' && (
-                    <span className="inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 text-3xs font-semibold text-(--color-danger-700)">
+                    <span className="text-3xs inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 font-semibold text-(--color-danger-700)">
                       Overdue
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 flex items-center gap-1 text-13 font-semibold text-(--color-text-primary)">
+                <p className="text-13 mt-0.5 flex items-center gap-1 font-semibold text-(--color-text-primary)">
                   <Wrench className="h-3.5 w-3.5 text-(--color-text-muted)" />
                   {formatShortDate(asset.nextServiceDate)}
                 </p>
@@ -373,9 +373,7 @@ export default function AssetDetailPage() {
 
           {asset.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
-              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
-                {asset.notes}
-              </p>
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">{asset.notes}</p>
             </DetailCard>
           )}
 

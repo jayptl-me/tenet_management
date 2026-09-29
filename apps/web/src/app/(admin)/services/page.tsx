@@ -254,7 +254,7 @@ export default function ServicesPage() {
                 {getLabel(row.serviceType)}
               </span>
               {row.openComplaintCount ? (
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 font-mono text-3xs font-bold text-(--color-danger-600)">
+                <span className="text-3xs ml-1.5 inline-flex items-center rounded-full bg-(--color-danger-100) px-1.5 py-0.5 font-mono font-bold text-(--color-danger-600)">
                   {row.openComplaintCount} open
                 </span>
               ) : null}
@@ -317,11 +317,7 @@ export default function ServicesPage() {
         description="Monitor and update service health across floors"
         action={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSyncAllFloors}
-              loading={syncing}
-            >
+            <Button variant="outline" onClick={handleSyncAllFloors} loading={syncing}>
               <RotateCcw className="h-4 w-4" />
               Sync All Floor Services
             </Button>
@@ -400,11 +396,7 @@ export default function ServicesPage() {
           dataPath="data"
           className="max-w-[200px]"
         />
-        <Button
-          variant="outline"
-          onClick={handleExportCsv}
-          disabled={services.length === 0}
-        >
+        <Button variant="outline" onClick={handleExportCsv} disabled={services.length === 0}>
           <Download className="h-4 w-4" />
           Export CSV
         </Button>

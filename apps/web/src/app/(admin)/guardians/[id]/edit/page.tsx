@@ -149,7 +149,7 @@ export default function EditGuardianPage() {
               />
             )}
           />
-          <p className="mt-1 text-12 text-(--color-text-secondary)">
+          <p className="text-12 mt-1 text-(--color-text-secondary)">
             Tenant reassignment is not supported on update. Create a new guardian link if needed.
           </p>
         </FormSection>

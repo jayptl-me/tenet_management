@@ -237,13 +237,11 @@ export default function FloorsPage() {
         const s = statsFor(row).services;
         const issues = s.degraded + s.down;
         return issues > 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-(--color-danger-200) bg-(--color-danger-50) px-2 py-0.5 text-2xs font-bold text-(--color-danger-700)">
+          <span className="text-2xs inline-flex items-center gap-1 rounded-full border border-(--color-danger-200) bg-(--color-danger-50) px-2 py-0.5 font-bold text-(--color-danger-700)">
             {issues} issue{issues !== 1 ? 's' : ''}
           </span>
         ) : (
-          <span className="text-2xs font-semibold text-(--color-success-600)">
-            All operational
-          </span>
+          <span className="text-2xs font-semibold text-(--color-success-600)">All operational</span>
         );
       },
     },

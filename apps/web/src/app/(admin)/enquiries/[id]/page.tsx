@@ -300,9 +300,7 @@ export default function EnquiryDetailPage() {
 
               {enquiry.message && (
                 <div className="mt-4 border-t border-(--border-color) pt-4">
-                  <p className="mb-2 text-xs font-medium text-(--color-text-muted)">
-                    Message
-                  </p>
+                  <p className="mb-2 text-xs font-medium text-(--color-text-muted)">Message</p>
                   <p className="text-sm leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
                     {enquiry.message}
                   </p>
@@ -330,9 +328,7 @@ export default function EnquiryDetailPage() {
               </DetailList>
               {enquiry.notes && (
                 <div className="mt-3 border-t border-(--border-color) pt-3">
-                  <p className="text-xs font-medium text-(--color-text-muted)">
-                    Staff Notes
-                  </p>
+                  <p className="text-xs font-medium text-(--color-text-muted)">Staff Notes</p>
                   <p className="mt-1 text-sm whitespace-pre-wrap text-(--color-text-secondary)">
                     {enquiry.notes}
                   </p>

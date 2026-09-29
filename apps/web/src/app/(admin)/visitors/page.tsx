@@ -300,9 +300,7 @@ export default function VisitorsPage() {
         mobileCardRenderer={(row) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-(--color-text-primary)">
-                {row.name}
-              </span>
+              <span className="text-sm font-semibold text-(--color-text-primary)">{row.name}</span>
               <StatusBadge
                 variant={statusToVariant(row.status)}
                 label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}

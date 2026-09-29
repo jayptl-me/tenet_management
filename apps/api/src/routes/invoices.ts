@@ -173,14 +173,12 @@ invoices.get('/preview-bulk', authGuard, adminOnly, async (c) => {
     return badRequest(c, 'month query parameter must be YYYY-MM format', 'INVALID_MONTH');
   }
 
-  const activeTenants = (await Tenant.find(safeFilter({ isActive: true })).lean()) as unknown as Array<
-    Record<string, unknown>
-  >;
+  const activeTenants = (await Tenant.find(
+    safeFilter({ isActive: true }),
+  ).lean()) as unknown as Array<Record<string, unknown>>;
   const activeTenantsCount = activeTenants.length;
 
-  const existingInvoices = (await Invoice.find(
-    safeFilter({ month, status: { $ne: 'cancelled' } }),
-  )
+  const existingInvoices = (await Invoice.find(safeFilter({ month, status: { $ne: 'cancelled' } }))
     .select('tenantId')
     .lean()) as unknown as Array<Record<string, unknown>>;
 

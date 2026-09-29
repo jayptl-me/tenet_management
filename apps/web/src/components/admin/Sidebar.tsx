@@ -450,7 +450,9 @@ export function Sidebar() {
       <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4">
         <Link href="/dashboard" className="group flex items-center gap-2.5">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
-            <span className="text-sm font-semibold tracking-tight text-[color:var(--color-on-brand)]">A</span>
+            <span className="text-sm font-semibold tracking-tight text-[color:var(--color-on-brand)]">
+              A
+            </span>
           </div>
           {!collapsed && (
             <span className="text-lg font-semibold tracking-tight text-[color:var(--color-text-primary)]">

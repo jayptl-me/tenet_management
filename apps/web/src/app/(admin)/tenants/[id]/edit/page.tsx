@@ -167,7 +167,8 @@ export default function EditTenantPage() {
           permanentState: perm.state ?? '',
           permanentPincode: perm.pincode ?? '',
           permanentPoliceStation: perm.policeStation ?? '',
-          occupationCategory: ((occ.category as string) || '') as '' | 'salaried' | 'student' | 'business' | 'other',
+          occupationCategory: ((occ.category as string) || '') as
+            '' | 'salaried' | 'student' | 'business' | 'other',
           organizationName: occ.organizationName ?? '',
           officeAddress: occ.officeAddress ?? '',
           officePhone: occ.contactPhone ?? '',
@@ -216,8 +217,8 @@ export default function EditTenantPage() {
       }
       const hasPermanent = Boolean(
         data.permanentStreet?.trim() ||
-          data.permanentCity?.trim() ||
-          data.permanentPoliceStation?.trim(),
+        data.permanentCity?.trim() ||
+        data.permanentPoliceStation?.trim(),
       );
       const hasOccupation = Boolean(
         data.occupationCategory || data.organizationName?.trim() || data.officeAddress?.trim(),
@@ -530,11 +531,7 @@ export default function EditTenantPage() {
           </FormGrid>
 
           <FormGrid cols={3}>
-            <Input
-              label="Blood Group"
-              placeholder="e.g. O+, B+, A+"
-              {...register('bloodGroup')}
-            />
+            <Input label="Blood Group" placeholder="e.g. O+, B+, A+" {...register('bloodGroup')} />
             <Input
               label="Identification Mark"
               placeholder="e.g. Mole on right wrist"
@@ -547,7 +544,7 @@ export default function EditTenantPage() {
             />
           </FormGrid>
 
-          <p className="mt-4 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+          <p className="mt-4 text-xs font-semibold tracking-wider text-(--color-text-secondary) uppercase">
             Permanent Native Address (with Police Station)
           </p>
           <FormGrid cols={3}>
@@ -556,23 +553,11 @@ export default function EditTenantPage() {
               placeholder="House #, Street name"
               {...register('permanentStreet')}
             />
-            <Input
-              label="City / Town"
-              placeholder="Native city"
-              {...register('permanentCity')}
-            />
-            <Input
-              label="District"
-              placeholder="District"
-              {...register('permanentDistrict')}
-            />
+            <Input label="City / Town" placeholder="Native city" {...register('permanentCity')} />
+            <Input label="District" placeholder="District" {...register('permanentDistrict')} />
           </FormGrid>
           <FormGrid cols={3}>
-            <Input
-              label="State"
-              placeholder="State"
-              {...register('permanentState')}
-            />
+            <Input label="State" placeholder="State" {...register('permanentState')} />
             <Input
               label="PIN Code (6 digits)"
               placeholder="560001"
@@ -586,7 +571,7 @@ export default function EditTenantPage() {
             />
           </FormGrid>
 
-          <p className="mt-4 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+          <p className="mt-4 text-xs font-semibold tracking-wider text-(--color-text-secondary) uppercase">
             Workplace / College Details
           </p>
           <FormGrid cols={3}>
@@ -620,23 +605,39 @@ export default function EditTenantPage() {
             />
           </div>
 
-          <p className="mt-4 text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider">
+          <p className="mt-4 text-xs font-semibold tracking-wider text-(--color-text-secondary) uppercase">
             Two Local Guarantors / City References
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) space-y-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
               <span className="text-xs font-bold text-(--color-brand-700)">Local Reference 1</span>
               <Input label="Name" placeholder="Guarantor name" {...register('ref1Name')} />
               <Input label="Phone" placeholder="10-digit mobile" {...register('ref1Phone')} />
-              <Input label="Relation" placeholder="Friend, Colleague, Relative" {...register('ref1Relation')} />
-              <Input label="City Address" placeholder="Address in current city" {...register('ref1Address')} />
+              <Input
+                label="Relation"
+                placeholder="Friend, Colleague, Relative"
+                {...register('ref1Relation')}
+              />
+              <Input
+                label="City Address"
+                placeholder="Address in current city"
+                {...register('ref1Address')}
+              />
             </div>
-            <div className="p-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) space-y-3">
+            <div className="space-y-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
               <span className="text-xs font-bold text-(--color-brand-700)">Local Reference 2</span>
               <Input label="Name" placeholder="Guarantor name" {...register('ref2Name')} />
               <Input label="Phone" placeholder="10-digit mobile" {...register('ref2Phone')} />
-              <Input label="Relation" placeholder="Friend, Colleague, Relative" {...register('ref2Relation')} />
-              <Input label="City Address" placeholder="Address in current city" {...register('ref2Address')} />
+              <Input
+                label="Relation"
+                placeholder="Friend, Colleague, Relative"
+                {...register('ref2Relation')}
+              />
+              <Input
+                label="City Address"
+                placeholder="Address in current city"
+                {...register('ref2Address')}
+              />
             </div>
           </div>
         </FormSection>
@@ -650,19 +651,13 @@ export default function EditTenantPage() {
             <FormGrid>
               <DocumentUpload
                 tenantId={id}
-                docType={
-                  (tenantData.documents as Record<string, string>)?.idType || 'aadhaar'
-                }
+                docType={(tenantData.documents as Record<string, string>)?.idType || 'aadhaar'}
                 currentUrl={
                   (tenantData.documents as Record<string, string>)?.idUrl ||
                   (tenantData.documents as Record<string, string>)?.aadhaarUrl
                 }
-                idNumberMasked={
-                  (tenantData.documents as Record<string, string>)?.idNumberMasked
-                }
-                isVerified={
-                  Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)
-                }
+                idNumberMasked={(tenantData.documents as Record<string, string>)?.idNumberMasked}
+                isVerified={Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)}
                 onUploaded={({ url, docType, idNumberMasked }) =>
                   setTenantData((prev) =>
                     prev
@@ -684,9 +679,7 @@ export default function EditTenantPage() {
                 tenantId={id}
                 docType="photo"
                 currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
-                isVerified={
-                  Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)
-                }
+                isVerified={Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)}
                 onUploaded={({ url }) =>
                   setTenantData((prev) =>
                     prev

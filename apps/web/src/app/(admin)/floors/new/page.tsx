@@ -276,7 +276,7 @@ export default function NewFloorPage() {
                           }
                         }}
                         className={clsx(
-                          'rounded-full border px-2.5 py-1 text-2xs font-semibold transition-all duration-150',
+                          'text-2xs rounded-full border px-2.5 py-1 font-semibold transition-all duration-150',
                           isActive
                             ? 'border-(--badge-info-border) bg-(--badge-info-bg) text-(--badge-info-text) shadow-(--shadow-xs)'
                             : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--border-color-hover) hover:text-(--color-text-primary)',
@@ -308,7 +308,7 @@ export default function NewFloorPage() {
                     {...register('floorNumber')}
                   />
                   {collidingFloor && (
-                    <p className="flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 text-2xs font-semibold text-(--badge-danger-text)">
+                    <p className="text-2xs flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                       Floor number {watchedFloorNumber} is already occupied by &quot;
                       {collidingFloor.label}&quot;.
@@ -329,8 +329,11 @@ export default function NewFloorPage() {
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div className="text-2xs leading-snug text-(--color-text-secondary)">
-                    <span className="font-semibold text-(--color-text-primary)">Dynamic Scaling:</span>{' '}
-                    Individual rooms, beds, sharing types, and rates can be customized or added anytime after creation.
+                    <span className="font-semibold text-(--color-text-primary)">
+                      Dynamic Scaling:
+                    </span>{' '}
+                    Individual rooms, beds, sharing types, and rates can be customized or added
+                    anytime after creation.
                   </div>
                 </div>
               </FormGrid>
@@ -371,20 +374,16 @@ export default function NewFloorPage() {
               description="System initialization and operational lifecycle after creation"
               divided
             >
-              <div className="space-y-2 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 text-12 leading-relaxed font-medium text-(--color-text-secondary)">
+              <div className="text-12 space-y-2 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 leading-relaxed font-medium text-(--color-text-secondary)">
                 <p>
-                  <strong className="text-(--color-text-primary)">
-                    Service Initialization:
-                  </strong>{' '}
+                  <strong className="text-(--color-text-primary)">Service Initialization:</strong>{' '}
                   After saving, service monitors are automatically generated for every per-floor
                   amenity definition (e.g. electrical circuits, water supply, laundry).
                 </p>
                 <p>
-                  <strong className="text-(--color-text-primary)">
-                    Room Construction:
-                  </strong>{' '}
-                  Once the floor is saved, you can add individual rooms, assign beds, and set
-                  per-bed sharing pricing on the Rooms board.
+                  <strong className="text-(--color-text-primary)">Room Construction:</strong> Once
+                  the floor is saved, you can add individual rooms, assign beds, and set per-bed
+                  sharing pricing on the Rooms board.
                 </p>
               </div>
             </FormSection>
@@ -450,4 +449,3 @@ export default function NewFloorPage() {
     </FormPage>
   );
 }
-

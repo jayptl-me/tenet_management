@@ -156,7 +156,9 @@ export default function NewAssetPage() {
                     onChange={field.onChange}
                     error={errors.category?.message}
                     helperText={
-                      watchedCategory ? `Grouped as ${assetCategoryLabel(watchedCategory)}` : undefined
+                      watchedCategory
+                        ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
+                        : undefined
                     }
                   />
                 )}
