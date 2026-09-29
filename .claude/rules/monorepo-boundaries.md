@@ -43,7 +43,7 @@ Flutter does not import `@pg/types` at runtime; it talks HTTP only. Same Flutter
 3. **No Resident UI in Admin Web:** Do not create `apps/web` routes for tenant, guardian, or visitor portals. Those live under `mobile/`.
 4. **Types Workspace Integration:** Shared request/response models for API + admin web live in `packages/types/src/`. Import as `@pg/types`.
 5. **Workspace Link Format:** Use `"@pg/types": "workspace:*"` in JS package.json files.
-6. **Single-Version Policy:** Match shared TS deps (`zod`, `typescript`, `eslint`) across JS workspaces.
+6. **Single-Version Policy:** Match shared TS deps (`zod`, `typescript`) across JS workspaces.
 
 ## Step-by-Step Protocol (Modifying Shared Structs)
 

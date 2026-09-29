@@ -13,7 +13,7 @@ Every code change must pass through these quality gates before the agent can req
 
 ### Gate 2: Linting & Formatting
 
-- Enforce eslint style compliance.
+- Enforce oxlint + @shadcn/lint design-system compliance (zero errors).
 - Action: Run `bun run lint` and `bun run format:check`.
 
 ### Gate 3: Compilation & Build

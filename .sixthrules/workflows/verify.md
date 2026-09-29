@@ -62,7 +62,7 @@ bun test (or turbo run test)
 
 ```
 □ New package → added to workspace config (turbo.json, nx.json, or root package.json workspaces)
-□ Shared config (tsconfig base, eslint config, prettier) extends correctly
+□ Shared config (tsconfig base, oxlint config, prettier) extends correctly
 □ New package's build output is referenceable by dependents
 □ No dead packages (unused workspace entries)
 □ CI pipeline includes new package
