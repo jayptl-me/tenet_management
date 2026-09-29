@@ -1,13 +1,13 @@
-/* ═════════════════════════════════════════════════════════
+/* ---------------------------------------------------------
    NEO-BRUTALIST THEME (Light & Dark)
    Design ref: Alex Mayhew "Neo-Brutalism: A Developer's Guide" (2026)
    Philosophy: Raw, honest, bold. 3px black borders, hard shadows, no blur.
-   ═════════════════════════════════════════════════════════ */
+   --------------------------------------------------------- */
 
-/* ── Brutalist Light ────────────────────────────────────── */
+/* -- Brutalist Light -------------------------------------- */
 [data-theme='brutalist']:not([data-mode='dark']),
 :root[data-theme='brutalist']:not([data-mode='dark']) {
-  /* Brand — Warm Amber */
+  /* Brand - Warm Amber */
   --color-brand-50: #fffbeb;
   --color-brand-100: #fef3c7;
   --color-brand-200: #fde68a;
@@ -20,7 +20,7 @@
   --color-brand-900: #78350f;
   --color-brand-950: #451a03;
 
-  /* Surface — Warm Stone */
+  /* Surface - Warm Stone */
   --color-surface-50: #fafaf9;
   --color-surface-100: #f5f5f4;
   --color-surface-200: #e7e5e4;
@@ -33,7 +33,7 @@
   --color-surface-900: #1c1917;
   --color-surface-950: #0c0a09;
 
-  /* Semantic — Full scale for StatusBadge + DataTable row colors */
+  /* Semantic - Full scale for StatusBadge + DataTable row colors */
   --color-danger-50: #fef2f2;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
@@ -95,19 +95,19 @@
   --color-neutral-800: #292524;
   --color-neutral-900: #1c1917;
 
-  /* Borders — 3px solid black */
+  /* Borders - 3px solid black */
   --bw-default: 2px;
   --bw-strong: 3px;
   --border-color: #000000;
 
-  /* Radii — Sharp (neo-brutalism rejects rounding) */
+  /* Radii - Sharp (neo-brutalism rejects rounding) */
   --radius-sm: 0px;
   --radius-md: 2px;
   --radius-lg: 4px;
   --radius-xl: 4px;
   --radius-full: 9999px;
 
-  /* Shadows — Hard offset, ZERO blur */
+  /* Shadows - Hard offset, ZERO blur */
   --shadow-card: 4px 4px 0 0 #000000;
   --shadow-card-hover: 2px 2px 0 0 #000000;
   --shadow-button: 2px 2px 0 0 #000000;
@@ -115,7 +115,7 @@
   --shadow-dropdown: 3px 3px 0 0 #000000;
   --shadow-modal: 6px 6px 0 0 rgba(0, 0, 0, 0.5);
 
-  /* Shadows — Full scale (hard offset idiom, zero blur) */
+  /* Shadows - Full scale (hard offset idiom, zero blur) */
   --shadow-xs: 1px 1px 0 0 #000000;
   --shadow-sm: 2px 2px 0 0 #000000;
   --shadow-md: 3px 3px 0 0 #000000;
@@ -124,7 +124,7 @@
   --shadow-2xl: 8px 8px 0 0 #000000;
   --shadow-tooltip: 2px 2px 0 0 #000000;
 
-  /* Borders — Aliases */
+  /* Borders - Aliases */
   --border-color-default: var(--border-color);
   --border-color-strong: #000000;
   --border-color-focus: var(--color-brand-500);
@@ -137,19 +137,19 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-padding: 6px 10px;
 
-  /* Glass — Brutalism rejects translucency: solid surfaces, no blur */
+  /* Glass - Brutalism rejects translucency: solid surfaces, no blur */
   --glass-bg: var(--color-surface-100);
   --glass-bg-strong: var(--color-card-bg);
   --glass-blur: none;
   --glass-blur-strong: none;
   --glass-border: var(--border-color);
 
-  /* Typography — Bold, chunky, uppercase monospace labels */
+  /* Typography - Bold, chunky, uppercase monospace labels */
   --font-display: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Transition — Fast, snappy */
+  /* Transition - Fast, snappy */
   --transition-duration: 150ms;
   --transition-duration-slow: 200ms;
   --transition-easing: ease-out;
@@ -172,24 +172,67 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Behaviors — Press-down effect */
+  /* Behaviors - Press-down effect */
   --hover-lift: translateX(1px) translateY(1px);
   --active-press-scale: 0.97;
   --active-press-x: 1px;
   --active-press-y: 1px;
 
-  /* ── Cross-cutting tokens ──────────────────────────────── */
+  /* -- Cross-cutting tokens -------------------------------- */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-50);
+
+  /* -- Solid fills (text-bearing surfaces - guaranteed AA ink) -- */
+  --color-brand-solid: #b45309;
+  --color-brand-solid-hover: #92400e;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #15803d;
+  --color-success-solid-hover: #166534;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #b45309;
+  --color-warning-solid-hover: #92400e;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #2563eb;
+  --color-info-solid-hover: #1d4ed8;
+  --color-on-info-solid: #ffffff;
+
+  /* -- Vivid on-fill ink (solid fills, primary buttons) -- */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+  --color-on-warning: #ffffff;
+  --color-on-info: #ffffff;
+
+  /* -- Tinted semantic chips -- */
+  --badge-success-bg: var(--color-success-100);
+  --badge-success-text: var(--color-success-800);
+  --badge-success-border: var(--color-success-200);
+  --badge-warning-bg: var(--color-warning-100);
+  --badge-warning-text: var(--color-warning-800);
+  --badge-warning-border: var(--color-warning-200);
+  --badge-danger-bg: var(--color-danger-100);
+  --badge-danger-text: var(--color-danger-800);
+  --badge-danger-border: var(--color-danger-200);
+  --badge-info-bg: var(--color-brand-100);
+  --badge-info-text: var(--color-brand-800);
+  --badge-info-border: var(--color-brand-200);
+  --badge-neutral-bg: var(--color-surface-100);
+  --badge-neutral-text: var(--color-text-secondary);
+  --badge-neutral-border: var(--color-surface-200);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
-  --color-card-bg: var(--color-surface-100);
-  --color-elevated: var(--color-surface-100);
+  --color-card-bg: #ffffff;
+  --color-elevated: #ffffff;
   --color-field-bg: var(--color-surface-50);
   --color-field-bg-hover: var(--color-surface-100);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-500);
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: var(--color-brand-500);
@@ -252,9 +295,9 @@
   --chart-cell-radius: 0px;
 }
 
-/* ── Brutalist Dark ─────────────────────────────────────── */
+/* -- Brutalist Dark --------------------------------------- */
 [data-theme='brutalist'][data-mode='dark'] {
-  /* Brand — Warm Amber (dark-adapted: lighter accents on dark bg) */
+  /* Brand - Warm Amber (dark-adapted: lighter accents on dark bg) */
   --color-brand-50: #451a03;
   --color-brand-100: #78350f;
   --color-brand-200: #92400e;
@@ -267,7 +310,7 @@
   --color-brand-900: #fef3c7;
   --color-brand-950: #fffbeb;
 
-  /* Surface — Dark stone */
+  /* Surface - Dark stone */
   --color-surface-50: #0c0a09;
   --color-surface-100: #1c1917;
   --color-surface-200: #292524;
@@ -280,7 +323,7 @@
   --color-surface-900: #f5f5f4;
   --color-surface-950: #fafaf9;
 
-  /* Semantic — Dark-mode adjusted */
+  /* Semantic - Dark-mode adjusted */
   --color-danger-50: #450a0a;
   --color-danger-100: #7f1d1d;
   --color-danger-200: #991b1b;
@@ -353,7 +396,7 @@
   --shadow-dropdown: 3px 3px 0 0 #ffffff;
   --shadow-modal: 6px 6px 0 0 rgba(255, 255, 255, 0.5);
 
-  /* Shadows — Full scale (hard offset idiom, zero blur) */
+  /* Shadows - Full scale (hard offset idiom, zero blur) */
   --shadow-xs: 1px 1px 0 0 #ffffff;
   --shadow-sm: 2px 2px 0 0 #ffffff;
   --shadow-md: 3px 3px 0 0 #ffffff;
@@ -362,38 +405,38 @@
   --shadow-2xl: 8px 8px 0 0 #ffffff;
   --shadow-tooltip: 2px 2px 0 0 #ffffff;
 
-  /* Borders — Aliases */
+  /* Borders - Aliases */
   --border-color-default: var(--border-color);
   --border-color-strong: #ffffff;
   --border-color-focus: var(--color-brand-500);
   --border-color-error: var(--color-danger-500);
   --border-color-success: var(--color-success-500);
 
-  /* Glass — Brutalism rejects translucency: solid surfaces, no blur */
+  /* Glass - Brutalism rejects translucency: solid surfaces, no blur */
   --glass-bg: var(--color-surface-100);
   --glass-bg-strong: var(--color-card-bg);
   --glass-blur: none;
   --glass-blur-strong: none;
   --glass-border: var(--border-color);
 
-  /* Typography — Same as light (dark mode does not inherit light block) */
+  /* Typography - Same as light (dark mode does not inherit light block) */
   --font-display: 'Syne', sans-serif;
   --font-body: 'DM Sans', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Transition — Same as light */
+  /* Transition - Same as light */
   --transition-duration: 150ms;
   --transition-duration-slow: 200ms;
   --transition-easing: ease-out;
   --transition-easing-out: ease-out;
   --transition-easing-in: ease-out;
 
-  /* Layout — Same as light */
+  /* Layout - Same as light */
   --sidebar-width: 256px;
   --sidebar-collapsed-width: 64px;
   --header-height: 60px;
 
-  /* Spacing scale — Same as light */
+  /* Spacing scale - Same as light */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -404,7 +447,7 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Behaviors — Same as light */
+  /* Behaviors - Same as light */
   --hover-lift: translateX(1px) translateY(1px);
   --active-press-scale: 0.97;
   --active-press-x: 1px;
@@ -413,8 +456,51 @@
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-500);
-  --color-text-inverted: var(--color-surface-50);
+  --color-text-muted: #89827e;
+  /* On-fill ink: light (near-white) so text on amber/red fills is legible */
+  --color-text-inverted: var(--color-surface-950);
+
+  /* -- Solid fills (text-bearing surfaces - guaranteed AA ink) -- */
+  --color-brand-solid: #b45309;
+  --color-brand-solid-hover: #92400e;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #15803d;
+  --color-success-solid-hover: #166534;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #b45309;
+  --color-warning-solid-hover: #92400e;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #2563eb;
+  --color-info-solid-hover: #1d4ed8;
+  --color-on-info-solid: #ffffff;
+
+  /* -- Vivid on-fill ink (solid fills, primary buttons) -- */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+  --color-on-warning: #ffffff;
+  --color-on-info: #ffffff;
+
+  /* -- Tinted semantic chips (dark) -- */
+  --badge-success-bg: var(--color-success-200);
+  --badge-success-text: var(--color-success-900);
+  --badge-success-border: var(--color-success-800);
+  --badge-warning-bg: var(--color-warning-200);
+  --badge-warning-text: var(--color-warning-900);
+  --badge-warning-border: var(--color-warning-800);
+  --badge-danger-bg: var(--color-danger-200);
+  --badge-danger-text: var(--color-danger-900);
+  --badge-danger-border: var(--color-danger-800);
+  --badge-info-bg: var(--color-brand-200);
+  --badge-info-text: var(--color-brand-900);
+  --badge-info-border: var(--color-brand-800);
+  --badge-neutral-bg: var(--color-surface-200);
+  --badge-neutral-text: var(--color-surface-800);
+  --badge-neutral-border: var(--color-surface-300);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
   --color-card-bg: var(--color-surface-100);
   --color-elevated: var(--color-surface-100);
@@ -422,6 +508,7 @@
   --color-field-bg-hover: var(--color-surface-200);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-400);
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: var(--color-brand-500);

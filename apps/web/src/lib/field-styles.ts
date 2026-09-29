@@ -19,6 +19,19 @@ export const fieldControlBase = clsx(
   'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)] disabled:shadow-none',
 );
 
+/** Compact control chrome for dense filter bars (same tokens, smaller metrics). */
+export const fieldControlCompact = clsx(
+  'w-full min-h-8 rounded-[var(--radius-md)] border bg-[color:var(--color-field-bg)]',
+  'py-1.5 px-3 text-xs font-semibold text-[color:var(--color-text-primary)]',
+  'placeholder:text-[color:var(--color-text-muted)]',
+  'shadow-[var(--shadow-xs)]',
+  'transition-[background-color,border-color,box-shadow] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
+  'hover:bg-[color:var(--color-field-bg-hover)] hover:border-[color:var(--color-field-border-hover)]',
+  'focus:outline-none focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:ring-offset-0',
+  'focus:bg-[color:var(--color-card-bg)] focus:border-[color:var(--border-color-focus)] focus:shadow-none',
+  'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)] disabled:bg-[color:var(--disabled-bg)] disabled:shadow-none',
+);
+
 export const fieldControlBorderOk = 'border-[color:var(--color-field-border)]';
 
 export const fieldControlBorderError = clsx(
