@@ -240,6 +240,51 @@ class TenantRepository {
     }
   }
 
+  /// Self-service profile update (`PATCH tenants/me/profile`).
+  /// Only phone and emergencyContact are accepted by the API for tenants.
+  Future<Map<String, dynamic>?> updateMyProfile({
+    String? phone,
+    Map<String, String>? emergencyContact,
+  }) async {
+    final data = await _api.patchJson(
+      'tenants/me/profile',
+      body: {
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (emergencyContact != null) 'emergencyContact': emergencyContact,
+      },
+      parse: (d) => d,
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return null;
+  }
+
+  /// Tenant self-service KYC upload (`POST tenants/me/documents`).
+  /// [docType] is "aadhaar", "passport", "voter_id", "driving_license", or "photo".
+  Future<String?> uploadKycDocument(
+    String filePath,
+    String docType, {
+    String? idNumberMasked,
+    bool? consentGiven,
+  }) async {
+    final fields = <String, String>{'docType': docType};
+    if (idNumberMasked != null && idNumberMasked.trim().isNotEmpty) {
+      fields['idNumberMasked'] = idNumberMasked.trim();
+    }
+    if (consentGiven != null) {
+      fields['consentGiven'] = consentGiven.toString();
+    }
+    final data = await _api.postMultipart(
+      'tenants/me/documents',
+      files: [('file', filePath)],
+      fields: fields,
+    );
+    if (data is Map) {
+      final url = data['url'];
+      if (url is String && url.isNotEmpty) return url;
+    }
+    return null;
+  }
+
   // ── Invoice detail ──────────────────────────────────────
   Future<Map<String, dynamic>?> invoiceDetail(String invoiceId) async {
     try {
@@ -505,6 +550,39 @@ class TenantRepository {
       final room = await _api.getJson('rooms/$roomId', parse: (d) => d);
       if (room is! Map) return null;
       return room['floorId']?.toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetch complete room details (beds, roommates, room amenities, photos) for the tenant.
+  Future<Map<String, dynamic>?> myRoomDetails([String? tenantId]) async {
+    try {
+      String? tid = tenantId;
+      if (tid == null || tid.isEmpty) {
+        final me = await myAuthProfile();
+        tid = me?['tenantId']?.toString();
+      }
+      if (tid == null || tid.isEmpty) return null;
+      final profile = await _api.getJson('tenants/$tid', parse: (d) => d);
+      if (profile is! Map) return null;
+      final roomData = profile['room'];
+      String? roomId;
+      if (roomData is Map && roomData['_id'] != null) {
+        roomId = roomData['_id'].toString();
+      } else if (profile['roomId'] != null) {
+        roomId = profile['roomId'].toString();
+      }
+      if (roomId == null || roomId.isEmpty) return null;
+      final room = await _api.getJson('rooms/$roomId', parse: (d) => d);
+      if (room is! Map) return null;
+      final result = Map<String, dynamic>.from(room);
+      result['myBedId'] = profile['bedId']?.toString();
+      result['myMoveInDate'] = profile['moveInDate'];
+      result['myMonthlyRent'] = profile['monthlyRent'];
+      result['myDepositPaid'] = profile['depositPaid'];
+      result['myTenantId'] = tid;
+      return result;
     } catch (_) {
       return null;
     }

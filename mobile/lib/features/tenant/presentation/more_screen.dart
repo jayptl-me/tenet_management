@@ -24,6 +24,12 @@ class TenantMoreScreen extends ConsumerWidget {
             onTap: () => context.go('/tenant/profile'),
           ),
           ListTile(
+            leading: const Icon(Icons.meeting_room_outlined),
+            title: const Text('My Room & Roommates'),
+            subtitle: const Text('Bed layout, co-occupants, room amenities'),
+            onTap: () => context.go('/tenant/room'),
+          ),
+          ListTile(
             leading: const Icon(Icons.report_problem_outlined),
             title: const Text('Complaints'),
             onTap: () => context.go('/tenant/complaints'),
