@@ -35,6 +35,8 @@ interface GenerateResult {
 interface SingleInvoiceData {
   tenantId: string;
   month: string;
+  lineItems?: IInvoiceLineItemSubdoc[];
+  dueDate?: Date | string;
 }
 
 /**
@@ -90,37 +92,60 @@ export async function generateSingleInvoice(params: SingleInvoiceData): Promise<
 
   const room = roomRaw as Record<string, unknown>;
 
-  const lineItems: IInvoiceLineItemSubdoc[] = [
-    {
-      description: `Room Rent — Room ${room.roomNumber} (${room.sharingType}-sharing)`,
-      amount: (tenant.monthlyRent as number) ?? 0,
-    },
-  ];
-
+  let lineItems: IInvoiceLineItemSubdoc[];
+  let rentAmount = (tenant.monthlyRent as number) ?? 0;
   let electricityAmount = 0;
+  let otherCharges = 0;
 
-  // Add electricity charges if a finalized bill exists for the month
-  try {
-    const share = await calculateElectricityShare(tenantId, month);
-    if (share > 0) {
-      electricityAmount = share;
-      lineItems.push({
-        description: `Electricity Charges — ${month}`,
-        amount: share,
-      });
+  if (params.lineItems && params.lineItems.length > 0) {
+    lineItems = params.lineItems;
+    rentAmount = 0;
+    for (const item of lineItems) {
+      const descLower = item.description.toLowerCase();
+      if (descLower.includes('rent')) {
+        rentAmount += item.amount;
+      } else if (descLower.includes('electricity') || descLower.includes('power')) {
+        electricityAmount += item.amount;
+      } else {
+        otherCharges += item.amount;
+      }
     }
-  } catch {
-    // No electricity bill for this month — skip
+  } else {
+    lineItems = [
+      {
+        description: `Room Rent - Room ${room.roomNumber} (${room.sharingType}-sharing)`,
+        amount: rentAmount,
+      },
+    ];
+
+    // Add electricity charges if a finalized bill exists for the month
+    try {
+      const share = await calculateElectricityShare(tenantId, month);
+      if (share > 0) {
+        electricityAmount = share;
+        lineItems.push({
+          description: `Electricity Charges - ${month}`,
+          amount: share,
+        });
+      }
+    } catch {
+      // No electricity bill for this month - skip
+    }
   }
 
   const invoiceNumber = await nextInvoiceNumber(month);
 
-  // Determine due date: 5th of the month
-  const [year, monthNum] = month.split('-').map(Number);
-  const dueDate = new Date(year!, monthNum! - 1, 5);
-  const now = new Date();
-  if (dueDate < now) {
-    dueDate.setMonth(dueDate.getMonth() + 1);
+  let dueDate: Date;
+  if (params.dueDate) {
+    dueDate = new Date(params.dueDate);
+  } else {
+    // Determine due date: 5th of the month
+    const [year, monthNum] = month.split('-').map(Number);
+    dueDate = new Date(year!, monthNum! - 1, 5);
+    const now = new Date();
+    if (dueDate < now) {
+      dueDate.setMonth(dueDate.getMonth() + 1);
+    }
   }
 
   const invoice = await invoiceCreate({
@@ -128,10 +153,10 @@ export async function generateSingleInvoice(params: SingleInvoiceData): Promise<
     tenantId: new mongoose.Types.ObjectId(tenantId),
     month,
     lineItems,
-    rentAmount: (tenant.monthlyRent as number) ?? 0,
+    rentAmount,
     electricityAmount,
-    otherCharges: 0,
-    totalAmount: 0,
+    otherCharges,
+    totalAmount: rentAmount + electricityAmount + otherCharges,
     status: 'sent',
     dueDate,
   });

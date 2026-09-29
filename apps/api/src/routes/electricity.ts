@@ -294,6 +294,90 @@ electricity.get('/my', authGuard, async (c) => {
   });
 });
 
+// ── GET /electricity/share ──────────────────────────────
+// Allows admin (e.g. invoice builder) to look up the electricity share
+// for a tenant in a given month.
+electricity.get('/share', authGuard, adminOnly, async (c) => {
+  const tenantId = c.req.query('tenantId');
+  const month = c.req.query('month');
+  if (!tenantId || !month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return badRequest(c, 'tenantId and month (YYYY-MM) are required');
+  }
+
+  const parsedTenantId = parseId(tenantId);
+  if (!parsedTenantId) return badRequest(c, 'Invalid tenantId');
+
+  const tenant = (await Tenant.findById(parsedTenantId)
+    .populate('roomId', 'roomNumber sharingType')
+    .lean()) as unknown as Record<string, unknown> | null;
+
+  if (!tenant) return notFound(c, 'Tenant');
+
+  const room = tenant.roomId as Record<string, unknown> | null;
+  const roomId = room?._id ? String(room._id) : null;
+  if (!roomId) {
+    return c.json({ success: true, data: null });
+  }
+
+  const bill = (await ElectricityBill.findOne(
+    safeFilter({ month, status: { $in: ['finalized', 'distributed'] } }),
+  ).lean()) as Record<string, unknown> | null;
+
+  if (!bill) {
+    return c.json({ success: true, data: null });
+  }
+
+  const roomEntries = (bill.roomEntries as Array<Record<string, unknown>>) ?? [];
+  const entry = roomEntries.find((e) => {
+    const rId =
+      typeof e.roomId === 'object' && e.roomId !== null && '_id' in e.roomId
+        ? String((e.roomId as { _id: unknown })._id)
+        : String(e.roomId ?? '');
+    return rId === roomId;
+  });
+
+  if (!entry) {
+    return c.json({ success: true, data: null });
+  }
+
+  const [year, monthNum] = String(bill.month).split('-').map(Number);
+  const lastDayOfMonth = new Date(year!, monthNum!, 0).getDate();
+  const monthEnd = new Date(`${bill.month}-${String(lastDayOfMonth).padStart(2, '0')}`);
+  const monthStart = new Date(`${bill.month}-01`);
+
+  const occupants = await Tenant.countDocuments(
+    safeFilter({
+      roomId: new mongoose.Types.ObjectId(roomId),
+      isActive: true,
+      moveInDate: { $lte: monthEnd },
+      $or: [{ moveOutDate: { $gte: monthStart } }, { moveOutDate: null }],
+    }),
+  );
+
+  const occupantCount = occupants > 0 ? occupants : 1;
+  const tenantShare = Math.round((((entry.amount as number) ?? 0) / occupantCount) * 100) / 100;
+  const unitsConsumed =
+    (entry.unitsConsumed as number) ??
+    Math.max(0, ((entry.currentReading as number) ?? 0) - ((entry.previousReading as number) ?? 0));
+
+  return c.json({
+    success: true,
+    data: {
+      billId: String(bill._id),
+      month: bill.month,
+      status: bill.status,
+      roomNumber: (room?.roomNumber as string) ?? '',
+      previousReading: entry.previousReading,
+      currentReading: entry.currentReading,
+      unitsConsumed,
+      ratePerUnit: entry.ratePerUnit,
+      roomTotalAmount: entry.amount,
+      occupantCount,
+      tenantShare,
+    },
+  });
+});
+
 // ── GET /electricity/:id ────────────────────────────────
 // Admins read any bill; tenants/guardians may read bills containing
 // their own (or ward's) room entry.
@@ -345,9 +429,64 @@ electricity.get('/:id', authGuard, async (c) => {
         403,
       );
     }
+    return c.json({ success: true, data: billRaw });
   }
 
-  return c.json({ success: true, data: billRaw });
+  // Admin view: attach linkedInvoices for this bill's rooms and month
+  let linkedInvoices: Array<Record<string, unknown>> = [];
+  const bill = billRaw as Record<string, unknown>;
+  const roomEntries = (bill.roomEntries as Array<Record<string, unknown>>) ?? [];
+  const roomIds = roomEntries
+    .map((e) => {
+      const r = e.roomId;
+      return typeof r === 'object' && r !== null && '_id' in r
+        ? String((r as { _id: unknown })._id)
+        : String(r ?? '');
+    })
+    .filter((rId) => mongoose.Types.ObjectId.isValid(rId))
+    .map((rId) => new mongoose.Types.ObjectId(rId));
+
+  if (roomIds.length > 0 && bill.month) {
+    const tenants = (await Tenant.find(
+      safeFilter({ roomId: { $in: roomIds } }),
+    )
+      .select('_id userId roomId')
+      .populate('userId', 'name phone email')
+      .populate('roomId', 'roomNumber')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
+    const tenantMap = new Map(tenants.map((t) => [String(t._id), t]));
+    const tenantObjIds = tenants.map((t) => t._id);
+
+    const invoices = (await Invoice.find(
+      safeFilter({
+        month: bill.month,
+        tenantId: { $in: tenantObjIds },
+      }),
+    )
+      .select('_id invoiceNumber tenantId electricityAmount totalAmount status dueDate')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
+    linkedInvoices = invoices.map((inv) => {
+      const t = tenantMap.get(String(inv.tenantId)) as Record<string, unknown> | undefined;
+      const user = t?.userId as { name?: string; phone?: string } | undefined;
+      const room = t?.roomId as { roomNumber?: string } | undefined;
+      return {
+        _id: String(inv._id),
+        invoiceNumber: inv.invoiceNumber,
+        tenantId: String(inv.tenantId),
+        tenantName: user?.name ?? 'Unknown',
+        tenantPhone: user?.phone ?? '',
+        roomNumber: room?.roomNumber ?? '',
+        electricityAmount: inv.electricityAmount ?? 0,
+        totalAmount: inv.totalAmount ?? 0,
+        status: inv.status,
+        dueDate: inv.dueDate ? new Date(inv.dueDate as string | Date).toISOString() : undefined,
+      };
+    });
+  }
+
+  return c.json({ success: true, data: { ...bill, linkedInvoices } });
 });
 
 // ── POST /electricity ───────────────────────────────────

@@ -7,7 +7,8 @@ export type INotificationType =
   | 'electricity_bill'
   | 'welcome'
   | 'emergency'
-  | 'meal_feedback';
+  | 'meal_feedback'
+  | 'kyc_uploaded';
 
 export interface INotification {
   id: string;

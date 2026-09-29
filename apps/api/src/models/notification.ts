@@ -50,6 +50,7 @@ const notificationSchema = new Schema<INotificationDocument>(
         'welcome',
         'emergency',
         'meal_feedback',
+        'kyc_uploaded',
       ],
       required: [true, 'Notification type is required'],
     },

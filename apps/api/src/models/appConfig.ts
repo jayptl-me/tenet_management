@@ -132,7 +132,7 @@ const amenityDefinitionSchema = new Schema(
   { _id: false },
 );
 
-const DEFAULT_AMENITY_DEFINITIONS = [
+export const DEFAULT_AMENITY_DEFINITIONS = [
   {
     key: 'wifi',
     label: 'WiFi',

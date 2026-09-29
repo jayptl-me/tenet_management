@@ -5,6 +5,8 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
 import { Asset } from '../models/asset.js';
+import '../models/floor.js';
+import '../models/room.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
 import mongoose from 'mongoose';
 

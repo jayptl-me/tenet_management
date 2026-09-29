@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "bun run src/scripts/seed.ts",
+    "seed:dashboard": "bun run src/scripts/seed-dashboard-telemetry.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

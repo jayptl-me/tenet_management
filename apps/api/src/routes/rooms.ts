@@ -146,10 +146,60 @@ router.get('/', authGuard, async (c) => {
 
   const skip = (page - 1) * limit;
 
-  const [data, total] = await Promise.all([
+  const [data, total, statsRows] = await Promise.all([
     Room.find(filter).sort(sort).skip(skip).limit(limit).populate('floor').lean(),
     Room.countDocuments(filter as Record<string, unknown>),
+    // Aggregate over the FULL filtered set (not just this page) so the UI's
+    // KPI strip reflects every matching room regardless of pagination.
+    Room.aggregate([
+      { $match: filter as Record<string, unknown> },
+      {
+        $project: {
+          isActive: 1,
+          monthlyRent: 1,
+          bedCount: { $size: { $ifNull: ['$beds', []] } },
+          occupiedBeds: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ['$beds', []] },
+                cond: { $eq: ['$$this.isOccupied', true] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRooms: { $sum: 1 },
+          activeRooms: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
+          totalBeds: { $sum: '$bedCount' },
+          occupiedBeds: { $sum: '$occupiedBeds' },
+          potentialRent: {
+            $sum: { $cond: [{ $eq: ['$isActive', true] }, '$monthlyRent', 0] },
+          },
+        },
+      },
+    ]),
   ]);
+
+  const s = (statsRows[0] ?? {}) as Partial<{
+    totalRooms: number;
+    activeRooms: number;
+    totalBeds: number;
+    occupiedBeds: number;
+    potentialRent: number;
+  }>;
+  const stats = {
+    totalRooms: s.totalRooms ?? 0,
+    activeRooms: s.activeRooms ?? 0,
+    totalBeds: s.totalBeds ?? 0,
+    occupiedBeds: s.occupiedBeds ?? 0,
+    vacantBeds: Math.max(0, (s.totalBeds ?? 0) - (s.occupiedBeds ?? 0)),
+    occupancyPct:
+      (s.totalBeds ?? 0) > 0 ? Math.round(((s.occupiedBeds ?? 0) / (s.totalBeds ?? 1)) * 100) : 0,
+    potentialRent: s.potentialRent ?? 0,
+  };
 
   // Enrich occupied beds with tenant names so the Bed Matrix can display
   // tenant associations without per-room detail fetches (tenant assignment flow).
@@ -194,7 +244,7 @@ router.get('/', authGuard, async (c) => {
   return c.json({
     success: true,
     data: enriched,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    meta: { total, page, limit, totalPages: Math.ceil(total / limit), stats },
   });
 });
 

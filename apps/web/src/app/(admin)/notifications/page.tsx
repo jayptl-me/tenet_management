@@ -17,6 +17,7 @@ import {
   Zap,
   Waves,
   Utensils,
+  FileCheck,
   Copy,
   Download,
 } from 'lucide-react';
@@ -67,14 +68,15 @@ const emptyForm: NotificationForm = {
 
 const typeIconsMap: Record<INotificationType, React.ReactNode> = {
   announcement: <Megaphone className="h-4 w-4" />,
-  emergency: <AlertTriangle className="h-4 w-4 text-[color:var(--color-danger-500)]" />,
-  payment_reminder: <CreditCard className="h-4 w-4 text-[color:var(--color-warning-500)]" />,
-  payment_verified: <Check className="h-4 w-4 text-[color:var(--color-success-500)]" />,
+  emergency: <AlertTriangle className="h-4 w-4 text-(--color-danger-500)" />,
+  payment_reminder: <CreditCard className="h-4 w-4 text-(--color-warning-500)" />,
+  payment_verified: <Check className="h-4 w-4 text-(--color-success-500)" />,
   complaint_update: <MessageSquare className="h-4 w-4" />,
   service_update: <Wrench className="h-4 w-4" />,
   electricity_bill: <Zap className="h-4 w-4" />,
   welcome: <Waves className="h-4 w-4" />,
   meal_feedback: <Utensils className="h-4 w-4" />,
+  kyc_uploaded: <FileCheck className="h-4 w-4" />,
 };
 
 const typeOptions: { value: INotificationType; label: string }[] = [

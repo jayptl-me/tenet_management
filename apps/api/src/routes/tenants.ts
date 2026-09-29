@@ -3,7 +3,16 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import mongoose, { Schema } from 'mongoose';
 import crypto from 'node:crypto';
-import { Tenant } from '../models/tenant.js';
+import React from 'react';
+import ReactPDF from '@react-pdf/renderer';
+import { StatementPdf } from '../templates/StatementPdf.js';
+import { PoliceVerificationPdf } from '../templates/PoliceVerificationPdf.js';
+import {
+  uploadKycDocument,
+  generatePrivateDocumentUrl,
+  deleteKycDocument,
+} from '../services/storage.service.js';
+import { Tenant, type ITenantDocument } from '../models/tenant.js';
 import { Room } from '../models/room.js';
 import { User } from '../models/user.js';
 import { Payment } from '../models/payment.js';
@@ -29,7 +38,7 @@ import {
   safeFilter,
 } from '../lib/routeUtils.js';
 import { isServiceAvailable } from '../lib/serviceAvailability.js';
-import { env } from '../lib/env.js';
+import { getPgUpiConfig } from '../lib/upi.js';
 import { logger } from '../lib/logger.js';
 import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
 import { getInvoiceBalance } from '../services/payment-status.service.js';
@@ -54,6 +63,47 @@ const emergencyContactSchema = z.strictObject({
   relation: z.string().trim().min(1).max(50),
 });
 
+const addressSchema = z.strictObject({
+  street: z.string().trim().max(200).optional(),
+  city: z.string().trim().max(100).optional(),
+  district: z.string().trim().max(100).optional(),
+  state: z.string().trim().max(100).optional(),
+  pincode: z.string().trim().regex(/^\d{6}$/, 'Must be a 6-digit Indian PIN code').optional().or(z.literal('')),
+  policeStation: z.string().trim().max(100).optional(),
+});
+
+const localReferenceSchema = z.strictObject({
+  name: z.string().trim().max(100).optional(),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+91[6-9]\d{9}$/, 'Must be +91XXXXXXXXXX format')
+    .optional()
+    .or(z.literal('')),
+  relation: z.string().trim().max(50).optional(),
+  address: z.string().trim().max(250).optional(),
+});
+
+const verificationProfileSchema = z.strictObject({
+  fatherOrSpouseName: z.string().trim().max(100).optional(),
+  dob: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+  bloodGroup: z.string().trim().max(10).optional(),
+  identificationMark: z.string().trim().max(200).optional(),
+  permanentAddress: addressSchema.optional(),
+  occupation: z
+    .strictObject({
+      category: z.enum(['salaried', 'student', 'business', 'other']).optional(),
+      organizationName: z.string().trim().max(150).optional(),
+      officeAddress: z.string().trim().max(250).optional(),
+      idNumber: z.string().trim().max(100).optional(),
+      contactPhone: z.string().trim().max(20).optional(),
+    })
+    .optional(),
+  localReferences: z.array(localReferenceSchema).max(2).optional(),
+  stayPurpose: z.string().trim().max(200).optional(),
+});
+
 const createTenantSchema = z.strictObject({
   name: z.string().trim().min(2).max(100),
   email: z.string().email().max(255).toLowerCase().trim(),
@@ -70,6 +120,7 @@ const createTenantSchema = z.strictObject({
   aadhaarUrl: z.string().url().optional(),
   photoUrl: z.string().url().optional(),
   enquiryId: z.string().optional(),
+  verificationProfile: verificationProfileSchema.optional(),
 });
 
 const updateTenantSchema = z.strictObject({
@@ -79,6 +130,7 @@ const updateTenantSchema = z.strictObject({
   roomId: z.string().min(1).optional(),
   moveInDate: z.string().optional(),
   emergencyContact: emergencyContactSchema.optional(),
+  verificationProfile: verificationProfileSchema.optional(),
   user: z
     .strictObject({
       name: z.string().trim().min(2).max(100).optional(),
@@ -189,6 +241,14 @@ router.post('/', authGuard, adminOnly, zValidator('json', createTenantSchema), a
               aadhaarUrl: body.aadhaarUrl,
               photoUrl: body.photoUrl,
             },
+            verificationProfile: body.verificationProfile
+              ? {
+                  ...body.verificationProfile,
+                  dob: body.verificationProfile.dob
+                    ? new Date(body.verificationProfile.dob)
+                    : undefined,
+                }
+              : undefined,
             isActive: true,
           },
         ],
@@ -330,7 +390,7 @@ router.get('/', authGuard, adminOnly, async (c) => {
         .skip(skip)
         .limit(limit)
         .populate('user')
-        .populate('room')
+        .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
         .lean(),
       Tenant.countDocuments(safeFilter(f)),
     ]);
@@ -354,7 +414,7 @@ router.get('/', authGuard, adminOnly, async (c) => {
         .skip(skip)
         .limit(limit)
         .populate('user')
-        .populate('room')
+        .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
         .lean(),
       Tenant.countDocuments(safeFilter(f)),
     ]);
@@ -369,7 +429,7 @@ router.get('/', authGuard, adminOnly, async (c) => {
         .skip(skip)
         .limit(limit)
         .populate('user')
-        .populate('room')
+        .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
         .lean(),
       Tenant.countDocuments(safeFilter(f)),
     ]);
@@ -485,6 +545,15 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateTenantSchema),
         sessionTenant.emergencyContact = {
           ...sessionTenant.emergencyContact,
           ...body.emergencyContact,
+        };
+      }
+      if (body.verificationProfile !== undefined) {
+        sessionTenant.verificationProfile = {
+          ...sessionTenant.verificationProfile,
+          ...body.verificationProfile,
+          dob: body.verificationProfile.dob
+            ? new Date(body.verificationProfile.dob)
+            : sessionTenant.verificationProfile?.dob,
         };
       }
 
@@ -878,46 +947,26 @@ router.post(
   },
 );
 
-async function deleteCloudinaryAsset(publicId?: string): Promise<void> {
-  if (!isServiceAvailable('cloudinary') || !publicId) return;
-  try {
-    const cloudName = env.CLOUDINARY_CLOUD_NAME;
-    const form = new FormData();
-    form.append('public_id', publicId);
-    await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
-      method: 'POST',
-      body: form,
-      headers: {
-        Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
-      },
-    });
-  } catch (err) {
-    logger.warn({ err, publicId }, 'Failed to delete Cloudinary asset');
-  }
-}
-
-// ── POST /:id/documents — upload KYC documents (Aadhaar, photo)
-router.post('/:id/documents', authGuard, adminOnly, async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) throw new ValidationError('Invalid tenant ID');
-
-  // Check Cloudinary availability with graceful degradation
-  if (!isServiceAvailable('cloudinary')) {
-    throw new ServiceUnavailableError(
-      'Cloudinary',
-      'Document uploads are not available because Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.',
-    );
-  }
-
-  const tenant = await Tenant.findById(id);
-  if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+// ── Shared KYC document upload pipeline (admin + tenant self-service) ──
+// Validates multipart fields, uploads private authenticated documents to Cloudinary,
+// overwrites previous assets without leaks, and writes an audit entry.
+async function handleKycUpload(
+  c: Context,
+  tenant: ITenantDocument,
+  auditUserId: string,
+  isSelfService: boolean,
+): Promise<Response> {
+  const tenantId = String(tenant._id);
 
   try {
     const body = await c.req.parseBody();
     const docType = (body?.docType as string) || 'aadhaar';
 
-    if (!['aadhaar', 'photo'].includes(docType)) {
-      throw new ValidationError('docType must be "aadhaar" or "photo"');
+    const ALLOWED_DOC_TYPES = ['aadhaar', 'passport', 'voter_id', 'driving_license', 'photo'];
+    if (!ALLOWED_DOC_TYPES.includes(docType)) {
+      throw new ValidationError(
+        'docType must be "aadhaar", "passport", "voter_id", "driving_license", or "photo"',
+      );
     }
 
     const file = body?.file as File | undefined;
@@ -926,6 +975,12 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
         'A file is required. Use multipart/form-data with field name "file".',
       );
     }
+
+    const idNumberMasked =
+      typeof body?.idNumberMasked === 'string' && body.idNumberMasked.trim()
+        ? body.idNumberMasked.trim()
+        : undefined;
+    const consentGiven = body?.consentGiven === 'true';
 
     // Validate file type and size
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -939,72 +994,106 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
       throw new ValidationError('File size must be under 5MB.');
     }
 
+    const isPrivate = docType !== 'photo';
+
     // Delete previous asset if overwriting to prevent storage leaks
-    if (docType === 'aadhaar' && tenant.documents?.aadhaarPublicId) {
-      await deleteCloudinaryAsset(tenant.documents.aadhaarPublicId);
-    } else if (docType === 'photo' && tenant.documents?.photoPublicId) {
-      await deleteCloudinaryAsset(tenant.documents.photoPublicId);
+    if (docType === 'photo') {
+      if (tenant.documents?.photoPublicId) {
+        await deleteKycDocument(tenant.documents.photoPublicId, false, false);
+      }
+    } else {
+      if (tenant.documents?.idPublicId) {
+        await deleteKycDocument(
+          tenant.documents.idPublicId,
+          tenant.documents.idUrl?.endsWith('.pdf') ?? false,
+          true,
+        );
+      } else if (tenant.documents?.aadhaarPublicId) {
+        await deleteKycDocument(tenant.documents.aadhaarPublicId, false, false);
+      }
     }
 
-    // Build Cloudinary upload form
-    const uploadForm = new FormData();
-    uploadForm.append('file', file);
-    uploadForm.append('public_id', `tenants/${id}/${docType}_${Date.now()}`);
-    uploadForm.append('folder', `tenet_pg/tenants/${id}`);
-    uploadForm.append('upload_preset', ''); // Use unsigned upload or API key
+    const result = await uploadKycDocument(tenantId, docType, file, isPrivate);
 
-    const cloudName = env.CLOUDINARY_CLOUD_NAME;
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: 'POST',
-      body: uploadForm,
-      headers: {
-        Authorization: `Basic ${btoa(`${env.CLOUDINARY_API_KEY}:${env.CLOUDINARY_API_SECRET}`)}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const errMsg =
-        (errData as { error?: { message?: string } })?.error?.message ?? 'Upload failed';
-      logger.error({ tenantId: id, docType, cloudinaryError: errMsg }, 'Cloudinary upload failed');
-      throw new AppError(
-        `Document upload failed: ${errMsg}`,
-        502,
-        'UPLOAD_FAILED',
-        undefined,
-        'The document upload could not be completed. Please try again.',
-      );
-    }
-
-    const result = (await response.json()) as {
-      secure_url: string;
-      public_id: string;
-      format: string;
-      width?: number;
-      height?: number;
-    };
-
-    // Update tenant with document URL and public_id
+    // Update tenant with document metadata
     if (!tenant.documents) {
       (tenant as unknown as Record<string, unknown>).documents = {};
     }
-    if (docType === 'aadhaar') {
-      tenant.documents.aadhaarUrl = result.secure_url;
-      tenant.documents.aadhaarPublicId = result.public_id;
-    } else {
+
+    if (docType === 'photo') {
       tenant.documents.photoUrl = result.secure_url;
       tenant.documents.photoPublicId = result.public_id;
+    } else {
+      tenant.documents.idType = docType as 'aadhaar' | 'passport' | 'voter_id' | 'driving_license';
+      tenant.documents.idUrl = result.secure_url;
+      tenant.documents.idPublicId = result.public_id;
+      if (idNumberMasked) {
+        tenant.documents.idNumberMasked = idNumberMasked;
+      }
+      if (consentGiven) {
+        tenant.documents.consentGiven = true;
+        tenant.documents.consentTimestamp = new Date();
+      }
+      // Backward compatibility for aadhaar
+      if (docType === 'aadhaar') {
+        tenant.documents.aadhaarUrl = result.secure_url;
+        tenant.documents.aadhaarPublicId = result.public_id;
+      }
     }
     await tenant.save();
+
+    // Notify all active admins so uploaded KYC documents get reviewed
+    if (isSelfService) {
+      try {
+        const { createNotification } = await import(
+          '../services/notification.service.js'
+        );
+        const adminUsers = await User.find({ role: 'admin', isActive: true })
+          .select('_id')
+          .lean();
+        const adminIds = adminUsers.map((a) => String(a._id));
+        if (adminIds.length > 0) {
+          const docLabel =
+            docType === 'photo'
+              ? 'profile photo'
+              : `${docType.replace('_', ' ').toUpperCase()} document`;
+          const tenantName =
+            (
+              (await User.findById(tenant.userId).select('name').lean()) as {
+                name?: string;
+              } | null
+            )?.name ?? 'A tenant';
+          await createNotification({
+            targetType: 'individual',
+            targetIds: adminIds,
+            title: 'KYC document uploaded',
+            body: `${tenantName} uploaded a new ${docLabel}. Review it on the tenant page.`,
+            type: 'kyc_uploaded',
+            data: {
+              tenantId,
+              docType,
+              url: result.secure_url,
+            },
+            sendPush: true,
+          });
+        }
+      } catch (notifyErr) {
+        logger.warn({ err: notifyErr }, 'Failed to notify admins of KYC upload');
+      }
+    }
 
     try {
       const { writeAuditLog } = await import('../lib/write-audit-log.js');
       await writeAuditLog({
-        userId: (c.get('user') as { sub?: string } | undefined)?.sub ?? 'system',
+        userId: auditUserId,
         action: 'update',
         resource: 'tenant',
-        resourceId: String(tenant._id),
-        details: { documentUploaded: docType, url: result.secure_url },
+        resourceId: tenantId,
+        details: {
+          documentUploaded: docType,
+          isPrivate,
+          selfService: auditUserId === String(tenant.userId),
+        },
         ip: c.req.header('x-forwarded-for') || undefined,
         userAgent: c.req.header('user-agent') || undefined,
       });
@@ -1012,14 +1101,19 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
       logger.warn({ auditErr }, 'Failed to write audit log for document upload');
     }
 
-    logger.info({ tenantId: id, docType, url: result.secure_url }, 'Tenant document uploaded');
+    logger.info({ tenantId, docType, isPrivate }, 'Tenant document uploaded');
+
+    const viewUrl = isPrivate
+      ? generatePrivateDocumentUrl(result.public_id, result.format, 600)
+      : result.secure_url;
 
     return c.json({
       success: true,
       data: {
         docType,
-        url: result.secure_url,
-        message: `${docType === 'aadhaar' ? 'Aadhaar' : 'Photo'} uploaded successfully.`,
+        url: viewUrl,
+        idNumberMasked: tenant.documents.idNumberMasked,
+        message: `${docType === 'photo' ? 'Photo' : docType.replace('_', ' ').toUpperCase()} uploaded successfully.`,
       },
     });
   } catch (err: unknown) {
@@ -1031,6 +1125,59 @@ router.post('/:id/documents', authGuard, adminOnly, async (c) => {
     }
     throw err;
   }
+}
+
+// ── POST /me/documents — tenant self-service KYC upload ──
+// Tenants can upload/replace their own Aadhaar and photo. A fresh upload flips
+// documents.isVerified back to false so the admin must re-review. Registered
+// before /:id/documents.
+router.post('/me/documents', authGuard, async (c) => {
+  const user = c.get('user');
+  if (user?.role !== 'tenant') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only tenants can upload documents here.' },
+      },
+      403,
+    );
+  }
+
+  if (!isServiceAvailable('cloudinary')) {
+    throw new ServiceUnavailableError(
+      'Cloudinary',
+      'Document uploads are not available. Please contact the PG office.',
+    );
+  }
+
+  const tenant = await Tenant.findOne(safeFilter({ userId: String(user.sub) }));
+  if (!tenant) return notFound(c, 'Tenant profile');
+
+  if (tenant.documents?.isVerified) {
+    tenant.documents.isVerified = false;
+    tenant.documents.verifiedAt = undefined;
+    await tenant.save();
+  }
+
+  return handleKycUpload(c, tenant, String(user.sub), true);
+});
+
+// ── POST /:id/documents — upload KYC documents (Aadhaar, photo; admin only)
+router.post('/:id/documents', authGuard, adminOnly, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) throw new ValidationError('Invalid tenant ID');
+
+  if (!isServiceAvailable('cloudinary')) {
+    throw new ServiceUnavailableError(
+      'Cloudinary',
+      'Document uploads are not available because Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.',
+    );
+  }
+
+  const tenant = await Tenant.findById(id);
+  if (!tenant) throw new AppError('Tenant not found', 404, 'TENANT_NOT_FOUND');
+
+  return handleKycUpload(c, tenant, (c.get('user') as { sub?: string }).sub ?? 'system', false);
 });
 
 // ── POST /:id/verify-kyc — admin marks tenant KYC documents as verified
@@ -1073,6 +1220,202 @@ router.post('/:id/verify-kyc', authGuard, adminOnly, async (c) => {
   });
 });
 
+// ── GET /:id/documents/:docType — retrieve a private signed URL for a KYC document
+router.get('/:id/documents/:docType', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
+
+  const docType = c.req.param('docType');
+  const tenant = await Tenant.findById(id);
+  if (!tenant) return notFound(c, 'Tenant');
+
+  if (docType === 'photo') {
+    const photoUrl = tenant.documents?.photoUrl;
+    if (!photoUrl) {
+      return notFound(c, 'Profile photo');
+    }
+    if (c.req.query('redirect') === 'true') {
+      return c.redirect(photoUrl);
+    }
+    return c.json({
+      success: true,
+      data: {
+        docType: 'photo',
+        url: photoUrl,
+        isVerified: tenant.documents?.isVerified ?? false,
+      },
+    });
+  }
+
+  // Identity document (aadhaar, passport, voter_id, driving_license, or general 'id')
+  const publicId = tenant.documents?.idPublicId || tenant.documents?.aadhaarPublicId;
+  const rawUrl = tenant.documents?.idUrl || tenant.documents?.aadhaarUrl;
+  if (!publicId && !rawUrl) {
+    return notFound(c, 'Identity document');
+  }
+
+  const isPdf = rawUrl ? rawUrl.toLowerCase().endsWith('.pdf') : false;
+  const format = isPdf ? 'pdf' : 'jpg';
+
+  let signedUrl = '';
+  if (publicId) {
+    signedUrl = generatePrivateDocumentUrl(publicId, format, 600);
+  } else if (rawUrl) {
+    signedUrl = rawUrl;
+  }
+
+  if (!signedUrl) {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'SIGNED_URL_FAILED', message: 'Failed to generate secure access URL for document.' },
+      },
+      500,
+    );
+  }
+
+  if (c.req.query('redirect') === 'true') {
+    return c.redirect(signedUrl);
+  }
+
+  return c.json({
+    success: true,
+    data: {
+      docType: tenant.documents?.idType || 'aadhaar',
+      url: signedUrl,
+      expiresInSeconds: 600,
+      idNumberMasked: tenant.documents?.idNumberMasked,
+      isVerified: tenant.documents?.isVerified ?? false,
+      consentGiven: tenant.documents?.consentGiven ?? false,
+      consentTimestamp: tenant.documents?.consentTimestamp,
+    },
+  });
+});
+
+// ── GET /:id/police-verification.pdf — generate and download police verification form
+router.get('/:id/police-verification.pdf', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
+
+  const tenant = await Tenant.findById(id)
+    .populate({ path: 'userId', select: 'name email phone' })
+    .populate({
+      path: 'roomId',
+      select: 'roomNumber floorId',
+      populate: { path: 'floorId', select: 'label floorNumber' },
+    })
+    .lean();
+  if (!tenant) return notFound(c, 'Tenant');
+
+  const t = tenant as unknown as {
+    _id: unknown;
+    bedId: string;
+    moveInDate: Date;
+    monthlyRent: number;
+    depositPaid: number;
+    userId?: { name?: string; phone?: string; email?: string };
+    roomId?: {
+      roomNumber?: string;
+      floorId?: { label?: string; floorNumber?: number };
+    };
+    documents?: ITenantDocument['documents'];
+    emergencyContact?: ITenantDocument['emergencyContact'];
+    verificationProfile?: ITenantDocument['verificationProfile'];
+  };
+
+  const tenantUser = t.userId;
+  const tenantRoom = t.roomId;
+
+  const upiConfig = await getPgUpiConfig();
+
+  // If photo is stored in authenticated mode, generate a temporary signed URL
+  let photoUrl = t.documents?.photoUrl;
+  if (t.documents?.photoPublicId && !photoUrl) {
+    photoUrl = generatePrivateDocumentUrl(t.documents.photoPublicId, 'jpg', 3600);
+  }
+
+  const pdfProps = {
+    tenant: {
+      name: tenantUser?.name || 'Resident',
+      phone: tenantUser?.phone || '',
+      email: tenantUser?.email || '',
+      roomNumber: tenantRoom?.roomNumber || 'N/A',
+      floorLabel:
+        tenantRoom?.floorId?.floorNumber !== undefined
+          ? `Floor ${tenantRoom.floorId.floorNumber}`
+          : 'N/A',
+      bedId: t.bedId,
+      moveInDate: t.moveInDate ? new Date(t.moveInDate).toISOString() : new Date().toISOString(),
+      monthlyRent: t.monthlyRent || 0,
+      depositPaid: t.depositPaid || 0,
+      photoUrl: photoUrl || undefined,
+    },
+    pg: {
+      name: upiConfig.upiPayeeName || 'Tenet PG Living',
+      address: '12th Main Road, Indiranagar, Bengaluru, Karnataka - 560038',
+      phone: '+919876543210',
+      email: 'admin@tenetpg.com',
+      ownerName: upiConfig.upiPayeeName || 'Property Manager',
+      policeStation: 'Indiranagar Police Station',
+    },
+    profile: t.verificationProfile
+      ? {
+          fatherOrSpouseName: t.verificationProfile.fatherOrSpouseName,
+          dob: t.verificationProfile.dob ? new Date(t.verificationProfile.dob).toISOString() : undefined,
+          gender: t.verificationProfile.gender,
+          bloodGroup: t.verificationProfile.bloodGroup,
+          identificationMark: t.verificationProfile.identificationMark,
+          permanentAddress: t.verificationProfile.permanentAddress,
+          occupation: t.verificationProfile.occupation,
+          localReferences: t.verificationProfile.localReferences,
+          stayPurpose: t.verificationProfile.stayPurpose,
+        }
+      : undefined,
+    emergencyContact: t.emergencyContact,
+    documentInfo: {
+      type: t.documents?.idType || (t.documents?.aadhaarUrl ? 'aadhaar' : 'None'),
+      numberMasked: t.documents?.idNumberMasked || (t.documents?.aadhaarUrl ? 'XXXX-XXXX-Verified' : 'Pending Verification'),
+      isVerified: Boolean(t.documents?.isVerified),
+    },
+  };
+
+  try {
+    const pdfBuffer = await (
+      ReactPDF as never as {
+        renderToBuffer: (el: unknown) => Promise<Buffer>;
+      }
+    ).renderToBuffer(
+      React.createElement(PoliceVerificationPdf as never, pdfProps),
+    );
+
+    const safeTenantName = (tenantUser?.name || 'resident').toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const fileName = `police-verification-${safeTenantName}-${String(tenant._id).slice(-4)}.pdf`;
+
+    return new Response(new Uint8Array(pdfBuffer), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${fileName}"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: id }, 'Failed to render police verification PDF');
+    return c.json(
+      {
+        success: false,
+        error: { code: 'PDF_GENERATION_FAILED', message: 'Failed to generate police verification PDF.' },
+      },
+      500,
+    );
+  }
+});
+
 // ── GET /:id/payments
 router.get('/:id/payments', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
@@ -1113,11 +1456,17 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
       const tenantIdStr = String(tenant._id);
 
       // Clean up Cloudinary documents to prevent storage leakage
-      if (tenant.documents?.aadhaarPublicId) {
-        await deleteCloudinaryAsset(tenant.documents.aadhaarPublicId);
+      if (tenant.documents?.idPublicId) {
+        await deleteKycDocument(
+          tenant.documents.idPublicId,
+          tenant.documents.idUrl?.endsWith('.pdf') ?? false,
+          true,
+        );
+      } else if (tenant.documents?.aadhaarPublicId) {
+        await deleteKycDocument(tenant.documents.aadhaarPublicId, false, false);
       }
       if (tenant.documents?.photoPublicId) {
-        await deleteCloudinaryAsset(tenant.documents.photoPublicId);
+        await deleteKycDocument(tenant.documents.photoPublicId, false, false);
       }
 
       // Cascade-delete all child entities
@@ -1256,6 +1605,97 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
   }
 });
 
+// ── PATCH /me/profile — tenant self-service profile update ──
+// Allows an authenticated tenant to update their own emergency contact and
+// phone. Name/email/room/rent stay admin-controlled. Static path registered
+// before /:id routes.
+const selfProfileSchema = z.strictObject({
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+91[6-9]\d{9}$/, 'Must be +91XXXXXXXXXX format')
+    .optional(),
+  emergencyContact: emergencyContactSchema.optional(),
+});
+
+router.patch('/me/profile', authGuard, zValidator('json', selfProfileSchema), async (c) => {
+  const user = c.get('user');
+  if (user?.role !== 'tenant') {
+    return c.json(
+      {
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only tenants can update their profile here.' },
+      },
+      403,
+    );
+  }
+
+  const body = c.req.valid('json');
+  const tenant = await Tenant.findOne(safeFilter({ userId: String(user.sub) }));
+  if (!tenant) return notFound(c, 'Tenant profile');
+
+  // Duplicate phone check (exclude own account)
+  if (body.phone) {
+    const phoneOwner = await User.findOne({ phone: body.phone }).select('_id').lean();
+    if (phoneOwner && String(phoneOwner._id) !== String(user.sub)) {
+      return c.json(
+        {
+          success: false,
+          error: { code: 'DUPLICATE_PHONE', message: 'A user with this phone number already exists.' },
+        },
+        409,
+      );
+    }
+  }
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (body.phone) {
+        await User.findByIdAndUpdate(user.sub, { phone: body.phone }, { session });
+      }
+      if (body.emergencyContact) {
+        tenant.emergencyContact = { ...tenant.emergencyContact, ...body.emergencyContact };
+      }
+      await tenant.save({ session });
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Profile update failed';
+    return c.json(
+      { success: false, error: { code: 'PROFILE_UPDATE_FAILED', message: msg } },
+      400,
+    );
+  } finally {
+    session.endSession();
+  }
+
+  try {
+    const { writeAuditLog } = await import('../lib/write-audit-log.js');
+    await writeAuditLog({
+      userId: user.sub,
+      action: 'update',
+      resource: 'tenant',
+      resourceId: String(tenant._id),
+      details: {
+        selfService: true,
+        fields: [
+          ...(body.phone ? ['phone'] : []),
+          ...(body.emergencyContact ? ['emergencyContact'] : []),
+        ],
+      },
+    });
+  } catch {
+    // Non-fatal
+  }
+
+  const populated = await Tenant.findById(tenant._id)
+    .populate('user')
+    .populate({ path: 'room', populate: { path: 'floor', select: 'label floorNumber' } })
+    .lean();
+
+  return c.json({ success: true, data: populated });
+});
+
 // ── GET /:id/invoices
 router.get('/:id/invoices', authGuard, async (c) => {
   const id = parseId(c.req.param('id'));
@@ -1354,6 +1794,126 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
       checkedOut: false,
     },
   });
+});
+
+// ── GET /:id/statement.pdf — Statement of Account (admin or tenant self) ──
+router.get('/:id/statement.pdf', authGuard, async (c) => {
+  const id = parseId(c.req.param('id'));
+  if (!id) return badRequest(c, 'Invalid tenant ID');
+
+  const denied = await assertAdminOrTenantOwner(c, id);
+  if (denied) return denied;
+
+  const tenant = await Tenant.findById(id)
+    .populate({ path: 'userId', select: 'name email phone' })
+    .populate({
+      path: 'roomId',
+      select: 'roomNumber floorId',
+      populate: { path: 'floorId', select: 'label floorNumber' },
+    })
+    .lean();
+  if (!tenant) return notFound(c, 'Tenant');
+
+  const tenantIdStr = String((tenant as { _id: unknown })._id);
+
+  const [invoices, payments, upiConfig] = await Promise.all([
+    Invoice.find(safeFilter({ tenantId: id }))
+      .select('invoiceNumber month totalAmount paidAmount status')
+      .sort({ month: 1 })
+      .lean(),
+    Payment.find(safeFilter({ tenantId: id }))
+      .select('amount method status paidAt month createdAt')
+      .sort({ createdAt: 1 })
+      .lean(),
+    getPgUpiConfig().catch(() => ({})),
+  ]);
+
+  // Remaining balance per invoice via the shared payment-status service
+  const invoiceRows = await Promise.all(
+    (invoices as unknown as Array<Record<string, unknown>>).map(async (inv) => {
+      const totalAmount = (inv.totalAmount as number) || 0;
+      const remaining = await getInvoiceBalance(String(inv._id), totalAmount);
+      return {
+        invoiceNumber: (inv.invoiceNumber as string) ?? '--',
+        month: (inv.month as string) ?? '',
+        totalAmount,
+        paidAmount: Math.max(0, totalAmount - remaining),
+        remaining,
+        status: (inv.status as string) ?? 'draft',
+      };
+    }),
+  );
+
+  const paymentRows = (payments as unknown as Array<Record<string, unknown>>).map((p) => ({
+    amount: (p.amount as number) || 0,
+    method: (p.method as string) ?? 'unknown',
+    status: (p.status as string) ?? 'unknown',
+    paidAt: (p.paidAt as string | null) ?? (p.createdAt as string | null) ?? null,
+    month: (p.month as string | null) ?? null,
+  }));
+
+  const t = tenant as unknown as {
+    monthlyRent?: number;
+    depositPaid?: number;
+    moveInDate?: string;
+    moveOutDate?: string | null;
+    isActive?: boolean;
+  };
+
+  const totals = {
+    invoiced: invoiceRows.reduce((s, r) => s + r.totalAmount, 0),
+    paid: invoiceRows.reduce((s, r) => s + r.paidAmount, 0),
+    outstanding: invoiceRows.reduce((s, r) => s + r.remaining, 0),
+    depositHeld: t.depositPaid || 0,
+  };
+
+  const statement = {
+    tenant,
+    stay: {
+      moveInDate: t.moveInDate ?? null,
+      moveOutDate: t.moveOutDate ?? null,
+      isActive: t.isActive ?? false,
+    },
+    monthlyRent: t.monthlyRent || 0,
+    depositPaid: t.depositPaid || 0,
+    invoices: invoiceRows,
+    payments: paymentRows,
+    totals: {
+      invoiced: Math.round(totals.invoiced * 100) / 100,
+      paid: Math.round(totals.paid * 100) / 100,
+      outstanding: Math.round(totals.outstanding * 100) / 100,
+      depositHeld: totals.depositHeld,
+    },
+    generatedAt: new Date(),
+  };
+
+  try {
+    const pdfBuffer = await (
+      ReactPDF as never as {
+        renderToBuffer: (el: unknown) => Promise<Buffer>;
+      }
+    ).renderToBuffer(
+      React.createElement(StatementPdf as never, { statement, appConfig: upiConfig }),
+    );
+
+    const fileName = `statement-${tenantIdStr.slice(-6)}.pdf`;
+    return new Response(new Uint8Array(pdfBuffer), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${fileName}"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: id }, 'Failed to render statement PDF');
+    return c.json(
+      {
+        success: false,
+        error: { code: 'PDF_GENERATION_FAILED', message: 'Failed to generate statement PDF.' },
+      },
+      500,
+    );
+  }
 });
 
 // ── GET /:id/activity — aggregated tenant activity timeline

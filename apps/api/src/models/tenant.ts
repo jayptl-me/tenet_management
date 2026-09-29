@@ -11,17 +11,53 @@ export interface ITenantDocument extends Document {
   monthlyRent: number;
   isActive: boolean;
   documents: {
-    aadhaarUrl?: string;
-    aadhaarPublicId?: string;
+    idType?: 'aadhaar' | 'passport' | 'voter_id' | 'driving_license';
+    idNumberMasked?: string;
+    idUrl?: string;
+    idPublicId?: string;
     photoUrl?: string;
     photoPublicId?: string;
     isVerified?: boolean;
     verifiedAt?: Date;
+    consentGiven?: boolean;
+    consentTimestamp?: Date;
+    // Backward compatibility fields
+    aadhaarUrl?: string;
+    aadhaarPublicId?: string;
   };
   emergencyContact: {
     name?: string;
     phone?: string;
     relation?: string;
+  };
+  verificationProfile?: {
+    fatherOrSpouseName?: string;
+    dob?: Date;
+    gender?: 'male' | 'female' | 'other';
+    bloodGroup?: string;
+    identificationMark?: string;
+    permanentAddress?: {
+      street?: string;
+      city?: string;
+      district?: string;
+      state?: string;
+      pincode?: string;
+      policeStation?: string;
+    };
+    occupation?: {
+      category?: 'salaried' | 'student' | 'business' | 'other';
+      organizationName?: string;
+      officeAddress?: string;
+      idNumber?: string;
+      contactPhone?: string;
+    };
+    localReferences?: Array<{
+      name?: string;
+      phone?: string;
+      address?: string;
+      relation?: string;
+    }>;
+    stayPurpose?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -68,12 +104,22 @@ const tenantSchema = new Schema<ITenantDocument>(
       default: true,
     },
     documents: {
-      aadhaarUrl: { type: String },
-      aadhaarPublicId: { type: String },
+      idType: {
+        type: String,
+        enum: ['aadhaar', 'passport', 'voter_id', 'driving_license'],
+      },
+      idNumberMasked: { type: String, trim: true },
+      idUrl: { type: String },
+      idPublicId: { type: String },
       photoUrl: { type: String },
       photoPublicId: { type: String },
       isVerified: { type: Boolean, default: false },
       verifiedAt: { type: Date },
+      consentGiven: { type: Boolean, default: false },
+      consentTimestamp: { type: Date },
+      // Backward compatibility fields
+      aadhaarUrl: { type: String },
+      aadhaarPublicId: { type: String },
     },
     emergencyContact: {
       name: { type: String, trim: true },
@@ -82,6 +128,43 @@ const tenantSchema = new Schema<ITenantDocument>(
         match: [/^\+91[6-9]\d{9}$/, 'Invalid Indian phone number'],
       },
       relation: { type: String, trim: true },
+    },
+    verificationProfile: {
+      fatherOrSpouseName: { type: String, trim: true },
+      dob: { type: Date },
+      gender: {
+        type: String,
+        enum: ['male', 'female', 'other'],
+      },
+      bloodGroup: { type: String, trim: true },
+      identificationMark: { type: String, trim: true },
+      permanentAddress: {
+        street: { type: String, trim: true },
+        city: { type: String, trim: true },
+        district: { type: String, trim: true },
+        state: { type: String, trim: true },
+        pincode: { type: String, trim: true },
+        policeStation: { type: String, trim: true },
+      },
+      occupation: {
+        category: {
+          type: String,
+          enum: ['salaried', 'student', 'business', 'other'],
+        },
+        organizationName: { type: String, trim: true },
+        officeAddress: { type: String, trim: true },
+        idNumber: { type: String, trim: true },
+        contactPhone: { type: String, trim: true },
+      },
+      localReferences: [
+        {
+          name: { type: String, trim: true },
+          phone: { type: String, trim: true },
+          address: { type: String, trim: true },
+          relation: { type: String, trim: true },
+        },
+      ],
+      stayPurpose: { type: String, trim: true },
     },
   },
   {
@@ -110,7 +193,6 @@ tenantSchema.index(
   {
     unique: true,
     partialFilterExpression: { isActive: true },
-    name: 'unique_active_room_bed',
   },
 );
 
