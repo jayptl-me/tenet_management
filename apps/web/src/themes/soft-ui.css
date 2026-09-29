@@ -1,12 +1,12 @@
-/* ═════════════════════════════════════════════════════════
+/* ---------------------------------------------------------
    GLASSMORPHIC / SOFT UI THEME (Light & Dark)
    Design ref: Halfaccessible "Glassmorphism Design Guide" (2024)
    Philosophy: Ethereal, translucent, luminous. Frosted glass with soft shadows.
-   ═════════════════════════════════════════════════════════ */
+   --------------------------------------------------------- */
 
-/* ── Glassmorphic Light ─────────────────────────────────── */
+/* -- Glassmorphic Light ----------------------------------- */
 [data-theme='soft-ui']:not([data-mode='dark']) {
-  /* Brand — Vibrant Teal (luminous, saturated) */
+  /* Brand - Vibrant Teal (luminous, saturated) */
   --color-brand-50: #ecfeff;
   --color-brand-100: #cffafe;
   --color-brand-200: #a5f3fc;
@@ -19,7 +19,7 @@
   --color-brand-900: #164e63;
   --color-brand-950: #083344;
 
-  /* Surface — Cool Slate with blue undertone */
+  /* Surface - Cool Slate with blue undertone */
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
   --color-surface-200: #e2e8f0;
@@ -32,7 +32,7 @@
   --color-surface-900: #0f172a;
   --color-surface-950: #020617;
 
-  /* Semantic — Full scale for StatusBadge, DataTable rows, alerts */
+  /* Semantic - Full scale for StatusBadge, DataTable rows, alerts */
   --color-danger-50: #fff5f5;
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
@@ -94,21 +94,25 @@
   --color-neutral-800: #1f2937;
   --color-neutral-900: #111827;
 
-  /* Borders — Thin, semi-transparent white */
+  /* Borders - Thin, semi-transparent white */
   --bw-default: 1px;
   --bw-strong: 1px;
   --border-color: rgba(255, 255, 255, 0.65);
 
-  /* Radii — Smooth, rounded */
+  /* Radii - Smooth, rounded */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 9999px;
 
-  /* Shadows — Multi-layer soft, far-reaching */
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.85);
-  --shadow-card-hover: 0 14px 40px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+  /* Shadows - Multi-layer soft, far-reaching */
+  --shadow-card:
+    0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  --shadow-card-hover:
+    0 14px 40px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
   --shadow-button: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-button-pressed: 0 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-dropdown: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
@@ -120,7 +124,7 @@
   --glass-bg: rgba(255, 255, 255, 0.58);
   --glass-bg-hover: rgba(255, 255, 255, 0.76);
 
-  /* Shadows — Full scale (soft luminous idiom) */
+  /* Shadows - Full scale (soft luminous idiom) */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
@@ -129,7 +133,7 @@
   --shadow-2xl: 0 20px 60px rgba(0, 0, 0, 0.16);
   --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.12);
 
-  /* Borders — Aliases */
+  /* Borders - Aliases */
   --border-color-default: var(--border-color);
   --border-color-strong: var(--color-surface-300);
   --border-color-focus: var(--color-brand-500);
@@ -142,25 +146,25 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-padding: 6px 10px;
 
-  /* Glass — Shared names consumed by shell components */
+  /* Glass - Shared names consumed by shell components */
   --glass-bg-strong: rgba(255, 255, 255, 0.82);
   --glass-blur: 16px;
   --glass-blur-strong: 24px;
   --glass-border: var(--border-color);
 
-  /* Typography — Modern geometric */
+  /* Typography - Modern geometric */
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 
-  /* Transition — Smooth, Material-like */
+  /* Transition - Smooth, Material-like */
   --transition-duration: 250ms;
   --transition-duration-slow: 350ms;
   --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-easing-out: cubic-bezier(0, 0, 0.2, 1);
   --transition-easing-in: cubic-bezier(0.4, 0, 1, 1);
 
-  /* Layout — Moderate width */
+  /* Layout - Moderate width */
   --sidebar-width: 272px;
   --sidebar-collapsed-width: 64px;
   --header-height: 60px;
@@ -176,24 +180,67 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Behaviors — Float upward on hover */
+  /* Behaviors - Float upward on hover */
   --hover-lift: translateY(-2px);
   --active-press-scale: 0.98;
   --active-press-x: 0px;
   --active-press-y: 0px;
 
-  /* ── Cross-cutting tokens ──────────────────────────────── */
+  /* -- Cross-cutting tokens -------------------------------- */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
   --color-text-muted: var(--color-surface-500);
   --color-text-inverted: var(--color-surface-50);
+
+  /* -- Solid fills (text-bearing surfaces - guaranteed AA ink) -- */
+  --color-brand-solid: #0e7490;
+  --color-brand-solid-hover: #155e75;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #0f766e;
+  --color-success-solid-hover: #115e59;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #a16207;
+  --color-warning-solid-hover: #854d0e;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #0e7490;
+  --color-info-solid-hover: #155e75;
+  --color-on-info-solid: #ffffff;
+
+  /* -- Vivid on-fill ink (solid fills, primary buttons) -- */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+  --color-on-warning: #ffffff;
+  --color-on-info: #ffffff;
+
+  /* -- Tinted semantic chips -- */
+  --badge-success-bg: var(--color-success-100);
+  --badge-success-text: var(--color-success-800);
+  --badge-success-border: var(--color-success-200);
+  --badge-warning-bg: var(--color-warning-100);
+  --badge-warning-text: var(--color-warning-800);
+  --badge-warning-border: var(--color-warning-200);
+  --badge-danger-bg: var(--color-danger-100);
+  --badge-danger-text: var(--color-danger-800);
+  --badge-danger-border: var(--color-danger-200);
+  --badge-info-bg: var(--color-brand-100);
+  --badge-info-text: var(--color-brand-800);
+  --badge-info-border: var(--color-brand-200);
+  --badge-neutral-bg: var(--color-surface-100);
+  --badge-neutral-text: var(--color-text-secondary);
+  --badge-neutral-border: var(--color-surface-200);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
-  --color-card-bg: var(--color-surface-100);
-  --color-elevated: var(--color-surface-100);
+  --color-card-bg: #ffffff;
+  --color-elevated: #ffffff;
   --color-field-bg: var(--color-surface-50);
   --color-field-bg-hover: var(--color-surface-100);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-400);
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: var(--color-brand-500);
@@ -256,9 +303,9 @@
   --chart-cell-radius: 3px;
 }
 
-/* ── Glassmorphic Dark ──────────────────────────────────── */
+/* -- Glassmorphic Dark ------------------------------------ */
 [data-theme='soft-ui'][data-mode='dark'] {
-  /* Brand — Vibrant Teal (dark-adapted: luminous on dark glass) */
+  /* Brand - Vibrant Teal (dark-adapted: luminous on dark glass) */
   --color-brand-50: #083344;
   --color-brand-100: #164e63;
   --color-brand-200: #155e75;
@@ -271,7 +318,7 @@
   --color-brand-900: #ecfeff;
   --color-brand-950: #f0faff;
 
-  /* Surface — Dark slate */
+  /* Surface - Dark slate */
   --color-surface-50: #020617;
   --color-surface-100: #0a1225;
   --color-surface-200: #162236;
@@ -284,7 +331,7 @@
   --color-surface-900: #f1f5f9;
   --color-surface-950: #f8fafc;
 
-  /* Semantic — Dark-mode adjusted */
+  /* Semantic - Dark-mode adjusted */
   --color-danger-50: #450a0a;
   --color-danger-100: #7f1d1d;
   --color-danger-200: #991b1b;
@@ -352,21 +399,25 @@
   --border-color: rgba(100, 140, 180, 0.16);
   --glass-border-glow: rgba(100, 180, 220, 0.1);
 
-  /* Shadows — Deeper, darker */
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --shadow-card-hover: 0 8px 36px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  /* Shadows - Deeper, darker */
+  --shadow-card:
+    0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-card-hover:
+    0 8px 36px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --shadow-button: 0 2px 8px rgba(0, 0, 0, 0.2);
   --shadow-button-pressed: 0 1px 2px rgba(0, 0, 0, 0.15);
   --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3);
 
-  /* Glass — Dark translucent */
+  /* Glass - Dark translucent */
   --backdrop-blur: 12px;
   --backdrop-saturate: 120%;
   --glass-bg: rgba(12, 18, 34, 0.52);
   --glass-bg-hover: rgba(12, 18, 34, 0.72);
 
-  /* Shadows — Full scale (soft luminous idiom, dark) */
+  /* Shadows - Full scale (soft luminous idiom, dark) */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -375,37 +426,37 @@
   --shadow-2xl: 0 20px 60px rgba(0, 0, 0, 0.5);
   --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.4);
 
-  /* Borders — Aliases */
+  /* Borders - Aliases */
   --border-color-default: var(--border-color);
   --border-color-strong: rgba(255, 255, 255, 0.16);
   --border-color-focus: var(--color-brand-500);
   --border-color-error: var(--color-danger-500);
   --border-color-success: var(--color-success-500);
 
-  /* Glass — Shared names consumed by shell components */
+  /* Glass - Shared names consumed by shell components */
   --glass-bg-strong: rgba(12, 18, 34, 0.8);
   --glass-blur: 12px;
   --glass-blur-strong: 20px;
   --glass-border: var(--border-color);
 
-  /* Radii — Same as light (must be repeated) */
+  /* Radii - Same as light (must be repeated) */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 9999px;
 
-  /* Typography — Same as light (must be repeated) */
+  /* Typography - Same as light (must be repeated) */
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 
-  /* Layout — Same as light */
+  /* Layout - Same as light */
   --sidebar-width: 272px;
   --sidebar-collapsed-width: 64px;
   --header-height: 60px;
 
-  /* Spacing scale — Same as light */
+  /* Spacing scale - Same as light */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -416,7 +467,7 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Transition — Same as light */
+  /* Transition - Same as light */
   --transition-duration: 250ms;
   --transition-duration-slow: 350ms;
   --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
@@ -432,8 +483,51 @@
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
   --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-500);
-  --color-text-inverted: var(--color-surface-50);
+  --color-text-muted: #708096;
+  /* On-fill ink: light (near-white) so text on teal/red fills is legible */
+  --color-text-inverted: #f8fafc;
+
+  /* -- Solid fills (text-bearing surfaces - guaranteed AA ink) -- */
+  --color-brand-solid: #0e7490;
+  --color-brand-solid-hover: #155e75;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #dc2626;
+  --color-danger-solid-hover: #b91c1c;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #0f766e;
+  --color-success-solid-hover: #115e59;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #a16207;
+  --color-warning-solid-hover: #854d0e;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #0e7490;
+  --color-info-solid-hover: #155e75;
+  --color-on-info-solid: #ffffff;
+
+  /* -- Vivid on-fill ink (solid fills, primary buttons) -- */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+  --color-on-warning: #ffffff;
+  --color-on-info: #ffffff;
+
+  /* -- Tinted semantic chips (dark) -- */
+  --badge-success-bg: var(--color-success-200);
+  --badge-success-text: var(--color-success-900);
+  --badge-success-border: var(--color-success-800);
+  --badge-warning-bg: var(--color-warning-200);
+  --badge-warning-text: var(--color-warning-900);
+  --badge-warning-border: var(--color-warning-800);
+  --badge-danger-bg: var(--color-danger-200);
+  --badge-danger-text: var(--color-danger-900);
+  --badge-danger-border: var(--color-danger-800);
+  --badge-info-bg: var(--color-brand-200);
+  --badge-info-text: var(--color-brand-900);
+  --badge-info-border: var(--color-brand-800);
+  --badge-neutral-bg: var(--color-surface-200);
+  --badge-neutral-text: var(--color-surface-800);
+  --badge-neutral-border: var(--color-surface-300);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
   --color-card-bg: var(--color-surface-100);
   --color-elevated: var(--color-surface-100);
@@ -441,6 +535,7 @@
   --color-field-bg-hover: var(--color-surface-200);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-400);
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: var(--color-brand-500);

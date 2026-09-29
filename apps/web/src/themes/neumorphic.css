@@ -186,9 +186,51 @@
 
   /* ── Cross-cutting tokens ──────────────────────────────── */
   --color-text-primary: var(--color-surface-900);
-  --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-500);
+  --color-text-secondary: var(--color-surface-700); /* AA 6.83 on card */
+  --color-text-muted: var(--color-surface-600); /* AA 4.63 on card */
   --color-text-inverted: var(--color-surface-50);
+
+  /* ── Solid fills (text-bearing surfaces — guaranteed AA ink) ── */
+  --color-brand-solid: #4956cc;
+  --color-brand-solid-hover: #374199;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #d12d51;
+  --color-danger-solid-hover: #ab1f3f;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #19703c;
+  --color-success-solid-hover: #155831;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #92501a;
+  --color-warning-solid-hover: #734219;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #3a5fcc;
+  --color-info-solid-hover: #2c49b0;
+  --color-on-info-solid: #ffffff;
+
+  /* ── Vivid on-fill ink (charts & icons on the 500 fills) ── */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #1e1f28;
+  --color-on-success: #1e1f28;
+  --color-on-warning: #1e1f28;
+  --color-on-info: #ffffff;
+
+  /* ── Tinted semantic chips ── */
+  --badge-success-bg: var(--color-success-100);
+  --badge-success-text: var(--color-success-800);
+  --badge-success-border: var(--color-success-200);
+  --badge-warning-bg: var(--color-warning-100);
+  --badge-warning-text: var(--color-warning-800);
+  --badge-warning-border: var(--color-warning-200);
+  --badge-danger-bg: var(--color-danger-100);
+  --badge-danger-text: var(--color-danger-800);
+  --badge-danger-border: var(--color-danger-200);
+  --badge-info-bg: var(--color-brand-100);
+  --badge-info-text: var(--color-brand-800);
+  --badge-info-border: var(--color-brand-200);
+  --badge-neutral-bg: var(--color-surface-100);
+  --badge-neutral-text: var(--color-text-secondary);
+  --badge-neutral-border: var(--color-surface-200);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
   --color-card-bg: var(--color-surface-100);
   --color-elevated: var(--color-surface-100);
@@ -196,6 +238,7 @@
   --color-field-bg-hover: var(--color-surface-100);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-400);
   --shimmer-base: var(--color-surface-200);
   --shimmer-shine: var(--color-surface-100);
   --focus-ring-color: rgba(92, 107, 255, 0.4);
@@ -433,9 +476,52 @@
 
   /* Cross-cutting dark */
   --color-text-primary: var(--color-surface-900);
-  --color-text-secondary: var(--color-surface-600);
-  --color-text-muted: var(--color-surface-500);
-  --color-text-inverted: var(--color-surface-50);
+  --color-text-secondary: #929cae;
+  --color-text-muted: #798396;
+  /* On-fill ink: light (near-white) so text on brand/danger fills is legible */
+  --color-text-inverted: #f0f2f5;
+
+  /* ── Solid fills (text-bearing surfaces — guaranteed AA ink) ── */
+  --color-brand-solid: #4956cc;
+  --color-brand-solid-hover: #374199;
+  --color-on-brand-solid: #ffffff;
+  --color-danger-solid: #d12d51;
+  --color-danger-solid-hover: #ab1f3f;
+  --color-on-danger-solid: #ffffff;
+  --color-success-solid: #19703c;
+  --color-success-solid-hover: #155831;
+  --color-on-success-solid: #ffffff;
+  --color-warning-solid: #92501a;
+  --color-warning-solid-hover: #734219;
+  --color-on-warning-solid: #ffffff;
+  --color-info-solid: #3a5fcc;
+  --color-info-solid-hover: #2c49b0;
+  --color-on-info-solid: #ffffff;
+
+  /* ── Vivid on-fill ink (charts & icons on the 500 fills) ── */
+  --color-on-brand: #1e1f28;
+  --color-on-danger: #1e1f28;
+  --color-on-success: #1e1f28;
+  --color-on-warning: #1e1f28;
+  --color-on-info: #ffffff;
+
+  /* ── Tinted semantic chips (dark) ── */
+  --badge-success-bg: var(--color-success-200);
+  --badge-success-text: var(--color-success-900);
+  --badge-success-border: var(--color-success-800);
+  --badge-warning-bg: var(--color-warning-200);
+  --badge-warning-text: var(--color-warning-900);
+  --badge-warning-border: var(--color-warning-800);
+  --badge-danger-bg: var(--color-danger-200);
+  --badge-danger-text: var(--color-danger-900);
+  --badge-danger-border: var(--color-danger-800);
+  --badge-info-bg: var(--color-brand-200);
+  --badge-info-text: var(--color-brand-900);
+  --badge-info-border: var(--color-brand-800);
+  --badge-neutral-bg: var(--color-surface-200);
+  --badge-neutral-text: var(--color-surface-800);
+  --badge-neutral-border: var(--color-surface-300);
+  --badge-dot: 6px;
   --color-page-bg: var(--color-surface-50);
   --color-card-bg: var(--color-surface-100);
   --color-elevated: var(--color-surface-100);
@@ -443,6 +529,7 @@
   --color-field-bg-hover: var(--color-surface-200);
   --color-field-border: var(--border-color);
   --color-field-border-hover: var(--color-surface-300);
+  --border-color-hover: var(--color-brand-400);
   --shimmer-base: var(--color-surface-300);
   --shimmer-shine: var(--color-surface-200);
   --focus-ring-color: rgba(156, 141, 255, 0.6);
