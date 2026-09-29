@@ -10,9 +10,9 @@ Pass 1 record: docs/audit/features/complaints_audit_pass1_20260908-003801.md
 
 | Surface | Capability                                                       | Status  |
 | ------- | ---------------------------------------------------------------- | ------- |
-| List    | table + kanban + stat cards + category chips + date filter + CSV | WORKING |
-| Create  | ResourceSelect sections + push detail                            | WORKING |
-| Detail  | stay card bed/floor + status form                                | WORKING |
+| List    | table + kanban + quick resolve modal + stat cards + filter + CSV | WORKING |
+| Create  | ResourceSelect sections + live photo thumbnail preview grid      | WORKING |
+| Detail  | stay card bed/floor + quick resolve modal + photo lightbox links | WORKING |
 | Edit    | badge legend + transition-safe submit                            | WORKING |
 | API     | guards, transitions, stay populate, photo audit, enum filters    | WORKING |
-| Flutter | 5 photo URLs + validation                                        | WORKING |
+| Flutter | modal bottom sheet, category visual grid, urgency chips, filters | WORKING |

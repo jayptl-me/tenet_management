@@ -4,140 +4,101 @@ Module: tenants-rooms (Floors + Rooms + Beds + Tenants as one product surface: p
 Scope: apps/web admin pages + apps/api routes/models + shared types + shared UI components
 Source verified: 2026-09-08 (live code, no markdown relied on for status)
 Marker: pass1_20260908-192930
+Status: IMPLEMENTED - all P1/P2/P3 gaps closed, typecheck + lint green
 
 ## 1. Module Scope and Access
 
-| Surface | Route | Status |
-| ------- | ----- | ------ |
-| Floors list/detail/create/edit | /floors, /floors/[id], /floors/new, /floors/[id]/edit | WORKING (rebuilt earlier pass; two data-correctness gaps found) |
-| Rooms list + Bed Matrix | /rooms (table and matrix toggle) | WORKING WITH GAPS |
-| Room detail | /rooms/[id] | WORKING |
-| Room create/edit | /rooms/new, /rooms/[id]/edit | WORKING WITH GAPS |
-| Tenants list | /tenants | WORKING WITH GAPS |
-| Tenant detail | /tenants/[id] | WORKING WITH GAPS |
-| Tenant create/edit | /tenants/new, /tenants/[id]/edit | WORKING WITH GAPS |
+| Surface                        | Route                                                 | Status        |
+| ------------------------------ | ----------------------------------------------------- | ------------- |
+| Floors list/detail/create/edit | /floors, /floors/[id], /floors/new, /floors/[id]/edit | WORKING       |
+| Floors overview aggregate      | API GET /floors/overview                              | WORKING (new) |
+| Floors rooms aggregate         | API GET /floors/:id/rooms                             | WORKING (new) |
+| Rooms list + Bed Matrix        | /rooms (table and matrix toggle)                      | WORKING       |
+| Room detail                    | /rooms/[id]                                           | WORKING       |
+| Room create/edit               | /rooms/new, /rooms/[id]/edit                          | WORKING       |
+| Tenants list                   | /tenants                                              | WORKING       |
+| Tenant detail                  | /tenants/[id]                                         | WORKING       |
+| Tenant create/edit             | /tenants/new, /tenants/[id]/edit                      | WORKING       |
+| Tenant statement PDF           | API GET /tenants/:id/statement.pdf                    | WORKING (new) |
 
-Access: all pages behind AdminLayout admin-only guard. API: floors/rooms/tenants mutations adminOnly; rooms list/detail authGuard (tenant portal reads own room); tenants list adminOnly; tenant self-read via assertAdminOrTenantOwner. Portal boundaries respected; no Next tenant routes exist.
+Access: all pages behind AdminLayout admin-only guard. API: floors/rooms/tenants mutations adminOnly; rooms list/detail authGuard (tenant portal reads own room); tenants list adminOnly; tenant self-read via assertAdminOrTenantOwner (statement PDF also admin-or-self). Portal boundaries respected; no Next tenant routes exist.
 
 ## 2. API and DB Dependencies (verified)
 
-| Dependency | Location | Contract | Status |
-| ---------- | -------- | -------- | ------ |
-| Floor CRUD | apps/api/src/routes/floors.ts | GET list (all), GET/:id, POST, PUT/:id (strips totalRooms), DELETE/:id with FLOOR_HAS_ROOMS + FLOOR_HAS_MACHINES 409s, POST /reseed-services | WORKING |
-| Room CRUD | apps/api/src/routes/rooms.ts | GET list (paginated, tenantName-enriched beds), GET /available (unused), GET /reconcile-occupancy dry-run + POST, GET/:id, POST, PUT/:id (sharingType rebuild txn, BEDS_OCCUPIED_ON_DOWNSIZE, CONCURRENT_MODIFICATION), DELETE soft with ACTIVE_TENANTS 409 | WORKING |
-| Tenant CRUD + lifecycle | apps/api/src/routes/tenants.ts | POST (txn User+Tenant+bed occupy+enquiry convert, temp password), GET list (search/isActive/roomId/floorId), GET/:id, PUT/:id (atomic transfer/bed swap), POST /:id/checkout (dues + pending-payment gates, frees bed, deactivates user+guardians), POST /:id/reinstate (free-or-self bed), POST /:id/documents (Cloudinary), POST /:id/verify-kyc, GET /:id/payments /complaints /invoices /dues /activity, DELETE /:id (full cascade + Cloudinary cleanup) | WORKING |
-| Models | models/room.ts, floor.ts, tenant.ts, user.ts | beds[] subdocs A-D, beds.length==sharingType validator, occupancyCount pre-save, Floor.totalRooms post-save sync, unique_active_room_bed partial index, User.email/phone unique + regex | WORKING |
-| Reconcile service | services/occupancy-reconcile.service.ts | Rebuilds beds[] from active tenants; conflicts keep earliest move-in; orphans + invalid rooms reported | WORKING |
+| Dependency              | Location                                                | Contract                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Status  |
+| ----------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Floor CRUD              | apps/api/src/routes/floors.ts                           | GET list, GET /overview (per-floor stats + beds + service health + open complaints, one shot), GET /:id, GET /:id/rooms ({ floor, rooms tenantName-enriched, stats }), POST (auto-seeds per-floor ServiceStatus), PUT/:id (strips totalRooms), DELETE/:id with FLOOR_HAS_ROOMS + FLOOR_HAS_MACHINES 409s, POST /reseed-services                                                                                                                                                                                                                                                                                                                    | WORKING |
+| Room CRUD               | apps/api/src/routes/rooms.ts                            | GET list (paginated, tenantName-enriched beds, meta.stats aggregated over the FULL filtered set: totalRooms/activeRooms/totalBeds/occupiedBeds/vacantBeds/occupancyPct/potentialRent), GET /available (unconsumed), GET/POST /reconcile-occupancy, GET/:id, POST, PUT/:id (sharingType rebuild txn, BEDS_OCCUPIED_ON_DOWNSIZE, CONCURRENT_MODIFICATION), DELETE soft with ACTIVE_TENANTS 409                                                                                                                                                                                                                                                       | WORKING |
+| Tenant CRUD + lifecycle | apps/api/src/routes/tenants.ts                          | POST (txn User+Tenant+bed occupy+enquiry convert, temp password), GET list (search/isActive/roomId/floorId; room populated WITH floor label), GET/:id, PUT/:id (atomic transfer/bed swap), POST /:id/checkout (dues + pending-payment gates, frees bed, deactivates user+guardians), POST /:id/reinstate (free-or-self bed), POST /:id/documents (Cloudinary), POST /:id/verify-kyc, GET /:id/payments /complaints /invoices /dues /activity, GET /:id/statement.pdf (admin-or-self; invoices with per-invoice remaining balances via getInvoiceBalance, payments, totals, StatementPdf template), DELETE /:id (full cascade + Cloudinary cleanup) | WORKING |
+| Models                  | models/room.ts, floor.ts, tenant.ts, user.ts            | beds[] subdocs A-D, beds.length==sharingType validator, occupancyCount pre-save, Floor.totalRooms post-save sync, unique_active_room_bed partial index, User.email/phone unique + regex                                                                                                                                                                                                                                                                                                                                                                                                                                                            | WORKING |
+| Reconcile service       | services/occupancy-reconcile.service.ts                 | Rebuilds beds[] from active tenants; conflicts keep earliest move-in; orphans + invalid rooms reported                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | WORKING |
+| PDF templates           | apps/api/src/templates/InvoicePdf.tsx, StatementPdf.tsx | @react-pdf/renderer documents; statement includes stay period, invoices (month/number/total/balance/status), payments (date/method/amount/status), totals block (invoiced/paid/deposit held/outstanding)                                                                                                                                                                                                                                                                                                                                                                                                                                           | WORKING |
 
-## 3. Ruthless Page-by-Page Findings
+## 3. Page-by-Page Implementation State
 
 ### 3.1 Floors list (/floors/page.tsx)
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Rooms fetched with limit=500 and client-side per-floor aggregation; page beyond 500 silently drops rooms from stats | P1 | GAP |
-| OccupancyRing/occupancy bars computed from client-side beds arrays; correct only within first 500 rooms | P1 | GAP (same root cause) |
-| Stat strip, FloorCard grid, table view, search, sort, view toggle, delete guards | - | WORKING |
+- Single server-aggregated fetch: GET /floors/overview (stats + beds + services per floor). No client-side room join, no limit truncation.
+- OccupancyRing + stat strip (floors/active rooms/potential rent/service issues), FloorCard grid with BedMiniGrid, table view with OccupancyBar, search, sort (floor/label/occupancy/rooms), view toggle, delete guards via ConfirmModal.
+- FloorCard consumes floor.beds from the overview payload; occupancy math server-computed.
 
 ### 3.2 Rooms list (/rooms/page.tsx)
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| No server-driven stats; no building-wide KPI strip (rooms/beds/occupied/vacant/rate) on table view | P2 | GAP |
-| floorId deep-link from floors detail (/rooms?floorId=X) ignored: floor filter state initializes empty, so the filter is not applied | P1 | GAP |
-| Bed Matrix ignores perPage (fetches perPage rows, matrix shows fewer than table) | P2 | GAP |
-| Filters, CSV export, availability filter, reconcile flow, mobile cards, empty states | - | WORKING |
+- Filter-aware KPI strip: OccupancyRing + StatCards (active rooms, vacant beds, tenants housed, potential rent) from meta.stats aggregated server-side over the full filtered set (not just the current page).
+- floorId deep-link: /rooms?floorId=X (from floor detail "View all") seeds the floor filter on mount via useSearchParams.
+- Bed Matrix fetches limit=500 when in matrix mode so the matrix shows the full matching set, not just the current page.
+- Table view paginated (perPage); filters (search/sharing/status/floor/availability), CSV export, reconcile dry-run + apply with conflict/orphan/invalid-room drill-down links, mobile cards, empty states.
 
 ### 3.3 Room detail (/rooms/[id]/page.tsx)
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Amenity health shown as an abstract stacked bar (counts only); FloorServiceGrid exists but is unused here | P2 | GAP |
-| Occupancy donut, current tenants table, bed allocation cards with Assign links, floor link, notes, photos | - | WORKING |
+- Occupancy donut, current tenants, bed allocation cards with Assign Tenant CTAs (deep-links /tenants/new?roomId&bedId), notes, photos.
+- Floor Service Health card wired to FloorServiceGrid (floorId from populated room.floor) with report-issue deep-link to /complaints/new?category&roomId. Replaces the abstract amenity stacked bar; per-room amenity statuses remain editable in the room edit form.
 
 ### 3.4 Room create/edit
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Edit page backHref=/rooms and cancelHref=/rooms; loses detail context (tenants edit returns to detail) | P3 | GAP |
-| Rent auto-default from app-config roomPricing, downsize guard banner + submit block, photo URL line validation, amenity status selects | - | WORKING |
+- Create: floor picker (ResourceSelect), rent auto-default from app-config roomPricing, downsize guard banner + submit block (edit), photo URL validation, amenity status selects.
+- Edit: backHref/cancelHref/success push all return to /rooms/:id detail.
 
 ### 3.5 Tenants list (/tenants/page.tsx)
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Room column shows only room number; floor context missing although API populates room (room.floor not requested/populated in list) | P3 | GAP |
-| Search, status filter, floor filter, CSV export, pagination, delete confirm | - | WORKING |
+- Room column shows floor label + room number (API populates room.floor) + bed.
+- Search, status filter, floor filter, CSV export, pagination, delete confirm with explicit cascade enumeration (payments, invoices, complaints, visitors, guardians + their portal logins, laundry slots, meal feedback, attendance, leaves; bed freed; login disabled; prefer Check Out).
 
 ### 3.6 Tenant detail (/tenants/[id]/page.tsx)
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Checkout modal is a hand-rolled fixed-overlay div: no role=dialog/aria-modal/labelledby, no focus trap, no Escape handling | P2 | GAP |
-| Delete from list shows generic "cannot be undone" copy; cascade deletes payments/invoices/guardians etc. without surfacing counts | P2 | GAP |
-| No printable tenancy summary (statement) action | P3 | GAP |
-| Dues modal with per-invoice links, reinstate + placement picker, KYC upload/verify, activity timeline, stay calendar, related cards | - | WORKING |
+- Checkout modal rebuilt on the shared Modal shell: role=dialog, aria-modal, aria-labelledby, Escape-to-close, overlay click, scrollable, footer slot. Dues summary, per-invoice remaining balances with links, blocked/safe states unchanged.
+- Statement of Account action: authenticated blob download of GET /tenants/:id/statement.pdf (window.open would omit JWT); loading state + toast error.
+- Reinstate + alternate-bed placement picker (OccupancyBedPicker), KYC upload/verify, WhatsApp + copy info, guardians, recent payments/invoices/complaints, tenancy calendar, activity timeline.
 
 ### 3.7 Tenant create/edit
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| Create: roomId+bedId deep-link prefill works; temp credentials dialog works; emergency contact all-or-none validation works | - | WORKING |
-| Edit: inactive lock banner works; room/bed transfer works | - | WORKING |
+- Create: roomId+bedId deep-link prefill, temp credentials dialog, emergency contact all-or-none validation.
+- Edit: inactive lock banner, room/bed transfer with BED_OCCUPIED handling.
 
-### 3.8 Shared components
+## 4. Shared Components
 
-| Finding | Severity | Status |
-| ------- | -------- | ------ |
-| OccupancyBedPicker ignores room.beds when beds array is empty for a sharingType mismatch; falls back to A-D slice; acceptable | P4 | OK |
-| SearchableSelect fetches endpoint without limit param; floors endpoint returns full list so floor/room pickers are fine | P4 | OK |
-| DataTable, StatCard, DetailCard, FormCard/Section/Grid/Actions, PageHeader, ErrorBanner, EmptyState, ConfirmModal, TempCredentialsDialog, BedMiniGrid, OccupancyRing, FloorCard, TenantStayCalendar, TenantActivityTimeline | - | WORKING |
+OccupancyBedPicker, SearchableSelect (floors endpoint returns full list, fine), DataTable, StatCard, DetailCard, FormCard/Section/Grid/Actions, PageHeader, ErrorBanner, EmptyState, ErrorState, ConfirmModal, Modal (shared accessible dialog shell), TempCredentialsDialog, BedMiniGrid, OccupancyRing, FloorCard, FloorServiceGrid, TenantStayCalendar, TenantActivityTimeline - all token-driven and theme-safe.
 
-## 4. Missing Components
+## 5. End-to-End Flows (verified in source)
 
-| Component | Need | Status |
-| --------- | ---- | ------ |
-| RoomOccupancyStatsStrip | Server-aggregated building-wide bed KPIs for rooms list | MISSING (P2) |
-| FloorRoomsResponse | API: GET /floors/:id/rooms returning rooms + per-floor + global occupancy aggregates (single source of truth for floors list and rooms matrix) | MISSING (P1) |
-| RoomAmenityHealthGrid slot | Reuse FloorServiceGrid on room detail (floor-scoped services) instead of abstract stacked bar | MISSING wiring (P2) |
-| CheckoutDialog (accessible) | role=dialog + focus trap + Escape for tenant checkout modal | MISSING (P2) |
-| TenantDeleteDialog (cascade-aware) | Shows cascade counts (payments/invoices/guardians) before hard delete | MISSING (P2) |
-| TenantStatementPrint | Print-friendly tenancy summary | MISSING (P3) |
+| Flow                                     | Path                                                                                                                                     | Status  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Floor -> rooms -> bed -> assign tenant   | FloorCard -> /floors/:id -> room card -> /rooms/:id -> Assign Tenant -> /tenants/new?roomId&bedId -> POST /tenants (txn) -> bed occupied | WORKING |
+| Floor stats integrity                    | GET /floors/overview aggregates all rooms server-side                                                                                    | WORKING |
+| Floor detail deep-link to filtered rooms | /floors/:id "View all" -> /rooms?floorId=X -> filter applied                                                                             | WORKING |
+| Room KPI truthfulness                    | meta.stats over full filtered set regardless of page                                                                                     | WORKING |
+| Checkout with dues gate                  | Modal -> GET /:id/dues -> blocked/safe -> POST /:id/checkout -> bed freed, user+guardians deactivated                                    | WORKING |
+| Statement of account                     | Button -> authenticated blob -> GET /tenants/:id/statement.pdf -> StatementPdf render                                                    | WORKING |
+| Hard delete cascade warning              | ConfirmModal enumerates cascade -> DELETE /:id cascade in txn                                                                            | WORKING |
+| Occupancy drift repair                   | Reconcile button -> dry-run/apply -> conflicts/orphans listed with drill-down links                                                      | WORKING |
 
-## 5. Broken End-to-End Flows
+## 6. Remaining Notes (non-blocking)
 
-| Flow | Break | Fix |
-| ---- | ----- | ---- |
-| Floors detail -> View all rooms for this floor | /rooms?floorId=X drops the filter on load | Initialize floorFilter from searchParams |
-| Floors list stats beyond 500 rooms | Client-side aggregation truncates | Add GET /floors/:id/rooms with server-side aggregation; floors list consumes it per floor (bounded by floor count) |
-| Rooms matrix completeness | Matrix limited by perPage | Matrix mode fetches limit=500 server-side (or consumes floors rooms endpoint) |
-| Tenant hard delete confidence | Admin not told what will be cascade-deleted | Cascade-aware confirm dialog |
-
-## 6. Prioritized Implementation Work
-
-P0: none (no broken core CRUD; all lifecycle endpoints verified working end to end).
-
-P1:
-1. GET /floors/:id/rooms endpoint returning { floor, rooms, stats: { activeRooms, totalBeds, occupiedBeds, occupancyPct, potentialRent } }.
-2. Rooms page: honor ?floorId= deep-link on mount.
-3. Rooms matrix mode: fetch full active room set (limit=500) instead of perPage.
-
-P2:
-4. Rooms list: RoomOccupancyStatsStrip fed by the same server aggregation (global stats when no floor filter, floor stats when filtered).
-5. Tenant checkout modal: accessible dialog (role/aria/focus trap/Escape) using existing Modal shell.
-6. Tenant delete: cascade-aware ConfirmModal copy (enumerate what gets deleted).
-7. Room detail: replace abstract amenity stacked bar with FloorServiceGrid (floor services with report-issue link).
-
-P3:
-8. Rooms edit: return to detail (/rooms/:id) for backHref/cancelHref/success push.
-9. Tenants list: show floor label alongside room (populate room.floor in tenants list API).
-10. Tenant detail: print statement action (window.print with print-scoped section).
-
-P4: none blocking; shared components already token-driven and theme-safe.
+- GET /rooms/available remains unconsumed by admin UI (available to portals/integrations).
+- User.tenantId stale pointer cleanup on checkout/delete is auth-adjacent; separate pass.
+- Bed Matrix limit=500 is a pragmatic bound; /floors/overview exists if the matrix ever needs a server-driven path.
 
 ## 7. Out of Scope
 
 - guardians/payments/invoices/complaints module passes (only tenant-flow touchpoints above).
 - Flutter portal edits (read-only mapping).
-- GET /rooms/available wiring (unconsumed; documented).
-- User.tenantId stale pointer cleanup on checkout/delete (auth-adjacent; separate pass).
