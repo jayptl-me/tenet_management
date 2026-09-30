@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import {
   UserRound,
   CalendarDays,
@@ -98,6 +99,14 @@ interface ElectricityShareInfo {
   tenantShare: number;
 }
 
+const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
+
+const DUPLICATE_INVOICE_KEY = (tenantId: string, month: string) =>
+  ['invoices', 'duplicate-check', tenantId, month] as const;
+
+const ELECTRICITY_SHARE_KEY = (tenantId: string, month: string) =>
+  ['electricity', 'share', tenantId, month] as const;
+
 function NewInvoiceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,107 +115,74 @@ function NewInvoiceForm() {
   const [tenantId, setTenantId] = useState(prefilledTenantId);
   const [month, setMonth] = useState(currentMonth());
   const [dueDate, setDueDate] = useState(defaultDueDate());
-  const [tenantDetail, setTenantDetail] = useState<PopulatedTenantDetail | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [elecShare, setElecShare] = useState<ElectricityShareInfo | null>(null);
 
   // Line items state
   const [lineItems, setLineItems] = useState<LineItemInput[]>([]);
 
-  // Fetch full tenant details when tenant changes
-  useEffect(() => {
-    if (!tenantId) {
-      setTenantDetail(null);
+  // Full tenant details for the selected resident (profile card + rent seed).
+  const { data: tenantDetail = null } = useApiQuery<PopulatedTenantDetail>(
+    TENANT_KEY(tenantId),
+    `tenants/${tenantId}`,
+    { enabled: Boolean(tenantId) },
+  );
+
+  // Duplicate-invoice check for the selected tenant and billing month.
+  const { data: duplicateMatches } = useApiQuery<Array<{ invoiceNumber?: string; status?: string }>>(
+    DUPLICATE_INVOICE_KEY(tenantId, month),
+    `invoices?tenantId=${tenantId}&month=${month}&limit=1`,
+    { enabled: Boolean(tenantId) && /^\d{4}-\d{2}$/.test(month) },
+  );
+
+  // Electricity share for the selected tenant and billing month.
+  const { data: elecShareData } = useApiQuery<ElectricityShareInfo | null>(
+    ELECTRICITY_SHARE_KEY(tenantId, month),
+    `electricity/share?tenantId=${tenantId}&month=${month}`,
+    { enabled: Boolean(tenantId) && /^\d{4}-\d{2}$/.test(month) },
+  );
+
+  const duplicateMatch = (duplicateMatches ?? [])[0];
+  const duplicateWarning = duplicateMatch
+    ? `An invoice${duplicateMatch.invoiceNumber ? ` (${duplicateMatch.invoiceNumber})` : ''} already exists for this tenant and month${duplicateMatch.status ? ` (Status: ${duplicateMatch.status.replace(/_/g, ' ')})` : ''}. Generating a new one will create a separate invoice record.`
+    : '';
+
+  const elecShare = elecShareData && elecShareData.tenantShare > 0 ? elecShareData : null;
+
+  // Line items follow the selection: cleared when the tenant is cleared, seeded
+  // from the resolved tenant's rent, and relabelled when the billing month
+  // changes. Adjusted during render (state derived from previous renders)
+  // instead of fetch effects.
+  const [lineItemOwner, setLineItemOwner] = useState<{ tenantId: string; month: string } | null>(
+    null,
+  );
+  if (!tenantId) {
+    if (lineItemOwner !== null) {
+      setLineItemOwner(null);
       setLineItems([]);
-      return;
     }
-
-    let cancelled = false;
-    api
-      .get(`tenants/${tenantId}`)
-      .json<{ success: boolean; data: PopulatedTenantDetail }>()
-      .then((res) => {
-        if (!cancelled && res.success) {
-          setTenantDetail(res.data);
-          // Seed initial line item from monthlyRent if not already customized
-          if (res.data.monthlyRent && res.data.monthlyRent > 0) {
-            setLineItems([
-              {
-                id: 'item-rent-initial',
-                description: `Room Rent (${month})`,
-                amount: res.data.monthlyRent,
-              },
-            ]);
-          }
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setTenantDetail(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, month]);
-
-  // Update line item description when month changes if it was default rent
-  useEffect(() => {
+  } else if (tenantDetail && lineItemOwner?.tenantId !== tenantId) {
+    setLineItemOwner({ tenantId, month });
+    // Seed the initial line item from monthlyRent when the tenant provides one.
+    if (tenantDetail.monthlyRent && tenantDetail.monthlyRent > 0) {
+      setLineItems([
+        {
+          id: 'item-rent-initial',
+          description: `Room Rent (${month})`,
+          amount: tenantDetail.monthlyRent,
+        },
+      ]);
+    }
+  } else if (lineItemOwner && lineItemOwner.month !== month) {
+    setLineItemOwner({ tenantId, month });
     setLineItems((prev) =>
-      prev.map((item) => {
-        if (item.id === 'item-rent-initial') {
-          return { ...item, description: `Room Rent (${month})` };
-        }
-        return item;
-      }),
+      prev.map((item) =>
+        item.id === 'item-rent-initial'
+          ? { ...item, description: `Room Rent (${month})` }
+          : item,
+      ),
     );
-  }, [month]);
-
-  // Check for duplicate invoices for selected tenant & month
-  useEffect(() => {
-    setDuplicateWarning('');
-    if (!tenantId || !month || !/^\d{4}-\d{2}$/.test(month)) return;
-
-    let cancelled = false;
-    api
-      .get(`invoices?tenantId=${tenantId}&month=${month}&limit=1`)
-      .json<{ success: boolean; data: Array<{ invoiceNumber?: string; status?: string }> }>()
-      .then((res) => {
-        if (!cancelled && (res.data ?? []).length > 0) {
-          const existing = res.data[0]!;
-          setDuplicateWarning(
-            `An invoice${existing.invoiceNumber ? ` (${existing.invoiceNumber})` : ''} already exists for this tenant and month${existing.status ? ` (Status: ${existing.status.replace(/_/g, ' ')})` : ''}. Generating a new one will create a separate invoice record.`,
-          );
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, month]);
-
-  // Check for electricity share for selected tenant & month
-  useEffect(() => {
-    setElecShare(null);
-    if (!tenantId || !month || !/^\d{4}-\d{2}$/.test(month)) return;
-
-    let cancelled = false;
-    api
-      .get(`electricity/share?tenantId=${tenantId}&month=${month}`)
-      .json<{ success: boolean; data: ElectricityShareInfo | null }>()
-      .then((res) => {
-        if (!cancelled && res.success && res.data && res.data.tenantShare > 0) {
-          setElecShare(res.data);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, month]);
+  }
 
   const isElecAdded = lineItems.some((item) =>
     item.description.toLowerCase().includes('electricity'),

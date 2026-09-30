@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Mail,
@@ -28,6 +29,8 @@ import {
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -121,6 +124,31 @@ interface TenantDetail {
   createdAt: string;
 }
 
+const TENANT_KEY = ['tenants', 'detail'] as const;
+const TENANT_PAYMENTS_KEY = ['tenants', 'payments'] as const;
+const TENANT_INVOICES_KEY = ['tenants', 'invoices'] as const;
+const TENANT_COMPLAINTS_KEY = ['tenants', 'complaints'] as const;
+const TENANT_ACTIVITY_KEY = ['tenants', 'activity'] as const;
+const TENANT_GUARDIANS_KEY = ['guardians', 'by-tenant'] as const;
+
+type GuardianLink = {
+  _id: string;
+  name: string;
+  phone?: string;
+  relation?: string;
+  isActive?: boolean;
+};
+type RecentPayment = { _id: string; amount: number; status: string; createdAt: string };
+type RecentInvoice = {
+  _id: string;
+  invoiceNumber?: string;
+  month?: string;
+  totalAmount?: number;
+  status?: string;
+};
+type RecentComplaint = { _id: string; title: string; status: string; priority?: string };
+type ActivityEvent = { id: string; type: string; title: string; subtitle?: string; date: string };
+
 function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) return '₹0';
   try {
@@ -143,13 +171,16 @@ function formatDate(d: string | null | undefined): string {
   }
 }
 
+function asRows<T>(data: T[] | undefined): T[] {
+  return Array.isArray(data) ? data : [];
+}
+
 export default function TenantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const queryClient = useQueryClient();
 
-  const [tenant, setTenant] = useState<TenantDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [duesLoading, setDuesLoading] = useState(false);
@@ -161,116 +192,70 @@ export default function TenantDetailPage() {
   const [reinstateRoomId, setReinstateRoomId] = useState('');
   const [reinstateBedId, setReinstateBedId] = useState('');
   const [reinstateError, setReinstateError] = useState('');
-  const [relatedError, setRelatedError] = useState('');
-  const [guardians, setGuardians] = useState<
-    Array<{ _id: string; name: string; phone?: string; relation?: string; isActive?: boolean }>
-  >([]);
-  const [recentPayments, setRecentPayments] = useState<
-    Array<{ _id: string; amount: number; status: string; createdAt: string }>
-  >([]);
-  const [recentInvoices, setRecentInvoices] = useState<
-    Array<{
-      _id: string;
-      invoiceNumber?: string;
-      month?: string;
-      totalAmount?: number;
-      status?: string;
-    }>
-  >([]);
-  const [recentComplaints, setRecentComplaints] = useState<
-    Array<{ _id: string; title: string; status: string; priority?: string }>
-  >([]);
-  const [calendarEvents, setCalendarEvents] = useState<StayCalendarEvent[]>([]);
   const [statementLoading, setStatementLoading] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`tenants/${id}`)
-      .json<{ success: boolean; data: TenantDetail }>()
-      .then((res) => setTenant(res.data))
-      .catch(() => setError('Failed to load tenant details'))
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<TenantDetail>([...TENANT_KEY, id], `tenants/${id}`, { enabled: !!id });
+  const tenant = data ?? null;
 
-  useEffect(() => {
-    if (!id) return;
-    setRelatedError('');
-    Promise.all([
-      api
-        .get(`guardians?tenantId=${id}&limit=20`)
-        .json<{ success: boolean; data: typeof guardians }>()
-        .catch(() => ({ success: false, data: [] as typeof guardians })),
-      api
-        .get(`tenants/${id}/payments`)
-        .json<{ success: boolean; data: typeof recentPayments }>()
-        .catch(() => ({ success: false, data: [] as typeof recentPayments })),
-      api
-        .get(`tenants/${id}/invoices`)
-        .json<{ success: boolean; data: typeof recentInvoices }>()
-        .catch(() => ({ success: false, data: [] as typeof recentInvoices })),
-      api
-        .get(`tenants/${id}/complaints`)
-        .json<{ success: boolean; data: typeof recentComplaints }>()
-        .catch(() => ({ success: false, data: [] as typeof recentComplaints })),
-    ]).then(([g, p, inv, c]) => {
-      setGuardians(Array.isArray(g.data) ? g.data.slice(0, 5) : []);
-      setRecentPayments(Array.isArray(p.data) ? p.data.slice(0, 5) : []);
-      setRecentInvoices(Array.isArray(inv.data) ? inv.data.slice(0, 5) : []);
-      setRecentComplaints(Array.isArray(c.data) ? c.data.slice(0, 5) : []);
-      if (!g.success && !p.success && !inv.success && !c.success) {
-        setRelatedError('Could not load related records');
-      }
-      const invoiceEvents: StayCalendarEvent[] = Array.isArray(inv.data)
-        ? inv.data
-            .filter(
-              (r: { month?: string; _id: string }) =>
-                typeof r.month === 'string' && /^\d{4}-\d{2}$/.test(r.month),
-            )
-            .map((r: { _id: string; month?: string; invoiceNumber?: string }) => ({
-              id: `invoice-${r._id}`,
-              date: `${r.month}-01`,
-              type: 'notice',
-              title: `Invoice ${r.invoiceNumber ?? r._id.slice(-6)}`,
-              subtitle: r.month ?? '',
-            }))
-        : [];
-      setCalendarEvents((prev) => [
-        ...prev.filter((e) => !e.id.startsWith('invoice-')),
-        ...invoiceEvents,
-      ]);
-    });
-  }, [id]);
+  const guardiansQuery = useApiQuery<GuardianLink[]>(
+    [...TENANT_GUARDIANS_KEY, id],
+    `guardians?tenantId=${id}&limit=20`,
+    { enabled: !!id },
+  );
+  const paymentsQuery = useApiQuery<RecentPayment[]>(
+    [...TENANT_PAYMENTS_KEY, id],
+    `tenants/${id}/payments`,
+    { enabled: !!id },
+  );
+  const invoicesQuery = useApiQuery<RecentInvoice[]>(
+    [...TENANT_INVOICES_KEY, id],
+    `tenants/${id}/invoices`,
+    { enabled: !!id },
+  );
+  const complaintsQuery = useApiQuery<RecentComplaint[]>(
+    [...TENANT_COMPLAINTS_KEY, id],
+    `tenants/${id}/complaints`,
+    { enabled: !!id },
+  );
+  const activityQuery = useApiQuery<ActivityEvent[]>(
+    [...TENANT_ACTIVITY_KEY, id],
+    `tenants/${id}/activity`,
+    { enabled: !!id },
+  );
 
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`tenants/${id}/activity`)
-      .json<{
-        success: boolean;
-        data: Array<{ id: string; type: string; title: string; subtitle?: string; date: string }>;
-      }>()
-      .then((res) => {
-        const mapped: StayCalendarEvent[] = Array.isArray(res.data)
-          ? res.data.map((e) => ({
-              id: e.id,
-              date: e.date,
-              type: e.type,
-              title: e.title,
-              subtitle: e.subtitle,
-            }))
-          : [];
-        setCalendarEvents((prev) => [
-          ...mapped,
-          ...prev.filter((e) => e.id.startsWith('invoice-')),
-        ]);
-      })
-      .catch(() => {
-        // Calendar stays with invoice markers only; timeline component shows its own error.
-      });
-  }, [id]);
+  const guardians = asRows(guardiansQuery.data).slice(0, 5);
+  const recentPayments = asRows(paymentsQuery.data).slice(0, 5);
+  const recentInvoices = asRows(invoicesQuery.data).slice(0, 5);
+  const recentComplaints = asRows(complaintsQuery.data).slice(0, 5);
+  const relatedError =
+    guardiansQuery.isError &&
+    paymentsQuery.isError &&
+    invoicesQuery.isError &&
+    complaintsQuery.isError
+      ? 'Could not load related records'
+      : '';
+
+  const invoiceEvents: StayCalendarEvent[] = asRows(invoicesQuery.data)
+    .filter((r) => typeof r.month === 'string' && /^\d{4}-\d{2}$/.test(r.month))
+    .map((r) => ({
+      id: `invoice-${r._id}`,
+      date: `${r.month}-01`,
+      type: 'notice',
+      title: `Invoice ${r.invoiceNumber ?? r._id.slice(-6)}`,
+      subtitle: r.month ?? '',
+    }));
+  const activityEvents: StayCalendarEvent[] = asRows(activityQuery.data).map((e) => ({
+    id: e.id,
+    date: e.date,
+    type: e.type,
+    title: e.title,
+    subtitle: e.subtitle,
+  }));
+  const calendarEvents = [...activityEvents, ...invoiceEvents];
 
   const handleCheckoutClick = async () => {
     if (!tenant) return;
@@ -371,18 +356,7 @@ export default function TenantDetailPage() {
     try {
       await api.post(`tenants/${tenant._id}/verify-kyc`).json();
       toast.success('KYC verified successfully');
-      setTenant((prev) =>
-        prev
-          ? {
-              ...prev,
-              documents: {
-                ...prev.documents,
-                isVerified: true,
-                verifiedAt: new Date().toISOString(),
-              },
-            }
-          : prev,
-      );
+      queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
     } catch {
       toast.error('Failed to verify KYC');
     } finally {
@@ -390,13 +364,15 @@ export default function TenantDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !tenant)) {
+  const loadError = errorMessage(queryError) || error;
+
+  if (!isLoading && (loadError || !tenant)) {
     return (
       <FormPage
         title="Tenant Details"
         description="View tenant information"
         backHref="/tenants"
-        error={error || 'Tenant not found'}
+        error={loadError || 'Tenant not found'}
         maxWidth="4xl"
       />
     );
@@ -662,39 +638,18 @@ export default function TenantDetailPage() {
                 currentUrl={tenant.documents?.idUrl || tenant.documents?.aadhaarUrl}
                 idNumberMasked={tenant.documents?.idNumberMasked}
                 isVerified={tenant.documents?.isVerified}
-                onUploaded={({ url, docType, idNumberMasked }) =>
-                  setTenant((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          documents: {
-                            ...prev.documents,
-                            idUrl: url,
-                            idType: docType as
-                              'aadhaar' | 'passport' | 'voter_id' | 'driving_license',
-                            idNumberMasked,
-                            isVerified: false,
-                          },
-                        }
-                      : prev,
-                  )
-                }
+                onUploaded={() => {
+                  queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
+                }}
               />
               <DocumentUpload
                 tenantId={tenant._id}
                 docType="photo"
                 currentUrl={tenant.documents?.photoUrl}
                 isVerified={tenant.documents?.isVerified}
-                onUploaded={({ url }) =>
-                  setTenant((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          documents: { ...prev.documents, photoUrl: url, isVerified: false },
-                        }
-                      : prev,
-                  )
-                }
+                onUploaded={() => {
+                  queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
+                }}
               />
             </div>
           </DetailCard>

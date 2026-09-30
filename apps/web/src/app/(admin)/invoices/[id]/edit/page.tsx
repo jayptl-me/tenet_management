@@ -93,7 +93,6 @@ export default function EditInvoicePage() {
     handleSubmit,
     reset,
     control,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -145,7 +144,7 @@ export default function EditInvoicePage() {
       });
   }, [id, reset]);
 
-  const watched = watch();
+  const watched = useWatch({ control });
   const isDirty = useMemo(() => {
     if (initial.rentAmount == null) return false;
     return (

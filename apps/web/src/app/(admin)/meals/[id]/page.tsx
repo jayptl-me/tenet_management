@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   User,
   Home,
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -53,27 +56,25 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
+const MEAL_FEEDBACK_KEY = (id: string) => ['meals', id] as const;
+
 export default function MealFeedbackDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const id = params.id as string;
 
-  const [feedback, setFeedback] = useState<MealFeedbackDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`meals/${id}`)
-      .json<{ success: boolean; data: MealFeedbackDetail }>()
-      .then((res) => setFeedback(res.data))
-      .catch(() => setError('Failed to load meal feedback'))
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data: feedback = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<MealFeedbackDetail>(MEAL_FEEDBACK_KEY(id), `meals/${id}`, {
+    enabled: Boolean(id),
+  });
+  const queryErrorMessage = errorMessage(queryError);
 
   const handleUpdateStatus = async (newStatus: 'acknowledged' | 'actioned') => {
     if (!id) return;
@@ -83,7 +84,7 @@ export default function MealFeedbackDetailPage() {
         .put(`meals/${id}`, { json: { status: newStatus } })
         .json<{ success: boolean; data: MealFeedbackDetail }>();
       if (res.success) {
-        setFeedback(res.data);
+        queryClient.setQueryData(MEAL_FEEDBACK_KEY(id), res.data);
       }
     } catch (err) {
       setError((await parseApiError(err)).message);
@@ -92,13 +93,13 @@ export default function MealFeedbackDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !feedback)) {
+  if (!isLoading && (queryErrorMessage || error || !feedback)) {
     return (
       <FormPage
         title="Meal Feedback"
         description="View meal feedback details"
         backHref="/meals"
-        error={error || 'Meal feedback not found'}
+        error={queryErrorMessage || error || 'Meal feedback not found'}
         maxWidth="4xl"
       />
     );

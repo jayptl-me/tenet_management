@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Plus, Wrench, Boxes, AlertTriangle, CalendarClock, Archive } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -48,16 +51,29 @@ interface AssetRow {
   createdAt: string;
 }
 
+interface AssetsListBody {
+  success: boolean;
+  data: AssetRow[];
+  meta: { total: number };
+}
+
 function floorText(floor: AssetRow['floorId']): string | null {
   if (!floor || typeof floor === 'string') return null;
   return floor.label ?? (floor.floorNumber != null ? `Floor ${floor.floorNumber}` : null);
 }
 
+const ASSETS_KEY = ['assets'] as const;
+const ASSETS_LIST_KEY = ['assets', 'list'] as const;
+const LOW_STOCK_KEY = ['assets', 'low-stock'] as const;
+const SERVICE_DUE_KEY = ['assets', 'service-due'] as const;
+const RETIRED_TOTAL_KEY = ['assets', 'retired-total'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_ASSETS: AssetRow[] = [];
+
 export default function AssetsPage() {
   const router = useRouter();
-  const [assets, setAssets] = useState<AssetRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -66,13 +82,9 @@ export default function AssetsPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AssetRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Alert modes fetch the dedicated server endpoints (full sets) instead of
+  // Alert modes show the dedicated server endpoints (full sets) instead of
   // intersecting IDs with the current page, so counts and pagination are exact.
   const [alertMode, setAlertMode] = useState<'all' | 'low' | 'due'>('all');
-  // Cached full alert sets double as StatCard counts (single fetch each).
-  const [lowStockRows, setLowStockRows] = useState<AssetRow[] | null>(null);
-  const [serviceDueRows, setServiceDueRows] = useState<AssetRow[] | null>(null);
-  const [retiredTotal, setRetiredTotal] = useState(0);
 
   const matchesFilters = useCallback(
     (row: AssetRow) => {
@@ -89,65 +101,44 @@ export default function AssetsPage() {
     [search, statusFilter, categoryFilter],
   );
 
-  const fetchAlertSets = useCallback(async () => {
-    try {
-      const [low, due, retired] = await Promise.all([
-        api.get('assets/low-stock').json<{ success: boolean; data: AssetRow[] }>(),
-        api.get('assets/service-due').json<{ success: boolean; data: AssetRow[] }>(),
-        api
-          .get('assets?status=retired&limit=1')
-          .json<{ success: boolean; meta: { total: number } }>(),
-      ]);
-      setLowStockRows(low.data ?? []);
-      setServiceDueRows(due.data ?? []);
-      setRetiredTotal(retired.meta?.total ?? 0);
-    } catch {
-      // StatCards fall back to dashes; banners still fetch on their own.
-    }
-  }, []);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (statusFilter) params.set('status', statusFilter);
+  if (categoryFilter) params.set('category', categoryFilter);
 
-  useEffect(() => {
-    fetchAlertSets();
-  }, [fetchAlertSets]);
+  const {
+    data: listBody,
+    isPending: listPending,
+    error: listError,
+  } = useApiBodyQuery<AssetsListBody>(
+    [...ASSETS_LIST_KEY, page, perPage, search, statusFilter, categoryFilter],
+    `assets?${params.toString()}`,
+    { enabled: alertMode === 'all' },
+  );
 
-  const fetchAssets = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      if (alertMode !== 'all') {
-        const endpoint = alertMode === 'low' ? 'assets/low-stock' : 'assets/service-due';
-        const res = await api.get(endpoint).json<{ success: boolean; data: AssetRow[] }>();
-        if (alertMode === 'low') setLowStockRows(res.data ?? []);
-        else setServiceDueRows(res.data ?? []);
-        const filtered = (res.data ?? []).filter(matchesFilters);
-        setAssets(filtered);
-        setTotal(filtered.length);
-        return;
-      }
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (statusFilter) params.set('status', statusFilter);
-      if (categoryFilter) params.set('category', categoryFilter);
+  // Cached full alert sets double as StatCard counts (single fetch each).
+  const { data: lowStockRows, isPending: lowStockPending, error: lowStockError } =
+    useApiQuery<AssetRow[]>(LOW_STOCK_KEY, 'assets/low-stock');
+  const { data: serviceDueRows, isPending: serviceDuePending, error: serviceDueError } =
+    useApiQuery<AssetRow[]>(SERVICE_DUE_KEY, 'assets/service-due');
+  const { data: retiredBody } = useApiBodyQuery<{ meta: { total: number } }>(
+    RETIRED_TOTAL_KEY,
+    'assets?status=retired&limit=1',
+  );
+  const retiredTotal = retiredBody?.meta?.total ?? 0;
 
-      const res = await api.get(`assets?${params.toString()}`).json<{
-        success: boolean;
-        data: AssetRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setAssets(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, statusFilter, categoryFilter, alertMode, matchesFilters]);
-
-  useEffect(() => {
-    fetchAssets();
-  }, [fetchAssets]);
+  const isLoading =
+    alertMode === 'all'
+      ? listPending
+      : alertMode === 'low'
+        ? lowStockPending
+        : serviceDuePending;
+  const fetchErrorMessage =
+    alertMode === 'all'
+      ? errorMessage(listError)
+      : errorMessage(alertMode === 'low' ? lowStockError : serviceDueError);
 
   const handleFilterLowStock = useCallback(async () => {
     setAlertMode((mode) => (mode === 'low' ? 'all' : 'low'));
@@ -158,6 +149,15 @@ export default function AssetsPage() {
     setAlertMode((mode) => (mode === 'due' ? 'all' : 'due'));
     setPage(1);
   }, []);
+
+  const alertRows =
+    alertMode === 'low' ? lowStockRows : alertMode === 'due' ? serviceDueRows : null;
+  const filteredAlertRows = useMemo(
+    () => (alertRows ?? []).filter(matchesFilters),
+    [alertRows, matchesFilters],
+  );
+  const assets = alertMode === 'all' ? (listBody?.data ?? EMPTY_ASSETS) : filteredAlertRows;
+  const total = alertMode === 'all' ? (listBody?.meta.total ?? 0) : filteredAlertRows.length;
 
   const displayedAssets = useMemo(() => {
     if (alertMode === 'all') return assets;
@@ -171,8 +171,8 @@ export default function AssetsPage() {
       await api.delete(`assets/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       toast.success('Asset retired');
-      fetchAssets();
-      fetchAlertSets();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: ASSETS_KEY });
     } catch (err) {
       const message = (await parseApiError(err)).message;
       setError(message);
@@ -270,7 +270,7 @@ export default function AssetsPage() {
           </Button>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total assets"

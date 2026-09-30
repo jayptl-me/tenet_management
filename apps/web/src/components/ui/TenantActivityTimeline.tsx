@@ -56,14 +56,20 @@ const eventConfig: Record<string, { icon: React.ReactNode; status: TimelineStatu
 
 export function TenantActivityTimeline({ tenantId, compact = false }: TenantActivityTimelineProps) {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!tenantId);
   const [error, setError] = useState('');
+  const [prevTenantId, setPrevTenantId] = useState(tenantId);
+
+  // Drop the spinner when the tenant disappears (render-time adjustment
+  // instead of an effect). A tenant swap keeps showing the previous events,
+  // exactly like before.
+  if (prevTenantId !== tenantId) {
+    setPrevTenantId(tenantId);
+    if (!tenantId) setLoading(false);
+  }
 
   useEffect(() => {
-    if (!tenantId) {
-      setLoading(false);
-      return;
-    }
+    if (!tenantId) return;
 
     api
       .get(`tenants/${tenantId}/activity`)

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Zap, Download, IndianRupee, PlugZap, CalendarClock } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -37,11 +40,20 @@ interface ElectricityBillRow {
   createdAt: string;
 }
 
+interface ElectricityListBody {
+  success: boolean;
+  data: ElectricityBillRow[];
+  meta: { total: number };
+}
+
+const ELECTRICITY_LIST_KEY = ['electricity', 'list'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_BILLS: ElectricityBillRow[] = [];
+
 export default function ElectricityPage() {
   const router = useRouter();
-  const [bills, setBills] = useState<ElectricityBillRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
@@ -50,33 +62,20 @@ export default function ElectricityPage() {
   const [deleteTarget, setDeleteTarget] = useState<ElectricityBillRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchBills = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
-      if (monthFilter) params.set('month', monthFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (statusFilter) params.set('status', statusFilter);
+  if (monthFilter) params.set('month', monthFilter);
 
-      const res = await api.get(`electricity?${params.toString()}`).json<{
-        success: boolean;
-        data: ElectricityBillRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setBills(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter, monthFilter]);
-
-  useEffect(() => {
-    fetchBills();
-  }, [fetchBills]);
+  const { data: billsBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<ElectricityListBody>(
+      [...ELECTRICITY_LIST_KEY, page, perPage, statusFilter, monthFilter],
+      `electricity?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const bills = billsBody?.data ?? EMPTY_BILLS;
+  const total = billsBody?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -84,7 +83,8 @@ export default function ElectricityPage() {
     try {
       await api.delete(`electricity/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchBills();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: ELECTRICITY_LIST_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -231,7 +231,7 @@ export default function ElectricityPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

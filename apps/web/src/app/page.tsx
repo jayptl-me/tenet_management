@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Menu,
   X,
@@ -613,11 +614,13 @@ export default function LandingPage() {
             >
               <div className="h-48 overflow-hidden bg-(--color-surface-200)">
                 {item.img ? (
-                  <img
+                  <Image
                     src={item.img}
                     alt={item.title}
+                    width={600}
+                    height={480}
+                    unoptimized
                     className="h-full w-full object-cover transition-transform duration-(--duration-glacial) group-hover:scale-105"
-                    loading="lazy"
                   />
                 ) : (
                   <div

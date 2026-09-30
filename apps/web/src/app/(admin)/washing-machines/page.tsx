@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, WashingMachine, Timer, User, Building2, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -28,11 +31,17 @@ interface MachineRow {
   notes?: string;
 }
 
+const WASHING_MACHINES_KEY = ['washing-machines', 'list'] as const;
+
+interface MachinesListBody {
+  success: boolean;
+  data: MachineRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function WashingMachinesPage() {
   const router = useRouter();
-  const [machines, setMachines] = useState<MachineRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
@@ -100,37 +109,27 @@ export default function WashingMachinesPage() {
     }
   };
 
-  const fetchMachines = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
+  const listParams = new URLSearchParams();
+  listParams.set('page', String(page));
+  listParams.set('limit', String(perPage));
+  if (statusFilter) listParams.set('status', statusFilter);
 
-      const res = await api.get(`washing-machines?${params.toString()}`).json<{
-        success: boolean;
-        data: MachineRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setMachines(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<MachinesListBody>(
+    [...WASHING_MACHINES_KEY, page, perPage, statusFilter],
+    `washing-machines?${listParams.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchMachines();
-  }, [fetchMachines]);
+  const machines = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleRelease = async (id: string) => {
     try {
       await api.post(`washing-machines/${id}/release`).json();
-      fetchMachines();
+      queryClient.invalidateQueries({ queryKey: WASHING_MACHINES_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     }
@@ -142,7 +141,7 @@ export default function WashingMachinesPage() {
     try {
       await api.delete(`washing-machines/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchMachines();
+      queryClient.invalidateQueries({ queryKey: WASHING_MACHINES_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -254,7 +253,7 @@ export default function WashingMachinesPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Select

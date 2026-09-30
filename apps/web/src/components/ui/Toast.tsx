@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
@@ -57,13 +57,16 @@ const BG_COLORS: Record<ToastType, string> = {
   info: 'bg-[color:var(--color-brand-50)]',
 };
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+// Portals only exist in the browser: useSyncExternalStore flips to true
+// after hydration, while the server snapshot keeps the initial render free
+// of createPortal (which would not survive the server/client markup match).
+const emptySubscribe = () => () => {};
+const browserSnapshot = () => true;
+const serverSnapshot = () => false;
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const mounted = useSyncExternalStore(emptySubscribe, browserSnapshot, serverSnapshot);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

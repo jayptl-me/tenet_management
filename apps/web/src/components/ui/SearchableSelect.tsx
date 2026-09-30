@@ -70,22 +70,44 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<SearchableOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !staticOptions && !!endpoint);
   const [fetchError, setFetchError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [prevStaticOptions, setPrevStaticOptions] = useState<SearchableOption[] | undefined>(
+    undefined,
+  );
+  const fetchInputs: ReadonlyArray<unknown> = [
+    endpoint,
+    valueKey,
+    dataPath,
+    staticOptions,
+    labelKey,
+    sublabelFn,
+  ];
+  const [prevFetchInputs, setPrevFetchInputs] = useState<ReadonlyArray<unknown>>(fetchInputs);
 
-  // Fetch from endpoint if provided, otherwise use static options
-  useEffect(() => {
-    if (staticOptions) {
-      setOptions(staticOptions);
-      return;
+  // Push static options into state and prime the endpoint fetch while
+  // rendering (guarded render-time adjustments instead of synchronous
+  // resets inside the effect).
+  if (prevStaticOptions !== staticOptions) {
+    setPrevStaticOptions(staticOptions);
+    if (staticOptions) setOptions(staticOptions);
+  }
+  if (fetchInputs.some((input, index) => input !== prevFetchInputs[index])) {
+    setPrevFetchInputs(fetchInputs);
+    if (endpoint && !staticOptions) {
+      setIsLoading(true);
+      setFetchError('');
     }
+  }
+
+  // Fetch from endpoint if provided, otherwise static options are used as-is
+  useEffect(() => {
+    if (staticOptions) return;
     if (!endpoint) return;
 
     let cancelled = false;
-    setIsLoading(true);
-    setFetchError('');
 
     api
       .get(endpoint)

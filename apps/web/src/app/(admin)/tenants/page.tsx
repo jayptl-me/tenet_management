@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Users, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
@@ -49,11 +52,17 @@ function kycStatus(t: TenantRow): { label: string; variant: 'success' | 'warning
   return { label: 'No Docs', variant: 'neutral' };
 }
 
+const TENANTS_KEY = ['tenants', 'list'] as const;
+
+interface TenantsListBody {
+  success: boolean;
+  data: TenantRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function TenantsPage() {
   const router = useRouter();
-  const [tenants, setTenants] = useState<TenantRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -63,34 +72,24 @@ export default function TenantsPage() {
   const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchTenants = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (statusFilter) params.set('isActive', statusFilter);
-      if (floorFilter) params.set('floorId', floorFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (statusFilter) params.set('isActive', statusFilter);
+  if (floorFilter) params.set('floorId', floorFilter);
 
-      const res = await api.get(`tenants?${params.toString()}`).json<{
-        success: boolean;
-        data: TenantRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setTenants(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, statusFilter, floorFilter]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<TenantsListBody>(
+    [...TENANTS_KEY, page, perPage, search, statusFilter, floorFilter],
+    `tenants?${params.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
+  const tenants = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -98,7 +97,7 @@ export default function TenantsPage() {
     try {
       await api.delete(`tenants/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchTenants();
+      queryClient.invalidateQueries({ queryKey: TENANTS_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
       setDeleting(false);
@@ -217,7 +216,7 @@ export default function TenantsPage() {
           </Button>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input

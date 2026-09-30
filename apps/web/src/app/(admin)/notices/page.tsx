@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Megaphone, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -27,11 +30,17 @@ interface NoticeRow {
   createdAt: string;
 }
 
+const NOTICES_KEY = ['notices', 'list'] as const;
+
+interface NoticesListBody {
+  success: boolean;
+  data: NoticeRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function NoticesPage() {
   const router = useRouter();
-  const [notices, setNotices] = useState<NoticeRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [targetFilter, setTargetFilter] = useState('');
@@ -40,33 +49,23 @@ export default function NoticesPage() {
   const [deleteTarget, setDeleteTarget] = useState<NoticeRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchNotices = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (targetFilter) params.set('targetType', targetFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (targetFilter) params.set('targetType', targetFilter);
 
-      const res = await api.get(`notices?${params.toString()}`).json<{
-        success: boolean;
-        data: NoticeRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setNotices(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, targetFilter]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<NoticesListBody>(
+    [...NOTICES_KEY, page, perPage, search, targetFilter],
+    `notices?${params.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchNotices();
-  }, [fetchNotices]);
+  const notices = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -74,7 +73,7 @@ export default function NoticesPage() {
     try {
       await api.delete(`notices/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchNotices();
+      queryClient.invalidateQueries({ queryKey: NOTICES_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -185,7 +184,7 @@ export default function NoticesPage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by title..."

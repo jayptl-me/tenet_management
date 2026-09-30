@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Home,
   Building,
@@ -17,8 +19,8 @@ import {
   Plus,
   UserPlus,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
@@ -93,41 +95,29 @@ const occupiedBedColumns: DataTableColumn<BedDetail>[] = [
   },
 ];
 
+const ROOM_KEY = (id: string) => ['rooms', id] as const;
+
 export default function RoomDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const id = params.id as string;
-
-  const [room, setRoom] = useState<RoomDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [assignBedTarget, setAssignBedTarget] = useState<BedAssignTarget | null>(null);
 
-  const fetchRoom = useCallback(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`rooms/${id}`)
-      .json<{ success: boolean; data: RoomDetail }>()
-      .then((res) => setRoom(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data: room = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<RoomDetail>(ROOM_KEY(id), `rooms/${id}`, { enabled: Boolean(id) });
+  const queryErrorMessage = errorMessage(queryError);
 
-  useEffect(() => {
-    fetchRoom();
-  }, [fetchRoom]);
-
-  if (!isLoading && (error || !room)) {
+  if (!isLoading && (queryErrorMessage || !room)) {
     return (
       <FormPage
         title="Room Details"
         description="View room information"
         backHref="/rooms"
-        error={error || 'Room not found'}
+        error={queryErrorMessage || 'Room not found'}
         maxWidth="4xl"
       />
     );
@@ -417,9 +407,12 @@ export default function RoomDetailPage() {
                     rel="noopener noreferrer"
                     className="block aspect-square overflow-hidden rounded-(--radius-lg) border border-(--border-color) shadow-(--shadow-sm) transition-all duration-(--transition-duration)"
                   >
-                    <img
+                    <Image
                       src={photo}
                       alt={`Room ${room.roomNumber} photo ${index + 1}`}
+                      width={600}
+                      height={600}
+                      unoptimized
                       className="h-full w-full object-cover"
                       onError={(e) => {
                         const t = e.currentTarget;
@@ -447,7 +440,9 @@ export default function RoomDetailPage() {
       <QuickBedAssignModal
         target={assignBedTarget}
         onClose={() => setAssignBedTarget(null)}
-        onSuccess={() => fetchRoom()}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ROOM_KEY(id) });
+        }}
       />
     </FormPage>
   );

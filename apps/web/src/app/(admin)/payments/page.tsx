@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Receipt, CheckCircle2, ShieldCheck, Download, IndianRupee } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -97,11 +100,52 @@ function invoiceNumberOf(row: PaymentRow): string {
   return row.invoiceNumber ?? (inv as string) ?? '';
 }
 
+interface PaymentsListBody {
+  success: boolean;
+  data: PaymentRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+const PAYMENTS_PREFIX = ['payments'] as const;
+const PAYMENT_STATUS_COUNTS_KEY = ['payments', 'status-counts'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_PAYMENTS: PaymentRow[] = [];
+
+const PAYMENTS_LIST_KEY = (
+  page: number,
+  perPage: number,
+  method: string,
+  type: string,
+  status: string,
+  fromDate: string,
+  toDate: string,
+  search: string,
+) => [
+  ...PAYMENTS_PREFIX,
+  'list',
+  page,
+  perPage,
+  method,
+  type,
+  status,
+  fromDate,
+  toDate,
+  search,
+];
+
+const PAYMENTS_SUMMARY_KEY = (month: string) => [...PAYMENTS_PREFIX, 'summary', month];
+
+function summaryMonths(): { thisMonth: string; prevMonth: string } {
+  const now = new Date();
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return { thisMonth: fmt(now), prevMonth: fmt(prevDate) };
+}
+
 export default function PaymentsPage() {
   const router = useRouter();
-  const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [methodFilter, setMethodFilter] = useState('');
@@ -111,14 +155,12 @@ export default function PaymentsPage() {
   const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Mutation (delete/export) failures; list failures come from the query.
   const [error, setError] = useState('');
-  const [summary, setSummary] = useState<PaymentMonthSummary | null>(null);
-  const [prevSummary, setPrevSummary] = useState<PaymentMonthSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PaymentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<VerifyPaymentTarget | null>(null);
   const [verifying, setVerifying] = useState(false);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const searchInit = useRef(false);
 
   // Debounce search input
@@ -127,40 +169,11 @@ export default function PaymentsPage() {
     return () => window.clearTimeout(t);
   }, [search]);
 
-  const fetchSummary = useCallback(async () => {
-    try {
-      const now = new Date();
-      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-      const [cur, prev] = await Promise.all([
-        api.get(`payments/summary?month=${thisMonth}`).json<{
-          success: boolean;
-          data: PaymentMonthSummary;
-        }>(),
-        api.get(`payments/summary?month=${prevMonth}`).json<{
-          success: boolean;
-          data: PaymentMonthSummary;
-        }>(),
-      ]);
-      setSummary(cur.data);
-      setPrevSummary(prev.data);
-    } catch {
-      // Summary load failure is non-blocking
-    }
-  }, []);
-
-  const fetchStatusCounts = useCallback(async () => {
-    try {
-      const res = await api.get('payments/status-counts').json<{
-        success: boolean;
-        data: Record<string, number>;
-      }>();
-      setStatusCounts(res.data);
-    } catch {
-      // Status counts load failure is non-blocking
-    }
-  }, []);
+  const refreshAfterMutation = useCallback(() => {
+    // Mirrors the old fetch runs: clear the stale banner, then refetch.
+    setError('');
+    queryClient.invalidateQueries({ queryKey: PAYMENTS_PREFIX });
+  }, [queryClient]);
 
   const handleVerify = async (approved: boolean, notes: string) => {
     if (!verifyTarget) return;
@@ -173,9 +186,7 @@ export default function PaymentsPage() {
         .json();
       toast.success(approved ? 'Payment approved' : 'Payment rejected');
       setVerifyTarget(null);
-      fetchPayments();
-      fetchSummary();
-      fetchStatusCounts();
+      refreshAfterMutation();
     } catch (err) {
       toast.error((await parseApiError(err)).message);
     } finally {
@@ -183,39 +194,51 @@ export default function PaymentsPage() {
     }
   };
 
-  const fetchPayments = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (methodFilter) params.set('method', methodFilter);
-      if (typeFilter) params.set('type', typeFilter);
-      if (statusFilter) params.set('status', statusFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
-      if (debouncedSearch) params.set('search', debouncedSearch);
+  const listParams = new URLSearchParams();
+  listParams.set('page', String(page));
+  listParams.set('limit', String(perPage));
+  if (methodFilter) listParams.set('method', methodFilter);
+  if (typeFilter) listParams.set('type', typeFilter);
+  if (statusFilter) listParams.set('status', statusFilter);
+  if (fromDate) listParams.set('fromDate', fromDate);
+  if (toDate) listParams.set('toDate', toDate);
+  if (debouncedSearch) listParams.set('search', debouncedSearch);
 
-      const res = await api.get(`payments?${params.toString()}`).json<{
-        success: boolean;
-        data: PaymentRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setPayments(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, methodFilter, typeFilter, statusFilter, fromDate, toDate, debouncedSearch]);
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<PaymentsListBody>(
+    PAYMENTS_LIST_KEY(
+      page,
+      perPage,
+      methodFilter,
+      typeFilter,
+      statusFilter,
+      fromDate,
+      toDate,
+      debouncedSearch,
+    ),
+    `payments?${listParams.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchPayments();
-    fetchSummary();
-    fetchStatusCounts();
-  }, [fetchPayments, fetchSummary, fetchStatusCounts]);
+  const payments = listBody?.data ?? EMPTY_PAYMENTS;
+  const total = listBody?.meta.total ?? 0;
+
+  // Month summaries and status counts for the metric strip (non-blocking).
+  const { thisMonth, prevMonth } = summaryMonths();
+  const { data: summary } = useApiQuery<PaymentMonthSummary>(
+    PAYMENTS_SUMMARY_KEY(thisMonth),
+    `payments/summary?month=${thisMonth}`,
+  );
+  const { data: prevSummary } = useApiQuery<PaymentMonthSummary>(
+    PAYMENTS_SUMMARY_KEY(prevMonth),
+    `payments/summary?month=${prevMonth}`,
+  );
+  const { data: statusCounts = {} } = useApiQuery<Record<string, number>>(
+    PAYMENT_STATUS_COUNTS_KEY,
+    'payments/status-counts',
+  );
 
   // Client-side search fallback (tenant, UTR, invoice number, amount)
   const visiblePayments = useMemo(() => {
@@ -243,8 +266,7 @@ export default function PaymentsPage() {
       await api.delete(`payments/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       toast.success('Payment deleted');
-      fetchPayments();
-      fetchSummary();
+      refreshAfterMutation();
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -539,7 +561,7 @@ export default function PaymentsPage() {
         }
       />
 
-      {error && <ErrorBanner message={error} />}
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       {/* Executive Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

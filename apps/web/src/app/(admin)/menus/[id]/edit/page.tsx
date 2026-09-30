@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,7 +56,6 @@ export default function EditMenuPage() {
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [itemCounts, setItemCounts] = useState({ breakfast: 0, lunch: 0, snacks: 0, dinner: 0 });
 
   const {
     register,
@@ -95,15 +94,16 @@ export default function EditMenuPage() {
   const snacksItems = useWatch({ control, name: 'meals.snacks' });
   const dinnerItems = useWatch({ control, name: 'meals.dinner' });
 
-  // Update item counts when meals change
-  useEffect(() => {
-    setItemCounts({
+  // Derive item counts for the dynamic summary as meals change
+  const itemCounts = useMemo(
+    () => ({
       breakfast: breakfastItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
       lunch: lunchItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
       snacks: snacksItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
       dinner: dinnerItems?.filter((i: { name: string }) => i.name?.trim()).length ?? 0,
-    });
-  }, [breakfastItems, lunchItems, snacksItems, dinnerItems]);
+    }),
+    [breakfastItems, lunchItems, snacksItems, dinnerItems],
+  );
 
   useEffect(() => {
     if (!id) return;
