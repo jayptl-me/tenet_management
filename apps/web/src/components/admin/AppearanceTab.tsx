@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PaintBucket, Monitor, Moon, Sun, Check } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -87,12 +87,15 @@ interface AppearanceTabProps {
 
 export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
   const [customBrandColor, setCustomBrandColor] = useState(theme.brandColor ?? '#f59e0b');
+  const [prevBrandColor, setPrevBrandColor] = useState(theme.brandColor);
   const brandColorValid = /^#[0-9a-fA-F]{6}$/.test(customBrandColor);
 
-  // Resync when the server-loaded theme arrives after first render.
-  useEffect(() => {
+  // Resync when the server-loaded theme arrives after first render
+  // (render-time adjustment instead of an effect).
+  if (prevBrandColor !== theme.brandColor) {
+    setPrevBrandColor(theme.brandColor);
     if (theme.brandColor) setCustomBrandColor(theme.brandColor);
-  }, [theme.brandColor]);
+  }
 
   /** Update form state AND apply to the live DOM instantly (save persists to server). */
   const updateTheme = (patch: Partial<ThemeSettings>) => {

@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   FileDown,
   MessageCircle,
@@ -25,7 +26,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
@@ -195,42 +197,30 @@ const paymentColumns: DataTableColumn<PaymentRecord>[] = [
   },
 ];
 
+const INVOICE_KEY = (id: string) => ['invoices', id] as const;
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [recordTarget, setRecordTarget] = useState<
     import('@/components/admin/RecordPaymentModal').RecordPaymentTarget | null
   >(null);
 
-  const fetchInvoice = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await api
-        .get(`invoices/${params.id}`)
-        .json<{ success: boolean; data: InvoiceDetail }>();
-      setInvoice(res.data);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [params.id]);
+  const {
+    data: invoice = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<InvoiceDetail>(INVOICE_KEY(params.id), `invoices/${params.id}`);
+  const queryErrorMessage = errorMessage(queryError);
 
-  useEffect(() => {
-    fetchInvoice();
-  }, [fetchInvoice]);
-
-  if (!isLoading && (error || !invoice)) {
+  if (!isLoading && (queryErrorMessage || !invoice)) {
     return (
       <FormPage
         title="Invoice Details"
         description="View invoice information"
         backHref="/invoices"
-        error={error || 'Invoice not found'}
+        error={queryErrorMessage || 'Invoice not found'}
         maxWidth="4xl"
       />
     );
@@ -815,7 +805,7 @@ export default function InvoiceDetailPage() {
             onClose={() => setRecordTarget(null)}
             onSuccess={() => {
               setRecordTarget(null);
-              fetchInvoice();
+              queryClient.invalidateQueries({ queryKey: INVOICE_KEY(params.id) });
             }}
           />
         </div>

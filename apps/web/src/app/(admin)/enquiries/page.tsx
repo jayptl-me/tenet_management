@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   MessageSquareMore,
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -85,12 +88,18 @@ const SOURCE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+interface EnquiriesListBody {
+  success: boolean;
+  data: EnquiryRow[];
+  meta: { total: number };
+}
+
+const ENQUIRIES_KEY = ['enquiries'] as const;
+const ENQUIRIES_STATS_KEY = ['enquiries', 'stats'] as const;
+
 export default function EnquiriesPage() {
   const router = useRouter();
-  const [enquiries, setEnquiries] = useState<EnquiryRow[]>([]);
-  const [stats, setStats] = useState<IEnquiryStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -112,52 +121,36 @@ export default function EnquiriesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await api.get('enquiries/stats').json<{
-        success: boolean;
-        data: IEnquiryStats;
-      }>();
-      setStats(res.data);
-    } catch {
-      // Non-critical background stats failure
-    }
-  }, []);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (statusFilter) params.set('status', statusFilter);
+  if (sourceFilter) params.set('source', sourceFilter);
+  if (debouncedSearch) params.set('search', debouncedSearch);
+  if (fromDate) params.set('fromDate', fromDate);
+  if (toDate) params.set('toDate', toDate);
 
-  const fetchEnquiries = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
-      if (sourceFilter) params.set('source', sourceFilter);
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
+  const { data: listBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<EnquiriesListBody>(
+      [
+        ...ENQUIRIES_KEY,
+        'list',
+        page,
+        perPage,
+        statusFilter,
+        sourceFilter,
+        debouncedSearch,
+        fromDate,
+        toDate,
+      ],
+      `enquiries?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const enquiries = listBody?.data ?? [];
+  const total = listBody?.meta.total ?? 0;
 
-      const res = await api.get(`enquiries?${params.toString()}`).json<{
-        success: boolean;
-        data: EnquiryRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setEnquiries(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter, sourceFilter, debouncedSearch, fromDate, toDate]);
-
-  useEffect(() => {
-    fetchEnquiries();
-  }, [fetchEnquiries]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  // Non-critical background stats failure stays silent, like before.
+  const { data: stats } = useApiQuery<IEnquiryStats>(ENQUIRIES_STATS_KEY, 'enquiries/stats');
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -165,8 +158,8 @@ export default function EnquiriesPage() {
     try {
       await api.delete(`enquiries/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchEnquiries();
-      fetchStats();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: ENQUIRIES_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -324,7 +317,7 @@ export default function EnquiriesPage() {
         </div>
       )}
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
 
       {/* ── Filter Bar ────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

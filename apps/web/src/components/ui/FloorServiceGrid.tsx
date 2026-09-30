@@ -98,9 +98,10 @@ export function FloorServiceGrid({
 }: FloorServiceGridProps) {
   const [services, setServices] = useState<FloorService[]>([]);
   const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!floorId);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [prevFloorId, setPrevFloorId] = useState(floorId);
 
   // Fetch amenity definitions once (for label/icon resolution)
   useEffect(() => {
@@ -115,15 +116,21 @@ export function FloorServiceGrid({
       });
   }, []);
 
+  // Reset loading/error when the floor changes (render-time adjustment
+  // instead of an effect).
+  if (prevFloorId !== floorId) {
+    setPrevFloorId(floorId);
+    if (floorId) {
+      setLoading(true);
+      setError('');
+    } else {
+      setLoading(false);
+    }
+  }
+
   // Fetch floor services
   useEffect(() => {
-    if (!floorId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError('');
+    if (!floorId) return;
 
     api
       .get(`services/floor/${floorId}/with-complaints`)

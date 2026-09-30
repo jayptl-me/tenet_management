@@ -98,12 +98,15 @@ function NotificationsContent() {
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>(
     tabParam === 'history' ? 'history' : 'compose',
   );
+  const [prevTabParam, setPrevTabParam] = useState<string | null>(tabParam);
 
-  useEffect(() => {
+  // Follow ?tab= changes during render instead of in an effect.
+  if (prevTabParam !== tabParam) {
+    setPrevTabParam(tabParam);
     if (tabParam === 'history' || tabParam === 'compose') {
       setActiveTab(tabParam);
     }
-  }, [tabParam]);
+  }
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);

@@ -73,6 +73,20 @@ interface AttendanceDetail {
   };
 }
 
+/** Derived check-in/out duration label; empty until both times are set. */
+function computeHoursRange(checkIn?: string, checkOut?: string): string {
+  if (!checkIn || !checkOut) return '';
+  const [inH, inM] = checkIn.split(':').map(Number);
+  const [outH, outM] = checkOut.split(':').map(Number);
+  const totalMinutes = outH * 60 + outM - (inH * 60 + inM);
+  if (totalMinutes >= 0) {
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+  return 'Invalid (out < in) — fix before saving';
+}
+
 export default function EditAttendancePage() {
   const router = useRouter();
   const params = useParams();
@@ -81,7 +95,6 @@ export default function EditAttendancePage() {
   const [submitError, setSubmitError] = useState('');
   const [attendanceData, setAttendanceData] = useState<AttendanceDetail | null>(null);
   const [originalDate, setOriginalDate] = useState('');
-  const [computedHours, setComputedHours] = useState<string>('');
 
   const {
     register,
@@ -98,22 +111,7 @@ export default function EditAttendancePage() {
   const status = useWatch({ control, name: 'status' });
   const dateValue = useWatch({ control, name: 'date' });
 
-  useEffect(() => {
-    if (checkIn && checkOut) {
-      const [inH, inM] = checkIn.split(':').map(Number);
-      const [outH, outM] = checkOut.split(':').map(Number);
-      const totalMinutes = outH * 60 + outM - (inH * 60 + inM);
-      if (totalMinutes >= 0) {
-        const hours = Math.floor(totalMinutes / 60);
-        const mins = totalMinutes % 60;
-        setComputedHours(`${hours}h ${mins}m`);
-      } else {
-        setComputedHours('Invalid (out < in) — fix before saving');
-      }
-    } else {
-      setComputedHours('');
-    }
-  }, [checkIn, checkOut]);
+  const computedHours = computeHoursRange(checkIn, checkOut);
 
   useEffect(() => {
     if (!id) return;

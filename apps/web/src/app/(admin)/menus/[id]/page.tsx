@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Calendar, Sun, Sunset, Moon, Cookie, MessageCircle, Pencil } from 'lucide-react';
-import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -60,34 +60,27 @@ function getMenuStatusInfo(date: string): {
   return { label: 'Scheduled', variant: 'info' };
 }
 
+const MENU_KEY = (id: string) => ['menus', id] as const;
+
 export default function MenuDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [menu, setMenu] = useState<MenuDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const {
+    data: menu = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<MenuDetail>(MENU_KEY(id), `menus/${id}`, { enabled: Boolean(id) });
+  const queryErrorMessage = errorMessage(queryError);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`menus/${id}`)
-      .json<{ success: boolean; data: MenuDetail }>()
-      .then((res) => setMenu(res.data))
-      .catch(() => setError('Failed to load menu'))
-      .finally(() => setIsLoading(false));
-  }, [id]);
-
-  if (!isLoading && (error || !menu)) {
+  if (!isLoading && (queryErrorMessage || !menu)) {
     return (
       <FormPage
         title="Daily Menu"
         description="View menu details"
         backHref="/menus"
-        error={error || 'Menu not found'}
+        error={queryErrorMessage || 'Menu not found'}
         maxWidth="4xl"
       />
     );

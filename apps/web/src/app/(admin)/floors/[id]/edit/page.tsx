@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
@@ -156,19 +156,32 @@ export default function EditFloorPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
   });
 
-  useEffect(() => {
-    if (!id) return;
+  // Whole-form subscription. watch() during render is incompatible with
+  // memoization; useWatch is the supported reactive replacement.
+  const watchedValues = useWatch({ control });
+
+  // Next.js reuses this component across /floors/[id]/edit navigations, so
+  // reset loading + error when the route param changes during render
+  // (react.dev: adjusting state when a prop changes) rather than calling
+  // setState synchronously inside the effect.
+  const [activeId, setActiveId] = useState(id);
+  if (activeId !== id) {
+    setActiveId(id);
     setIsLoading(true);
     setSubmitError('');
+  }
+
+  useEffect(() => {
+    if (!id) return;
 
     Promise.all([
       api.get(`floors/${id}`).json<{ success: boolean; data: FloorDetail }>(),
@@ -239,8 +252,8 @@ export default function EditFloorPage() {
   }, [id, reset]);
 
   // Live preview & collision calculation
-  const watchedLabel = (watch('label') as string) ?? '';
-  const watchedFloorNumber = Number(watch('floorNumber')) || 0;
+  const watchedLabel = (watchedValues.label as string) ?? '';
+  const watchedFloorNumber = Number(watchedValues.floorNumber) || 0;
 
   // Real-time client-side collision check against other floors
   const collidingFloor = useMemo(() => {
@@ -510,7 +523,7 @@ export default function EditFloorPage() {
                 >
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {perFloorAmenities.map((a) => {
-                      const value = Number(watch(a.key)) || 0;
+                      const value = Number(watchedValues[a.key]) || 0;
                       return (
                         <AmenityCountStepper
                           key={a.key}

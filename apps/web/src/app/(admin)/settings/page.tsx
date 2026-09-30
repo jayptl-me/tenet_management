@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
@@ -244,6 +246,19 @@ const CONFIRM_OFF_FLAGS: (keyof IFeatureFlags)[] = [
   'noticeBoardEnabled',
 ];
 
+function emptySubscribe(): () => void {
+  return () => {};
+}
+
+/** Current URL hash (`#tab`), read from `window` on the client only. */
+function readHashSnapshot(): string {
+  return typeof window === 'undefined' ? '' : window.location.hash;
+}
+
+function readHashServerSnapshot(): string {
+  return '';
+}
+
 interface ConfigFormData {
   pgName: string;
   tagline: string;
@@ -285,6 +300,11 @@ interface ConfigFormData {
   features: IFeatureFlags;
   theme?: ThemeSettings;
   amenityDefinitions: AmenityDefinition[];
+}
+
+interface AppConfigBody {
+  success: boolean;
+  data: IAppConfig;
 }
 
 function mapToForm(config: Partial<IAppConfig>): ConfigFormData {
@@ -336,14 +356,21 @@ export default function SettingsPage() {
   const router = useRouter();
   const [config, setConfig] = useState<ConfigFormData | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('general');
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
   const [newAmenity, setNewAmenity] = useState('');
   const [amenityError, setAmenityError] = useState('');
   const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [actionError, setActionError] = useState('');
+
+  const {
+    data: appConfigBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<AppConfigBody>(['app-config', reloadKey], 'app-config');
+
+  const error = errorMessage(queryError) || actionError;
 
   // Admin password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -357,6 +384,19 @@ export default function SettingsPage() {
     config !== null && initialSnapshot !== null
       ? JSON.stringify(config) !== initialSnapshot
       : false;
+
+  // Seed the form when a payload arrives (render-time adjustment instead of an
+  // effect). Each payload is seen at most once, and never while the operator has
+  // unsaved edits, so a background refetch cannot clobber work in progress.
+  const [appliedBody, setAppliedBody] = useState<AppConfigBody | null>(null);
+  if (appConfigBody && appConfigBody !== appliedBody) {
+    setAppliedBody(appConfigBody);
+    if (!isDirty) {
+      const mapped = mapToForm(appConfigBody.data);
+      setConfig(mapped);
+      setInitialSnapshot(JSON.stringify(mapped));
+    }
+  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -405,13 +445,19 @@ export default function SettingsPage() {
     }
   };
 
-  // Tab persistence via URL hash
-  useEffect(() => {
-    const hash = window.location.hash.replace('#', '') as TabKey;
-    if (hash && tabs.some((t) => t.key === hash)) {
-      setActiveTab(hash);
+  // Tab persistence via URL hash. Read reactively (with an empty subscriber,
+  // since `history.replaceState` does not fire `hashchange`) and applied during
+  // render instead of in an effect.
+  const hash = useSyncExternalStore(emptySubscribe, readHashSnapshot, readHashServerSnapshot);
+  const [appliedHash, setAppliedHash] = useState<string | null>(null);
+
+  if (appliedHash !== hash) {
+    setAppliedHash(hash);
+    const hashTab = hash.replace('#', '') as TabKey;
+    if (hashTab && tabs.some((t) => t.key === hashTab)) {
+      setActiveTab(hashTab);
     }
-  }, []);
+  }
 
   const handleTabChange = (key: TabKey) => {
     if (key === activeTab) return;
@@ -425,25 +471,10 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => {
-    setIsLoading(true);
-    setError('');
-    api
-      .get('app-config')
-      .json<{ success: boolean; data: IAppConfig }>()
-      .then((res) => {
-        const mapped = mapToForm(res.data);
-        setConfig(mapped);
-        setInitialSnapshot(JSON.stringify(mapped));
-      })
-      .catch(() => setError('Failed to load settings'))
-      .finally(() => setIsLoading(false));
-  }, [reloadKey]);
-
   const handleSave = async () => {
     if (!config) return;
     setIsSaving(true);
-    setError('');
+    setActionError('');
     try {
       // Never POST raw form state: empty strings fail API Zod (phone/email optional
       // but '' is not undefined; blank testimonials fail name/quote min 1).
@@ -469,7 +500,7 @@ export default function SettingsPage() {
       }
     } catch (err) {
       const parsed = await parseApiError(err);
-      setError(parsed.message || 'Failed to save settings');
+      setActionError(parsed.message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
     }

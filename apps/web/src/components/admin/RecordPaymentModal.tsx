@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Wallet, Smartphone, Landmark, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -54,16 +54,20 @@ export function RecordPaymentModal({
   onClose,
   onSuccess,
 }: RecordPaymentModalProps) {
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<number>(() => target?.balance ?? 0);
   const [method, setMethod] = useState<'cash' | 'upi' | 'bank_transfer' | 'other'>('cash');
   const [paidAt, setPaidAt] = useState(nowLocalDatetime());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [prevTarget, setPrevTarget] = useState(target);
 
   const balance = target?.balance ?? 0;
 
-  useEffect(() => {
+  // Reset the form when a new invoice is targeted (render-time adjustment
+  // instead of an effect).
+  if (prevTarget !== target) {
+    setPrevTarget(target);
     if (target) {
       setAmount(target.balance ?? 0);
       setMethod('cash');
@@ -71,7 +75,7 @@ export function RecordPaymentModal({
       setNotes('');
       setError('');
     }
-  }, [target]);
+  }
 
   const remainingAfter = Math.max(0, balance - amount);
   const isOverpay = amount > balance + 0.001;

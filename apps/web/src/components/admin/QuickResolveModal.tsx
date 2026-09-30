@@ -37,16 +37,20 @@ export function QuickResolveModal({
   onClose,
 }: QuickResolveModalProps) {
   const [resolutionStatus, setResolutionStatus] = useState<'resolved' | 'dismissed'>('resolved');
-  const [adminNotes, setAdminNotes] = useState('');
+  const [adminNotes, setAdminNotes] = useState(() => target?.adminNotes ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [prevTarget, setPrevTarget] = useState(target);
 
-  useEffect(() => {
+  // Reset the form when a new complaint is targeted (render-time adjustment
+  // instead of an effect).
+  if (prevTarget !== target) {
+    setPrevTarget(target);
     if (target) {
       setResolutionStatus('resolved');
       setAdminNotes(target.adminNotes ?? '');
       setIsSubmitting(false);
     }
-  }, [target]);
+  }
 
   useEffect(() => {
     if (!target) return;

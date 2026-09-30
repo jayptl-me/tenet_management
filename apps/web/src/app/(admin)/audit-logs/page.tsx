@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ScrollText, Eye, X, Download, Loader2, Search, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { modalContent } from '@/lib/animations';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -26,6 +28,12 @@ interface AuditLogRow {
   details?: Record<string, unknown>;
   ip?: string;
   timestamp: string;
+}
+
+interface AuditLogsListBody {
+  success: boolean;
+  data: AuditLogRow[];
+  meta: { total: number };
 }
 
 const DEFAULT_ACTIONS = [
@@ -94,11 +102,13 @@ const ACTION_LABELS: Record<
   reconcile: { label: 'Reconciled', variant: 'info' },
 };
 
+const AUDIT_LOGS_LIST_KEY = ['audit-logs', 'list'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_LOGS: AuditLogRow[] = [];
+
 export default function AuditLogsPage() {
-  const [logs, setLogs] = useState<AuditLogRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [actionFilter, setActionFilter] = useState('');
@@ -124,39 +134,36 @@ export default function AuditLogsPage() {
       .catch(() => {});
   }, []);
 
-  const fetchLogs = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (actionFilter) params.set('action', actionFilter);
-      if (resourceFilter) params.set('resource', resourceFilter);
-      if (userIdFilter.trim()) params.set('userId', userIdFilter.trim());
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (actionFilter) params.set('action', actionFilter);
+  if (resourceFilter) params.set('resource', resourceFilter);
+  if (userIdFilter.trim()) params.set('userId', userIdFilter.trim());
+  if (fromDate) params.set('fromDate', fromDate);
+  if (toDate) params.set('toDate', toDate);
 
-      const res = await api.get(`audit-logs?${params.toString()}`).json<{
-        success: boolean;
-        data: AuditLogRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setLogs(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, actionFilter, resourceFilter, userIdFilter, fromDate, toDate]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  const { data: logsBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<AuditLogsListBody>(
+      [
+        ...AUDIT_LOGS_LIST_KEY,
+        page,
+        perPage,
+        actionFilter,
+        resourceFilter,
+        userIdFilter,
+        fromDate,
+        toDate,
+      ],
+      `audit-logs?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const logs = logsBody?.data ?? EMPTY_LOGS;
+  const total = logsBody?.meta.total ?? 0;
 
   const handleExportCsv = async () => {
     setIsExporting(true);
+    setError('');
     try {
       const params = new URLSearchParams();
       params.set('page', '1');
@@ -361,7 +368,7 @@ export default function AuditLogsPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input

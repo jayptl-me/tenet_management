@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   BedDouble,
   CreditCard,
@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { useQueryClient } from '@tanstack/react-query';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
@@ -242,40 +243,29 @@ function PanelEmpty({
 
 // ── Dashboard Page ─────────────────────────────────────
 
+const DASHBOARD_STATS_KEY = ['dashboard', 'stats'] as const;
+
 export default function DashboardPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [error, setError] = useState('');
 
-  const fetchStats = useCallback(async (isManual = false) => {
-    if (isManual) setIsRefreshing(true);
+  const {
+    data: stats,
+    isPending: isLoading,
+    error: queryError,
+    dataUpdatedAt,
+  } = useApiQuery<DashboardStats>(DASHBOARD_STATS_KEY, 'dashboard/stats');
+  const queryErrorMessage = errorMessage(queryError);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     try {
-      const res = await api
-        .get('dashboard/stats')
-        .json<{ success: boolean; data: DashboardStats }>();
-      setStats(res.data);
-      setError('');
-      setLastUpdated(
-        new Date().toLocaleTimeString('en-IN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }),
-      );
-    } catch (err) {
-      setError((await parseApiError(err)).message);
+      await queryClient.invalidateQueries({ queryKey: DASHBOARD_STATS_KEY });
     } finally {
-      setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  };
 
   // Real-time SSE listener: refresh operational KPIs automatically on domain events
   useSSE(
@@ -294,10 +284,10 @@ export default function DashboardPage() {
           event === 'meal_feedback_submitted' ||
           event === 'emergency_alert'
         ) {
-          fetchStats();
+          void queryClient.invalidateQueries({ queryKey: DASHBOARD_STATS_KEY });
         }
       },
-      [fetchStats],
+      [queryClient],
     ),
   );
 
@@ -306,7 +296,7 @@ export default function DashboardPage() {
   if (!stats) {
     return (
       <ErrorState
-        title={error || 'Failed to load dashboard'}
+        title={queryErrorMessage || 'Failed to load dashboard'}
         description="We could not load your operational metrics. Check your connection and try again."
         onRetry={() => window.location.reload()}
       />
@@ -314,6 +304,11 @@ export default function DashboardPage() {
   }
 
   // ── Derived Data ──────────────────────────────
+  const lastUpdated = new Date(dataUpdatedAt).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
   const totalComplaints =
     stats.complaints.open +
     stats.complaints.inProgress +
@@ -437,7 +432,7 @@ export default function DashboardPage() {
               variant="outline"
               size="sm"
               disabled={isRefreshing}
-              onClick={() => fetchStats(true)}
+              onClick={handleRefresh}
             >
               <RotateCw className={clsx('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               <span>Refresh</span>

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, DoorOpen, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -51,11 +54,17 @@ function formatShortDate(value?: string): string {
   }
 }
 
+const VISITORS_KEY = ['visitors', 'list'] as const;
+
+interface VisitorsListBody {
+  success: boolean;
+  data: VisitorRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function VisitorsPage() {
   const router = useRouter();
-  const [visitors, setVisitors] = useState<VisitorRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
@@ -64,6 +73,25 @@ export default function VisitorsPage() {
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<VisitorRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (statusFilter) params.set('status', statusFilter);
+  if (search.trim()) params.set('search', search.trim());
+  if (tenantFilter) params.set('tenantId', tenantFilter);
+
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<VisitorsListBody>(
+    [...VISITORS_KEY, page, perPage, statusFilter, search, tenantFilter],
+    `visitors?${params.toString()}`,
+  );
+
+  const visitors = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleExport = () => {
     if (visitors.length === 0) return;
@@ -117,42 +145,13 @@ export default function VisitorsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const fetchVisitors = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
-      if (search.trim()) params.set('search', search.trim());
-      if (tenantFilter) params.set('tenantId', tenantFilter);
-
-      const res = await api.get(`visitors?${params.toString()}`).json<{
-        success: boolean;
-        data: VisitorRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setVisitors(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter, search, tenantFilter]);
-
-  useEffect(() => {
-    fetchVisitors();
-  }, [fetchVisitors]);
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await api.delete(`visitors/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchVisitors();
+      queryClient.invalidateQueries({ queryKey: VISITORS_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -238,7 +237,7 @@ export default function VisitorsPage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by visitor name or phone..."

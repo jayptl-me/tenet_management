@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Bell,
@@ -18,6 +18,8 @@ import {
   FileSearch,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { parseApiError } from '@/lib/errorParser';
 import { notificationTargetHref } from '@/lib/notificationLinks';
 import { Button } from '@/components/ui/Button';
@@ -44,16 +46,25 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
+const NOTIFICATION_KEY = ['notifications', 'detail'] as const;
+
 export default function NotificationDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [notification, setNotification] = useState<INotification | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const {
+    data: notification = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<INotification | null>([NOTIFICATION_KEY, id], `notifications/${id}`, {
+    enabled: !!id,
+  });
+
+  const error = errorMessage(queryError);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -68,24 +79,6 @@ export default function NotificationDetailPage() {
       setShowDeleteModal(false);
     }
   };
-
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`notifications/${id}`)
-      .json<{ success: boolean; data: INotification }>()
-      .then((res) => {
-        setNotification(res.data);
-      })
-      .catch(() => {
-        setError('Failed to load notification');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [id]);
 
   if (!isLoading && (error || !notification)) {
     return (

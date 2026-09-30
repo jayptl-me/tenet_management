@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -247,6 +247,7 @@ export function Sidebar() {
   );
   const [pinned, setPinned] = useState<string[]>(loadPinned);
   const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const [appliedPath, setAppliedPath] = useState<string | undefined>(undefined);
 
   // Feature flags from AppConfig or defaults
   const features = useMemo(() => {
@@ -262,8 +263,11 @@ export function Sidebar() {
     };
   }, [appConfig]);
 
-  // Auto-expand section containing the active route
-  useEffect(() => {
+  // Auto-expand section containing the active route. Done as a guarded
+  // render-time adjustment instead of an effect so a manually collapsed
+  // active section stays collapsed until the route actually changes.
+  if (appliedPath !== pathname) {
+    setAppliedPath(pathname);
     for (const section of navSections) {
       if (
         section.items.some((item) => pathname === item.href || pathname.startsWith(item.href + '/'))
@@ -272,7 +276,7 @@ export function Sidebar() {
         break;
       }
     }
-  }, [pathname]);
+  }
 
   const toggleSection = useCallback((id: string) => {
     setExpandedSections((prev) => {

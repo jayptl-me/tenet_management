@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, Suspense } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   LayoutList,
@@ -16,6 +17,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +34,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { HeatmapCalendar } from '@/components/ui/HeatmapCalendar';
 import { useSSE } from '@/hooks/useSSE';
 import type { DataTableColumn } from '@/components/ui/DataTable';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   DndContext,
   DragOverlay,
@@ -70,6 +73,40 @@ interface ComplaintStats {
 }
 
 type ViewMode = 'table' | 'kanban';
+
+const COMPLAINTS_KEY = ['complaints'] as const;
+const COMPLAINTS_STATS_KEY = ['complaints', 'stats'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_COMPLAINTS: ComplaintRow[] = [];
+
+interface ComplaintsListBody {
+  success: boolean;
+  data: ComplaintRow[];
+  meta: { total: number };
+}
+
+/**
+ * Deep-linked date filters: `?date=` pins both ends, otherwise `fromDate` /
+ * `toDate` are read independently (invalid values are ignored).
+ */
+function readUrlDates(params: URLSearchParams): { fromDate: string; toDate: string } {
+  const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const dateParam = params.get('date') ?? '';
+  const fromParam = params.get('fromDate') ?? '';
+  const toParam = params.get('toDate') ?? '';
+
+  if (isDate(dateParam)) {
+    return { fromDate: dateParam, toDate: dateParam };
+  }
+  if (isDate(fromParam)) {
+    return { fromDate: fromParam, toDate: isDate(toParam) ? toParam : fromParam };
+  }
+  if (isDate(toParam)) {
+    return { fromDate: '', toDate: toParam };
+  }
+  return { fromDate: '', toDate: '' };
+}
 
 const KANBAN_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as const;
 
@@ -244,28 +281,88 @@ function KanbanCard({
 
 // ── Main Page Component ─────────────────────────────────
 
-export default function ComplaintsPage() {
+function ComplaintsContent() {
   const router = useRouter();
-  const [complaints, setComplaints] = useState<ComplaintRow[]>([]);
-  const [stats, setStats] = useState<ComplaintStats | null>(null);
-  const [total, setTotal] = useState(0);
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const urlDates = readUrlDates(searchParams);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [fromDate, setFromDate] = useState(urlDates.fromDate);
+  const [toDate, setToDate] = useState(urlDates.toDate);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  // Mutation (delete/export/quick-resolve) failures; list failures come from the queries.
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ComplaintRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [quickResolveTarget, setQuickResolveTarget] = useState<QuickResolveTarget | null>(null);
+
+  const tableParams = new URLSearchParams();
+  tableParams.set('page', String(page));
+  tableParams.set('limit', String(perPage));
+  if (searchFilter.trim()) tableParams.set('search', searchFilter.trim());
+  if (statusFilter) tableParams.set('status', statusFilter);
+  if (categoryFilter) tableParams.set('category', categoryFilter);
+  if (priorityFilter) tableParams.set('priority', priorityFilter);
+  if (fromDate) tableParams.set('fromDate', fromDate);
+  if (toDate) tableParams.set('toDate', toDate);
+
+  const kanbanParams = new URLSearchParams();
+  kanbanParams.set('limit', '200');
+  if (searchFilter.trim()) kanbanParams.set('search', searchFilter.trim());
+  if (categoryFilter) kanbanParams.set('category', categoryFilter);
+  if (priorityFilter) kanbanParams.set('priority', priorityFilter);
+  if (fromDate) kanbanParams.set('fromDate', fromDate);
+  if (toDate) kanbanParams.set('toDate', toDate);
+
+  const { data: statsBody } = useApiQuery<ComplaintStats>(COMPLAINTS_STATS_KEY, 'complaints/stats');
+
+  const tableQuery = useApiBodyQuery<ComplaintsListBody>(
+    [
+      ...COMPLAINTS_KEY,
+      'table',
+      page,
+      perPage,
+      searchFilter,
+      statusFilter,
+      categoryFilter,
+      priorityFilter,
+      fromDate,
+      toDate,
+    ],
+    `complaints?${tableParams.toString()}`,
+    { enabled: viewMode === 'table' },
+  );
+
+  const kanbanKey = [
+    ...COMPLAINTS_KEY,
+    'kanban',
+    searchFilter,
+    categoryFilter,
+    priorityFilter,
+    fromDate,
+    toDate,
+  ] as const;
+
+  const kanbanQuery = useApiBodyQuery<ComplaintsListBody>(
+    kanbanKey,
+    `complaints?${kanbanParams.toString()}`,
+    { enabled: viewMode === 'kanban' },
+  );
+
+  const activeQuery = viewMode === 'kanban' ? kanbanQuery : tableQuery;
+  const complaints = activeQuery.data?.data ?? EMPTY_COMPLAINTS;
+  const total = activeQuery.data?.meta.total ?? 0;
+  const isLoading = activeQuery.isPending;
+  const fetchErrorMessage = errorMessage(activeQuery.error);
+  const stats = statsBody ?? null;
 
   const handleQuickResolve = async (
     id: string,
@@ -280,12 +377,8 @@ export default function ComplaintsPage() {
         .json();
       toast.success(`Complaint marked as ${status.replace(/_/g, ' ')}`);
       setQuickResolveTarget(null);
-      fetchStats();
-      if (viewMode === 'kanban') {
-        fetchAllForKanban();
-      } else {
-        fetchComplaints();
-      }
+      setError('');
+      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
     } catch (err) {
       toast.error((await parseApiError(err)).message);
     }
@@ -297,131 +390,15 @@ export default function ComplaintsPage() {
     }),
   );
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await api.get('complaints/stats').json<{
-        success: boolean;
-        data: ComplaintStats;
-      }>();
-      if (res.success && res.data) {
-        setStats(res.data);
-      }
-    } catch {
-      // Non-blocking for stats failure
-    }
-  }, []);
-
-  const fetchComplaints = useCallback(async () => {
-    if (viewMode === 'kanban') return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (searchFilter.trim()) params.set('search', searchFilter.trim());
-      if (statusFilter) params.set('status', statusFilter);
-      if (categoryFilter) params.set('category', categoryFilter);
-      if (priorityFilter) params.set('priority', priorityFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
-
-      const res = await api.get(`complaints?${params.toString()}`).json<{
-        success: boolean;
-        data: ComplaintRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setComplaints(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    page,
-    perPage,
-    searchFilter,
-    statusFilter,
-    categoryFilter,
-    priorityFilter,
-    fromDate,
-    toDate,
-    viewMode,
-  ]);
-
-  const fetchAllForKanban = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('limit', '200');
-      if (searchFilter.trim()) params.set('search', searchFilter.trim());
-      if (categoryFilter) params.set('category', categoryFilter);
-      if (priorityFilter) params.set('priority', priorityFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
-
-      const res = await api.get(`complaints?${params.toString()}`).json<{
-        success: boolean;
-        data: ComplaintRow[];
-        meta: { total: number };
-      }>();
-      setComplaints(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchFilter, categoryFilter, priorityFilter, fromDate, toDate]);
-
-  useEffect(() => {
-    try {
-      const qp = new URLSearchParams(window.location.search);
-      const dateParam = qp.get('date') ?? '';
-      const fromParam = qp.get('fromDate') ?? '';
-      const toParam = qp.get('toDate') ?? '';
-      const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
-      if (isDate(dateParam)) {
-        setFromDate(dateParam);
-        setToDate(dateParam);
-      } else {
-        if (isDate(fromParam)) {
-          setFromDate(fromParam);
-          setToDate(isDate(toParam) ? toParam : fromParam);
-        } else if (isDate(toParam)) {
-          setToDate(toParam);
-        }
-      }
-    } catch {
-      // Non-browser or malformed query: ignore deep link
-    }
-    fetchStats();
-  }, [fetchStats]);
-
-  useEffect(() => {
-    if (viewMode === 'kanban') {
-      fetchAllForKanban();
-    } else {
-      fetchComplaints();
-    }
-  }, [viewMode, fetchAllForKanban, fetchComplaints]);
-
   // Real-time SSE listener
   useSSE(
     useCallback(
       (event: string) => {
         if (event === 'new_complaint' || event === 'complaint_updated') {
-          fetchStats();
-          if (viewMode === 'kanban') {
-            fetchAllForKanban();
-          } else {
-            fetchComplaints();
-          }
+          void queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
         }
       },
-      [fetchStats, viewMode, fetchAllForKanban, fetchComplaints],
+      [queryClient],
     ),
   );
 
@@ -505,12 +482,8 @@ export default function ComplaintsPage() {
     try {
       await api.delete(`complaints/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchStats();
-      if (viewMode === 'kanban') {
-        fetchAllForKanban();
-      } else {
-        fetchComplaints();
-      }
+      setError('');
+      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -577,8 +550,14 @@ export default function ComplaintsPage() {
     const complaint = complaints.find((c) => c._id === complaintId);
     if (!complaint || complaint.status === newStatus) return;
 
-    setComplaints((prev) =>
-      prev.map((c) => (c._id === complaintId ? { ...c, status: newStatus } : c)),
+    // Optimistic column move on the kanban cache; reverted if the PUT fails.
+    queryClient.setQueryData<ComplaintsListBody>(kanbanKey, (old) =>
+      old
+        ? {
+            ...old,
+            data: old.data.map((c) => (c._id === complaintId ? { ...c, status: newStatus } : c)),
+          }
+        : old,
     );
 
     setIsUpdatingStatus(true);
@@ -588,10 +567,17 @@ export default function ComplaintsPage() {
           json: { status: newStatus },
         })
         .json();
-      fetchStats();
+      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_STATS_KEY });
     } catch {
-      setComplaints((prev) =>
-        prev.map((c) => (c._id === complaintId ? { ...c, status: complaint.status } : c)),
+      queryClient.setQueryData<ComplaintsListBody>(kanbanKey, (old) =>
+        old
+          ? {
+              ...old,
+              data: old.data.map((c) =>
+                c._id === complaintId ? { ...c, status: complaint.status } : c,
+              ),
+            }
+          : old,
       );
     } finally {
       setIsUpdatingStatus(false);
@@ -748,7 +734,7 @@ export default function ComplaintsPage() {
         }
       />
 
-      {error && <ErrorBanner message={error} />}
+      <ErrorBanner message={fetchErrorMessage || error} />
 
       {/* ── Top KPI StatCards Row ────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1082,5 +1068,19 @@ export default function ComplaintsPage() {
         onClose={() => setQuickResolveTarget(null)}
       />
     </div>
+  );
+}
+
+export default function ComplaintsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <ComplaintsContent />
+    </Suspense>
   );
 }

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, ClipboardCheck, Download, CalendarDays } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -101,11 +104,36 @@ function formatClock(value: string | undefined): string {
   }
 }
 
+const ATTENDANCE_LIST_KEY = ['attendance', 'list'] as const;
+const ATTENDANCE_SUMMARY_KEY = ['attendance', 'summary'] as const;
+const ATTENDANCE_DAY_KEY = ['attendance', 'day'] as const;
+
+/** Query window for `attendance/summary` covering the whole calendar month. */
+function attendanceSummaryPath(year: number, month: number, tenantId: string): string {
+  const last = new Date(year, month + 1, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const params = new URLSearchParams();
+  params.set('fromDate', `${year}-${pad(month + 1)}-01`);
+  params.set('toDate', `${year}-${pad(month + 1)}-${pad(last)}`);
+  if (tenantId) params.set('tenantId', tenantId);
+  return `attendance/summary?${params.toString()}`;
+}
+
+/** Calendar month the summary panel opens on. */
+function currentMonth(): { year: number; month: number } {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() };
+}
+
+interface AttendanceListBody {
+  success: boolean;
+  data: AttendanceRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function AttendancePage() {
   const router = useRouter();
-  const [records, setRecords] = useState<AttendanceRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -118,118 +146,69 @@ export default function AttendancePage() {
   const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [calendarDays, setCalendarDays] = useState<AttendanceDayMap>({});
-  const [calendarLoading, setCalendarLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [dayRecords, setDayRecords] = useState<AttendanceDayRecord[]>([]);
-  const [dayLoading, setDayLoading] = useState(false);
+  const [summaryMonth, setSummaryMonth] = useState(currentMonth);
   const [showCalendar, setShowCalendar] = useState(true);
 
   const rangeInvalid = fromDate !== '' && toDate !== '' && fromDate > toDate;
 
-  const fetchRecords = useCallback(async () => {
-    if (rangeInvalid) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search.trim()) params.set('search', search.trim());
-      if (statusFilter) params.set('status', statusFilter);
-      if (methodFilter) params.set('method', methodFilter);
-      if (tenantFilter) params.set('tenantId', tenantFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
+  const listParams = new URLSearchParams();
+  listParams.set('page', String(page));
+  listParams.set('limit', String(perPage));
+  if (search.trim()) listParams.set('search', search.trim());
+  if (statusFilter) listParams.set('status', statusFilter);
+  if (methodFilter) listParams.set('method', methodFilter);
+  if (tenantFilter) listParams.set('tenantId', tenantFilter);
+  if (fromDate) listParams.set('fromDate', fromDate);
+  if (toDate) listParams.set('toDate', toDate);
 
-      const res = await api.get(`attendance?${params.toString()}`).json<{
-        success: boolean;
-        data: AttendanceRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setRecords(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    page,
-    perPage,
-    search,
-    statusFilter,
-    methodFilter,
-    tenantFilter,
-    fromDate,
-    toDate,
-    rangeInvalid,
-  ]);
-
-  const fetchSummary = useCallback(
-    async (year: number, month: number) => {
-      setCalendarLoading(true);
-      try {
-        const last = new Date(year, month + 1, 0).getDate();
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const from = `${year}-${pad(month + 1)}-01`;
-        const to = `${year}-${pad(month + 1)}-${pad(last)}`;
-        const params = new URLSearchParams();
-        params.set('fromDate', from);
-        params.set('toDate', to);
-        if (tenantFilter) params.set('tenantId', tenantFilter);
-        const res = await api.get(`attendance/summary?${params.toString()}`).json<{
-          success: boolean;
-          data: IAttendanceSummaryResponse;
-        }>();
-        setCalendarDays(res.data.days ?? {});
-      } catch {
-        setCalendarDays({});
-      } finally {
-        setCalendarLoading(false);
-      }
-    },
-    [tenantFilter],
+  const listQuery = useApiBodyQuery<AttendanceListBody>(
+    [
+      ...ATTENDANCE_LIST_KEY,
+      page,
+      perPage,
+      search,
+      statusFilter,
+      methodFilter,
+      tenantFilter,
+      fromDate,
+      toDate,
+    ],
+    `attendance?${listParams.toString()}`,
+    { enabled: !rangeInvalid },
   );
+  const records = listQuery.data?.data ?? [];
+  const total = listQuery.data?.meta.total ?? 0;
 
-  const fetchDayRecords = useCallback(
-    async (ymd: string) => {
-      setDayLoading(true);
-      try {
-        const params = new URLSearchParams();
-        params.set('date', ymd);
-        params.set('limit', '50');
-        if (statusFilter) params.set('status', statusFilter);
-        if (methodFilter) params.set('method', methodFilter);
-        if (tenantFilter) params.set('tenantId', tenantFilter);
-        if (search.trim()) params.set('search', search.trim());
-        const res = await api.get(`attendance?${params.toString()}`).json<{
-          success: boolean;
-          data: AttendanceDayRecord[];
-        }>();
-        setDayRecords(res.data ?? []);
-      } catch {
-        setDayRecords([]);
-      } finally {
-        setDayLoading(false);
-      }
-    },
-    [statusFilter, methodFilter, tenantFilter, search],
+  const summaryQuery = useApiQuery<IAttendanceSummaryResponse>(
+    [...ATTENDANCE_SUMMARY_KEY, summaryMonth.year, summaryMonth.month, tenantFilter],
+    attendanceSummaryPath(summaryMonth.year, summaryMonth.month, tenantFilter),
   );
+  const calendarDays: AttendanceDayMap = summaryQuery.data?.days ?? {};
+  const calendarLoading = summaryQuery.isPending;
 
-  useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+  const dayParams = new URLSearchParams();
+  if (selectedDay) dayParams.set('date', selectedDay);
+  dayParams.set('limit', '50');
+  if (statusFilter) dayParams.set('status', statusFilter);
+  if (methodFilter) dayParams.set('method', methodFilter);
+  if (tenantFilter) dayParams.set('tenantId', tenantFilter);
+  if (search.trim()) dayParams.set('search', search.trim());
 
-  useEffect(() => {
-    const now = new Date();
-    fetchSummary(now.getFullYear(), now.getMonth());
-  }, [fetchSummary]);
-
-  useEffect(() => {
-    if (selectedDay) fetchDayRecords(selectedDay);
-    else setDayRecords([]);
-  }, [selectedDay, fetchDayRecords]);
+  const dayQuery = useApiQuery<AttendanceDayRecord[]>(
+    [
+      ...ATTENDANCE_DAY_KEY,
+      selectedDay ?? '',
+      statusFilter,
+      methodFilter,
+      tenantFilter,
+      search,
+    ],
+    `attendance?${dayParams.toString()}`,
+    { enabled: selectedDay !== null },
+  );
+  const dayRecords = dayQuery.data ?? [];
+  const dayLoading = dayQuery.isPending;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -237,10 +216,7 @@ export default function AttendancePage() {
     try {
       await api.delete(`attendance/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchRecords();
-      const now = new Date();
-      fetchSummary(now.getFullYear(), now.getMonth());
-      if (selectedDay) fetchDayRecords(selectedDay);
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -366,7 +342,7 @@ export default function AttendancePage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(listQuery.error) || error} />
       <TodayAttendanceBoard
         selectedStatus={statusFilter}
         onSelectStatus={(status) => {
@@ -383,7 +359,7 @@ export default function AttendancePage() {
               isLoading={calendarLoading}
               selectedDay={selectedDay}
               onSelectDay={setSelectedDay}
-              onMonthChange={(y, m) => fetchSummary(y, m)}
+              onMonthChange={(y, m) => setSummaryMonth({ year: y, month: m })}
             />
           </div>
           <AttendanceDayDetail
@@ -484,7 +460,7 @@ export default function AttendancePage() {
         columns={columns}
         data={records}
         keyExtractor={(row: AttendanceRow) => row._id}
-        isLoading={isLoading}
+        isLoading={listQuery.isPending}
         onRowClick={(row) => router.push(`/attendance/${row._id}`)}
         pagination={{
           page,

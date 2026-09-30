@@ -176,9 +176,14 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     const validInitial = isNaN(initialDate.getTime()) ? new Date() : initialDate;
     const [viewYear, setViewYear] = useState<number>(validInitial.getFullYear());
     const [viewMonth, setViewMonth] = useState<number>(validInitial.getMonth());
+    const [prevCurrent, setPrevCurrent] = useState(current);
+    const [prevOpen, setPrevOpen] = useState(open);
 
     // Update view when value changes and popover is closed
-    useEffect(() => {
+    // (guarded render-time adjustment instead of an effect).
+    if (prevCurrent !== current || prevOpen !== open) {
+      setPrevCurrent(current);
+      setPrevOpen(open);
       if (!open && current) {
         const d = new Date(current.length === 7 ? `${current}-01` : current);
         if (!isNaN(d.getTime())) {
@@ -186,7 +191,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           setViewMonth(d.getMonth());
         }
       }
-    }, [current, open]);
+    }
 
     const emitChange = useCallback(
       (next: string) => {

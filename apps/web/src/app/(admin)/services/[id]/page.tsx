@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Wifi, Calendar, Building, User, Pencil, AlertTriangle, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -47,15 +48,22 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
+const SERVICE_KEY = ['services', 'detail'] as const;
+
 export default function ServiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [service, setService] = useState<ServiceDetail | null>(null);
   const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+
+  const {
+    data: service = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<ServiceDetail | null>([SERVICE_KEY, id], `services/${id}`, { enabled: !!id });
+
+  const error = errorMessage(queryError);
 
   useEffect(() => {
     api
@@ -68,20 +76,6 @@ export default function ServiceDetailPage() {
         // Fall back to formatted serviceType keys
       });
   }, []);
-
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`services/${id}`)
-      .json<{ success: boolean; data: ServiceDetail }>()
-      .then((res) => setService(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
 
   if (!isLoading && (error || !service)) {
     return (

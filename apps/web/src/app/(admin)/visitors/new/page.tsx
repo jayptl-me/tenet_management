@@ -85,6 +85,11 @@ function arrivalSummary(value: string): { label: string; detail: string; isPast:
   return { label: `In ${diffDays} days`, detail: `${day} at ${time}`, isPast: false };
 }
 
+/** True when arrival is more than 5 minutes in the past; clock is read on call. */
+function isArrivalStale(arrival: Date): boolean {
+  return arrival.getTime() < Date.now() - 5 * 60 * 1000;
+}
+
 export default function NewVisitorPage() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState('');
@@ -144,7 +149,7 @@ export default function NewVisitorPage() {
       setSubmitError('Expected arrival is not a valid date and time.');
       return;
     }
-    if (arrival.getTime() < Date.now() - 5 * 60 * 1000) {
+    if (isArrivalStale(arrival)) {
       setSubmitError('Expected arrival is in the past. Choose a current or future time.');
       return;
     }

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Plus, CheckCircle, XCircle, Shirt, Download } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -44,12 +47,18 @@ function sanitizeCSVValue(val: unknown): string {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
+interface LaundryListBody {
+  success: boolean;
+  data: LaundryRow[];
+  meta: { total: number };
+}
+
+const LAUNDRY_LIST_KEY = ['laundry-slots', 'list'] as const;
+
 export default function LaundryPage() {
   const router = useRouter();
-  const [slots, setSlots] = useState<LaundryRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
@@ -60,40 +69,28 @@ export default function LaundryPage() {
   const [deleting, setDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const fetchSlots = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
-      if (dateFilter) params.set('slotDate', dateFilter);
-      if (tenantFilter) params.set('tenantId', tenantFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (statusFilter) params.set('status', statusFilter);
+  if (dateFilter) params.set('slotDate', dateFilter);
+  if (tenantFilter) params.set('tenantId', tenantFilter);
 
-      const res = await api.get(`laundry-slots?${params.toString()}`).json<{
-        success: boolean;
-        data: LaundryRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setSlots(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter, dateFilter, tenantFilter]);
-
-  useEffect(() => {
-    fetchSlots();
-  }, [fetchSlots]);
+  const { data: slotsBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<LaundryListBody>(
+      [...LAUNDRY_LIST_KEY, page, perPage, statusFilter, dateFilter, tenantFilter],
+      `laundry-slots?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const slots = slotsBody?.data ?? [];
+  const total = slotsBody?.meta.total ?? 0;
 
   const handleStatusUpdate = async (id: string, status: string) => {
     setIsUpdating(true);
     try {
       await api.put(`laundry-slots/${id}`, { json: { status } }).json();
-      fetchSlots();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: LAUNDRY_LIST_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -107,7 +104,8 @@ export default function LaundryPage() {
     try {
       await api.delete(`laundry-slots/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchSlots();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: LAUNDRY_LIST_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -295,7 +293,7 @@ export default function LaundryPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <DatePicker

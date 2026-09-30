@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   WashingMachine,
@@ -12,8 +12,10 @@ import {
   Pencil,
   RefreshCw,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -52,28 +54,25 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
+const MACHINE_KEY = ['washing-machines', 'detail'] as const;
+
 export default function WashingMachineDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const queryClient = useQueryClient();
 
-  const [machine, setMachine] = useState<WashingMachineDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`washing-machines/${id}`)
-      .json<{ success: boolean; data: WashingMachineDetail }>()
-      .then((res) => setMachine(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data: machine = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<WashingMachineDetail | null>([MACHINE_KEY, id], `washing-machines/${id}`, {
+    enabled: !!id,
+  });
+
+  const error = errorMessage(queryError) || actionError;
 
   const handleRelease = async () => {
     if (!machine) return;
@@ -82,9 +81,9 @@ export default function WashingMachineDetailPage() {
       const res = await api
         .get(`washing-machines/${id}`)
         .json<{ success: boolean; data: WashingMachineDetail }>();
-      setMachine(res.data);
+      queryClient.setQueryData([MACHINE_KEY, id], res.data);
     } catch {
-      setError('Failed to release machine');
+      setActionError('Failed to release machine');
     }
   };
 

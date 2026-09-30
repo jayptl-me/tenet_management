@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertTriangle, User, Home, Hash, Receipt, Lock, History } from 'lucide-react';
@@ -73,7 +73,7 @@ export default function EditPaymentPage() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -109,7 +109,7 @@ export default function EditPaymentPage() {
       });
   }, [id, reset]);
 
-  const watched = watch();
+  const watched = useWatch({ control });
   const isDirty = useMemo(() => {
     if (!initial.amount && initial.amount !== 0) return false;
     return (

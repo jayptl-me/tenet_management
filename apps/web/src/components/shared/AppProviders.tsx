@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { shouldRetry } from '@/lib/query';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ToastProvider, useGlobalToastListener } from '@/components/ui/Toast';
 
@@ -22,8 +23,11 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000,
-            retry: 1,
+            // Always refetch on mount so an admin never edits a stale row, but
+            // paint immediately from cache when a payload is already there.
+            staleTime: 0,
+            // One retry for network/5xx only; 4xx fails fast (see lib/query).
+            retry: shouldRetry,
             refetchOnWindowFocus: false,
           },
         },

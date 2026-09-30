@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   Building2,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -56,6 +59,8 @@ interface FloorRow {
 
 type SortKey = 'floor_asc' | 'floor_desc' | 'label' | 'occupancy' | 'rooms';
 
+const FLOORS_KEY = ['floors', 'overview'] as const;
+
 const SORT_OPTIONS = [
   { value: 'floor_asc', label: 'Floor # (low to high)' },
   { value: 'floor_desc', label: 'Floor # (high to low)' },
@@ -68,8 +73,7 @@ const SORT_OPTIONS = [
 
 export default function FloorsPage() {
   const router = useRouter();
-  const [floors, setFloors] = useState<FloorRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -79,25 +83,19 @@ export default function FloorsPage() {
   const [deleteTarget, setDeleteTarget] = useState<FloorRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchFloors = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // Single server-aggregated call: per-floor stats + beds + service health.
-      // Replaces the old rooms?limit=500 + services?limit=100 client joins,
-      // which truncated on larger datasets.
-      const res = await api.get('floors/overview').json<{ success: boolean; data: FloorRow[] }>();
-      setFloors(res.data ?? []);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Single server-aggregated call: per-floor stats + beds + service health.
+  // Replaces the old rooms?limit=500 + services?limit=100 client joins,
+  // which truncated on larger datasets.
+  const {
+    data: floors = [],
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<FloorRow[]>(FLOORS_KEY, 'floors/overview');
 
-  useEffect(() => {
-    fetchFloors();
-  }, [fetchFloors]);
+  const invalidateFloors = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: FLOORS_KEY }),
+    [queryClient],
+  );
 
   const statsFor = useCallback((floor: FloorRow) => floor.stats, []);
 
@@ -159,7 +157,7 @@ export default function FloorsPage() {
     try {
       await api.delete(`floors/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchFloors();
+      invalidateFloors();
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -271,7 +269,7 @@ export default function FloorsPage() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       {/* Stat strip */}
       {isLoading ? (

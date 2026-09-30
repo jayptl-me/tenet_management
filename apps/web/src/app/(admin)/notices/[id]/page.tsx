@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Megaphone, Calendar, Target, MessageCircle, Info, Copy, Pencil, User } from 'lucide-react';
 import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -37,83 +38,86 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
+const NOTICE_KEY = ['notices', 'detail'] as const;
+
+/**
+ * Resolve the notice's target IDs to human labels using the floors, rooms or
+ * tenants lists. Returns `null` when there is nothing (or nothing safe) to
+ * resolve, in which case the raw IDs stay on screen.
+ */
+async function resolveTargetNames(data: NoticeDetail): Promise<Record<string, string> | null> {
+  const ids = data.targetIds ?? [];
+  if (ids.length === 0 || !data.targetType || data.targetType === 'all') return null;
+  try {
+    const names: Record<string, string> = {};
+    if (data.targetType === 'floor') {
+      const res = await api.get('floors').json<{
+        success: boolean;
+        data: Array<{ _id: string; label?: string; floorNumber?: number }>;
+      }>();
+      for (const f of res.data ?? []) {
+        if (ids.includes(f._id)) names[f._id] = floorLabel(f);
+      }
+    } else if (data.targetType === 'room') {
+      const res = await api.get('rooms?limit=100').json<{
+        success: boolean;
+        data: Array<{
+          _id: string;
+          roomNumber?: string;
+          sharingType?: number;
+          monthlyRent?: number;
+        }>;
+      }>();
+      for (const r of res.data ?? []) {
+        if (ids.includes(r._id)) names[r._id] = roomLabel(r);
+      }
+    } else if (data.targetType === 'individual') {
+      // Individual targets are user IDs; resolve via tenant user links.
+      const res = await api.get('tenants?limit=100').json<{
+        success: boolean;
+        data: Array<{
+          _id: string;
+          user?: { _id?: string; name?: string };
+          userId?: { _id?: string; name?: string } | string;
+          room?: { roomNumber?: string };
+        }>;
+      }>();
+      for (const t of res.data ?? []) {
+        const userDoc = t.user ?? (typeof t.userId === 'object' ? t.userId : undefined);
+        const userDocId = userDoc?._id ? String(userDoc._id) : '';
+        if (userDocId && ids.includes(userDocId)) {
+          names[userDocId] = tenantLabel(t as Parameters<typeof tenantLabel>[0]);
+        }
+      }
+    }
+    return names;
+  } catch {
+    return null;
+  }
+}
+
 export default function NoticeDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [notice, setNotice] = useState<NoticeDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [targetNames, setTargetNames] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`notices/${id}`)
-      .json<{ success: boolean; data: NoticeDetail }>()
-      .then((res) => {
-        setNotice(res.data);
-        void resolveTargetNames(res.data);
-      })
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data: notice = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<NoticeDetail | null>([NOTICE_KEY, id], `notices/${id}`, { enabled: !!id });
 
-  async function resolveTargetNames(data: NoticeDetail) {
-    const ids = data.targetIds ?? [];
-    if (ids.length === 0 || !data.targetType || data.targetType === 'all') return;
-    try {
-      const names: Record<string, string> = {};
-      if (data.targetType === 'floor') {
-        const res = await api.get('floors').json<{
-          success: boolean;
-          data: Array<{ _id: string; label?: string; floorNumber?: number }>;
-        }>();
-        for (const f of res.data ?? []) {
-          if (ids.includes(f._id)) names[f._id] = floorLabel(f);
-        }
-      } else if (data.targetType === 'room') {
-        const res = await api.get('rooms?limit=100').json<{
-          success: boolean;
-          data: Array<{
-            _id: string;
-            roomNumber?: string;
-            sharingType?: number;
-            monthlyRent?: number;
-          }>;
-        }>();
-        for (const r of res.data ?? []) {
-          if (ids.includes(r._id)) names[r._id] = roomLabel(r);
-        }
-      } else if (data.targetType === 'individual') {
-        // Individual targets are user IDs; resolve via tenant user links.
-        const res = await api.get('tenants?limit=100').json<{
-          success: boolean;
-          data: Array<{
-            _id: string;
-            user?: { _id?: string; name?: string };
-            userId?: { _id?: string; name?: string } | string;
-            room?: { roomNumber?: string };
-          }>;
-        }>();
-        for (const t of res.data ?? []) {
-          const userDoc = t.user ?? (typeof t.userId === 'object' ? t.userId : undefined);
-          const userDocId = userDoc?._id ? String(userDoc._id) : '';
-          if (userDocId && ids.includes(userDocId)) {
-            names[userDocId] = tenantLabel(t as Parameters<typeof tenantLabel>[0]);
-          }
-        }
-      }
-      setTargetNames(names);
-    } catch {
-      // Names stay unresolved; raw IDs still render below
-    }
-  }
+  // Resolve the loaded notice's target IDs to display labels.
+  useEffect(() => {
+    if (!notice) return;
+    void resolveTargetNames(notice).then((names) => {
+      if (names) setTargetNames(names);
+    });
+  }, [notice]);
+
+  const error = errorMessage(queryError);
 
   if (!isLoading && (error || !notice)) {
     return (

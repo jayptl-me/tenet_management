@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -29,13 +32,19 @@ interface GuardianRow {
   createdAt: string;
 }
 
+const GUARDIANS_KEY = ['guardians', 'list'] as const;
+
+interface GuardiansListBody {
+  success: boolean;
+  data: GuardianRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 function GuardiansList() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tenantIdFilter = searchParams.get('tenantId') ?? '';
-  const [guardians, setGuardians] = useState<GuardianRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -43,33 +52,23 @@ function GuardiansList() {
   const [deleteTarget, setDeleteTarget] = useState<GuardianRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchGuardians = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (tenantIdFilter) params.set('tenantId', tenantIdFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (tenantIdFilter) params.set('tenantId', tenantIdFilter);
 
-      const res = await api.get(`guardians?${params.toString()}`).json<{
-        success: boolean;
-        data: GuardianRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setGuardians(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, tenantIdFilter]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<GuardiansListBody>(
+    [...GUARDIANS_KEY, page, perPage, search, tenantIdFilter],
+    `guardians?${params.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchGuardians();
-  }, [fetchGuardians]);
+  const guardians = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -77,7 +76,7 @@ function GuardiansList() {
     try {
       await api.delete(`guardians/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchGuardians();
+      queryClient.invalidateQueries({ queryKey: GUARDIANS_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -174,7 +173,7 @@ function GuardiansList() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           placeholder="Search by name..."

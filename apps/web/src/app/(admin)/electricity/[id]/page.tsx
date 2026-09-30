@@ -1,11 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Zap, Pencil, CheckCircle2, Send, FileText, FileUp, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
@@ -174,36 +178,24 @@ const linkedInvoiceColumns: DataTableColumn<LinkedInvoice>[] = [
   },
 ];
 
+const BILL_KEY = (id: string) => ['electricity', id] as const;
+
 export default function ElectricityBillDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [bill, setBill] = useState<ElectricityBillDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [actionError, setActionError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
   const [acting, setActing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await api
-        .get(`electricity/${params.id}`)
-        .json<{ success: boolean; data: ElectricityBillDetail }>();
-      setBill(res.data);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [params.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data: bill = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<ElectricityBillDetail>(BILL_KEY(params.id), `electricity/${params.id}`);
+  const queryErrorMessage = errorMessage(queryError);
 
   const finalize = async () => {
     setActing(true);
@@ -212,7 +204,7 @@ export default function ElectricityBillDetailPage() {
     try {
       await api.post(`electricity/${params.id}/finalize`, { json: {} }).json();
       setActionMsg('Bill finalized. You can now distribute charges to invoices.');
-      await load();
+      await queryClient.invalidateQueries({ queryKey: BILL_KEY(params.id) });
     } catch (err) {
       setActionError((await parseApiError(err)).message);
     } finally {
@@ -231,7 +223,7 @@ export default function ElectricityBillDetailPage() {
       const d = res.data?.distributed ?? 0;
       const e = res.data?.errors ?? 0;
       setActionMsg(`Distribution complete: ${d} invoice(s) updated, ${e} error(s).`);
-      await load();
+      await queryClient.invalidateQueries({ queryKey: BILL_KEY(params.id) });
     } catch (err) {
       setActionError((await parseApiError(err)).message);
     } finally {
@@ -247,7 +239,7 @@ export default function ElectricityBillDetailPage() {
       formData.append('file', file);
       await api.post(`electricity/${params.id}/image`, { body: formData }).json();
       setActionMsg('Bill image uploaded.');
-      await load();
+      await queryClient.invalidateQueries({ queryKey: BILL_KEY(params.id) });
     } catch (err) {
       const parsed = await parseApiError(err);
       setActionError(parsed.message);
@@ -263,7 +255,7 @@ export default function ElectricityBillDetailPage() {
     try {
       await api.delete(`electricity/${params.id}/image`).json();
       setActionMsg('Bill image removed.');
-      await load();
+      await queryClient.invalidateQueries({ queryKey: BILL_KEY(params.id) });
     } catch (err) {
       const parsed = await parseApiError(err);
       setActionError(parsed.message);
@@ -272,13 +264,13 @@ export default function ElectricityBillDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !bill)) {
+  if (!isLoading && (queryErrorMessage || !bill)) {
     return (
       <FormPage
         title="Electricity Bill"
         description="Monthly multi-room bill"
         backHref="/electricity"
-        error={error || 'Electricity bill not found'}
+        error={queryErrorMessage || 'Electricity bill not found'}
         maxWidth="4xl"
       />
     );
@@ -403,9 +395,12 @@ export default function ElectricityBillDetailPage() {
                       </a>
                     </div>
                   ) : (
-                    <img
+                    <Image
                       src={bill.billImageUrl}
                       alt={`Electricity bill for ${bill.month}`}
+                      width={640}
+                      height={480}
+                      unoptimized
                       className="max-h-64 w-full object-contain"
                     />
                   )}

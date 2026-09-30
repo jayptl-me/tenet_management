@@ -130,6 +130,11 @@ export function formatShortDate(dateStr: string | null | undefined): string {
   }
 }
 
+/** True when the next service date is already in the past. */
+function isServiceOverdue(dateStr: string): boolean {
+  return new Date(dateStr).getTime() < Date.now();
+}
+
 export function AssetServiceTimeline({
   purchasedDate,
   lastServicedDate,
@@ -144,7 +149,7 @@ export function AssetServiceTimeline({
   className?: string;
 }) {
   const retired = status === 'retired';
-  const overdue = !!nextServiceDate && !retired && new Date(nextServiceDate).getTime() < Date.now();
+  const overdue = !!nextServiceDate && !retired && isServiceOverdue(nextServiceDate);
   const nodes: TimelineNode[] = [
     { key: 'purchased', label: 'Purchased', date: purchasedDate },
     { key: 'last', label: 'Last serviced', date: lastServicedDate },

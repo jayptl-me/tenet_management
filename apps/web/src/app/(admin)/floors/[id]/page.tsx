@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Building,
@@ -14,8 +14,8 @@ import {
   IndianRupee,
   Sparkles,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -82,54 +82,48 @@ function formatCurrency(amount: number | null | undefined): string {
 
 // ── Page ───────────────────────────────────────────────
 
+const FLOOR_KEY = (id: string) => ['floors', id] as const;
+const FLOOR_ROOMS_KEY = (id: string) => ['floors', id, 'rooms'] as const;
+const FLOOR_MACHINES_KEY = (id: string) => ['washing-machines', 'by-floor', id] as const;
+const APP_CONFIG_KEY = ['app-config'] as const;
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_ROOMS: RoomListing[] = [];
+
 export default function FloorDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [floor, setFloor] = useState<FloorDetail | null>(null);
-  const [rooms, setRooms] = useState<RoomListing[]>([]);
-  const [floorStats, setFloorStats] = useState<FloorStats | null>(null);
-  const [machines, setMachines] = useState<MachineListing[]>([]);
-  const [amenityDefs, setAmenityDefs] = useState<AmenityDef[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  // Primary query drives loading and error states, like the old effect did.
+  const {
+    data: floor = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<FloorDetail>(FLOOR_KEY(id), `floors/${id}`, { enabled: Boolean(id) });
+  const queryErrorMessage = errorMessage(queryError);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
+  // Server-aggregated rooms + stats - single source of truth, no client
+  // limit truncation. Falls back to zeros while loading; errors stay silent.
+  const { data: roomsData } = useApiQuery<{ rooms: RoomListing[]; stats: FloorStats }>(
+    FLOOR_ROOMS_KEY(id),
+    `floors/${id}/rooms`,
+    { enabled: Boolean(id) },
+  );
+  const rooms = roomsData?.rooms ?? EMPTY_ROOMS;
+  const floorStats = roomsData?.stats ?? null;
 
-    api
-      .get(`floors/${id}`)
-      .json<{ success: boolean; data: FloorDetail }>()
-      .then((res) => setFloor(res.data))
-      .catch(async (err) => setError((await parseApiError(err)).message))
-      .finally(() => setIsLoading(false));
+  const { data: machines = [] } = useApiQuery<MachineListing[]>(
+    FLOOR_MACHINES_KEY(id),
+    `washing-machines?floorId=${id}`,
+    { enabled: Boolean(id) },
+  );
 
-    // Server-aggregated rooms + stats — single source of truth, no client
-    // limit truncation. Falls back to zeros while loading.
-    api
-      .get(`floors/${id}/rooms`)
-      .json<{ success: boolean; data: { rooms: RoomListing[]; stats: FloorStats } }>()
-      .then((res) => {
-        setRooms(res.data?.rooms ?? []);
-        setFloorStats(res.data?.stats ?? null);
-      })
-      .catch(() => {});
-
-    api
-      .get(`washing-machines?floorId=${id}`)
-      .json<{ success: boolean; data: MachineListing[] }>()
-      .then((res) => setMachines(res.data ?? []))
-      .catch(() => {});
-
-    api
-      .get('app-config')
-      .json<{ success: boolean; data: { amenityDefinitions?: AmenityDef[] } }>()
-      .then((res) => setAmenityDefs(res.data?.amenityDefinitions ?? []))
-      .catch(() => {});
-  }, [id]);
+  const { data: appConfig } = useApiQuery<{ amenityDefinitions?: AmenityDef[] }>(
+    APP_CONFIG_KEY,
+    'app-config',
+  );
+  const amenityDefs = appConfig?.amenityDefinitions ?? [];
 
   const stats = useMemo(() => {
     const s: FloorStats = floorStats ?? {
@@ -150,13 +144,13 @@ export default function FloorDetailPage() {
     };
   }, [rooms, floorStats]);
 
-  if (!isLoading && (error || !floor)) {
+  if (!isLoading && (queryErrorMessage || !floor)) {
     return (
       <FormPage
         title="Floor Details"
         description="View floor information"
         backHref="/floors"
-        error={error || 'Floor not found'}
+        error={queryErrorMessage || 'Floor not found'}
         maxWidth="5xl"
       />
     );

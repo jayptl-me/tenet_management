@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,8 +14,8 @@ import {
   Building2,
   Phone,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -52,36 +51,29 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
+const LAUNDRY_SLOT_KEY = (id: string) => ['laundry-slots', id] as const;
+
 export default function LaundryDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [slot, setSlot] = useState<LaundrySlotDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const {
+    data: slot = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<LaundrySlotDetail>(LAUNDRY_SLOT_KEY(id), `laundry-slots/${id}`, {
+    enabled: Boolean(id),
+  });
+  const queryErrorMessage = errorMessage(queryError);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`laundry-slots/${id}`)
-      .json<{ success: boolean; data: LaundrySlotDetail }>()
-      .then((res) => setSlot(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
-
-  if (!isLoading && (error || !slot)) {
+  if (!isLoading && (queryErrorMessage || !slot)) {
     return (
       <FormPage
         title="Laundry Slot"
         description="View laundry slot details"
         backHref="/laundry"
-        error={error || 'Slot not found'}
+        error={queryErrorMessage || 'Slot not found'}
         maxWidth="4xl"
       />
     );
