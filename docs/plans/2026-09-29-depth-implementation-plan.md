@@ -282,6 +282,13 @@ Current jobs: `typecheck`, `lint`, `test-api` (mongo:7), `build-web`, `build-api
 | e2e            | job has no `next build` and no artifact sharing, but `webServer` runs `next start` (needs `.next`) -> all specs fail; also installs chromium only while config declares chromium/firefox/webkit | build in-job (or upload/download artifact from `build-web`), restrict projects to chromium in CI, add `NEXT_PUBLIC_API_URL` |
 | Zero tolerance | n/a                                                                                                                                                                                             | after Phase 2: `bun run lint` must print 0 warnings                                                                         |
 
+**Verified 2026-09-29 on run `36581880412` (the Phase 1 push):**
+
+- `bun install --frozen-lockfile` **passes** with no lockfile present. The lockfile gap is a *reproducibility* risk, not a CI failure -- the original text here overstated it. Committing `bun.lock` still stands, on build determinism alone.
+- Jobs: `lint` 12s, `test-api` 48s, `build-web` 26s, `build-api` 10s, `typecheck` 17s -- **all green**.
+- `e2e` **failed** at `Run bun run test:e2e`, exactly as predicted: the job runs no `next build`, yet `playwright.config.ts` starts `next start`, which needs `.next`. This is the only red job.
+- Annotation: `actions/checkout@v4` targets Node.js 20 and is forced onto Node 24 -- bump the action during this phase.
+
 ### 5.3 Deployment facts and doc drift
 
 - `render.yaml`: `pg-api` (bun, `healthCheckPath: /api/v1/health`) + `pg-web` (bun, `next start` on `.next`). **No `previews:` key** (D6: skipping).
