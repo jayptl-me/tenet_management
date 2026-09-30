@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { api } from '@/lib/api';
 import { applyColorScaleToDOM, removeCustomStylesFromDOM } from '@/lib/colorScale';
 import type { ThemeSettings, ThemePreset, ThemeMode } from '@pg/types';
@@ -38,16 +38,25 @@ function readThemeFromDOM(): ThemeSettings {
   return { preset, mode };
 }
 
+// True only after hydration: the DOM-backed theme must not be read before the
+// server markup has been matched, otherwise the first client render would
+// disagree with it.
+const emptySubscribe = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function useTheme() {
+  const hydrated = useSyncExternalStore(emptySubscribe, hydratedSnapshot, serverSnapshot);
   const [theme, setThemeState] = useState<ThemeSettings>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   // Bootstrap: read initial state from DOM (set by ThemeProvider before hydration)
-  useEffect(() => {
-    const initial = readThemeFromDOM();
-    setThemeState(initial);
+  if (hydrated && !bootstrapped) {
+    setBootstrapped(true);
+    setThemeState(readThemeFromDOM());
     setLoading(false);
-  }, []);
+  }
 
   // Listen for theme-update events fired by ThemeProvider after settings save
   useEffect(() => {

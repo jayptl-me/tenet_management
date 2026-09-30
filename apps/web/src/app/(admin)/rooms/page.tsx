@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useState, useCallback, useMemo, Suspense } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   DoorOpen,
@@ -15,6 +16,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -89,21 +92,42 @@ interface ReconcileReport {
   }>;
 }
 
+interface RoomsListBody {
+  success: boolean;
+  data: RoomRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number; stats: RoomsStats };
+}
+
+// Stable empty fallback: `?? []` would allocate a fresh array on every render
+// while the query is pending, breaking referential stability for useMemo deps.
+const EMPTY_ROOMS: RoomRow[] = [];
+
+const ROOMS_LIST_PREFIX = ['rooms', 'list'] as const;
+
+const ROOMS_LIST_KEY = (
+  page: number,
+  limit: number,
+  search: string,
+  sharingFilter: string,
+  statusFilter: string,
+  floorFilter: string,
+) => [...ROOMS_LIST_PREFIX, page, limit, search, sharingFilter, statusFilter, floorFilter];
+
 function RoomsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [rooms, setRooms] = useState<RoomRow[]>([]);
-  const [stats, setStats] = useState<RoomsStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
   const [sharingFilter, setSharingFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [floorFilter, setFloorFilter] = useState('');
+  // Deep-link support: /rooms?floorId=X (from floor detail "View all") seeds
+  // the floor filter on first render.
+  const [floorFilter, setFloorFilter] = useState(() => searchParams.get('floorId') ?? '');
   const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>('');
+  // Mutation (delete/reconcile) failures; list failures come from the query.
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<RoomRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -111,40 +135,40 @@ function RoomsContent() {
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState<ReconcileReport | null>(null);
 
-  // Deep-link support: /rooms?floorId=X (from floor detail "View all") seeds
-  // the floor filter once on mount.
-  useEffect(() => {
-    const floorParam = searchParams.get('floorId');
-    if (floorParam) setFloorFilter(floorParam);
-  }, [searchParams]);
+  const listParams = new URLSearchParams();
+  listParams.set('page', String(page));
+  // Matrix view must show every matching room, not just the current page.
+  listParams.set('limit', viewMode === 'matrix' ? '500' : String(perPage));
+  if (search) listParams.set('roomNumber', search);
+  if (sharingFilter) listParams.set('sharingType', sharingFilter);
+  if (statusFilter) listParams.set('isActive', statusFilter);
+  if (floorFilter) listParams.set('floorId', floorFilter);
 
-  const fetchRooms = useCallback(async () => {
-    setIsLoading(true);
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<RoomsListBody>(
+    ROOMS_LIST_KEY(
+      page,
+      viewMode === 'matrix' ? 500 : perPage,
+      search,
+      sharingFilter,
+      statusFilter,
+      floorFilter,
+    ),
+    `rooms?${listParams.toString()}`,
+  );
+
+  const rooms = listBody?.data ?? EMPTY_ROOMS;
+  const total = listBody?.meta.total ?? 0;
+  const stats = listBody?.meta.stats ?? null;
+
+  const refreshRooms = useCallback(() => {
+    // A fresh list run used to clear the banner along with refetching data.
     setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      // Matrix view must show every matching room, not just the current page.
-      params.set('limit', viewMode === 'matrix' ? '500' : String(perPage));
-      if (search) params.set('roomNumber', search);
-      if (sharingFilter) params.set('sharingType', sharingFilter);
-      if (statusFilter) params.set('isActive', statusFilter);
-      if (floorFilter) params.set('floorId', floorFilter);
-
-      const res = await api.get(`rooms?${params.toString()}`).json<{
-        success: boolean;
-        data: RoomRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number; stats: RoomsStats };
-      }>();
-      setRooms(res.data);
-      setTotal(res.meta.total);
-      setStats(res.meta.stats ?? null);
-    } catch {
-      setError('Failed to load rooms');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, sharingFilter, statusFilter, floorFilter, viewMode]);
+    queryClient.invalidateQueries({ queryKey: ROOMS_LIST_PREFIX });
+  }, [queryClient]);
 
   const visibleRooms = useMemo(() => {
     if (!availabilityFilter) return rooms;
@@ -190,17 +214,13 @@ function RoomsContent() {
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await api.delete(`rooms/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchRooms();
+      refreshRooms();
     } catch {
       setError('Failed to delete room');
     } finally {
@@ -218,7 +238,7 @@ function RoomsContent() {
       }>();
       setReconcileConfirm(false);
       setReconcileResult(res.data);
-      fetchRooms();
+      refreshRooms();
     } catch (err) {
       setReconcileConfirm(false);
       setError((await parseApiError(err)).message);
@@ -338,7 +358,7 @@ function RoomsContent() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       {/* Filter-aware KPI strip — aggregates over the full filtered set */}
       {!isLoading && stats && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Package,
@@ -18,6 +18,8 @@ import {
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -77,29 +79,21 @@ function serviceHealth(
   return { label: formatShortDate(nextServiceDate), variant: 'success' };
 }
 
+const ASSET_KEY = (id: string | undefined) => ['assets', id] as const;
+
 export default function AssetDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
-  const [asset, setAsset] = useState<AssetDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [retireModalOpen, setRetireModalOpen] = useState(false);
   const [isRetiring, setIsRetiring] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`assets/${id}`)
-      .json<{ success: boolean; data: AssetDetail }>()
-      .then((res) => setAsset(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const {
+    data: asset = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<AssetDetail>(ASSET_KEY(id), `assets/${id}`, { enabled: Boolean(id) });
+  const queryErrorMessage = errorMessage(queryError);
 
   const handleRetire = async () => {
     if (!asset) return;
@@ -116,13 +110,13 @@ export default function AssetDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !asset)) {
+  if (!isLoading && (queryErrorMessage || !asset)) {
     return (
       <FormPage
         title="Asset Details"
         description="View asset information"
         backHref="/assets"
-        error={error || 'Asset not found'}
+        error={queryErrorMessage || 'Asset not found'}
         maxWidth="4xl"
       />
     );

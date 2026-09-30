@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -14,8 +13,8 @@ import {
   Building2,
   Calendar,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
@@ -70,63 +69,43 @@ function formatDateTime(dateStr: string | null | undefined): string {
   }
 }
 
+const GUARDIAN_KEY = ['guardians', 'detail'] as const;
+const TENANT_KEY = ['tenants', 'detail'] as const;
+const INVOICES_BY_TENANT_KEY = ['invoices', 'by-tenant'] as const;
+
 export default function GuardianDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
-  const [guardian, setGuardian] = useState<GuardianDetail | null>(null);
-  const [wardTenant, setWardTenant] = useState<WardTenantDetail | null>(null);
-  const [calendarEvents, setCalendarEvents] = useState<StayCalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`guardians/${id}`)
-      .json<{ success: boolean; data: GuardianDetail }>()
-      .then(async (res) => {
-        const g = res.data;
-        setGuardian(g);
-        if (g.tenant?._id) {
-          try {
-            const [tenantRes, invoicesRes] = await Promise.all([
-              api
-                .get(`tenants/${g.tenant._id}`)
-                .json<{ success: boolean; data: WardTenantDetail }>()
-                .catch(() => null),
-              api
-                .get(`invoices?tenantId=${g.tenant._id}`)
-                .json<{ success: boolean; data: InvoiceRecord[] }>()
-                .catch(() => null),
-            ]);
-            if (tenantRes?.data) {
-              setWardTenant(tenantRes.data);
-            }
-            if (Array.isArray(invoicesRes?.data)) {
-              const mapped: StayCalendarEvent[] = invoicesRes.data
-                .filter((inv) => inv.dueDate)
-                .map((inv) => ({
-                  date: String(inv.dueDate).slice(0, 10),
-                  type: 'invoice' as const,
-                  title: `Invoice ${inv.month ?? ''}`,
-                  meta: inv.totalAmount ? `₹${inv.totalAmount.toLocaleString('en-IN')}` : undefined,
-                  id: inv._id,
-                }));
-              setCalendarEvents(mapped);
-            }
-          } catch {
-            // Non-blocking for ward calendar
-          }
-        }
-      })
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const guardianQuery = useApiQuery<GuardianDetail>(
+    [...GUARDIAN_KEY, id ?? ''],
+    `guardians/${id ?? ''}`,
+    { enabled: !!id },
+  );
+  const guardian = guardianQuery.data ?? null;
+  const isLoading = guardianQuery.isPending;
+  const error = errorMessage(guardianQuery.error);
+
+  const wardTenantId = guardian?.tenant?._id ?? '';
+  const wardQuery = useApiQuery<WardTenantDetail>([...TENANT_KEY, wardTenantId], `tenants/${wardTenantId}`, {
+    enabled: !!wardTenantId,
+  });
+  const invoicesQuery = useApiQuery<InvoiceRecord[]>(
+    [...INVOICES_BY_TENANT_KEY, wardTenantId],
+    `invoices?tenantId=${wardTenantId}`,
+    { enabled: !!wardTenantId },
+  );
+  const wardTenant = wardQuery.data ?? null;
+  const calendarEvents: StayCalendarEvent[] = (invoicesQuery.data ?? [])
+    .filter((inv) => inv.dueDate)
+    .map((inv) => ({
+      date: String(inv.dueDate).slice(0, 10),
+      type: 'invoice' as const,
+      title: `Invoice ${inv.month ?? ''}`,
+      meta: inv.totalAmount ? `₹${inv.totalAmount.toLocaleString('en-IN')}` : undefined,
+      id: inv._id,
+    }));
 
   if (!isLoading && (error || !guardian)) {
     return (

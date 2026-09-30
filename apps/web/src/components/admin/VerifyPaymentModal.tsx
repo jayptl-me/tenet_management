@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, Copy, ImageOff, ShieldCheck, X } from 'lucide-react';
 import { modalContent } from '@/lib/animations';
@@ -60,15 +61,19 @@ export function VerifyPaymentModal({
   const [copied, setCopied] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [zoom, setZoom] = useState(false);
+  const [prevTarget, setPrevTarget] = useState(target);
 
-  useEffect(() => {
+  // Reset evidence/notes state when a new payment is targeted (render-time
+  // adjustment instead of an effect).
+  if (prevTarget !== target) {
+    setPrevTarget(target);
     if (target) {
       setNotes('');
       setCopied(false);
       setImgFailed(false);
       setZoom(false);
     }
-  }, [target]);
+  }
 
   useEffect(() => {
     if (!target) return;
@@ -201,9 +206,12 @@ export function VerifyPaymentModal({
                   className="block w-full overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] transition-opacity hover:opacity-90"
                   aria-label="Open screenshot full size"
                 >
-                  <img
+                  <Image
                     src={target.screenshotUrl}
                     alt="Payment screenshot"
+                    width={640}
+                    height={480}
+                    unoptimized
                     className="max-h-48 w-full object-cover"
                     onError={() => setImgFailed(true)}
                   />
@@ -278,9 +286,12 @@ export function VerifyPaymentModal({
                 role="dialog"
                 aria-label="Payment screenshot full size"
               >
-                <img
+                <Image
                   src={target.screenshotUrl}
                   alt="Payment screenshot full size"
+                  width={1280}
+                  height={960}
+                  unoptimized
                   className="max-h-full max-w-full rounded-[var(--radius-lg)] object-contain"
                 />
                 <button

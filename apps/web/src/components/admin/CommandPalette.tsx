@@ -482,6 +482,7 @@ export function CommandPalette({
   const { data: appConfig } = useAppConfigPublic();
   const [query, setQuery] = useState('');
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [prevOpen, setPrevOpen] = useState(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -520,14 +521,20 @@ export function CommandPalette({
     );
   }, [query, commands]);
 
-  // Reset state when opened
-  useEffect(() => {
+  // Reset state when opened (render-time adjustment instead of an effect)
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) {
       setQuery('');
       setSelectedIdx(0);
-      // Focus input after animation
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }
+
+  // Focus input after animation
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
   }, [open]);
 
   // Keyboard navigation

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
@@ -103,6 +104,12 @@ function fmtMoney(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
+
+const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
+
+const PAYABLE_INVOICES_KEY = (tenantId: string) => ['invoices', 'payable', tenantId] as const;
+
 function NewPaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -110,14 +117,6 @@ function NewPaymentForm() {
   const prefillInvoiceId = searchParams.get('invoiceId') ?? '';
 
   const [submitError, setSubmitError] = useState('');
-  const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
-  const [invoicesLoading, setInvoicesLoading] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceOption | null>(null);
-
-  // Tenant overview state
-  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
-  const [tenantDues, setTenantDues] = useState<TenantDuesData | null>(null);
-  const [tenantLoading, setTenantLoading] = useState(false);
 
   // Skip clearing invoiceId on the first tenant-driven load when deep-linking with prefs.
   const skipInvoiceClearOnce = useRef(Boolean(prefillTenantId));
@@ -146,61 +145,43 @@ function NewPaymentForm() {
   const amount = useWatch({ control, name: 'amount' });
   const method = useWatch({ control, name: 'method' });
 
-  // Load tenant profile & dues for smart overview
-  useEffect(() => {
-    if (!tenantId) {
-      setTenantProfile(null);
-      setTenantDues(null);
-      return;
-    }
-    setTenantLoading(true);
-    Promise.all([
-      api
-        .get(`tenants/${tenantId}`)
-        .json<{ success: boolean; data: TenantProfile }>()
-        .catch(() => null),
-      api
-        .get(`tenants/${tenantId}/dues`)
-        .json<{ success: boolean; data: TenantDuesData }>()
-        .catch(() => null),
-    ])
-      .then(([pRes, dRes]) => {
-        if (pRes?.data) setTenantProfile(pRes.data);
-        if (dRes?.data) setTenantDues(dRes.data);
-      })
-      .finally(() => setTenantLoading(false));
-  }, [tenantId]);
+  // Tenant profile & dues for the smart overview.
+  const { data: tenantProfile = null, isFetching: tenantLoading } = useApiQuery<TenantProfile>(
+    TENANT_KEY(tenantId),
+    `tenants/${tenantId}`,
+    { enabled: Boolean(tenantId) },
+  );
+  const { data: tenantDues = null } = useApiQuery<TenantDuesData>(
+    TENANT_DUES_KEY(tenantId),
+    `tenants/${tenantId}/dues`,
+    { enabled: Boolean(tenantId) },
+  );
 
-  const loadInvoices = useCallback(async (tid: string) => {
-    if (!tid) {
-      setInvoices([]);
-      return;
-    }
-    setInvoicesLoading(true);
-    try {
-      const res = await api
-        .get(`invoices?tenantId=${tid}&limit=50&sort=month&order=desc`)
-        .json<{ success: boolean; data: InvoiceOption[] }>();
-      const payable = (res.data ?? []).filter((inv) =>
+  // Payable invoices for the selected tenant.
+  const { data: payableInvoices, isFetching: invoicesLoading } = useApiQuery<InvoiceOption[]>(
+    PAYABLE_INVOICES_KEY(tenantId),
+    `invoices?tenantId=${tenantId}&limit=50&sort=month&order=desc`,
+    { enabled: Boolean(tenantId) },
+  );
+  const invoices = useMemo(
+    () =>
+      (payableInvoices ?? []).filter((inv) =>
         ['draft', 'sent', 'partial', 'overdue'].includes(inv.status),
-      );
-      setInvoices(payable);
-    } catch {
-      setInvoices([]);
-    } finally {
-      setInvoicesLoading(false);
-    }
-  }, []);
+      ),
+    [payableInvoices],
+  );
 
+  // Invoice chosen in the form, resolved from the payable list.
+  const selectedInvoice = invoices.find((inv) => inv._id === invoiceId) ?? null;
+
+  // Clear the invoice choice whenever the tenant changes.
   useEffect(() => {
     if (skipInvoiceClearOnce.current) {
       skipInvoiceClearOnce.current = false;
     } else {
       setValue('invoiceId', '');
     }
-    setSelectedInvoice(null);
-    void loadInvoices(tenantId);
-  }, [tenantId, loadInvoices, setValue]);
+  }, [tenantId, setValue]);
 
   // Apply optional invoiceId prefill once payable invoices are loaded.
   useEffect(() => {
@@ -215,14 +196,10 @@ function NewPaymentForm() {
     }
   }, [invoices, invoicesLoading, prefillInvoiceId, prefillTenantId, tenantId, setValue]);
 
-  // Resolve the selected invoice object for the context card
+  // Set the collected amount to the invoice balance when an invoice is chosen.
   useEffect(() => {
-    if (!invoiceId) {
-      setSelectedInvoice(null);
-      return;
-    }
+    if (!invoiceId) return;
     const found = invoices.find((inv) => inv._id === invoiceId);
-    setSelectedInvoice(found ?? null);
     if (found) {
       const bal = found.balance ?? Math.max(0, found.totalAmount - (found.paidAmount ?? 0));
       setValue('amount', bal > 0 ? bal : 0);

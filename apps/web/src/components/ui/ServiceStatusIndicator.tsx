@@ -131,21 +131,24 @@ export function ServiceStatusIndicator({
 }: ServiceStatusIndicatorProps) {
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!floorId);
+  const [prevFloorId, setPrevFloorId] = useState(floorId);
 
   // Fetch amenity definitions (shared cache — only one request across all instances)
   useEffect(() => {
     fetchDefinitionsOnce().then(setDefinitions);
   }, []);
 
+  // Toggle the loading state when the floor changes (render-time adjustment
+  // instead of an effect).
+  if (prevFloorId !== floorId) {
+    setPrevFloorId(floorId);
+    setLoading(!!floorId);
+  }
+
   // Fetch floor services (shared cache per floorId)
   useEffect(() => {
-    if (!floorId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    if (!floorId) return;
     fetchFloorServicesOnce(floorId)
       .then(setServices)
       .finally(() => setLoading(false));

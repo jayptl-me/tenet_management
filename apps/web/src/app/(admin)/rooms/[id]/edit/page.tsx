@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import Image from 'next/image';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertTriangle, Hash, Banknote, Link as LinkIcon, Plus, X } from 'lucide-react';
@@ -94,14 +95,13 @@ export default function EditRoomPage() {
     control,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
-  const watchedSharing = Number(watch('sharingType'));
+  const watchedSharing = Number(useWatch({ control, name: 'sharingType' }));
   const isDownsizeBlocked = currentOccupancy > 0 && watchedSharing < currentOccupancy;
 
   const [photos, setPhotos] = useState<string[]>([]);
@@ -363,12 +363,14 @@ export default function EditRoomPage() {
                         className="group relative flex flex-col items-center overflow-hidden rounded-(--radius-md) border border-(--border-color) bg-(--color-field-bg) p-2"
                       >
                         <div className="relative h-24 w-full overflow-hidden rounded-sm bg-black/5">
-                          <img
+                          <Image
                             src={url}
                             alt={`Room photo ${idx + 1}`}
-                            className="h-full w-full object-cover"
+                            fill
+                            unoptimized
+                            className="object-cover"
                             onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src =
+                              e.currentTarget.src =
                                 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                             }}
                           />

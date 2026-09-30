@@ -13,14 +13,18 @@ import { useApiLoadingStore } from '@/store/apiLoading';
 export function GlobalLoadingBar() {
   const isSlowLoading = useApiLoadingStore((s) => s.isSlowLoading);
   const [visible, setVisible] = useState(false);
+  const [prevSlowLoading, setPrevSlowLoading] = useState(isSlowLoading);
+
+  if (prevSlowLoading !== isSlowLoading) {
+    setPrevSlowLoading(isSlowLoading);
+    if (!isSlowLoading) setVisible(false);
+  }
 
   useEffect(() => {
     if (isSlowLoading) {
       // Small delay so quick requests don't flash the bar
       const timer = setTimeout(() => setVisible(true), 300);
       return () => clearTimeout(timer);
-    } else {
-      setVisible(false);
     }
   }, [isSlowLoading]);
 

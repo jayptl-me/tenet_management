@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   User,
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -145,19 +147,83 @@ function shiftYmd(ymd: string, delta: number): string {
   return `${y}-${m}-${day}`;
 }
 
+const ATTENDANCE_DETAIL_KEY = ['attendance', 'detail'] as const;
+const ATTENDANCE_SUMMARY_KEY = ['attendance', 'summary'] as const;
+const LEAVES_BY_TENANT_KEY = ['leaves', 'by-tenant'] as const;
+
+/** Query window for `attendance/summary` covering the whole calendar month. */
+function attendanceSummaryPath(year: number, month: number, tenantId: string): string {
+  const last = new Date(year, month + 1, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const params = new URLSearchParams();
+  params.set('fromDate', `${year}-${pad(month + 1)}-01`);
+  params.set('toDate', `${year}-${pad(month + 1)}-${pad(last)}`);
+  if (tenantId) params.set('tenantId', tenantId);
+  return `attendance/summary?${params.toString()}`;
+}
+
+/** Leave whose range covers the given day, or null when none matches. */
+function findCoveringLeave(rows: LeaveRow[], ymd: string): LeaveRow | null {
+  return (
+    rows.find((l) => {
+      const from = (l.fromDate ?? l.startDate ?? '').slice(0, 10);
+      const to = (l.toDate ?? l.endDate ?? '').slice(0, 10);
+      return from !== '' && to !== '' && from <= ymd && ymd <= to;
+    }) ?? null
+  );
+}
+
 export default function AttendanceDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  const [record, setRecord] = useState<AttendanceDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [navError, setNavError] = useState('');
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [calendarDays, setCalendarDays] = useState<AttendanceDayMap>({});
-  const [leaveLink, setLeaveLink] = useState<LeaveRow | null>(null);
+  const [summaryNav, setSummaryNav] = useState<{
+    id: string;
+    year: number;
+    month: number;
+  } | null>(null);
+
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<AttendanceDetail>(
+    [...ATTENDANCE_DETAIL_KEY, id ?? ''],
+    `attendance/${id ?? ''}`,
+    { enabled: !!id },
+  );
+  const record = data ?? null;
+
+  const recordYmd = record ? record.date.slice(0, 10) : '';
+  const recordMonth = record ? new Date(`${recordYmd}T00:00:00`) : new Date();
+  const tenantId = record?.tenant?._id ?? '';
+
+  const activeMonth =
+    summaryNav && record && summaryNav.id === record._id
+      ? { year: summaryNav.year, month: summaryNav.month }
+      : { year: recordMonth.getFullYear(), month: recordMonth.getMonth() };
+
+  const summaryQuery = useApiQuery<IAttendanceSummaryResponse>(
+    [...ATTENDANCE_SUMMARY_KEY, activeMonth.year, activeMonth.month, tenantId],
+    attendanceSummaryPath(activeMonth.year, activeMonth.month, tenantId),
+    { enabled: !!record },
+  );
+  const calendarDays: AttendanceDayMap = summaryQuery.data?.days ?? {};
+
+  const leaveQuery = useApiQuery<LeaveRow[]>(
+    [...LEAVES_BY_TENANT_KEY, tenantId],
+    `leaves?tenantId=${tenantId}&limit=50`,
+    { enabled: tenantId !== '' && record?.status === 'on_leave' },
+  );
+  const leaveLink =
+    record?.status === 'on_leave' && leaveQuery.data
+      ? findCoveringLeave(leaveQuery.data, recordYmd)
+      : null;
 
   const handleDelete = async () => {
     if (!id) return;
@@ -171,61 +237,6 @@ export default function AttendanceDetailPage() {
       setConfirmDeleteOpen(false);
     }
   };
-
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`attendance/${id}`)
-      .json<{ success: boolean; data: AttendanceDetail }>()
-      .then((res) => setRecord(res.data))
-      .catch(() => setError('Failed to load attendance details'))
-      .finally(() => setIsLoading(false));
-  }, [id]);
-
-  const fetchMonth = useCallback(async (year: number, month: number, tenantId?: string) => {
-    try {
-      const last = new Date(year, month + 1, 0).getDate();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const params = new URLSearchParams();
-      params.set('fromDate', `${year}-${pad(month + 1)}-01`);
-      params.set('toDate', `${year}-${pad(month + 1)}-${pad(last)}`);
-      if (tenantId) params.set('tenantId', tenantId);
-      const res = await api.get(`attendance/summary?${params.toString()}`).json<{
-        success: boolean;
-        data: IAttendanceSummaryResponse;
-      }>();
-      setCalendarDays(res.data.days ?? {});
-    } catch {
-      setCalendarDays({});
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!record) return;
-    const ymd = record.date.slice(0, 10);
-    const d = new Date(`${ymd}T00:00:00`);
-    fetchMonth(d.getFullYear(), d.getMonth(), record.tenant?._id);
-    if (record.status === 'on_leave' && record.tenant?._id) {
-      const tenantId = record.tenant._id;
-      api
-        .get(`leaves?tenantId=${tenantId}&limit=50`)
-        .json<{ success: boolean; data: LeaveRow[] }>()
-        .then((res) => {
-          const rows = res.data ?? [];
-          const covering = rows.find((l) => {
-            const from = (l.fromDate ?? l.startDate ?? '').slice(0, 10);
-            const to = (l.toDate ?? l.endDate ?? '').slice(0, 10);
-            return from !== '' && to !== '' && from <= ymd && ymd <= to;
-          });
-          setLeaveLink(covering ?? null);
-        })
-        .catch(() => setLeaveLink(null));
-    } else {
-      setLeaveLink(null);
-    }
-  }, [record, fetchMonth]);
 
   const goToDate = async (target: string) => {
     if (!record) return;
@@ -252,13 +263,15 @@ export default function AttendanceDetailPage() {
     await goToDate(shiftYmd(record.date.slice(0, 10), delta));
   };
 
-  if (!isLoading && (error || !record)) {
+  const loadError = errorMessage(queryError) || error;
+
+  if (!isLoading && (loadError || !record)) {
     return (
       <FormPage
         title="Attendance Record"
         description="View attendance details"
         backHref="/attendance"
-        error={error || 'Attendance record not found'}
+        error={loadError || 'Attendance record not found'}
         maxWidth="4xl"
       />
     );
@@ -267,14 +280,11 @@ export default function AttendanceDetailPage() {
   const statusVariant = record ? statusToVariant(record.status) : 'neutral';
   const tenantName = record?.tenant?.user?.name ?? 'N/A';
   const roomNumber = record?.tenant?.room?.roomNumber ?? 'N/A';
-  const tenantId = record?.tenant?._id;
   const checkIn = record?.checkInTime ?? record?.checkIn;
   const checkOut = record?.checkOutTime ?? record?.checkOut;
   const methodIcon = record?.method ? methodIcons[record.method] : <Monitor className="h-4 w-4" />;
   const methodLabel = record?.method ? (methodLabels[record.method] ?? record.method) : 'Unknown';
   const duration = durationBetween(checkIn ?? null, checkOut ?? null);
-  const recordYmd = record ? record.date.slice(0, 10) : '';
-  const recordMonth = record ? new Date(`${recordYmd}T00:00:00`) : new Date();
 
   return (
     <FormPage
@@ -453,7 +463,7 @@ export default function AttendanceDetailPage() {
               onSelectDay={(ymd) => {
                 if (ymd && ymd !== recordYmd) goToDate(ymd);
               }}
-              onMonthChange={(y, m) => fetchMonth(y, m, tenantId)}
+              onMonthChange={(y, m) => setSummaryNav({ id: record._id, year: y, month: m })}
             />
           </div>
 

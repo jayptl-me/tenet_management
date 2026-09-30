@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, CalendarClock, Download } from 'lucide-react';
 import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -53,12 +56,18 @@ function sanitizeCSVValue(val: unknown): string {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
+const LEAVES_KEY = ['leaves', 'list'] as const;
+
+interface LeavesListBody {
+  success: boolean;
+  data: LeaveRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
 export default function LeavesPage() {
   const router = useRouter();
-  const [leaves, setLeaves] = useState<LeaveRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isExporting, setIsExporting] = useState(false);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -70,36 +79,26 @@ export default function LeavesPage() {
   const [deleteTarget, setDeleteTarget] = useState<LeaveRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchLeaves = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search.trim()) params.set('search', search.trim());
-      if (statusFilter) params.set('status', statusFilter);
-      if (tenantFilter) params.set('tenantId', tenantFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search.trim()) params.set('search', search.trim());
+  if (statusFilter) params.set('status', statusFilter);
+  if (tenantFilter) params.set('tenantId', tenantFilter);
+  if (fromDate) params.set('fromDate', fromDate);
+  if (toDate) params.set('toDate', toDate);
 
-      const res = await api.get(`leaves?${params.toString()}`).json<{
-        success: boolean;
-        data: LeaveRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setLeaves(res.data);
-      setTotal(res.meta.total);
-    } catch {
-      setError('Failed to load leave applications');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, statusFilter, tenantFilter, fromDate, toDate]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<LeavesListBody>(
+    [...LEAVES_KEY, page, perPage, search, statusFilter, tenantFilter, fromDate, toDate],
+    `leaves?${params.toString()}`,
+  );
 
-  useEffect(() => {
-    fetchLeaves();
-  }, [fetchLeaves]);
+  const leaves = data?.data ?? [];
+  const total = data?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -107,7 +106,7 @@ export default function LeavesPage() {
     try {
       await api.delete(`leaves/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchLeaves();
+      queryClient.invalidateQueries({ queryKey: LEAVES_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -268,7 +267,7 @@ export default function LeavesPage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
         <Input
           placeholder="Search by tenant name..."

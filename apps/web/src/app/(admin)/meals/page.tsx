@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Plus, Utensils, Download } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -30,11 +33,17 @@ interface MealFeedbackRow {
   createdAt: string;
 }
 
+interface MealFeedbackListBody {
+  success: boolean;
+  data: MealFeedbackRow[];
+  meta: { total: number };
+}
+
+const MEALS_FEEDBACK_LIST_KEY = ['meals', 'feedback'] as const;
+
 export default function MealsPage() {
   const router = useRouter();
-  const [feedbacks, setFeedbacks] = useState<MealFeedbackRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [mealFilter, setMealFilter] = useState('');
@@ -46,36 +55,32 @@ export default function MealsPage() {
   const [deleteTarget, setDeleteTarget] = useState<MealFeedbackRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchFeedbacks = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (mealFilter) params.set('mealType', mealFilter);
-      if (ratingFilter) params.set('rating', ratingFilter);
-      if (statusFilter) params.set('status', statusFilter);
-      if (dateFilter) params.set('date', dateFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (mealFilter) params.set('mealType', mealFilter);
+  if (ratingFilter) params.set('rating', ratingFilter);
+  if (statusFilter) params.set('status', statusFilter);
+  if (dateFilter) params.set('date', dateFilter);
 
-      const res = await api.get(`meals/feedback?${params.toString()}`).json<{
-        success: boolean;
-        data: MealFeedbackRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setFeedbacks(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, mealFilter, ratingFilter, dateFilter, statusFilter]);
-
-  useEffect(() => {
-    fetchFeedbacks();
-  }, [fetchFeedbacks]);
+  const { data: listBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<MealFeedbackListBody>(
+      [
+        ...MEALS_FEEDBACK_LIST_KEY,
+        page,
+        perPage,
+        search,
+        mealFilter,
+        ratingFilter,
+        statusFilter,
+        dateFilter,
+      ],
+      `meals/feedback?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const feedbacks = listBody?.data ?? [];
+  const total = listBody?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -83,7 +88,8 @@ export default function MealsPage() {
     try {
       await api.delete(`meals/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchFeedbacks();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: MEALS_FEEDBACK_LIST_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -222,7 +228,7 @@ export default function MealsPage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
       <FeedbackSummaryStrip />
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input

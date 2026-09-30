@@ -10,7 +10,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
  */
 export function useUnsavedGuard(isDirty: boolean): void {
   const dirtyRef = useRef(isDirty);
-  dirtyRef.current = isDirty;
+
+  useEffect(() => {
+    dirtyRef.current = isDirty;
+  }, [isDirty]);
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {

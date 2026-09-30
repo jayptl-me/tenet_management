@@ -41,14 +41,18 @@ export function QuickBedAssignModal({ target, onClose, onSuccess }: QuickBedAssi
   const [selectedTenantId, setSelectedTenantId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [prevTarget, setPrevTarget] = useState(target);
 
-  useEffect(() => {
+  // Reset the form when a new bed is targeted (render-time adjustment instead
+  // of an effect so the first interaction never sees stale values).
+  if (prevTarget !== target) {
+    setPrevTarget(target);
     if (target) {
       setSelectedTenantId('');
       setError('');
       setIsSubmitting(false);
     }
-  }, [target]);
+  }
 
   useEffect(() => {
     if (!target) return;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
   FileText,
@@ -20,6 +21,8 @@ import {
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -117,12 +120,43 @@ function sanitizeCSVValue(val: unknown): string {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
+interface InvoicesListBody {
+  success: boolean;
+  data: InvoiceRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+const INVOICES_PREFIX = ['invoices'] as const;
+const INVOICE_STATUS_COUNTS_KEY = ['invoices', 'status-counts'] as const;
+const INVOICES_AGING_KEY = ['invoices', 'aging'] as const;
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+const PAYMENTS_TREND_KEY = ['payments', 'trend', 6] as const;
+
+const INVOICES_LIST_KEY = (
+  page: number,
+  perPage: number,
+  status: string,
+  month: string,
+  tenantId: string,
+  search: string,
+) => [...INVOICES_PREFIX, 'list', page, perPage, status, month, tenantId, search];
+
+const INVOICE_BULK_PREVIEW_KEY = (modalOpen: boolean, month: string) =>
+  [...INVOICES_PREFIX, 'preview-bulk', modalOpen, month];
+
+const PAYMENTS_SUMMARY_KEY = (month: string) => [...PAYMENTS_SUMMARY_PREFIX, month];
+
+function summaryMonths(): { thisMonth: string; prevMonth: string } {
+  const now = new Date();
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return { thisMonth: fmt(now), prevMonth: fmt(prevDate) };
+}
+
 function InvoicesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [statusFilter, setStatusFilter] = useState('');
@@ -131,32 +165,20 @@ function InvoicesContent() {
   const [monthFilter, setMonthFilter] = useState(() => searchParams.get('month') ?? '');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Mutation (delete/export) failures; list failures come from the query.
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Status Counts
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
-
-  // Bulk Generate state & preview
+  // Bulk Generate state
   const [bulkMonth, setBulkMonth] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false);
-  const [bulkPreview, setBulkPreview] = useState<BulkPreviewData | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Bulk Actions
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
-
-  // Executive Analytics
-  const [summary, setSummary] = useState<SummaryMonth | null>(null);
-  const [prevSummary, setPrevSummary] = useState<SummaryMonth | null>(null);
-  const [aging, setAging] = useState<AgingData | null>(null);
-  const [agingLoading, setAgingLoading] = useState(true);
-  const [trend, setTrend] = useState<TrendPoint[]>([]);
-  const [trendLoading, setTrendLoading] = useState(true);
 
   // Debounce search input
   useEffect(() => {
@@ -164,115 +186,68 @@ function InvoicesContent() {
     return () => window.clearTimeout(t);
   }, [search]);
 
-  const fetchStatusCounts = useCallback(async () => {
-    try {
-      const res = await api.get('invoices/status-counts').json<{
-        success: boolean;
-        data: Record<string, number>;
-      }>();
-      if (res.success && res.data) {
-        setStatusCounts(res.data);
-      }
-    } catch {
-      // Non-blocking
-    }
-  }, []);
+  const listParams = new URLSearchParams();
+  listParams.set('page', String(page));
+  listParams.set('limit', String(perPage));
+  if (statusFilter) listParams.set('status', statusFilter);
+  if (monthFilter) listParams.set('month', monthFilter);
+  if (tenantFilter) listParams.set('tenantId', tenantFilter);
+  if (debouncedSearch) listParams.set('search', debouncedSearch);
 
-  const fetchInvoices = useCallback(async () => {
-    setIsLoading(true);
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<InvoicesListBody>(
+    INVOICES_LIST_KEY(page, perPage, statusFilter, monthFilter, tenantFilter, debouncedSearch),
+    `invoices?${listParams.toString()}`,
+  );
+
+  const invoices = listBody?.data ?? [];
+  const total = listBody?.meta.total ?? 0;
+
+  // Status counts are global and not scoped by the list filters.
+  const { data: statusCounts = {} } = useApiQuery<Record<string, number>>(
+    INVOICE_STATUS_COUNTS_KEY,
+    'invoices/status-counts',
+  );
+
+  // Executive analytics: month summaries, aging buckets, and the trend chart.
+  const { thisMonth, prevMonth } = summaryMonths();
+  const { data: summary } = useApiQuery<SummaryMonth>(
+    PAYMENTS_SUMMARY_KEY(thisMonth),
+    `payments/summary?month=${thisMonth}`,
+  );
+  const { data: prevSummary } = useApiQuery<SummaryMonth>(
+    PAYMENTS_SUMMARY_KEY(prevMonth),
+    `payments/summary?month=${prevMonth}`,
+  );
+  const { data: aging = null, isPending: agingLoading } = useApiQuery<AgingData>(
+    INVOICES_AGING_KEY,
+    'invoices/aging',
+  );
+  const { data: trend = [], isPending: trendLoading } = useApiQuery<TrendPoint[]>(
+    PAYMENTS_TREND_KEY,
+    'payments/trend?months=6',
+  );
+
+  // Pre-flight preview for the bulk generate modal.
+  const {
+    data: bulkPreview = null,
+    isPending: previewLoading,
+  } = useApiQuery<BulkPreviewData>(
+    INVOICE_BULK_PREVIEW_KEY(bulkGenerateOpen, bulkMonth),
+    `invoices/preview-bulk?month=${bulkMonth}`,
+    { enabled: bulkGenerateOpen && Boolean(bulkMonth) },
+  );
+
+  const refreshAfterMutation = useCallback(() => {
+    // A fresh list run used to clear the banner along with refetching data.
     setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (statusFilter) params.set('status', statusFilter);
-      if (monthFilter) params.set('month', monthFilter);
-      if (tenantFilter) params.set('tenantId', tenantFilter);
-      if (debouncedSearch) params.set('search', debouncedSearch);
-
-      const res = await api.get(`invoices?${params.toString()}`).json<{
-        success: boolean;
-        data: InvoiceRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setInvoices(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, statusFilter, monthFilter, tenantFilter, debouncedSearch]);
-
-  useEffect(() => {
-    fetchInvoices();
-    fetchStatusCounts();
-  }, [fetchInvoices, fetchStatusCounts]);
-
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      const now = new Date();
-      const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-
-      const [sumRes, prevRes] = await Promise.all([
-        api.get(`payments/summary?month=${thisMonth}`).json<{
-          success: boolean;
-          data: SummaryMonth;
-        }>(),
-        api.get(`payments/summary?month=${prevMonth}`).json<{
-          success: boolean;
-          data: SummaryMonth;
-        }>(),
-      ]);
-      setSummary(sumRes.data);
-      setPrevSummary(prevRes.data);
-
-      const [agingRes, trendRes] = await Promise.all([
-        api.get('invoices/aging').json<{ success: boolean; data: AgingData }>(),
-        api.get('payments/trend?months=6').json<{ success: boolean; data: TrendPoint[] }>(),
-      ]);
-      setAging(agingRes.data);
-      setTrend(trendRes.data);
-    } catch {
-      // Analytics are non-blocking
-    } finally {
-      setAgingLoading(false);
-      setTrendLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
-
-  // Fetch pre-flight preview when bulkMonth changes
-  useEffect(() => {
-    if (!bulkGenerateOpen || !bulkMonth) {
-      setBulkPreview(null);
-      return;
-    }
-    let cancelled = false;
-    setPreviewLoading(true);
-    api
-      .get(`invoices/preview-bulk?month=${bulkMonth}`)
-      .json<{ success: boolean; data: BulkPreviewData }>()
-      .then((res) => {
-        if (!cancelled && res.success) {
-          setBulkPreview(res.data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setBulkPreview(null);
-      })
-      .finally(() => {
-        if (!cancelled) setPreviewLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [bulkMonth, bulkGenerateOpen]);
+    queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX });
+    queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX });
+    queryClient.invalidateQueries({ queryKey: PAYMENTS_TREND_KEY });
+  }, [queryClient]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -281,9 +256,7 @@ function InvoicesContent() {
       await api.delete(`invoices/${deleteTarget._id}`).json();
       setDeleteTarget(null);
       toast.success('Invoice deleted');
-      fetchInvoices();
-      fetchStatusCounts();
-      fetchAnalytics();
+      refreshAfterMutation();
     } catch (err) {
       const parsed = await parseApiError(err);
       setError(parsed.message || 'Failed to delete invoice');
@@ -309,8 +282,7 @@ function InvoicesContent() {
     }
     toast.success(`Marked ${ok} invoice(s) sent${failed ? `, ${failed} failed` : ''}.`);
     setSelectedKeys(new Set());
-    fetchInvoices();
-    fetchStatusCounts();
+    refreshAfterMutation();
   };
 
   const handleBulkDelete = async () => {
@@ -332,9 +304,7 @@ function InvoicesContent() {
       `Deleted ${ok} invoice(s)${failed ? `, ${failed} skipped (paid or has payments)` : ''}.`,
     );
     setSelectedKeys(new Set());
-    fetchInvoices();
-    fetchStatusCounts();
-    fetchAnalytics();
+    refreshAfterMutation();
   };
 
   const handleBulkGenerate = async () => {
@@ -350,9 +320,7 @@ function InvoicesContent() {
         );
         setBulkMonth('');
         setBulkGenerateOpen(false);
-        fetchInvoices();
-        fetchStatusCounts();
-        fetchAnalytics();
+        refreshAfterMutation();
       }
     } catch (err) {
       toast.error((await parseApiError(err)).message);
@@ -611,7 +579,7 @@ function InvoicesContent() {
         }
       />
 
-      <ErrorBanner message={error} />
+      <ErrorBanner message={errorMessage(queryError) || error} />
 
       {/* Executive Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -837,7 +805,6 @@ function InvoicesContent() {
         open={bulkGenerateOpen}
         onClose={() => {
           setBulkGenerateOpen(false);
-          setBulkPreview(null);
         }}
         title="Bulk generate invoices"
         description="Creates invoices for all eligible active tenants for the selected month. Existing invoices are automatically skipped."
@@ -849,7 +816,6 @@ function InvoicesContent() {
               disabled={bulkLoading}
               onClick={() => {
                 setBulkGenerateOpen(false);
-                setBulkPreview(null);
               }}
             >
               Cancel

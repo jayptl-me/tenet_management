@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -21,6 +22,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -90,32 +93,25 @@ function getDurationDays(start: string, end: string): number {
   }
 }
 
+const LEAVE_KEY = ['leaves', 'detail'] as const;
+
 export default function LeaveDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const queryClient = useQueryClient();
 
-  const [leave, setLeave] = useState<LeaveDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<LeaveDetail>([...LEAVE_KEY, id ?? ''], `leaves/${id ?? ''}`, { enabled: !!id });
+  const leave = data ?? null;
+  const error = errorMessage(queryError);
   const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
   const [actionError, setActionError] = useState('');
   const [showRejectPrompt, setShowRejectPrompt] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
-
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`leaves/${id}`)
-      .json<{ success: boolean; data: LeaveDetail }>()
-      .then((res) => setLeave(res.data))
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
 
   const handleAction = async (action: 'approve' | 'reject') => {
     if (!id) return;
@@ -130,7 +126,7 @@ export default function LeaveDetailPage() {
         })
         .json<{ success: boolean; data: LeaveDetail }>();
       if (res.success) {
-        setLeave(res.data);
+        queryClient.invalidateQueries({ queryKey: LEAVE_KEY });
         setShowRejectPrompt(false);
       } else {
         setActionError('Failed to update leave status');

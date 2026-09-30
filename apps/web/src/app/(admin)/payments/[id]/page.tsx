@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import {
   CreditCard,
@@ -22,6 +23,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -227,55 +230,37 @@ function auditDescription(event: AuditEvent): string | undefined {
   return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
+const PAYMENT_KEY = (id: string) => ['payments', id] as const;
+
+const PAYMENT_EVENTS_KEY = (id: string) => ['payments', id, 'audit-logs'] as const;
+
 export default function PaymentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [payment, setPayment] = useState<PaymentDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(true);
   const [copiedUtr, setCopiedUtr] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    api
-      .get(`payments/${id}`)
-      .json<{ success: boolean; data: PaymentDetail }>()
-      .then((res) => {
-        setPayment(res.data);
-      })
-      .catch(async (err) => {
-        setError((await parseApiError(err)).message);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [id]);
+  const {
+    data: payment = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<PaymentDetail>(PAYMENT_KEY(id), `payments/${id}`, { enabled: Boolean(id) });
+  const queryErrorMessage = errorMessage(queryError);
 
   // Real activity trail from audit logs (falls back silently)
-  useEffect(() => {
-    if (!id) return;
-    setEventsLoading(true);
-    api
-      .get(`audit-logs?resource=payment&resourceId=${id}&limit=25`)
-      .json<{ success: boolean; data: AuditEvent[] }>()
-      .then((res) => {
-        setEvents(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => setEvents([]))
-      .finally(() => setEventsLoading(false));
-  }, [id]);
+  const { data: eventsData, isPending: eventsLoading } = useApiQuery<AuditEvent[]>(
+    PAYMENT_EVENTS_KEY(id),
+    `audit-logs?resource=payment&resourceId=${id}&limit=25`,
+    { enabled: Boolean(id) },
+  );
+  const events = Array.isArray(eventsData) ? eventsData : [];
 
   const loadReceipt = async () => {
     if (!payment) return;
@@ -325,13 +310,13 @@ export default function PaymentDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !payment)) {
+  if (!isLoading && (queryErrorMessage || !payment)) {
     return (
       <FormPage
         title="Payment Details"
         description="View payment information"
         backHref="/payments"
-        error={error || 'Payment not found'}
+        error={queryErrorMessage || 'Payment not found'}
         maxWidth="4xl"
       />
     );
@@ -582,9 +567,12 @@ export default function PaymentDetailPage() {
                 rel="noopener noreferrer"
                 className="block max-w-sm overflow-hidden rounded-(--radius-lg) border border-(--border-color) shadow-(--shadow-sm) transition-all duration-(--transition-duration)"
               >
-                <img
+                <Image
                   src={payment.screenshotUrl}
                   alt="Payment Screenshot"
+                  width={640}
+                  height={480}
+                  unoptimized
                   className="w-full object-cover"
                   onError={(e) => {
                     const target = e.currentTarget;

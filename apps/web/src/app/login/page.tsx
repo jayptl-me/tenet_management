@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -52,12 +52,18 @@ const formItem = {
 
 // ── Login Page ─────────────────────────────────────────
 
+// Entrance animations must not start on the server-rendered markup, so the
+// client flips this to true right after hydration.
+const emptySubscribe = () => () => {};
+const browserSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, browserSnapshot, serverSnapshot);
 
   // Forgot password modal state
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -65,11 +71,6 @@ export default function AdminLoginPage() {
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
-
-  // Theme-aware: read current theme preset for login page styling
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

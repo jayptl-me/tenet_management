@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -22,6 +23,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -106,42 +109,43 @@ function statusToDisplayLabel(status: string): string {
   return status.replace(/_/g, ' ');
 }
 
+const VISITOR_KEY = ['visitors', 'detail'] as const;
+
+/**
+ * Milliseconds on premises. Open visits (no departure recorded) count up to
+ * "now"; kept at module scope so render never calls an impure clock directly.
+ */
+function visitDurationMs(
+  actualArrival: string | null | undefined,
+  actualDeparture: string | null | undefined,
+): number | null {
+  if (actualArrival == null) return null;
+  const end = actualDeparture != null ? new Date(actualDeparture).getTime() : Date.now();
+  return end - new Date(actualArrival).getTime();
+}
+
 export default function VisitorDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [visitor, setVisitor] = useState<VisitorDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [actionError, setActionError] = useState('');
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const res = await api.get(`visitors/${id}`).json<{ success: boolean; data: VisitorDetail }>();
-      setVisitor(res.data);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const {
+    data,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<VisitorDetail>([...VISITOR_KEY, id], `visitors/${id}`, { enabled: !!id });
+  const visitor = data ?? null;
+  const error = errorMessage(queryError);
 
   const handleLifecycleAction = async (action: string) => {
     if (!visitor) return;
     setActionError('');
     try {
       // All FSM transitions use POST /visitors/:id/{arrive|depart|cancel|approve}
-      const res = await api
-        .post(`visitors/${visitor._id}/${action}`, { json: {} })
-        .json<{ success: boolean; data: VisitorDetail }>();
-      setVisitor(res.data);
+      await api.post(`visitors/${visitor._id}/${action}`, { json: {} }).json();
+      queryClient.invalidateQueries({ queryKey: VISITOR_KEY });
     } catch (err) {
       setActionError((await parseApiError(err)).message);
     }
@@ -163,11 +167,7 @@ export default function VisitorDetailPage() {
   // approve -> expected; arrive -> arrived; depart -> departed; cancel -> cancelled
   const status = visitor?.status ?? '';
   const visitWindowState = visitWindow(visitor?.expectedArrival, status);
-  const durationMs =
-    visitor?.actualArrival != null
-      ? new Date(visitor.actualDeparture ?? Date.now()).getTime() -
-        new Date(visitor.actualArrival).getTime()
-      : null;
+  const durationMs = visitDurationMs(visitor?.actualArrival, visitor?.actualDeparture);
   const hostRoom = visitor?.tenant?.room?.roomNumber;
   const hostBed = visitor?.tenant?.bedId;
   const hostFloor = visitor?.tenant?.room?.floor?.label;

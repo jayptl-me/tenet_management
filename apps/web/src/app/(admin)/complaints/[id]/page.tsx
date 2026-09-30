@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -283,10 +284,12 @@ export default function ComplaintDetailPage() {
                           rel="noopener noreferrer"
                           className="group relative block h-24 w-24 overflow-hidden rounded-(--radius-md) border border-(--border-color) shadow-xs transition-transform hover:scale-105"
                         >
-                          <img
+                          <Image
                             src={url}
                             alt="Complaint evidence"
-                            className="h-full w-full object-cover"
+                            fill
+                            unoptimized
+                            className="object-cover"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                             <ExternalLink className="h-4 w-4 text-white" />

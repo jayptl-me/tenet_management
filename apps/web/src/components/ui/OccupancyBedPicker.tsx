@@ -37,15 +37,25 @@ export function OccupancyBedPicker({
   error,
   label = 'Bed',
 }: OccupancyBedPickerProps) {
+  const loadKey = roomId ? `${roomId}|${currentBedId ?? ''}` : null;
   const [options, setOptions] = useState<SelectOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => loadKey !== null);
+  const [prevLoadKey, setPrevLoadKey] = useState<string | null>(loadKey);
+
+  // Reset/prime the picker when the room or the resident's current bed
+  // changes (render-time adjustment instead of an effect).
+  if (prevLoadKey !== loadKey) {
+    setPrevLoadKey(loadKey);
+    if (loadKey === null) {
+      setOptions([]);
+    } else {
+      setLoading(true);
+    }
+  }
 
   const loadBeds = useCallback(async () => {
-    if (!roomId) {
-      setOptions([]);
-      return;
-    }
-    setLoading(true);
+    if (!roomId) return;
+    let next: SelectOption[] = [];
     try {
       const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>();
       const room = res.data;
@@ -65,10 +75,11 @@ export function OccupancyBedPicker({
         };
       });
       // Keep occupied beds visible but disabled so the admin sees occupancy state
-      setOptions(beds);
+      next = beds;
     } catch {
-      setOptions([]);
+      next = [];
     } finally {
+      setOptions(next);
       setLoading(false);
     }
   }, [roomId, currentBedId]);

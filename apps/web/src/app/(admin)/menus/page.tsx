@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Plus, ClipboardList, List, CalendarRange, Download } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiBodyQuery } from '@/hooks/useApiQuery';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -56,11 +59,17 @@ function getMenuStatusInfo(date: string): { label: string; variant: StatusVarian
   return { label: 'Scheduled', variant: 'info' };
 }
 
+interface MenusListBody {
+  success: boolean;
+  data: MenuRow[];
+  meta: { total: number };
+}
+
+const MENUS_LIST_KEY = ['menus', 'list'] as const;
+
 export default function MenusPage() {
   const router = useRouter();
-  const [menus, setMenus] = useState<MenuRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
@@ -70,33 +79,20 @@ export default function MenusPage() {
   const [deleting, setDeleting] = useState(false);
   const [view, setView] = useState<'list' | 'week'>('list');
 
-  const fetchMenus = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('limit', String(perPage));
-      if (search) params.set('search', search);
-      if (statusFilter) params.set('isActive', statusFilter);
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(perPage));
+  if (search) params.set('search', search);
+  if (statusFilter) params.set('isActive', statusFilter);
 
-      const res = await api.get(`menus?${params.toString()}`).json<{
-        success: boolean;
-        data: MenuRow[];
-        meta: { total: number; page: number; limit: number; totalPages: number };
-      }>();
-      setMenus(res.data);
-      setTotal(res.meta.total);
-    } catch (err) {
-      setError((await parseApiError(err)).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, perPage, search, statusFilter]);
-
-  useEffect(() => {
-    fetchMenus();
-  }, [fetchMenus]);
+  const { data: listBody, isPending: isLoading, error: queryError } =
+    useApiBodyQuery<MenusListBody>(
+      [...MENUS_LIST_KEY, page, perPage, search, statusFilter],
+      `menus?${params.toString()}`,
+    );
+  const fetchErrorMessage = errorMessage(queryError);
+  const menus = listBody?.data ?? [];
+  const total = listBody?.meta.total ?? 0;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -104,7 +100,8 @@ export default function MenusPage() {
     try {
       await api.delete(`menus/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      fetchMenus();
+      setError('');
+      await queryClient.invalidateQueries({ queryKey: MENUS_LIST_KEY });
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -260,7 +257,7 @@ export default function MenusPage() {
           </div>
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={fetchErrorMessage || error} />
       {view === 'week' ? (
         <WeekMenuPlanner
           onDayClick={(date, menu) =>

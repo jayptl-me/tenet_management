@@ -82,25 +82,35 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
   const [copyTarget, setCopyTarget] = useState<string | null>(null);
   const [copyLoading, setCopyLoading] = useState(false);
   const [error, setError] = useState('');
+  const [prevMonday, setPrevMonday] = useState(monday);
 
-  const fetchWeek = useCallback(async () => {
+  // Show the loading state when the visible week changes (render-time
+  // adjustment instead of an effect).
+  if (prevMonday !== monday) {
+    setPrevMonday(monday);
     setIsLoading(true);
     setError('');
+  }
+
+  const fetchWeek = useCallback(async () => {
+    let map: Record<string, MenuDay | null> | null = null;
     try {
       const fromDate = weekDates[0];
       const toDate = weekDates[6];
       const res = await api
         .get(`menus?fromDate=${fromDate}&toDate=${toDate}&limit=50`)
         .json<{ success: boolean; data: MenuDay[] }>();
-      const map: Record<string, MenuDay | null> = {};
-      for (const date of weekDates) map[date] = null;
+      const built: Record<string, MenuDay | null> = {};
+      for (const date of weekDates) built[date] = null;
       for (const menu of res.data ?? []) {
-        if (menu.date) map[menu.date] = menu;
+        if (menu.date) built[menu.date] = menu;
       }
-      setMenus(map);
+      map = built;
     } catch {
-      setError('Failed to load weekly menus');
+      map = null;
     } finally {
+      if (map) setMenus(map);
+      else setError('Failed to load weekly menus');
       setIsLoading(false);
     }
   }, [weekDates]);
@@ -128,6 +138,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       }
       setCopySource(null);
       setCopyTarget(null);
+      setIsLoading(true);
       await fetchWeek();
     } catch {
       setError('Failed to copy day menu');
