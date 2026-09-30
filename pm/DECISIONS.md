@@ -76,3 +76,51 @@ Format: `DR-<n>` -- date, decision, options considered, pick, sources.
 **Follow-on (2026-09-29):** two sub-decisions -- **full CI hardening** (commit `bun.lock`, pin bun 1.3.0, split the `lint || format:check` mask, add Flutter job, make e2e runnable) and **skip preview environments** (they need Render Pro at $25/mo, a `previews:` key render.yaml lacks, and `sync:false` vars are not copied into previews -- this repo has 13).
 
 **Sources:** render.com/docs/native-runtimes (verified -- "JavaScript / TypeScript (supports both Node.js and Bun)"), render.com/docs/web-services (verified), render.com/pricing (verified -- Hobby $0, Pro $25, Scale $499), render.com/docs/preview-environments (verified), vercel.com/docs (verified), firebase.google.com/docs/hosting/quickstart (verified), fly.io/docs/reference/configuration (verified), fly.io/docs/about/pricing (verified), coolify.io/docs (verified).
+
+---
+
+## DR-5 -- 2026-09-30 -- notifications/new stub: keep, delete, or build
+
+**Context:** plan 4.3 called it the shallowest page (18 lines, `router.replace('/notifications?tab=compose')`). Re-inspection shows a deliberate design: the page's own comment says the compose form lives in the Compose tab on `/notifications` and the redirect avoids dual compose entry points.
+
+**Options (Gate R):** A. Keep redirect, close the gap as intentional | B. Delete the route (old links 404) | C. Build a standalone compose page (duplicates the tab).
+
+**Picked (Jay, 2026-09-30):** A -- keep the redirect; the depth audit records it as intentional, no code change.
+
+**Sources:** `apps/web/src/app/(admin)/notifications/new/page.tsx:7-15` (deliberate-redirect comment), `apps/web/src/app/(admin)/notifications/page.tsx:98-393` (working Compose tab), plan 4.3.
+
+---
+
+## DR-6 -- 2026-09-30 -- Intent for admin-only modules (Flutter parity)
+
+**Context:** plan 4.5 listed admin modules with no resident screen and warned that without declared intent the depth audit keeps flagging deliberate parity gaps: enquiries, floors, menus, rooms (self only), audit-logs, export, settings, assets, dashboard (partial).
+
+**Options (Gate R):** A. Admin-only is deliberate -- no parity flags, no Flutter scope added | B. Resident screens planned for named modules | C. Decide per module at each flag.
+
+**Picked (Jay, 2026-09-30):** A -- admin-only is deliberate for that whole list; the audit must not flag missing resident screens for them; no Flutter work is added to this program.
+
+**Sources:** plan 4.5 parity table; Jay's pick 2026-09-30.
+
+---
+
+## DR-7 -- 2026-09-30 -- Git landing cadence for Phases 2-4
+
+**Context:** standing rule is commits/pushes only when Jay says so; the approved plan ends phases in verified states, and Phase 2 currently sits in 77 dirty paths.
+
+**Options (Gate R):** A. Commit + push at each phase end (CI gates each phase) | B. Commit per phase, push only at the end | C. Leave uncommitted for Jay.
+
+**Picked (Jay, 2026-09-30):** A -- one Conventional Commit per phase boundary, pushed immediately, CI verified per phase (same pattern as the Phase 1 push, run `36581880412`).
+
+**Sources:** Jay's pick 2026-09-30; plan 2.4 and 5.2 (CI run `36581880412`); root profile version-control rule (owner-authorized here).
+
+---
+
+## DR-8 -- 2026-09-30 -- How Phase 4 Render dashboard verification happens
+
+**Context:** plan 5.1 requires verifying 13 `sync:false` vars in the Render dashboard; unset `ADMIN_*` vars mean the seed admin password falls back to `Admin1234!` in production. Dashboard writes are production and Jay-owned.
+
+**Options (Gate R):** A. Agent prepares an exact checklist, Jay applies it in the dashboard | B. Read-only Render API token, agent diffs and proposes each write behind a typed gate line | C. Docs only this round.
+
+**Picked (Jay, 2026-09-30):** A -- agent verifies code against docs and hands over var names, values, and ordering; Jay applies them. No production writes by the agent.
+
+**Sources:** plan 5.1 env table (`apps/api/src/lib/env.ts`), Jay's pick 2026-09-30.
