@@ -14,3 +14,11 @@ Pass 1 record: docs/audit/features/menus_audit_pass1_20260908-003801.md
 | Create/Edit/Detail | 4 meal slots incl. snacks        | WORKING |
 | API                | mess flag gate + dish $or search | WORKING |
 | Flutter            | snacks slot + icon               | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

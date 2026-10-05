@@ -104,3 +104,16 @@ export interface IHealthResponse {
 - [x] `bun run typecheck` passes with zero errors.
 - [x] `bun run lint` (oxlint) passes with zero warnings and zero errors.
 - [x] `flutter analyze` passes with zero issues.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| HL-GAP-1 Accurate HTTP status code on database failure | CLOSED - index.ts returns 503 degraded when database disconnected |
+| HL-GAP-2 Shared TypeScript health contract | CLOSED - packages/types/src/health.ts created and re-exported |
+| HL-GAP-3 Type-safe cold-start polling | CLOSED - IHealthResponse wired into store/apiLoading.ts |
+| HL-GAP-4 Deployment spec health check configuration | CLOSED - healthCheckPath added under pg-api in render.yaml |

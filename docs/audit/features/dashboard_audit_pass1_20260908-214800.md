@@ -47,3 +47,11 @@
 - Automated Typecheck: `tsc --noEmit` passed on `@pg/types`, `@pg/web`, `@pg/api` with exit code 0.
 - All three theme systems (`saas`, `soft-ui`, `custom`) supported with CSS variable tokens.
 - Real-time SSE updates (`useSSE`) fully wired across all operational domain events.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

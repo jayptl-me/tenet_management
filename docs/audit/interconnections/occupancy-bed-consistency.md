@@ -51,7 +51,7 @@ Mutation paths:
 | Floor.totalRooms sync                                          | room model post-save / post-delete; soft-delete path in rooms.ts                                                                                |
 | Unit / integration tests                                       | `apps/api/src/__tests__/beds.test.ts`, `tenant-transfer.test.ts`, `rooms.test.ts`, `module-http-e2e.test.ts`                                    |
 | Admin create/edit bed UI                                       | tenants new OccupancyBedPicker; edit filtered Select; rooms detail                                                                              |
-| Related                                                        | `docs/audit/interconnections/tenant-lifecycle.md`, `docs/audit/features/rooms.md`, `docs/audit/features/tenants_audit_pass1_20260907-230647.md` |
+| Related                                                        | `docs/audit/interconnections/tenant-lifecycle.md`, `docs/audit/features/rooms.md`, `docs/audit/features/tenants-rooms_audit_pass1_20260908-192930.md` |
 
 ### rebuildBedsForSharingType (rooms.ts)
 

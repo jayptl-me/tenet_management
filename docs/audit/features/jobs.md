@@ -79,3 +79,17 @@ The system operates across two operational execution modes:
 - [x] External HTTP route implemented for washing machine release (JOB-GAP-5).
 - [x] Production environment secret configured in `render.yaml` (JOB-GAP-3).
 - [x] Graceful shutdown lifecycle wired with `stopScheduler()` (JOB-GAP-6).
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| **JOB-GAP-1** - `POST /jobs/overdue-check` clobbered `partial` invoices to `overdue` | CLOSED - Aligned `routes/jobs.ts` with `scheduler.ts` to only update `{ status: 'sent', dueDate: { $lt: now } }`, preserving partial payment records |
+| **JOB-GAP-2** - `send-reminders` and `meal-prompts` only logged counts without creating notifications | CLOSED - Wired `createNotification` in both `routes/jobs.ts` and `jobs/scheduler.ts` to dispatch persisted `payment_reminder` and `meal_feedback` notifications with push/SSE |
+| **JOB-GAP-3** - `CRON_SECRET` was missing in `render.yaml`, leaving deployments with default fallback | CLOSED - Added `CRON_SECRET` with `generateValue: true` under `pg-api` in `render.yaml` |
+| **JOB-GAP-5** - Washing machine timer release was only available in cron, not HTTP | CLOSED - Added `POST /api/v1/jobs/release-washing-machines` protected by `x-cron-secret` |
+| **JOB-GAP-6** - `stopScheduler()` was never called during server shutdown | CLOSED - Imported and invoked `stopScheduler()` in `apps/api/src/index.ts` `shutdown()` prior to database disconnection |

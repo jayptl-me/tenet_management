@@ -78,8 +78,47 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 <!-- AUTO:RECENTLY-CLOSED:START -->
 
 | Claim | Live proof |
-| ----- | ---------- |
-| --    | --         |
+|-------|------------|
+| No tenant-side document upload (P3) | CLOSED - API endpoint plus image_picker integration (fixed this pass) |
+| No PDF Aadhaar upload from the portal (P4) | CLOSED - file_picker integration (fixed this pass) |
+| T1 Missing default values for --color-on-brand, --color-on-danger, --c | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T2 Missing dark mode fallback values for --color-on- and --badge-_-_ t | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T3 --color-card-bg is set to var(--color-surface-100) (#f5f5f4, #f1f5f | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T4 Hover states across StatCard, Quick Jump cards, and room cards use  | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T5 Line 186 references nonexistent variable --color-border-color. | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T6 renderDeltaInline includes dark:text-[color:var(--color-success-400 | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T7 Icons render as raw unboxed 16px text-muted SVGs pushed to the top  | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T8 Values inside bars fall back to chartTokens.onFill (white). White t | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T9 Hardcoded text-white on occupied bed cells and calendar date cells. | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| T10 Service status chips, age badges, and AttentionRequiredBanner hard | CLOSED - remediated per pass1 Completion Status section 9 (Completed, verified 2026-09-08) |
+| ComplaintResolutionHub hardcoded SLA pill and aging horizon classes (T | CLOSED - named in pass1 Completion Status: Dashboard Widgets remediated (verified 2026-09- |
+| ComplaintCategoryMatrix overdue badge hardcoded red classes (Token Def | CLOSED - named in pass1 Completion Status: Dashboard Widgets remediated (verified 2026-09- |
+| Quick Jump Cards hover border darkens instead of glows in dark mode (M | CLOSED - named in pass1 Completion Status: Quick Jump cards remediated (verified 2026-09-0 |
+| Idiom-complete shadow/glass/spacing/transition/focus/collapsed tokens  | FIXED - WORKING - themes/brutalist.css, neumorphic.css, soft-ui.css |
+| Brutalist dark repeated typography/layout/behavior (was SaaS-leaked) | FIXED - WORKING - themes/brutalist.css |
+| Neumorphic/soft-ui light tooltip blocks; direct shadow-tooltip refs | FIXED - WORKING - themes/neumorphic.css, soft-ui.css |
+| Custom preset base (teal, light+dark) + import wiring | FIXED - WORKING - themes/custom.css, app/globals.css |
+| Dead token refs replaced with semantic tokens | FIXED - WORKING - audit-logs/payments/floors pages, Select.tsx |
+| Instant-apply + swatches + real preview + stale-state + real scale | FIXED - WORKING - components/admin/AppearanceTab.tsx |
+| Codebase index preset list | FIXED - WORKING - .sixthrules + .claude mirrors |
+| USR-P1-1 - Salt rounds discrepancies between documentation and code | **CLOSED** - Verified `SALT_ROUNDS = 12` in active model code |
+| USR-P2-1 - Audit log parity on password reset and change operations | **CLOSED** - Added `writeAuditLog` for `password_reset` and `password_change` in `apps/api |
+| List/detail/create populate tenant.user + tenant.room(roomNumber floor | FIXED - WORKING - apps/api/src/routes/visitors.ts (visitorTenantPopulate) |
+| List search (visitorName/phone regex) + tenantId filters | FIXED - WORKING - apps/api/src/routes/visitors.ts GET /visitors |
+| Admin create rejects checked-out tenant (TENANT_INACTIVE 409, mirrors  | FIXED - WORKING - apps/api/src/routes/visitors.ts POST /visitors |
+| VisitorLifecycleStepper component (linear stepper + cancelled branch,  | FIXED - WORKING - apps/web/src/components/ui/VisitorLifecycleStepper.tsx |
+| VisitorGatePassCard component (passcode parity, host/purpose/timeline, | FIXED - WORKING - apps/web/src/components/ui/VisitorGatePassCard.tsx |
+| Rebuilt register form: host section (active-tenants picker + room/bed/ | FIXED - WORKING - apps/web/src/app/(admin)/visitors/new/page.tsx |
+| Rebuilt edit form: read-only host context card (tenant link + room/bed | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx |
+| Enriched detail: StatCards (window/duration/host stay/pass code), step | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/page.tsx |
+| Enriched list: search input, tenant filter, Room column (populated), E | FIXED - WORKING - apps/web/src/app/(admin)/visitors/page.tsx |
+| Trimmed legacy visitors.md to structured listings + working status onl | FIXED - WORKING - docs/audit/features/visitors.md |
+| DELETE in_use 409 MACHINE_IN_USE | FIXED - WORKING - apps/api/src/routes/washingMachines.ts |
+| Edit in_use preservation + payload strip + parsers | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/[id]/edit/page.tsx |
+| List Button + parsers + full CSV | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/page.tsx |
+| Detail variant + parser | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/[id]/page.tsx |
+| New sections + parser | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/new/page.tsx |
+| Flutter single-hop myWashingMachines + fallback | FIXED - WORKING - washing_machines_screen.dart, tenant_repository.dart |
 
 <!-- AUTO:RECENTLY-CLOSED:END -->
 
@@ -90,10 +129,9 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 
 <!-- AUTO:OPEN-P1:START -->
 
-| ID  | Domain | Gap                              | Paths |
-| --- | ------ | -------------------------------- | ----- |
-| --  | --     | (no open P1 rows in feature MDs) | --    |
-
+| ID | Domain | Gap | Paths |
+|----|--------|-----|-------|
+| -- | -- | (no open P1 rows in feature MDs) | -- |
 <!-- AUTO:OPEN-P1:END -->
 
 ## Residual P2 (non-blocking sample -- not exhaustive)

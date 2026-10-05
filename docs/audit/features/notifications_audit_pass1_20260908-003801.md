@@ -130,3 +130,16 @@ notifications (broadcast compose, history, unread inbox, emergency alerts).
 | Delete toast parser                          | apps/web/src/app/(admin)/notifications/[id]/page.tsx      | WORKING |
 
 Verification: bun run lint clean; bun run typecheck clean across types/web/api; no tests executed; no emojis; portal boundaries respected.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| History status filter + recipient CSV counts | FIXED - WORKING - apps/web/src/app/(admin)/notifications/page.tsx |
+| Edit redirects to history tab | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/edit/page.tsx |
+| Emergency compose flag gate | FIXED - WORKING - apps/api/src/routes/notifications.ts |
+| Delete toast parser | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/page.tsx |

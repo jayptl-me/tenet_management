@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,9 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { Textarea } from '@/components/ui/Textarea';
-import { FormPage } from '@/components/ui/FormPage';
-import { FormCard } from '@/components/ui/FormCard';
-import { FormActions } from '@/components/ui/FormActions';
+import { CrudFormPage } from '@/components/ui/CrudFormPage';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 import { parseApiError } from '@/lib/errorParser';
@@ -32,123 +28,107 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function NewLaundrySlotPage() {
-  const router = useRouter();
-  const [submitError, setSubmitError] = useState('');
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  const form = useForm<FormData>({
     resolver: zodResolver(schema),
   });
-
-  const onSubmit = async (data: FormData) => {
-    setSubmitError('');
-    try {
-      await api
-        .post('laundry-slots', { json: data })
-        .json<{ success: boolean; data: { _id: string } }>();
-      router.push('/laundry');
-    } catch (err) {
-      const parsed = await parseApiError(err);
-      setSubmitError(
-        parsed.code === 'DUPLICATE_SLOT'
-          ? parsed.message
-          : parsed.message || 'Failed to create laundry slot. Please try again.',
-      );
-    }
-  };
+  const { register, control, formState } = form;
+  const { errors } = formState;
 
   return (
-    <FormPage
+    <CrudFormPage
       title="New Laundry Slot"
       description="Book a laundry slot for a tenant"
       backHref="/laundry"
-      error={submitError}
-    >
-      <FormCard
-        onSubmit={handleSubmit(onSubmit)}
-        footer={
-          <FormActions
-            loading={isSubmitting}
-            cancelHref="/laundry"
-            submitLabel="Book Slot"
-            divided={false}
-          />
+      redirectTo="/laundry"
+      submitLabel="Book Slot"
+      mode="create"
+      form={form}
+      submit={async ({ values }) => {
+        // Page-owned message shaping: the shell formats thrown errors through
+        // parseApiError, which passes a plain Error message through unchanged.
+        try {
+          await api
+            .post('laundry-slots', { json: values })
+            .json<{ success: boolean; data: { _id: string } }>();
+        } catch (err) {
+          const parsed = await parseApiError(err);
+          throw new Error(
+            parsed.code === 'DUPLICATE_SLOT'
+              ? parsed.message
+              : parsed.message || 'Failed to create laundry slot. Please try again.',
+          );
         }
+      }}
+    >
+      <FormSection
+        title="Resident"
+        icon={<UserRound />}
+        description="Only active residents can hold slots"
       >
-        <FormSection
-          title="Resident"
-          icon={<UserRound />}
-          description="Only active residents can hold slots"
-        >
-          <Controller
-            name="tenantId"
-            control={control}
-            render={({ field }) => (
-              <ResourceSelect
-                label="Tenant"
-                endpoint="tenants?isActive=true"
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Select tenant..."
-                error={errors.tenantId?.message}
-                valueKey="_id"
-                labelKey={tenantLabel}
-                sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
-                dataPath="data"
-              />
-            )}
+        <Controller
+          name="tenantId"
+          control={control}
+          render={({ field }) => (
+            <ResourceSelect
+              label="Tenant"
+              endpoint="tenants?isActive=true"
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Select tenant..."
+              error={errors.tenantId?.message}
+              valueKey="_id"
+              labelKey={tenantLabel}
+              sublabelFn={(item) => tenantSublabel(item as { monthlyRent?: number })}
+              dataPath="data"
+            />
+          )}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Schedule"
+        icon={<CalendarDays />}
+        description="Facility allows 5 concurrent bookings per slot time"
+        divided
+      >
+        <FormGrid>
+          <DatePicker
+            label="Slot Date"
+            error={errors.slotDate?.message}
+            {...register('slotDate')}
           />
-        </FormSection>
+          <Input
+            label="Slot Time"
+            type="time"
+            error={errors.slotTime?.message}
+            {...register('slotTime')}
+          />
+        </FormGrid>
+      </FormSection>
 
-        <FormSection
-          title="Schedule"
-          icon={<CalendarDays />}
-          description="Facility allows 5 concurrent bookings per slot time"
-          divided
-        >
-          <FormGrid>
-            <DatePicker
-              label="Slot Date"
-              error={errors.slotDate?.message}
-              {...register('slotDate')}
-            />
-            <Input
-              label="Slot Time"
-              type="time"
-              error={errors.slotTime?.message}
-              {...register('slotTime')}
-            />
-          </FormGrid>
-        </FormSection>
-
-        <FormSection
-          title="Load"
-          icon={<Package />}
-          description="Items and handling notes (max 300 chars)"
-          divided
-        >
-          <FormGrid>
-            <Input
-              label="Number of Items"
-              type="number"
-              placeholder="e.g., 5"
-              error={errors.items?.message}
-              {...register('items')}
-            />
-            <Textarea
-              label="Notes (Optional)"
-              rows={3}
-              placeholder="Any special instructions..."
-              error={errors.notes?.message}
-              {...register('notes')}
-            />
-          </FormGrid>
-        </FormSection>
-      </FormCard>
-    </FormPage>
+      <FormSection
+        title="Load"
+        icon={<Package />}
+        description="Items and handling notes (max 300 chars)"
+        divided
+      >
+        <FormGrid>
+          <Input
+            label="Number of Items"
+            type="number"
+            placeholder="e.g., 5"
+            error={errors.items?.message}
+            {...register('items')}
+          />
+          <Textarea
+            label="Notes (Optional)"
+            rows={3}
+            placeholder="Any special instructions..."
+            error={errors.notes?.message}
+            {...register('notes')}
+          />
+        </FormGrid>
+      </FormSection>
+    </CrudFormPage>
   );
 }

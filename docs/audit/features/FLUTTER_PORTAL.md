@@ -14,3 +14,11 @@ Pass 1 record: docs/audit/features/flutter-portal_audit_pass1_20260908-003801.md
 | Guardian | ward + attendance dates + notices + profile     | WORKING |
 | Visitor  | register/status/home desk                       | WORKING |
 | Quality  | flutter analyze clean                           | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

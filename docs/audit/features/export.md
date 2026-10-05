@@ -12,3 +12,11 @@ Pass 1 record: docs/audit/features/export_audit_pass1_20260908-003801.md
 | --------- | ----------------------------------------------------------------------- | ------- |
 | Engine    | paginated fetch + recursive flatten + sanitize + audit                  | WORKING |
 | Resources | 17 entities incl. floors/rooms/guardians/notices/menus/laundry/machines | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

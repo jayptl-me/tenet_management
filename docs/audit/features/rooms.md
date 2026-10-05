@@ -15,3 +15,11 @@ Implementation spec: docs/audit/features/tenants-rooms_audit_pass1_20260908-1929
 | Create  | ResourceSelect floor picker, rent auto-default from AppConfig roomPricing, amenity status pickers                                                                                                                                                                                                | WORKING |
 | Edit    | sharingType rebuild with downsize guard, backHref/cancelHref/success return to detail                                                                                                                                                                                                            | WORKING |
 | API     | paginated list with tenantName-enriched beds + full-set meta.stats, /available (unconsumed), reconcile-occupancy GET/POST, detail, create, transactional sharing update, soft delete                                                                                                             | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

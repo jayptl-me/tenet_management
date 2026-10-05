@@ -1,0 +1,157 @@
+# Payments Module - Depth Audit Pass 1
+
+Module: payments
+Source verified: live source code, 2026-09-30
+Timestamp: 20260930
+Method: depth-implementation-plan section 4.2 (inventory -> signals -> depth verdict -> redesign spec), queue step 3.3 (rank 1 money order, section 4.4)
+Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes.
+Precedent: docs/audit/features/floors_audit_pass1_20260908-235500.md
+Related docs: docs/audit/features/payments.md, docs/audit/features/payments_audit_pass1_20260908-003801.md, docs/audit/features/payments-invoices_audit_pass1_20260908-222000.md, docs/plans/crud-form-page-design.md section 6.1
+Exclusions honored: payments/new and payments/[id]/edit stay outside CrudFormPage (money path, hand-rolled dirty guard, paid lock); the redesign spec works with those hand-rolled pieces and does not propose absorbing them.
+Note: all numbers below were measured fresh from source on 2026-09-30. The three existing payments audit files carried zero open rows at audit time, so no row in this file duplicates an existing Open gaps claim. Findings were kept in this file only; docs/audit/features/payments.md keeps its placeholder Open gaps text (no row table there to extend without duplication risk).
+
+## 1. Inventory (depth-audit step 1)
+
+| Artifact | Path | Lines | Notes |
+| -------- | ---- | ----- | ----- |
+| List / ledger | apps/web/src/app/(admin)/payments/page.tsx | 812 | Filters, status tabs, metric strip, verify modal, CSV export |
+| Detail | apps/web/src/app/(admin)/payments/[id]/page.tsx | 742 | KPI row, tenant card, UTR evidence, receipt modal, audit timeline |
+| Create | apps/web/src/app/(admin)/payments/new/page.tsx | 671 | 3 dependent queries, reconciliation rail, invoice radio cards |
+| Edit | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx | 376 | Paid lock, hand-rolled dirty guard, linked-records rail |
+| API route | apps/api/src/routes/payments.ts | 1216 | 16 endpoints (see section 5) |
+| Shared types | packages/types/src/payment.ts | 79 | IPayment, IPaymentListItem, IPaymentStatus - zero consumers in apps/web |
+| Verify modal | apps/web/src/components/admin/VerifyPaymentModal.tsx | 312 | Shared by list + detail |
+| Receipt document | apps/web/src/components/admin/ReceiptDocument.tsx | 165 | Print-isolated receipt, shared with invoices |
+| Existing audit docs | docs/audit/features/ | 3 files | payments.md, payments_audit_pass1_20260908-003801.md, payments-invoices_audit_pass1_20260908-222000.md |
+
+## 2. Pages and Routes (with depth issues identified)
+
+| Surface | Route / File | Implementation status | Depth issues identified |
+| ------- | ------------ | --------------------- | ----------------------- |
+| Payments ledger | apps/web/src/app/(admin)/payments/page.tsx -> /payments | Deep base, shallow edges (P2) | 1. Zero cross-module links: no next/link import, every router.push target stays inside /payments; tenant name, invoice number and room cells are plain spans (lines 441-491). 2. CSV export silently caps at 100 rows: requests limit=1000 (line 281) but GET /payments clamps via parsePagination (routeUtils.ts:16), meta.total never checked, active search not sent (lines 283-286), no truncation notice. 3. Metric scope mismatch: cards are month-scoped (payments/summary?month=) while StatusTabs and Awaiting Verification are all-time (status-counts without month, line 238) and neither reacts to the date-range/method/type filters on the table. 4. No chart or method-mix breakdown although GET /payments/trend exists (consumed only by /invoices). |
+| Payment detail | apps/web/src/app/(admin)/payments/[id]/page.tsx -> /payments/[id] | Strong (P3 edges) | 1. Invoice linkage renders only inside the UTR evidence block (`payment.utrNumber &&` at line 442; Link at 468-475): offline cash/bank payments show no invoice reference anywhere even though GET /:id populates invoiceId. 2. Verify and void refresh via window.location.reload() (lines 306, 619) instead of the list page's queryClient invalidation. 3. No visible state machine: current StatusBadge only; rejection resets to pending and the UTR/screenshot are unset server-side (payments.ts:1089-1091), so a rejected submission is indistinguishable from a never-submitted one outside appended notes and the audit timeline. 4. No balance context: no tenant outstanding dues, no invoice balance, no sibling payments against the same invoice. 5. Activity card shows a plain "Loading activity..." text (line 660) rather than a shared skeleton. |
+| Record payment | apps/web/src/app/(admin)/payments/new/page.tsx -> /payments/new | Smartest surface (P3 edges) | 1. Context is not navigable: resident profile strip (lines 296-360) and reconciliation rail Target Invoice (lines 584-646) are plain text; only cross-module CTA is /invoices/new?tenantId= in the zero-invoice empty state (line 399). 2. Rail reads a possibly stale invoice balance: no revalidation of the selected invoice between load and submit. 3. Suspense fallback is a bare spinner while sibling pages shimmer. |
+| Edit payment | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx -> /payments/[id]/edit | Correct protections, shallowest shell (P3) | 1. Only payments page outside the React Query stack: raw useEffect + api.get + setIsLoading (lines 82-110), no cache participation, no queryClient invalidation after PUT (relies on global staleTime 0 refetch-on-mount in AppProviders). 2. Context rail shows the invoice as a number only - no invoice status/balance, so the admin cannot see what an amount change does to the linked invoice; room is a plain span with no link to /rooms/:id (lines 314-319). 3. No derived impact preview (the new-payment page has one; edit has none). |
+
+## 3. Depth Signals per Page (depth-audit step 2, measured 2026-09-30)
+
+| Page | useEffect | Error state | Empty state | Loading quality | Distinct cross-module links | Derived metrics / charts | Shared stack | API calls |
+| ---- | --------- | ----------- | ----------- | --------------- | --------------------------- | ------------------------ | ----------- | --------- |
+| list (812) | 1 (search debounce) | Yes: ErrorBanner over queryError + local error state + toasts (7 error sites) | Yes: EmptyState with Record Payment CTA | Real skeletons: DataTable SkeletonRow x5 + MobileCardSkeleton x3 | 0 (payments-internal only) | 4 StatCards with month delta and % uncollected; StatusTabs live counts; no chart | PageHeader, DataTable, StatCard, StatusTabs, FilterChips, EmptyState, ErrorBanner, ConfirmModal, TableActions, Select, DateRangePicker, VerifyPaymentModal | 4 queries (list, summary x2, status-counts) + 3 direct (verify, delete, export GET) |
+| [id] (742) | 0 | Yes: FormPage error/not-found path + parseApiError toasts (8 error sites) | Yes: audit empty state + not-found state | FormPage shimmer skeleton; Activity card text-only fallback | 3: /tenants/:id, /rooms/:id, /invoices/:id (invoice link conditional on UTR) | 4 StatCards (amount, method, due date, settlement) | FormPage, DetailCard, StatCard, StatusBadge, Timeline, Modal, ReceiptDocument, VerifyPaymentModal | 2 queries (payment, audit-logs) + 3 on-demand (receipt GET, verify POST, void POST) |
+| new (671) | 3 (invoice clear, prefill, balance auto-fill) | Yes: submitError + zod field errors + parseApiError (4 sites) | Yes: 3 contextual states (hint, loading, zero-invoice CTA with Generate Invoice) | pulse strips + Suspense spinner | 1: /invoices/new?tenantId= | Dues, deposit held, balance before/after, overpay guard, quick amount chips, resulting-status prediction | FormPage, FormCard, FormSection, FormGrid, FormActions, Input, Textarea, ResourceSelect, StatusBadge | 3 queries (tenant, dues, payable invoices) + 1 POST payments/offline |
+| [id]/edit (376) | 1 (raw GET fetch) | Yes: submitError covers load + submit (5 sites) | n/a (load-failure error path) | FormPage shimmer skeleton | 2: /tenants/:id, /invoices/:id (room unlinked) | Status help text + unsaved-changes indicator only | FormPage, FormCard, FormSection, FormActions, Input, Select, Textarea, StatusBadge, ConfirmModal | 1 GET + 1 PUT; hand-rolled dirty guard (useUnsavedGuardState) + paid lock |
+
+## 4. Depth Verdict per Page (depth-audit step 3)
+
+Standard: "smart and cohesive" = derived metrics (dues aging, collection rate), context (tenant balance, invoice linkage), cross-links (tenant <-> invoice <-> payment), a visible state machine (pending_verification / paid / rejected / cancelled), real empty/loading/error states, and theme tokens + shared components everywhere.
+
+- **List**: strong on states (skeletons, empty CTA, error banner) and shared stack; **shallow on context and cohesion**: 0 cross-module links means the ledger is a dead end for tenant/invoice investigation, KPI scope disagrees with the table under filters, and the money export is silently wrong past 100 rows. Not cohesive with the invoices ledger, which does carry an aging ladder and trend chart.
+- **Detail**: the strongest page (KPI row, tenant/room links, UTR evidence, receipt, real audit timeline) but invoice linkage is gated behind the presence of a UTR, refreshes bypass React Query, and the payment state machine and balance context are not rendered. Depth is present but conditional.
+- **New**: the smartest surface in the module (live reconciliation rail, dues context, overpay guard, status prediction). Shallowness is limited to navigability: none of the rich context it fetches links out to the tenant or invoice it describes.
+- **Edit**: protection depth is above average (paid lock banner, fieldset disable, hand-rolled dirty guard - both deliberate exclusions from CrudFormPage per crud-form-page-design 6.1), but it is the only page outside the query stack, and its rail shows linked record identifiers without the balances or states an admin needs while editing money.
+- Theme tokens: all four pages use token classes (`text-(--color-...)`, `--color-brand-*`); a grep for raw palette classes and hex colors across the four pages returned zero matches. Theme cohesion is not a gap in this module.
+
+## 5. End-to-End Dependency Mapping (API surface, apps/api/src/routes/payments.ts)
+
+| Endpoint | Line | Admin web consumer | Status |
+| -------- | ---- | ------------------ | ------ |
+| GET /payments | 131 | list (table + CSV export) | Consumed |
+| GET /payments/status-counts | 241 | list metric + tabs (no month param) | Consumed (all-time scope) |
+| GET /payments/summary | 274 | list cards (this + prev month) | Consumed |
+| GET /payments/trend | 295 | invoices list only | Consumed by invoices, unused by payments |
+| GET /payments/my | 328 | Flutter tenant screen | Consumed (portal) |
+| POST /payments/offline | 356 | new page | Consumed |
+| GET /payments/qr-code | 532 | Flutter tenant invoice flow | Consumed (portal) |
+| POST /payments/submit-utr | 628 | Flutter tenant screen | Consumed (portal) |
+| POST /payments/verify-utr/:paymentId | 733 | none (repo-wide grep: 0) | Unconsumed (PAY-D1-9) |
+| GET /payments/pending-verification | 854 | none (repo-wide grep: 0) | Unconsumed (PAY-D1-9) |
+| GET /payments/:id/receipt | 884 | detail receipt modal | Consumed |
+| GET /payments/:id | 949 | detail (query) + edit (raw fetch) | Consumed |
+| PUT /payments/:id | 1000 | edit page (paid rows rejected server-side) | Consumed |
+| POST /payments/:id/verify | 1054 | list + detail VerifyPaymentModal | Consumed |
+| POST /payments/:id/void | 1123 | detail page | Consumed |
+| DELETE /payments/:id | 1173 | list ConfirmModal (unverified only) | Consumed |
+
+Reject semantics: both verify paths map reject to status `pending` and `$unset` utrNumber + screenshotUrl (payments.ts:768-770, 1089-1091). The `rejected` value accepted by verifyUtrSchema never reaches the Payment model (enum: pending, pending_verification, paid, overdue, cancelled).
+
+## 6. Redesign Spec (depth-audit step 4)
+
+Ordered by impact within each page. All items work with, not against, the hand-rolled money pieces.
+
+### 6.0 What must NOT change (hard constraints)
+
+1. **Paid lock semantics**: PUT /payments/:id keeps rejecting `paid`; the edit page keeps coercing legacy paid rows to a read-only locked banner (lines 163-180), keeps `fieldset disabled`, keeps submit blocked, and keeps `paid` out of the status enum. Void remains the only path from paid.
+2. **Hand-rolled dirty guard**: `useUnsavedGuardState(isDirty && !isPaidLocked && !isSubmitting)` with the manual field-level diff (edit lines 112-124) and its ConfirmModal stay as-is. Both pages remain excluded from CrudFormPage (crud-form-page-design 6.1, plan risk note) - no shell absorption.
+3. **Receipt/QR flows**: `canShowReceipt` gating (paid/approved/completed plus pending_verification proof visibility), ReceiptDocument print modal, GET /:id/receipt, and the Flutter QR/UTR surfaces keep their current contracts.
+4. **Verify contract**: POST /:id/verify { approved, notes } used by both list and detail via the shared VerifyPaymentModal; DELETE stays unverified-only; POST /offline contract and created-id redirect stay.
+5. **Portal boundary**: Flutter consumes payments/my, submit-utr, qr-code, receipt - do not reshape those payloads.
+
+### 6.1 /payments (list) - top 5 moves
+
+1. **Cross-link the ledger (fixes PAY-D1-1-2)**: make tenant name a Link to /tenants/:id, invoice number a Link to /invoices/:id, and room sublabel a Link to /rooms/:id in both DataTable columns and mobileCardRenderer; keep row click -> payment detail.
+2. **Make the export truthful (fixes PAY-D1-1-1)**: page through meta.totalPages (limit=100 loop) or add a server-side CSV endpoint; pass the active `search` param; surface a warning if any rows are omitted. Do not remove the export.
+3. **Unify metric scope (fixes PAY-D1-1-5)**: either label tabs/cards explicitly ("This month" vs "All time") and keep both, or pass month + the active date range to status-counts/summary so cards and table answer the same question.
+4. **Add collection intelligence (fixes PAY-D1-1-6)**: a collection-rate StatCard (collected/expected for the visible scope) plus a method-mix or 6-month sparkline reusing the existing GET /payments/trend payload (or the shared DonutChart/Sparkline components) - one chart, no new endpoint.
+5. **Deepen the verify queue loop**: keep the interactive Awaiting Verification card; add a rejected-attempts column or a badge fed from the audit trail so the verification cycle is visible from the ledger, and link the pending count to the tab (already working).
+
+### 6.2 /payments/[id] (detail) - top 5 moves
+
+1. **Invoice linkage for every payment (fixes PAY-D1-1-3)**: move the invoice Link out of the UTR-only block into the Payment Information DetailCard (invoice number, month, status, balance) so offline cash/bank payments link to their invoice exactly like UTR payments do.
+2. **Replace full reloads (fixes PAY-D1-1-7)**: verify and void call `queryClient.invalidateQueries({ queryKey: ['payments'] })` + toast, mirroring the list page; drop window.location.reload().
+3. **Render the state machine (fixes PAY-D1-1-11)**: a compact stepper - recorded -> pending_verification -> paid or back to pending (rejected) -> cancelled (void) - with the current node highlighted, plus the rejection note surfaced from notes/audit instead of leaving it only in the timeline.
+4. **Add balance context**: fetch GET /tenants/:id/dues and the linked invoice's balance next to the amount cards; show "remaining on invoice after this payment" - this is the same math the new-payment rail already does, reused.
+5. **Close the sibling loop**: "other payments on this invoice" list (or a link to /payments?tenantId=) and a direct Edit/Record-adjustment pair in the header actions, so tenant <-> invoice <-> payment navigation is one hop in each direction.
+
+### 6.3 /payments/new (record) - top 5 moves
+
+1. **Link the context it already fetches (fixes PAY-D1-1-12)**: resident strip name/room -> /tenants/:id, reconciliation rail Target Invoice -> /invoices/:id; keep the /invoices/new CTA in the zero-invoice state.
+2. **Revalidate before submit**: refetch the selected payable invoice on submit (or subscribe to its query invalidation) so the rail's balance-before/after cannot be stale when a tenant UTR lands concurrently; keep balance auto-fill and the overpay guard.
+3. **Keep the hand-rolled structure**: the 3-query dependent pattern, invoice radio cards, quick chips, and POST payments/offline stay exactly as they are (page is a CrudFormPage exclusion); no shell migration.
+4. **Suspense parity**: swap the bare spinner fallback for the same shimmer skeleton family FormPage uses, so entering the money form matches every other payments page.
+5. **Post-create handoff**: the created-id push to /payments/:id already works; add an invalidate of the ['payments'] prefix before push so the ledger behind it never shows a stale count.
+
+### 6.4 /payments/[id]/edit - top 5 moves
+
+1. **Keep the money pieces untouched**: paid-lock banner, fieldset disable, submit block, status enum without `paid`, and the hand-rolled dirty guard + ConfirmModal are constraints, not work items (6.0.1-6.0.2).
+2. **Move the GET onto useApiQuery (fixes PAY-D1-1-4)**: behavior-preserving swap of the raw effect (lines 82-110) for `useApiQuery(['payments', id], 'payments/:id')` with the same FormPage skeleton and error banner; add `queryClient.invalidateQueries(['payments'])` after PUT.
+3. **Balance-aware rail (fixes PAY-D1-1-8 part 1)**: extend Linked records with invoice status badge, invoice total/paid/balance, and a live "balance after this amount change" readout - reuse the new-page reconciliation math, read-only.
+4. **Link the room (fixes PAY-D1-1-8 part 2)**: room row becomes a Link to /rooms/:id (floor sublabel when present), matching the tenant and invoice links already in the rail.
+5. **Status guidance stays**: STATUS_HELP text and the "Paid is set only through Verify" helper are good depth - keep them and mirror the same helper copy on the detail page stepper (6.2.3) so the state machine reads identically in both places.
+
+### 6.5 Sequencing by impact
+
+1. PAY-D1-1-1 (export correctness) and PAY-D1-1-3 (invoice linkage) - money-path correctness first.
+2. PAY-D1-1-2 (list cross-links) and 6.2.1/6.2.2 - navigation + refresh cohesion.
+3. PAY-D1-1-5/6 (metric scope + chart) - one ledger pass.
+4. PAY-D1-1-4/7/8 (edit stack swap, reload removal, rail depth) - behavior-preserving cohesion.
+5. PAY-D1-1-9/10/11/12 (dead endpoints, type contracts, state machine, new-page links) - cleanup and polish.
+
+## 7. Definition of Done
+
+1. All PAY-D1 rows addressed or explicitly re-triaged with a named reason.
+2. `bun run typecheck` and `bun run lint` green; no emojis; portal boundaries respected.
+3. Paid lock, dirty guard, receipt/QR, and verify contracts unchanged (section 6.0).
+4. Audit pipeline after any row edits: normalize -> build -> lint (TOTAL FAIL: 0) -> reconcile (PASS).
+5. Cross-module links present on all four payments pages; CSV export complete or loudly bounded.
+
+## Open gaps
+
+| ID | Severity | Gap | Paths |
+| ---- | -------- | --- | ----- |
+| PAY-D1-1 | P2 | CSV export silently truncates: handleExportCsv requests limit=1000 but GET /payments clamps limit to 100 via parsePagination (Math.min(100,...)), meta.total is never checked, the active search term is not sent, and no truncation warning is shown - a financial export can silently drop rows. | apps/web/src/app/(admin)/payments/page.tsx; apps/api/src/lib/routeUtils.ts |
+| PAY-D1-2 | P2 | Payments ledger has zero cross-module links: no next/link import and every router.push target stays inside /payments; tenant name, invoice number and room cells are plain spans, so tenant/invoice investigation requires opening each payment detail first. | apps/web/src/app/(admin)/payments/page.tsx |
+| PAY-D1-3 | P2 | Payment detail renders invoice linkage only inside the UTR evidence block (payment.utrNumber guard at line 442); offline cash/bank payments show no invoice reference anywhere despite GET /:id populating invoiceId. | apps/web/src/app/(admin)/payments/[id]/page.tsx |
+| PAY-D1-4 | P3 | Edit page is the only payments surface outside the React Query stack: raw useEffect + api.get + setIsLoading load (lines 82-110), no cache participation and no invalidation after PUT, relying on the global staleTime 0 refetch-on-mount behavior instead. | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx |
+| PAY-D1-5 | P3 | Metric scope mismatch on the ledger: Collected/Expected/Pending cards are month-scoped while StatusTabs and Awaiting Verification counts are all-time (status-counts called without a month param) and neither reacts to the active date-range/method/type table filters, so cards and rows can disagree. | apps/web/src/app/(admin)/payments/page.tsx |
+| PAY-D1-6 | P3 | No chart, collection-rate trend, or method-mix breakdown on the payments ledger even though GET /payments/trend exists and is already consumed by the invoices list; derived metrics stop at four StatCards. | apps/web/src/app/(admin)/payments/page.tsx; apps/api/src/routes/payments.ts |
+| PAY-D1-7 | P3 | Detail verify and void actions refresh via window.location.reload() (lines 306, 619) instead of the queryClient invalidation pattern the list page uses - full page reload on the money detail path and an inconsistent state-refresh convention. | apps/web/src/app/(admin)/payments/[id]/page.tsx |
+| PAY-D1-8 | P3 | Edit context rail lacks money context: the linked invoice appears as a number only (no status, total, or balance to judge an amount change against) and the room is a plain span with no link to /rooms/:id, unlike tenant and invoice which are linked. | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx |
+| PAY-D1-9 | P3 | Two unconsumed API surfaces: GET /payments/pending-verification (line 854) and POST /payments/verify-utr/:paymentId (line 733) have zero consumers in apps/ and mobile/ (list and detail both use POST /:id/verify). | apps/api/src/routes/payments.ts |
+| PAY-D1-10 | P3 | Shared payment DTOs are unused: packages/types/src/payment.ts (IPayment, IPaymentListItem, IPaymentStatus) has no importer in apps/web while the four payments pages declare 13 local interfaces, so page shapes can drift from the API contract. | packages/types/src/payment.ts; apps/web/src/app/(admin)/payments/page.tsx; apps/web/src/app/(admin)/payments/new/page.tsx; apps/web/src/app/(admin)/payments/[id]/page.tsx; apps/web/src/app/(admin)/payments/[id]/edit/page.tsx |
+| PAY-D1-11 | P3 | Rejection is invisible in the payment state machine: both verify paths map reject back to status pending and $unset utrNumber + screenshotUrl (payments.ts:768-770, 1089-1091), so after a rejection no rejected state, badge, or evidence remains in the UI beyond appended notes and the audit timeline. | apps/api/src/routes/payments.ts; apps/web/src/app/(admin)/payments/[id]/page.tsx |
+| PAY-D1-12 | P3 | New-payment page context is not navigable: the resident profile strip (room, bed, rent, deposit, dues) and the reconciliation rail Target Invoice are plain text with no links to /tenants/:id or /invoices/:id; the only cross-module CTA is /invoices/new in the zero-invoice empty state. | apps/web/src/app/(admin)/payments/new/page.tsx |
+
+## Closed
+
+No closed remediation claims recorded in this file. Claims move here only after the fix is verified in source.

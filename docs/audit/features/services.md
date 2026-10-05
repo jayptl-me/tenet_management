@@ -15,3 +15,11 @@ Pass 1 record: docs/audit/features/services_audit_pass1_20260908-003801.md
 | Detail      | health + complaints + notes                                        | WORKING |
 | API         | tenant floor scope, note audits, batched enricher, reseed endpoint | WORKING |
 | Flutter     | services list unwrap + category map                                | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

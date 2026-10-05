@@ -126,3 +126,11 @@ Standard browser `EventSource` does not permit setting arbitrary HTTP headers su
 - [x] `bun run typecheck` passed (0 errors across `@pg/types`, `@pg/web`, `@pg/api`).
 - [x] `bun run lint` (oxlint) passed with 0 warnings and 0 errors across 324 files.
 - [x] `cd mobile && flutter analyze` passed with 0 issues.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

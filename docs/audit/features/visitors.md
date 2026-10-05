@@ -134,3 +134,11 @@ Pass 1 record: docs/audit/features/visitors_audit_pass1_20260907-233246.md
 | Detail populate tenant.user + tenant.room + nested floor; bedId from tenant doc | WORKING |
 | Admin create blocked for checked-out tenant (TENANT_INACTIVE)                   | WORKING |
 | Tenant-scoped history + ownership checks                                        | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/laundry_audit_pass1_20260908-003801.md
 | Edit    | transition-safe form                                                  | WORKING |
 | API     | tenant meta/pagination, admin filters, PUT transitions, bed/floor map | WORKING |
 | Flutter | items/notes cards + 300 chars + tenantId omit                         | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

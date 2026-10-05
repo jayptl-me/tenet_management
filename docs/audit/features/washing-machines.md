@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/washing-machines_audit_pass1_20260908-003801.
 | Edit    | in_use claim preservation                                   | WORKING |
 | API     | claim/release guards, single-claim limit, in_use delete 409 | WORKING |
 | Flutter | single-hop list + fallback + countdown                      | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

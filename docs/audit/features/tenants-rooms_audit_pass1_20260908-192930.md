@@ -102,3 +102,15 @@ OccupancyBedPicker, SearchableSelect (floors endpoint returns full list, fine), 
 
 - guardians/payments/invoices/complaints module passes (only tenant-flow touchpoints above).
 - Flutter portal edits (read-only mapping).
+
+## Open gaps
+
+| ID | Severity | Gap | Paths |
+|----|----------|-----|--------|
+| TR-P2-1 | P2 | User.tenantId not cleared on checkout or delete; stale pointer cleanup deferred as auth-adjacent | apps/api/src/routes/tenants.ts |
+| TR-P3-1 | P3 | GET /rooms/available remains unconsumed by admin UI | apps/api/src/routes/rooms.ts |
+| TR-P3-2 | P3 | Bed Matrix fetch bounded to limit=500 (pragmatic cap) | apps/web/src/app/(admin)/rooms/page.tsx |
+
+## Closed
+
+No closed remediation claims recorded in this file.

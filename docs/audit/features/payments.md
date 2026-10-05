@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/payments_audit_pass1_20260908-003801.md
 | Edit    | paid lock + linked header, no paid-via-PUT                     | WORKING |
 | API     | offline/verify/void/PUT-guarded/receipt/my-populate            | WORKING |
 | Flutter | UTR screenshot + balance labels                                | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

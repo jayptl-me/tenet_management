@@ -15,3 +15,11 @@ Pass 1 record: docs/audit/features/notices_audit_pass1_20260908-003801.md
 | Detail      | resolved target names + share actions | WORKING |
 | API         | portal pagination, minlength align    | WORKING |
 | Flutter     | pin chips both portals                | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

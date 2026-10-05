@@ -12,3 +12,11 @@ Pass 1 record: docs/audit/features/settings_audit_pass1_20260908-003801.md
 | ------- | ------------------------------------------------------------------------ | ------- |
 | Console | identity/branding/landing/pricing/features/theme/amenities + light color | WORKING |
 | Catalog | amenity defaults aligned with API/model                                  | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

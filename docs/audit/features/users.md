@@ -197,3 +197,14 @@ The product split is enforced at both the HTTP API layer and the individual clie
 - [x] Session revocation on password reset and password change.
 - [x] Comprehensive audit logging across login, logout, password reset, and password change.
 - [x] Zero emojis introduced in documentation or source files.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| **USR-P1-1** - Salt rounds discrepancies between documentation and code | **CLOSED** - Verified `SALT_ROUNDS = 12` in active model code |
+| **USR-P2-1** - Audit log parity on password reset and change operations | **CLOSED** - Added `writeAuditLog` for `password_reset` and `password_change` in `apps/api/src/routes/auth.ts` capturing user ID, email, IP, and UserAgent |

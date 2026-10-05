@@ -43,3 +43,27 @@ All resident portal screens (tenant tab set, guardian shell, visitor desk).
 ## 4. Verification
 
 flutter analyze: No issues found; no emojis; portal boundaries respected (no Next resident routes added anywhere).
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| floorServices unwrapped {services,totalRooms} dict to [] (services always empty) | FIXED - WORKING - tenant_repository.dart |
+| Report-issue deep link sent raw serviceType (water_supply/geyser invalid categories) | FIXED - WORKING - services_screen.dart |
+| meals parse expected isHoliday/notes/special (absent in API) | FIXED - WORKING - meals_screen.dart |
+| guardian notices() handled List only (API wraps) | FIXED - WORKING - guardian_repository.dart |
+| Bill proof rendered as raw URL text | FIXED - WORKING - electricity_screen.dart |
+| Washing floor via 3-hop myFloorId chain | FIXED - WORKING - washing_machines_screen.dart, tenant_repository.dart |
+| Laundry notes cap 150 vs API 300 | FIXED - WORKING - laundry_screen.dart |
+| bookLaundry sent tenantId (server forces own) | FIXED - WORKING - tenant_repository.dart |
+| Leave sheet no duration feedback | FIXED - WORKING - leaves_screen.dart |
+| Invoices no balance/filter | FIXED - WORKING - invoices_screen.dart |
+| UTR form no screenshot URL | FIXED - WORKING - payments_screen.dart, tenant_repository.dart |
+| Notices no pin affordance | FIXED - WORKING - notices_screen.dart, guardian_notices_screen.dart |
+| Ward attendance fixed limit:100, no dates | FIXED - WORKING - ward_attendance_screen.dart |
+| Invoice detail no resident context | FIXED - WORKING - invoice_detail_screen.dart |
+| Laundry cards no items/notes | FIXED - WORKING - laundry_screen.dart |

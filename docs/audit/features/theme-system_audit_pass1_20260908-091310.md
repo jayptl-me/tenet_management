@@ -113,3 +113,23 @@ theme-system (preset token coverage, dead token references, custom preset, Appea
 | Codebase index preset list                                                         | .sixthrules + .claude mirrors                     | WORKING |
 
 Verification: bun run lint clean; bun run typecheck clean across types/web/api; no tests executed; no emojis; portal boundaries respected.
+
+## Open gaps
+
+| ID | Severity | Gap | Paths |
+|----|----------|-----|--------|
+| THM-P3-1 | P3 | OKLCH migration deferred; hex scales retained (no perceptual uniformity) | apps/web/src/themes |
+| THM-P3-2 | P3 | Per-preset font pairing redesign deferred; presets keep existing fonts | apps/web/src/themes |
+| THM-P3-3 | P3 | Landing page theme polish deferred as separate pass | apps/web/src/app/page.tsx |
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| Idiom-complete shadow/glass/spacing/transition/focus/collapsed tokens (light+dark) | FIXED - WORKING - themes/brutalist.css, neumorphic.css, soft-ui.css |
+| Brutalist dark repeated typography/layout/behavior (was SaaS-leaked) | FIXED - WORKING - themes/brutalist.css |
+| Neumorphic/soft-ui light tooltip blocks; direct shadow-tooltip refs | FIXED - WORKING - themes/neumorphic.css, soft-ui.css |
+| Custom preset base (teal, light+dark) + import wiring | FIXED - WORKING - themes/custom.css, app/globals.css |
+| Dead token refs replaced with semantic tokens | FIXED - WORKING - audit-logs/payments/floors pages, Select.tsx |
+| Instant-apply + swatches + real preview + stale-state + real scale | FIXED - WORKING - components/admin/AppearanceTab.tsx |
+| Codebase index preset list | FIXED - WORKING - .sixthrules + .claude mirrors |

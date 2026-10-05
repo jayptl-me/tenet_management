@@ -95,3 +95,18 @@ The system operates across a 3-stage operational lifecycle:
 - [x] Admin UI provides "Verify KYC" button and verified badge (KYC-GAP-5).
 - [x] Flutter mobile profile screen updated with dynamic agreement status and `isVerified` support (KYC-GAP-7).
 - [x] Audit logs recorded for document uploads and verifications (KYC-GAP-9).
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| **KYC-GAP-1** - Orphaned Cloudinary files on replacement and cascade delete | CLOSED - Added `deleteCloudinaryAsset` helper; deletes previous asset when overwriting and deletes both assets during tenant deletion |
+| **KYC-GAP-2** - Public asset IDs and verification states were unpersisted | CLOSED - Added `aadhaarPublicId`, `photoPublicId`, `isVerified`, and `verifiedAt` to `tenantSchema` and `ITenantDocuments` |
+| **KYC-GAP-3** - Verification was pseudo-derived without administrative verification endpoint | CLOSED - Implemented `POST /api/v1/tenants/:id/verify-kyc` with audit logging |
+| **KYC-GAP-5** - Detail page had no button or indicator to confirm KYC verification | CLOSED - Added "Verify KYC" action button and "KYC Verified" status badge to Documents DetailCard |
+| **KYC-GAP-7** - Tenancy agreement status was hardcoded to `true` in Flutter profile screen | CLOSED - Updated `isUploaded: p['moveInDate'] != null` and checked `isVerified` in StatusChip |
+| **KYC-GAP-9** - Document upload and verification lacked immutable audit logging | CLOSED - Added `writeAuditLog` calls to both `POST /:id/documents` and `POST /:id/verify-kyc` |

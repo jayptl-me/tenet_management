@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/complaints_audit_pass1_20260908-003801.md
 | Edit    | badge legend + transition-safe submit                            | WORKING |
 | API     | guards, transitions, stay populate, photo audit, enum filters    | WORKING |
 | Flutter | modal bottom sheet, category visual grid, urgency chips, filters | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.
