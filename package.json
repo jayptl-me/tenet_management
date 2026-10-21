@@ -14,6 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:contracts": "bun scripts/audit/check-contracts.ts",
+    "gen:lifecycle": "bun scripts/audit/gen-lifecycle-dart.ts",
+    "check:lifecycle": "bun scripts/audit/check-lifecycle-parity.ts",
     "seed": "bun --filter '@pg/api' seed",
     "seed:sample": "bun --filter '@pg/api' seed -- --with-sample-data",
     "seed:dashboard": "bun --filter '@pg/api' seed:dashboard",

@@ -29,8 +29,8 @@ import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
-import { LeaveLifecycleStepper } from '@/components/ui/LeaveLifecycleStepper';
 import { LeaveAttendanceImpact } from '@/components/ui/LeaveAttendanceImpact';
+import { StatusStepper } from '@/components/ui/StatusStepper';
 import { TenantStayCalendar } from '@/components/ui/TenantStayCalendar';
 import { Textarea } from '@/components/ui/Textarea';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
@@ -224,7 +224,13 @@ export default function LeaveDetailPage() {
           </div>
 
           <DetailCard title="Lifecycle progress" icon={<ListChecks />}>
-            <LeaveLifecycleStepper status={leave.status} />
+            <StatusStepper domain="leave" current={leave.status} />
+            {leave.status === 'approved' && (
+              <p className="mt-3 text-xs font-semibold text-(--color-text-muted)">
+                Each day of the window is marked <span className="font-bold">on leave</span> on the
+                attendance board. Days with a real on-site check-in are preserved.
+              </p>
+            )}
           </DetailCard>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

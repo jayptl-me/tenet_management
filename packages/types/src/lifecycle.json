@@ -1,0 +1,227 @@
+{
+  "payment": {
+    "kind": "ladder",
+    "label": "Payment",
+    "steps": [
+      {
+        "key": "pending",
+        "label": "Pending",
+        "endpoint": "POST /invoices/generate-single",
+        "actor": "admin",
+        "allowedNext": ["pending_verification", "paid", "overdue", "cancelled"]
+      },
+      {
+        "key": "pending_verification",
+        "label": "Pending verification",
+        "endpoint": "POST /payments/submit-utr",
+        "actor": "tenant",
+        "allowedNext": ["paid", "pending"]
+      },
+      {
+        "key": "paid",
+        "label": "Paid",
+        "endpoint": "POST /payments/:id/verify",
+        "actor": "admin",
+        "allowedNext": ["cancelled"]
+      },
+      {
+        "key": "overdue",
+        "label": "Overdue",
+        "endpoint": "PUT /payments/:id",
+        "actor": "admin",
+        "allowedNext": ["paid", "cancelled"]
+      },
+      {
+        "key": "cancelled",
+        "label": "Cancelled",
+        "endpoint": "POST /payments/:id/void",
+        "actor": "admin",
+        "allowedNext": []
+      }
+    ]
+  },
+  "invoice": {
+    "kind": "ladder",
+    "label": "Invoice",
+    "steps": [
+      {
+        "key": "draft",
+        "label": "Draft",
+        "endpoint": "PUT /invoices/:id",
+        "actor": "admin",
+        "allowedNext": ["sent", "cancelled"]
+      },
+      {
+        "key": "sent",
+        "label": "Sent",
+        "endpoint": "POST /invoices/generate-single",
+        "actor": "admin",
+        "allowedNext": ["partial", "paid", "overdue", "cancelled", "draft"]
+      },
+      {
+        "key": "partial",
+        "label": "Partially paid",
+        "endpoint": "SERVICE apps/api/src/services/payment-status.service.ts",
+        "actor": "system",
+        "allowedNext": ["paid", "cancelled"]
+      },
+      {
+        "key": "paid",
+        "label": "Paid",
+        "endpoint": "SERVICE apps/api/src/services/payment-status.service.ts",
+        "actor": "system",
+        "allowedNext": []
+      },
+      {
+        "key": "overdue",
+        "label": "Overdue",
+        "endpoint": "PUT /invoices/:id",
+        "actor": "admin",
+        "allowedNext": ["partial", "paid", "cancelled"]
+      },
+      {
+        "key": "cancelled",
+        "label": "Cancelled",
+        "endpoint": "PUT /invoices/:id",
+        "actor": "admin",
+        "allowedNext": ["draft", "sent"]
+      }
+    ]
+  },
+  "complaint": {
+    "kind": "ladder",
+    "label": "Complaint",
+    "steps": [
+      {
+        "key": "open",
+        "label": "Open",
+        "endpoint": "POST /complaints",
+        "actor": "tenant",
+        "allowedNext": ["in_progress", "resolved", "dismissed"]
+      },
+      {
+        "key": "in_progress",
+        "label": "In progress",
+        "endpoint": "PUT /complaints/:id/status",
+        "actor": "admin",
+        "allowedNext": ["resolved", "dismissed", "open"]
+      },
+      {
+        "key": "resolved",
+        "label": "Resolved",
+        "endpoint": "PUT /complaints/:id/status",
+        "actor": "admin",
+        "allowedNext": ["open"]
+      },
+      {
+        "key": "dismissed",
+        "label": "Dismissed",
+        "endpoint": "PUT /complaints/:id/status",
+        "actor": "admin",
+        "allowedNext": ["open"]
+      }
+    ]
+  },
+  "leave": {
+    "kind": "ladder",
+    "label": "Leave application",
+    "steps": [
+      {
+        "key": "pending",
+        "label": "Pending",
+        "endpoint": "POST /leaves",
+        "actor": "tenant",
+        "allowedNext": ["approved", "rejected", "cancelled"]
+      },
+      {
+        "key": "approved",
+        "label": "Approved",
+        "endpoint": "PUT /leaves/:id/approve",
+        "actor": "admin",
+        "allowedNext": []
+      },
+      {
+        "key": "rejected",
+        "label": "Rejected",
+        "endpoint": "PUT /leaves/:id/reject",
+        "actor": "admin",
+        "allowedNext": []
+      },
+      {
+        "key": "cancelled",
+        "label": "Cancelled",
+        "endpoint": "POST /leaves/:id/cancel",
+        "actor": "tenant",
+        "allowedNext": []
+      }
+    ]
+  },
+  "visitor": {
+    "kind": "ladder",
+    "label": "Visitor pass",
+    "steps": [
+      {
+        "key": "expected",
+        "label": "Expected",
+        "endpoint": "POST /visitors",
+        "actor": "tenant",
+        "allowedNext": ["arrived", "cancelled"]
+      },
+      {
+        "key": "arrived",
+        "label": "Arrived",
+        "endpoint": "POST /visitors/:id/arrive",
+        "actor": "admin",
+        "allowedNext": ["departed"]
+      },
+      {
+        "key": "departed",
+        "label": "Departed",
+        "endpoint": "POST /visitors/:id/depart",
+        "actor": "admin",
+        "allowedNext": []
+      },
+      {
+        "key": "cancelled",
+        "label": "Cancelled",
+        "endpoint": "POST /visitors/:id/cancel",
+        "actor": "tenant",
+        "allowedNext": ["expected"]
+      }
+    ]
+  },
+  "enquiry": {
+    "kind": "ladder",
+    "label": "Enquiry",
+    "steps": [
+      {
+        "key": "new",
+        "label": "New",
+        "endpoint": "POST /enquiries",
+        "actor": "visitor",
+        "allowedNext": ["contacted", "converted", "lost"]
+      },
+      {
+        "key": "contacted",
+        "label": "Contacted",
+        "endpoint": "PUT /enquiries/:id/status",
+        "actor": "admin",
+        "allowedNext": ["converted", "lost", "new"]
+      },
+      {
+        "key": "converted",
+        "label": "Converted",
+        "endpoint": "PUT /enquiries/:id/status",
+        "actor": "admin",
+        "allowedNext": []
+      },
+      {
+        "key": "lost",
+        "label": "Lost",
+        "endpoint": "PUT /enquiries/:id/status",
+        "actor": "admin",
+        "allowedNext": ["new", "contacted"]
+      }
+    ]
+  }
+}

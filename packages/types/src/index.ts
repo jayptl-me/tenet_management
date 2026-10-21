@@ -244,3 +244,20 @@ export type {
 export { PAYMENTS_CONTRACT } from './contracts/payments';
 export { KNOWN_BASELINE } from './contracts/baseline';
 export type { KnownBaselineEntry } from './contracts/baseline';
+
+// ── Lifecycle vocabulary ─────────────────────────────────
+export {
+  DOMAINS,
+  isLifecycleDomain,
+  lifecycleAnchorIndex,
+  lifecycleBranches,
+  lifecycleFor,
+  lifecycleSpine,
+} from './lifecycle';
+export type {
+  LifecycleActor,
+  LifecycleDomain,
+  LifecycleKind,
+  LifecycleSpec,
+  LifecycleStep,
+} from './lifecycle';

@@ -31,7 +31,7 @@ import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { VisitorLifecycleActions } from '@/components/ui/VisitorLifecycleActions';
-import { VisitorLifecycleStepper } from '@/components/ui/VisitorLifecycleStepper';
+import { StatusStepper } from '@/components/ui/StatusStepper';
 import { VisitorGatePassCard, visitorPassCode } from '@/components/ui/VisitorGatePassCard';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
 
@@ -236,7 +236,12 @@ export default function VisitorDetailPage() {
           </div>
 
           <DetailCard title="Lifecycle progress" icon={<ListChecks />}>
-            <VisitorLifecycleStepper status={status} />
+            <StatusStepper domain="visitor" current={status} />
+            {status === 'cancelled' && (
+              <p className="mt-3 text-xs font-semibold text-(--color-text-muted)">
+                Cancelled while expected - an admin can re-approve this pass back to Expected.
+              </p>
+            )}
             <div className="mt-4 border-t border-(--border-color) pt-4">
               <VisitorLifecycleActions
                 visitorId={visitor._id}
