@@ -186,7 +186,7 @@ export default function MealsPage() {
     {
       header: 'Comment',
       accessor: (row) => (
-        <span className="block max-w-[200px] truncate text-xs text-(--color-text-muted)">
+        <span className="block max-w-50 truncate text-xs text-(--color-text-muted)">
           {row.comment ?? '—'}
         </span>
       ),
@@ -265,7 +265,7 @@ export default function MealsPage() {
             setMealFilter(e.target.value);
             setPage(1);
           }}
-          className="w-full sm:w-[160px]"
+          className="w-full sm:w-40"
         />
         <Select
           options={[
@@ -279,7 +279,7 @@ export default function MealsPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="w-full sm:w-[180px]"
+          className="w-full sm:w-45"
         />
         <Select
           options={[
@@ -295,7 +295,7 @@ export default function MealsPage() {
             setRatingFilter(e.target.value);
             setPage(1);
           }}
-          className="w-full sm:w-[160px]"
+          className="w-full sm:w-40"
         />
       </div>
       <DataTable

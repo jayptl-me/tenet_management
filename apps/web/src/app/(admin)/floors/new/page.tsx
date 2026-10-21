@@ -240,7 +240,7 @@ export default function NewFloorPage() {
           />
         }
       >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_var(--content-rail-width)]">
           {/* Left Column: Form Controls */}
           <div className="space-y-6">
             <FormSection

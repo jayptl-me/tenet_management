@@ -184,7 +184,7 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[200px] rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-card) transition-all duration-(--transition-duration) ${isOver ? 'scale-[1.01] ring-2 ring-(--color-brand-500) ring-offset-2 ring-offset-(--focus-ring-offset-bg)' : ''}`}
+      className={`min-h-50 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) shadow-(--shadow-card) transition-all duration-(--transition-duration) ${isOver ? 'scale-[1.01] ring-2 ring-(--color-brand-500) ring-offset-2 ring-offset-(--focus-ring-offset-bg)' : ''}`}
     >
       <div
         className={`border-b-[length:var(--bw-strong)] border-b-(--border-color) px-4 py-3 ${meta.color} rounded-t-md`}
@@ -198,7 +198,7 @@ function KanbanColumn({
           </span>
         </div>
       </div>
-      <div className="max-h-[500px] space-y-2 overflow-y-auto p-3">
+      <div className="max-h-125 space-y-2 overflow-y-auto p-3">
         {complaints.length === 0 ? (
           <p className="py-6 text-center text-xs text-(--color-text-muted)">No complaints</p>
         ) : (
@@ -713,7 +713,7 @@ function ComplaintsContent() {
           }
         />
       ),
-      className: 'w-[160px]',
+      className: 'w-40',
     },
   ];
 
@@ -862,7 +862,7 @@ function ComplaintsContent() {
       {/* ── Multi-Attribute Filter Bar ──────────────── */}
       <div className="flex flex-col gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative min-w-[220px] flex-1">
+          <div className="relative min-w-55 flex-1">
             <Input
               placeholder="Search title, description, or tenant..."
               value={searchState.text}
@@ -882,7 +882,7 @@ function ComplaintsContent() {
               statusState.setValue(e.target.value);
               setPage(1);
             }}
-            className="sm:w-[160px]"
+            className="sm:w-40"
             aria-label="Filter by status"
           />
 
@@ -893,7 +893,7 @@ function ComplaintsContent() {
               categoryState.setValue(e.target.value);
               setPage(1);
             }}
-            className="sm:w-[180px]"
+            className="sm:w-45"
             aria-label="Filter by category"
           />
 
@@ -919,7 +919,7 @@ function ComplaintsContent() {
               handleDateRangeChange(fromDate, value);
               setPage(1);
             }}
-            className="sm:w-[320px] sm:shrink-0"
+            className="sm:w-80 sm:shrink-0"
           />
         </div>
 

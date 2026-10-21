@@ -206,7 +206,7 @@ function ReconcilesCell({ bill }: { bill: ElectricityBillRow }) {
         No: {fmtMoney(variance)} apart
       </span>
       {bill.varianceReason ? (
-        <span className="text-2xs block max-w-[200px] truncate text-(--color-text-muted)">
+        <span className="text-2xs block max-w-50 truncate text-(--color-text-muted)">
           {bill.varianceReason}
         </span>
       ) : (
@@ -599,7 +599,7 @@ function ElectricityContent() {
     {
       header: 'State',
       accessor: (row) => <BillStateTrack status={row.status} />,
-      className: 'w-[180px]',
+      className: 'w-45',
     },
     {
       header: 'Residents charged',
@@ -719,7 +719,7 @@ function ElectricityContent() {
               monthState.setValue(value);
               setPage(1);
             }}
-            className="w-full sm:w-[180px]"
+            className="w-full sm:w-45"
           />
           <FilterChips chips={chips} onClearAll={clearAllFilters} />
         </div>

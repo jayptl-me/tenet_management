@@ -208,7 +208,7 @@ export default function NoticesPage() {
             setTargetFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[200px]"
+          className="max-w-50"
         />
       </div>
       <DataTable

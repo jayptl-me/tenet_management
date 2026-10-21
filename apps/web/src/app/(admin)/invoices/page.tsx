@@ -878,7 +878,7 @@ function InvoicesContent() {
             valueKey="_id"
             labelKey={tenantLabel}
             dataPath="data"
-            className="w-[220px]"
+            className="w-55"
           />
           <Button
             variant="outline"

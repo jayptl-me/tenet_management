@@ -513,7 +513,21 @@
   --text-14: var(--text-14);
   --text-15: var(--text-15);
   --text-16: var(--text-16);
+  /* The display ramp. It was declared in :root but never registered here, so
+     `text-lg` and the rest resolved to Tailwind's own defaults (18px for
+     text-lg) instead of the scale this file declares (17px). Two scales, and
+     the declared one was the one nobody saw. */
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --text-4xl: var(--text-4xl);
+  --text-5xl: var(--text-5xl);
   --tracking-label: var(--tracking-label);
+  /* The width of a page's context rail. The shell's ContentFrame sets it per
+     usage; this is the default, so a page that builds its own grid does not
+     have to hardcode a length. */
+  --content-rail-width: 320px;
 
   --color-brand-50: var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);

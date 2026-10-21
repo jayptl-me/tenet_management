@@ -290,7 +290,7 @@ export default function MenusPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="max-w-[160px]"
+              className="max-w-40"
             />
           </div>
           <DataTable

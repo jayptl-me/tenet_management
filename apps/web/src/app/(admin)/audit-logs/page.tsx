@@ -380,7 +380,7 @@ export default function AuditLogsPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           leftIcon={<Search className="h-4 w-4" />}
           aria-label="Search audit logs"
-          className="w-full sm:w-[220px]"
+          className="w-full sm:w-55"
         />
 
         <Select
@@ -417,7 +417,7 @@ export default function AuditLogsPage() {
             setPage(1);
           }}
           aria-label="Filter by user ID"
-          className="w-full font-mono text-xs sm:w-[200px]"
+          className="w-full font-mono text-xs sm:w-50"
         />
         <DateRangePicker
           fromDate={fromDate}

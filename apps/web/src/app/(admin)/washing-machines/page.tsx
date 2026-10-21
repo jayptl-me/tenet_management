@@ -230,7 +230,7 @@ export default function WashingMachinesPage() {
           />
         </div>
       ),
-      className: 'w-[200px]',
+      className: 'w-50',
     },
   ];
 
@@ -269,7 +269,7 @@ export default function WashingMachinesPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="max-w-[200px]"
+          className="max-w-50"
         />
       </div>
 

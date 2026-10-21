@@ -386,7 +386,7 @@ function EnquiriesContent() {
               statusState.setValue(e.target.value);
               setPage(1);
             }}
-            className="w-full sm:w-[180px]"
+            className="w-full sm:w-45"
           />
           <Select
             aria-label="Filter by source"
@@ -396,7 +396,7 @@ function EnquiriesContent() {
               sourceState.setValue(e.target.value);
               setPage(1);
             }}
-            className="w-full sm:w-[180px]"
+            className="w-full sm:w-45"
           />
           <DateRangePicker
             compact
@@ -410,7 +410,7 @@ function EnquiriesContent() {
               handleDateRangeChange(fromDate, value);
               setPage(1);
             }}
-            className="w-full sm:w-[300px]"
+            className="w-full sm:w-75"
           />
           {hasActiveFilters && (
             <Button

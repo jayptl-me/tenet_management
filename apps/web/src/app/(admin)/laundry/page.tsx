@@ -268,7 +268,7 @@ export default function LaundryPage() {
           />
         </div>
       ),
-      className: 'w-[180px]',
+      className: 'w-45',
     },
   ];
 
@@ -307,7 +307,7 @@ export default function LaundryPage() {
             setDateFilter(val);
             setPage(1);
           }}
-          className="w-full sm:w-[180px]"
+          className="w-full sm:w-45"
         />
         <ResourceSelect
           endpoint="tenants"
@@ -320,7 +320,7 @@ export default function LaundryPage() {
           valueKey="_id"
           labelKey={tenantLabel}
           dataPath="data"
-          className="w-full sm:w-[240px]"
+          className="w-full sm:w-60"
         />
         <Select
           options={[
@@ -335,7 +335,7 @@ export default function LaundryPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="w-full sm:w-[200px]"
+          className="w-full sm:w-50"
           aria-label="Filter by status"
         />
       </div>
