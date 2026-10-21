@@ -86,7 +86,7 @@ export default function EditLaundrySlotPage() {
       backHref="/laundry"
       redirectTo="/laundry"
       mode="edit"
-      maxWidth="3xl"
+      maxWidth="form"
       form={form}
       load={{
         queryKey: ['laundry-slots', id],
@@ -121,11 +121,7 @@ export default function EditLaundrySlotPage() {
         description="When the laundry slot is booked and how many items"
       >
         <FormGrid>
-          <DatePicker
-            label="Slot date"
-            error={err.slotDate?.message}
-            {...register('slotDate')}
-          />
+          <DatePicker label="Slot date" error={err.slotDate?.message} {...register('slotDate')} />
           <Input
             label="Slot time"
             type="time"

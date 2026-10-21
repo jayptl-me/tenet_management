@@ -64,20 +64,23 @@ export default function MealsPage() {
   if (statusFilter) params.set('status', statusFilter);
   if (dateFilter) params.set('date', dateFilter);
 
-  const { data: listBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<MealFeedbackListBody>(
-      [
-        ...MEALS_FEEDBACK_LIST_KEY,
-        page,
-        perPage,
-        search,
-        mealFilter,
-        ratingFilter,
-        statusFilter,
-        dateFilter,
-      ],
-      `meals/feedback?${params.toString()}`,
-    );
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<MealFeedbackListBody>(
+    [
+      ...MEALS_FEEDBACK_LIST_KEY,
+      page,
+      perPage,
+      search,
+      mealFilter,
+      ratingFilter,
+      statusFilter,
+      dateFilter,
+    ],
+    `meals/feedback?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const feedbacks = listBody?.data ?? [];
   const total = listBody?.meta.total ?? 0;

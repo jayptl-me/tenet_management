@@ -88,9 +88,13 @@ export default function GuardianDetailPage() {
   const error = errorMessage(guardianQuery.error);
 
   const wardTenantId = guardian?.tenant?._id ?? '';
-  const wardQuery = useApiQuery<WardTenantDetail>([...TENANT_KEY, wardTenantId], `tenants/${wardTenantId}`, {
-    enabled: !!wardTenantId,
-  });
+  const wardQuery = useApiQuery<WardTenantDetail>(
+    [...TENANT_KEY, wardTenantId],
+    `tenants/${wardTenantId}`,
+    {
+      enabled: !!wardTenantId,
+    },
+  );
   const invoicesQuery = useApiQuery<InvoiceRecord[]>(
     [...INVOICES_BY_TENANT_KEY, wardTenantId],
     `invoices?tenantId=${wardTenantId}`,
@@ -114,7 +118,7 @@ export default function GuardianDetailPage() {
         description="View guardian information"
         backHref="/guardians"
         error={error || 'Guardian not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -125,7 +129,7 @@ export default function GuardianDetailPage() {
       description="Guardian details"
       backHref="/guardians"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         guardian ? (
           <StatusBadge

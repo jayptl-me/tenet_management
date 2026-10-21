@@ -428,12 +428,7 @@ export default function DashboardPage() {
         description={`${todayLabel}${lastUpdated ? ` · Updated ${lastUpdated}` : ''}`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isRefreshing}
-              onClick={handleRefresh}
-            >
+            <Button variant="outline" size="sm" disabled={isRefreshing} onClick={handleRefresh}>
               <RotateCw className={clsx('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />
               <span>Refresh</span>
             </Button>

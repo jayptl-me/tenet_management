@@ -121,10 +121,16 @@ export default function AssetsPage() {
   );
 
   // Cached full alert sets double as StatCard counts (single fetch each).
-  const { data: lowStockRows, isPending: lowStockPending, error: lowStockError } =
-    useApiQuery<AssetRow[]>(LOW_STOCK_KEY, 'assets/low-stock');
-  const { data: serviceDueRows, isPending: serviceDuePending, error: serviceDueError } =
-    useApiQuery<AssetRow[]>(SERVICE_DUE_KEY, 'assets/service-due');
+  const {
+    data: lowStockRows,
+    isPending: lowStockPending,
+    error: lowStockError,
+  } = useApiQuery<AssetRow[]>(LOW_STOCK_KEY, 'assets/low-stock');
+  const {
+    data: serviceDueRows,
+    isPending: serviceDuePending,
+    error: serviceDueError,
+  } = useApiQuery<AssetRow[]>(SERVICE_DUE_KEY, 'assets/service-due');
   const { data: retiredBody } = useApiBodyQuery<{ meta: { total: number } }>(
     RETIRED_TOTAL_KEY,
     'assets?status=retired&limit=1',
@@ -132,11 +138,7 @@ export default function AssetsPage() {
   const retiredTotal = retiredBody?.meta?.total ?? 0;
 
   const isLoading =
-    alertMode === 'all'
-      ? listPending
-      : alertMode === 'low'
-        ? lowStockPending
-        : serviceDuePending;
+    alertMode === 'all' ? listPending : alertMode === 'low' ? lowStockPending : serviceDuePending;
   const fetchErrorMessage =
     alertMode === 'all'
       ? errorMessage(listError)
@@ -292,7 +294,7 @@ export default function AssetsPage() {
       <ErrorBanner message={fetchErrorMessage || error} />
 
       {writeResult && (
-        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
           {writeResult}
         </div>
       )}

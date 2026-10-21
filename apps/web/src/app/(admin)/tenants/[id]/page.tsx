@@ -355,7 +355,9 @@ export default function TenantDetailPage() {
     setVerifyingKyc(true);
     try {
       await api.post(`tenants/${tenant._id}/verify-kyc`).json();
-      toast.success('KYC verified successfully');
+      // No success toast: the KYC badge next to this button shows the server's
+      // own state after the invalidation below, so the screen never claims a
+      // verification the server did not record.
       queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
     } catch {
       toast.error('Failed to verify KYC');
@@ -373,7 +375,7 @@ export default function TenantDetailPage() {
         description="View tenant information"
         backHref="/tenants"
         error={loadError || 'Tenant not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -386,7 +388,7 @@ export default function TenantDetailPage() {
       }
       backHref="/tenants"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         tenant ? (
           <StatusBadge
@@ -397,7 +399,27 @@ export default function TenantDetailPage() {
       }
       actions={
         tenant ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The primary action of the record, pinned in the header so it is
+                reachable without scrolling. The full action card stays lower
+                down on the page, with every action it had. */}
+            {tenant.isActive && (
+              <Button variant="danger" size="sm" onClick={handleCheckoutClick}>
+                <LogOut className="h-4 w-4" />
+                Check Out
+              </Button>
+            )}
+            {!tenant.isActive && (
+              <Button
+                variant="primary"
+                size="sm"
+                loading={reinstating && !showReinstatePlacement}
+                onClick={() => void handleReinstate()}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reinstate
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

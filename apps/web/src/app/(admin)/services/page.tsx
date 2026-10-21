@@ -381,13 +381,13 @@ function ServicesContent() {
       <ErrorBanner message={error} />
 
       {writeResult && (
-        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
           {writeResult}
         </div>
       )}
 
       {provisionedRows.length > 0 && (
-        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
           <p className="mb-2">Provisioning result, per floor, as the server answered it:</p>
           <ul className="space-y-1">
             {provisionedRows.map((row) => (

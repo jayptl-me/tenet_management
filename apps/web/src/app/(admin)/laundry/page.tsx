@@ -76,11 +76,14 @@ export default function LaundryPage() {
   if (dateFilter) params.set('slotDate', dateFilter);
   if (tenantFilter) params.set('tenantId', tenantFilter);
 
-  const { data: slotsBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<LaundryListBody>(
-      [...LAUNDRY_LIST_KEY, page, perPage, statusFilter, dateFilter, tenantFilter],
-      `laundry-slots?${params.toString()}`,
-    );
+  const {
+    data: slotsBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<LaundryListBody>(
+    [...LAUNDRY_LIST_KEY, page, perPage, statusFilter, dateFilter, tenantFilter],
+    `laundry-slots?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const slots = slotsBody?.data ?? [];
   const total = slotsBody?.meta.total ?? 0;

@@ -68,11 +68,14 @@ export default function ElectricityPage() {
   if (statusFilter) params.set('status', statusFilter);
   if (monthFilter) params.set('month', monthFilter);
 
-  const { data: billsBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<ElectricityListBody>(
-      [...ELECTRICITY_LIST_KEY, page, perPage, statusFilter, monthFilter],
-      `electricity?${params.toString()}`,
-    );
+  const {
+    data: billsBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<ElectricityListBody>(
+    [...ELECTRICITY_LIST_KEY, page, perPage, statusFilter, monthFilter],
+    `electricity?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const bills = billsBody?.data ?? EMPTY_BILLS;
   const total = billsBody?.meta.total ?? 0;

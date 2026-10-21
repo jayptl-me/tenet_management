@@ -85,11 +85,14 @@ export default function MenusPage() {
   if (search) params.set('search', search);
   if (statusFilter) params.set('isActive', statusFilter);
 
-  const { data: listBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<MenusListBody>(
-      [...MENUS_LIST_KEY, page, perPage, search, statusFilter],
-      `menus?${params.toString()}`,
-    );
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<MenusListBody>(
+    [...MENUS_LIST_KEY, page, perPage, search, statusFilter],
+    `menus?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const menus = listBody?.data ?? [];
   const total = listBody?.meta.total ?? 0;

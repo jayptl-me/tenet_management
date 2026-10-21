@@ -143,20 +143,23 @@ export default function AuditLogsPage() {
   if (fromDate) params.set('fromDate', fromDate);
   if (toDate) params.set('toDate', toDate);
 
-  const { data: logsBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<AuditLogsListBody>(
-      [
-        ...AUDIT_LOGS_LIST_KEY,
-        page,
-        perPage,
-        actionFilter,
-        resourceFilter,
-        userIdFilter,
-        fromDate,
-        toDate,
-      ],
-      `audit-logs?${params.toString()}`,
-    );
+  const {
+    data: logsBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<AuditLogsListBody>(
+    [
+      ...AUDIT_LOGS_LIST_KEY,
+      page,
+      perPage,
+      actionFilter,
+      resourceFilter,
+      userIdFilter,
+      fromDate,
+      toDate,
+    ],
+    `audit-logs?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const logs = logsBody?.data ?? EMPTY_LOGS;
   const total = logsBody?.meta.total ?? 0;
