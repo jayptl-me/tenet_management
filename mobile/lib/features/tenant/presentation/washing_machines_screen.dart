@@ -271,11 +271,14 @@ class _TenantWashingMachinesScreenState
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null)
+                        ErrorBanner(message: _error!, onRetry: _load),
                       if (_machines.isEmpty)
                         const EmptyState(
                             message:
-                                'No washing machines on your floor')
+                                'No washing machines on your floor',
+                            hint: 'No machine is listed for your floor yet. '
+                                'Nothing to do here.')
                       else
                         ..._machines.map(
                           (m) => _buildMachineCard(context, theme, m),

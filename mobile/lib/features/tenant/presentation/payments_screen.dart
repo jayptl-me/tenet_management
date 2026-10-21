@@ -29,6 +29,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   final _utr = TextEditingController();
   final _screenshot = TextEditingController();
   bool _submitting = false;
+  final _scrollController = ScrollController();
 
   Map<String, dynamic>? _qr;
   bool _qrLoading = false;
@@ -66,6 +67,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   void dispose() {
     _utr.dispose();
     _screenshot.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -152,6 +154,59 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     }
   }
 
+  /// Server-computed balance of an open invoice.
+  ///
+  /// The server sends `balance` on every invoice row and the UPI QR is built
+  /// from the same number, so the label and the QR can never disagree. The
+  /// amount is never derived on the client.
+  String _dueLabel(Map<String, dynamic> invoice) {
+    final balance = (invoice['balance'] as num?)?.toDouble();
+    if (balance == null) return 'balance unavailable';
+    if (balance <= 0.001) return 'nothing due';
+    return '${formatMoney(balance)} due';
+  }
+
+  /// The first open invoice that still has a server-reported balance.
+  Map<String, dynamic>? _openInvoiceWithBalance() {
+    for (final invoice in _invoices) {
+      final balance = (invoice['balance'] as num?)?.toDouble();
+      if (balance != null && balance > 0.001) return invoice;
+    }
+    return null;
+  }
+
+  /// Payments the resident has sent and the admin has not confirmed yet.
+  ///
+  /// A `pending` row is not enough: the API opens one automatically for every
+  /// invoice it generates, and that is money the resident never sent. Only a
+  /// row that carries a UTR is a payment waiting for a decision.
+  List<Map<String, dynamic>> get _pendingPayments => _payments.where((p) {
+        final status = (p['status']?.toString() ?? '').toLowerCase();
+        if (status == 'pending_verification') return true;
+        final utr = (p['utrNumber']?.toString() ?? '').trim();
+        return status == 'pending' && utr.isNotEmpty;
+      }).toList();
+
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
+  /// Next step for a resident with no payment history: pay what is due.
+  Future<void> _payOutstanding() async {
+    final target = _openInvoiceWithBalance();
+    if (target == null) return;
+    final id = target['_id']?.toString() ?? target['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    setState(() => _invoiceId = id);
+    await _loadQr(id);
+    _scrollToTop();
+  }
+
   Future<void> _submitUtr() async {
     if (_invoiceId == null || _utr.text.trim().length < 6) {
       setState(() => _error = 'Select invoice and enter a valid UTR (min 6 chars).');
@@ -171,7 +226,10 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
           );
       _utr.clear();
       _screenshot.clear();
-      setState(() => _success = 'UTR submitted for verification.');
+      setState(() =>
+          _success =
+              'UTR submitted. The admin will confirm this payment and you '
+              'will get a notification.');
       await _load();
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -218,6 +276,8 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   @override
   Widget build(BuildContext context) {
     final qrBytes = _decodeQrImage(_qr?['qrDataUrl']?.toString());
+    // The open invoice that still has a server-reported balance, if any.
+    final outstanding = _openInvoiceWithBalance();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Payments')),
@@ -229,10 +289,11 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                 child: SkeletonList(cardCount: 3, height: 120),
               )
             : ListView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_error != null) ...[
-                    ErrorBanner(message: _error!),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
             if (_success != null) ...[
@@ -251,6 +312,14 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+            ],
+            if (_pendingPayments.isNotEmpty) ...[
+              ..._pendingPayments.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _PendingPaymentCard(payment: p),
+                ),
+              ),
             ],
             Card(
               child: Padding(
@@ -279,15 +348,10 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                       items: _invoices
                           .map(
                             (i) {
-                              final total =
-                                  (i['totalAmount'] as num?)?.toDouble() ?? 0;
-                              final paid =
-                                  (i['paidAmount'] as num?)?.toDouble() ?? 0;
-                              final due = total - paid;
                               return DropdownMenuItem(
                                 value: i['_id']?.toString(),
                                 child: Text(
-                                  '${i['invoiceNumber'] ?? i['_id']} · ${formatMoney(due > 0 ? due : 0)} due',
+                                  '${i['invoiceNumber'] ?? i['_id']} · ${_dueLabel(i)}',
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               );
@@ -310,7 +374,12 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                         ),
                       )
                     else if (_qrError != null)
-                      ErrorBanner(message: _qrError!)
+                      ErrorBanner(
+                        message: _qrError!,
+                        onRetry: _invoiceId == null
+                            ? null
+                            : () => _loadQr(_invoiceId!),
+                      )
                     else if (_qr != null) ...[
                       if (qrBytes != null)
                         Center(
@@ -412,7 +481,15 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
             if (_loading)
               const SkeletonList(cardCount: 2, height: 72)
             else if (_payments.isEmpty)
-              const EmptyState(message: 'No payments yet')
+              EmptyState(
+                message: 'No payments yet',
+                hint: outstanding == null
+                    ? 'Nothing is due right now. No action needed.'
+                    : 'Pay the outstanding balance with the UPI QR above.',
+                actionLabel:
+                    outstanding == null ? null : 'Pay the outstanding balance',
+                onAction: _payOutstanding,
+              )
             else
               ..._payments.map(
                 (p) => ListCard(
@@ -710,6 +787,90 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A payment the admin has not confirmed yet.
+///
+/// The resident must be able to see that the money is not lost: the amount
+/// they sent, the day they sent it, and what happens next.
+class _PendingPaymentCard extends StatelessWidget {
+  const _PendingPaymentCard({required this.payment});
+
+  final Map<String, dynamic> payment;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = payment['amount'] as num?;
+    // The server stamps the UTR submission on the row (updatedAt), and the
+    // row is created by the submission when there was no pending row yet.
+    final submittedOn = formatDate(
+      payment['utrSubmittedAt'] ??
+          payment['updatedAt'] ??
+          payment['createdAt'] ??
+          payment['paidAt'],
+    );
+    final status = payment['status']?.toString() ?? 'pending_verification';
+    final utr = (payment['utrNumber']?.toString() ?? '').trim();
+
+    return Material(
+      color: AppTheme.warningSoft,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.hourglass_top, size: 18, color: AppTheme.warningText),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Awaiting confirmation',
+                    style: const TextStyle(
+                      color: AppTheme.warningText,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                StatusChip(label: status),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              formatMoney(amount),
+              style: const TextStyle(
+                color: AppTheme.warningText,
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              utr.isEmpty
+                  ? 'Submitted on $submittedOn'
+                  : 'UTR $utr · submitted on $submittedOn',
+              style: const TextStyle(
+                color: AppTheme.warningText,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The admin will confirm this payment. You will get a '
+              'notification when it is verified, rejected or voided.',
+              style: TextStyle(
+                color: AppTheme.warningText.withValues(alpha: 0.9),
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -131,7 +131,7 @@ class _TenantServicesScreenState extends ConsumerState<TenantServicesScreen> {
             ),
             const SizedBox(height: 16),
             if (_error != null) ...[
-              ErrorBanner(message: _error!),
+              ErrorBanner(message: _error!, onRetry: _load),
               const SizedBox(height: 12),
             ],
             if (_loading)
@@ -139,6 +139,8 @@ class _TenantServicesScreenState extends ConsumerState<TenantServicesScreen> {
             else if (_services.isEmpty)
               const EmptyState(
                 message: 'No service statuses recorded for your floor.',
+                hint: 'Your manager records the status of each service. '
+                    'Nothing to do here.',
               )
             else
               ..._services.map((svc) {

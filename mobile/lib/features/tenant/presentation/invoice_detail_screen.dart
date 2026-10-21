@@ -134,7 +134,7 @@ class _TenantInvoiceDetailScreenState
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_error != null) ...[
-                    ErrorBanner(message: _error!),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
                   if (_invoice != null) ...[

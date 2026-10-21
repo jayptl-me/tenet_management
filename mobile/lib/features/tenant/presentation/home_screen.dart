@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_features.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import '../data/tenant_repository.dart';
@@ -23,6 +24,12 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
   List<Map<String, dynamic>> _complaints = [];
   int _unreadCount = 0;
   Map<String, dynamic>? _profile;
+
+  // Outstanding dues come from their own endpoint and are loaded separately,
+  // so a dues failure never blanks the rest of the home screen.
+  Map<String, dynamic>? _dues;
+  String? _duesError;
+  bool _duesLoading = true;
 
   @override
   void initState() {
@@ -65,6 +72,30 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
+      });
+    }
+    await _loadDues();
+  }
+
+  /// Outstanding balance for this tenant. Every number is computed by the
+  /// server (`GET tenants/me/dues`); the portal never derives one.
+  Future<void> _loadDues() async {
+    setState(() {
+      _duesLoading = true;
+      _duesError = null;
+    });
+    try {
+      final dues = await ref.read(tenantRepositoryProvider).myDues();
+      if (!mounted) return;
+      setState(() {
+        _dues = dues;
+        _duesLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _duesError = e.toString().replaceFirst('Exception: ', '');
+        _duesLoading = false;
       });
     }
   }
@@ -171,9 +202,11 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
             ),
             const SizedBox(height: 16),
             if (_error != null) ...[
-              ErrorBanner(message: _error!),
+              ErrorBanner(message: _error!, onRetry: _load),
               const SizedBox(height: 12),
             ],
+            _buildDuesCard(context),
+            const SizedBox(height: 16),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -261,7 +294,13 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
             if (_loading)
               const SkeletonList(count: 3)
             else if (_invoices.isEmpty)
-              const EmptyState(message: 'No invoices yet')
+              EmptyState(
+                message: 'No invoices yet',
+                hint: 'Your outstanding balance and every open bill are on '
+                    'the dues screen.',
+                actionLabel: 'Open the dues view',
+                onAction: () => context.go('/tenant/dues'),
+              )
             else
               ..._invoices.map((inv) {
                 final id =
@@ -270,8 +309,7 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                   title: inv['invoiceNumber']?.toString() ??
                       inv['_id']?.toString() ??
                       'Invoice',
-                  subtitle:
-                      '${inv['month'] ?? ''} · ${formatMoney(inv['totalAmount'] as num?)}',
+                  subtitle: invoiceMoneyLine(inv),
                   trailing:
                       StatusChip(label: inv['status']?.toString() ?? '--'),
                   onTap: id.isEmpty
@@ -301,7 +339,13 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
             if (_loading)
               const SkeletonList(count: 2)
             else if (_complaints.isEmpty)
-              const EmptyState(message: 'No complaints')
+              EmptyState(
+                message: 'No complaints',
+                hint: 'Nothing to report right now. Raise an issue from the '
+                    'complaints screen if something breaks.',
+                actionLabel: 'Raise an issue',
+                onAction: () => context.go('/tenant/complaints'),
+              )
             else
               ..._complaints.map((c) {
                 final id = c['_id']?.toString() ?? c['id']?.toString() ?? '';
@@ -314,6 +358,164 @@ class _TenantHomeScreenState extends ConsumerState<TenantHomeScreen> {
                       : () => context.go('/tenant/complaints/$id'),
                 );
               }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The outstanding balance card. This is the number the resident came for,
+  /// and it comes from the server (`GET tenants/me/dues`), never from a local
+  /// sum of invoice totals.
+  Widget _buildDuesCard(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    if (_duesLoading) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: SkeletonBlock(height: 72),
+        ),
+      );
+    }
+
+    if (_duesError != null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Outstanding balance',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              ErrorBanner(message: _duesError!, onRetry: _loadDues),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final dues = _dues;
+    if (dues == null) {
+      // The dues endpoint is not served by this API build yet. Say so and
+      // point at the screen that still works.
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Outstanding balance',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'The dues summary is not available right now. Your invoices '
+                'show the latest balance.',
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => context.go('/tenant/invoices'),
+                child: const Text('View invoices'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final totalDue = (dues['totalDue'] as num?)?.toDouble() ?? 0;
+    final depositHeld = (dues['depositHeld'] as num?)?.toDouble() ?? 0;
+    final unpaid = dues['unpaidInvoices'];
+    final openCount = unpaid is List ? unpaid.length : 0;
+    final checkedOut = dues['checkedOut'] == true;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Outstanding balance',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                if (checkedOut)
+                  const Text(
+                    'Stay closed',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.muted,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              formatMoney(totalDue),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: totalDue > 0 ? AppTheme.dangerText : cs.primary,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              openCount == 0
+                  ? 'No open invoices. Nothing to pay.'
+                  : '$openCount open invoice${openCount == 1 ? '' : 's'}',
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (depositHeld > 0)
+              Text(
+                'Deposit held ${formatMoney(depositHeld)}',
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => context.go('/tenant/dues'),
+                    child: const Text('View dues'),
+                  ),
+                ),
+                if (totalDue > 0) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/tenant/payments'),
+                      child: const Text('Pay now'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),

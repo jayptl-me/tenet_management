@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_theme.dart';
@@ -134,9 +135,18 @@ class _TenantNoticesScreenState extends ConsumerState<TenantNoticesScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null) ...[
+                        ErrorBanner(message: _error!, onRetry: _load),
+                        const SizedBox(height: 12),
+                      ],
                       if (_rows.isEmpty)
-                        const EmptyState(message: 'No notices')
+                        EmptyState(
+                          message: 'No notices',
+                          hint: 'The manager has not posted a notice yet. '
+                              'Nothing to do here.',
+                          actionLabel: 'Back to the feed',
+                          onAction: () => context.go('/tenant'),
+                        )
                       else
                         ..._rows.map(
                           (n) => ListCard(

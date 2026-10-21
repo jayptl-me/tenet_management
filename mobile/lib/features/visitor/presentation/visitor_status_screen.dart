@@ -176,7 +176,14 @@ class _VisitorStatusScreenState extends ConsumerState<VisitorStatusScreen> {
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[
-          ErrorBanner(message: _error!),
+          ErrorBanner(
+            message: _error!,
+            onRetry: () {
+              final id = _idController.text.trim();
+              if (id.isEmpty) return;
+              _load(id);
+            },
+          ),
           const SizedBox(height: 12),
         ],
         if (_loading) const SkeletonBlock(height: 240),

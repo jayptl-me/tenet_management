@@ -17,6 +17,24 @@ class TenantRepository {
     return _asMapList(data);
   }
 
+  /// Outstanding dues for the signed-in tenant (`GET tenants/me/dues`).
+  ///
+  /// Every amount in the payload (`totalDue`, `unpaidInvoices[].remaining`) is
+  /// computed by the server from the settled payments, so the portal never
+  /// derives a balance itself. Returns null when the endpoint is not deployed
+  /// (404) so the caller can say so instead of failing the whole screen; any
+  /// other failure is rethrown so the caller can offer a retry.
+  Future<Map<String, dynamic>?> myDues() async {
+    try {
+      final data = await _api.getJson('tenants/me/dues', parse: (d) => d);
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> myPayments() async {
     final data = await _api.getJson('payments/my', parse: (d) => d);
     return _asMapList(data);

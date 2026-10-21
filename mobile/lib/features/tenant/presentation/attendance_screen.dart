@@ -208,7 +208,7 @@ class _TenantAttendanceScreenState
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (_error != null) ...[
-                        ErrorBanner(message: _error!),
+                        ErrorBanner(message: _error!, onRetry: _load),
                         const SizedBox(height: 12),
                       ],
                       // Today's status card
@@ -291,7 +291,18 @@ class _TenantAttendanceScreenState
                       ),
                       const SizedBox(height: 8),
                       if (_filtered.isEmpty)
-                        const EmptyState(message: 'No attendance records')
+                        EmptyState(
+                          message: 'No attendance records',
+                          hint: _statusFilter == null
+                              ? 'Your check-in and check-out history will '
+                                  'appear here.'
+                              : 'No record matches this filter.',
+                          actionLabel:
+                              _statusFilter == null ? null : 'Show all records',
+                          onAction: _statusFilter == null
+                              ? null
+                              : () => setState(() => _statusFilter = null),
+                        )
                       else
                         ..._groupedByMonth.entries.expand((entry) => [
                               Padding(

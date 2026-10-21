@@ -167,7 +167,10 @@ class _GuardianAttendanceScreenState
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null) ...[
+                        ErrorBanner(message: _error!, onRetry: _load),
+                        const SizedBox(height: 12),
+                      ],
                       Wrap(
                         spacing: 8,
                         children: [
@@ -241,7 +244,32 @@ class _GuardianAttendanceScreenState
                       ),
                       const SizedBox(height: 8),
                       if (_filtered.isEmpty)
-                        const EmptyState(message: 'No attendance records')
+                        EmptyState(
+                          message: 'No attendance records',
+                          hint: _statusFilter == null &&
+                                  _fromDate == null &&
+                                  _toDate == null
+                              ? 'Your ward\'s check-in and check-out history '
+                                  'will appear here.'
+                              : 'No record matches this filter or date range.',
+                          actionLabel: _statusFilter == null &&
+                                  _fromDate == null &&
+                                  _toDate == null
+                              ? null
+                              : 'Show all records',
+                          onAction: _statusFilter == null &&
+                                  _fromDate == null &&
+                                  _toDate == null
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _statusFilter = null;
+                                    _fromDate = null;
+                                    _toDate = null;
+                                  });
+                                  _load();
+                                },
+                        )
                       else
                         ..._groupedByMonth.entries.expand((entry) => [
                               Padding(

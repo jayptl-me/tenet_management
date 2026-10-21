@@ -177,7 +177,7 @@ class _GuardianProfileScreenState extends ConsumerState<GuardianProfileScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_error != null) ...[
-                    ErrorBanner(message: _error!),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
 

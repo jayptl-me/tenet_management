@@ -177,9 +177,16 @@ class _GuardianNoticesScreenState extends ConsumerState<GuardianNoticesScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null) ...[
+                        ErrorBanner(message: _error!, onRetry: _load),
+                        const SizedBox(height: 12),
+                      ],
                       if (_rows.isEmpty)
-                        const EmptyState(message: 'No notices for your ward')
+                        const EmptyState(
+                          message: 'No notices for your ward',
+                          hint: 'Nothing has been posted for your ward yet. '
+                              'No action needed.',
+                        )
                       else
                         ..._rows.map(
                           (n) => ListCard(

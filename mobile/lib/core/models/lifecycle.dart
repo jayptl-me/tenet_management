@@ -25,7 +25,7 @@ class LifecycleStep {
   /// The human label of the state.
   final String label;
 
-  /// The API route that writes this status, or "SERVICE <path>" when a shared service writes it.
+  /// The API route that writes this status, or "SERVICE [path]" when a shared service writes it.
   final String endpoint;
 
   /// The role that performs the transition.

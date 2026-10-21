@@ -45,13 +45,6 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
     }
   }
 
-  double _remaining(Map<String, dynamic> inv) {
-    final total = (inv['totalAmount'] as num?)?.toDouble() ?? 0;
-    final paid = (inv['paidAmount'] as num?)?.toDouble() ?? 0;
-    final balance = (inv['balance'] as num?)?.toDouble();
-    return balance ?? (total - paid);
-  }
-
   @override
   Widget build(BuildContext context) {
     final visible = _statusFilter.isEmpty
@@ -66,7 +59,10 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (_error != null) ErrorBanner(message: _error!),
+            if (_error != null) ...[
+              ErrorBanner(message: _error!, onRetry: _load),
+              const SizedBox(height: 12),
+            ],
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -96,25 +92,39 @@ class _TenantInvoicesScreenState extends ConsumerState<TenantInvoicesScreen> {
             if (_loading)
               const SkeletonList(count: 5)
             else if (visible.isEmpty)
-              const EmptyState(message: 'No invoices found')
-                  else
-                    ...visible.map(
-                      (inv) {
-                        final id = inv['_id']?.toString() ?? inv['id']?.toString() ?? '';
-                        final due = _remaining(inv);
-                        return ListCard(
-                          title: inv['invoiceNumber']?.toString() ?? 'Invoice',
-                          subtitle:
-                              '${inv['month'] ?? ''} · ${formatMoney(inv['totalAmount'] as num?)}${due > 0.001 ? ' · due ${formatMoney(due)}' : ' · settled'}',
-                          trailing: StatusChip(label: inv['status']?.toString() ?? '--'),
-                          onTap: id.isNotEmpty
-                              ? () => context.go('/tenant/invoices/$id')
-                              : null,
-                        );
-                      },
-                    ),
-                ],
+              EmptyState(
+                message: 'No invoices found',
+                hint: _statusFilter.isEmpty
+                    ? 'Nothing is billed to you yet. Your outstanding bill and '
+                        'balance are on the dues screen.'
+                    : 'No invoice matches this filter.',
+                actionLabel: _statusFilter.isEmpty
+                    ? 'View the bill'
+                    : 'Show all invoices',
+                onAction: () {
+                  if (_statusFilter.isNotEmpty) {
+                    setState(() => _statusFilter = '');
+                  } else {
+                    context.go('/tenant/dues');
+                  }
+                },
+              )
+            else
+              ...visible.map(
+                (inv) {
+                  final id = inv['_id']?.toString() ?? inv['id']?.toString() ?? '';
+                  return ListCard(
+                    title: inv['invoiceNumber']?.toString() ?? 'Invoice',
+                    subtitle: invoiceMoneyLine(inv),
+                    trailing: StatusChip(label: inv['status']?.toString() ?? '--'),
+                    onTap: id.isNotEmpty
+                        ? () => context.go('/tenant/invoices/$id')
+                        : null,
+                  );
+                },
               ),
+          ],
+        ),
       ),
     );
   }

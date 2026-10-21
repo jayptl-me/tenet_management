@@ -228,13 +228,16 @@ class _TenantNotificationsScreenState
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_error != null) ...[
-                    ErrorBanner(message: _error!),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
                   if (_notifications.isEmpty)
                     const EmptyState(
-                        message: 'No notifications',
-                        icon: Icons.notifications_none)
+                      message: 'No notifications',
+                      hint: 'Updates about your stay, payments and requests '
+                          'will arrive here. No action needed.',
+                      icon: Icons.notifications_none,
+                    )
                   else
                     ..._notifications.map((n) {
                       final isRead = n['isRead'] == true;

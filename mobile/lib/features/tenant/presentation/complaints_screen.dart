@@ -139,7 +139,7 @@ class _TenantComplaintsScreenState extends ConsumerState<TenantComplaintsScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
             if (_error != null) ...[
-              ErrorBanner(message: _error!),
+              ErrorBanner(message: _error!, onRetry: _load),
               const SizedBox(height: 12),
             ],
 

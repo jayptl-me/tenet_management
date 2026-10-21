@@ -29,11 +29,30 @@ class PortalScaffold extends StatelessWidget {
   }
 }
 
+/// Empty state panel.
+///
+/// An empty state must never be a dead end:
+/// - [hint] says in words what happens next, or that nothing is needed.
+/// - [actionLabel] + [onAction] render a real button wired to a real route or
+///   handler. When there is no next step, leave the action out and say so in
+///   the hint instead of showing a panel that leads nowhere.
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.message, this.icon});
+  const EmptyState({
+    super.key,
+    required this.message,
+    this.icon,
+    this.hint,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String message;
   final IconData? icon;
+  final String? hint;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  bool get _hasAction => actionLabel != null && onAction != null;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +73,26 @@ class EmptyState extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
             ),
+            if (hint != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                hint!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+            if (_hasAction) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 240,
+                child: FilledButton.tonal(
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -104,9 +143,19 @@ class FeatureDisabledWidget extends StatelessWidget {
 }
 
 class ErrorBanner extends StatelessWidget {
-  const ErrorBanner({super.key, required this.message});
+  const ErrorBanner({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.retryLabel = 'Retry',
+  });
 
   final String message;
+
+  /// When set, the banner offers a retry so a failed request is recoverable
+  /// without leaving the screen.
+  final VoidCallback? onRetry;
+  final String retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +178,16 @@ class ErrorBanner extends StatelessWidget {
                 ),
               ),
             ),
+            if (onRetry != null) ...[
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: onRetry,
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onErrorContainer,
+                ),
+                child: Text(retryLabel),
+              ),
+            ],
           ],
         ),
       ),
@@ -141,33 +200,59 @@ class StatusChip extends StatelessWidget {
 
   final String label;
 
+  /// Every status the API can return must land on a deliberate colour.
+  /// Anything not listed here falls back to the neutral tone, so new
+  /// statuses stay visible as "unknown" instead of pretending to be fine.
   ({Color bg, Color text}) _resolveColors(BuildContext context) {
     final lower = label.trim().toLowerCase().replaceAll('-', '_');
+
+    // Settled, approved or finished work.
     if (lower == 'paid' ||
         lower == 'resolved' ||
         lower == 'approved' ||
         lower == 'operational' ||
         lower == 'active' ||
-        lower == 'available') {
+        lower == 'available' ||
+        lower == 'arrived' ||
+        lower == 'departed' ||
+        lower == 'converted' ||
+        lower == 'completed' ||
+        lower == 'present') {
       return (bg: AppTheme.successSoft, text: AppTheme.success);
     }
+
+    // Refused, failed or lost work.
     if (lower == 'overdue' ||
         lower == 'rejected' ||
         lower == 'down' ||
         lower == 'cancelled' ||
         lower == 'inactive' ||
-        lower == 'urgent') {
+        lower == 'urgent' ||
+        lower == 'dismissed' ||
+        lower == 'lost' ||
+        lower == 'not_returned') {
       return (bg: AppTheme.dangerSoft, text: AppTheme.danger);
     }
+
+    // Waiting on someone else.
     if (lower == 'pending' ||
         lower == 'partial' ||
         lower == 'pending_verification' ||
         lower == 'in_progress' ||
         lower == 'degraded' ||
         lower == 'high' ||
-        lower == 'sent') {
+        lower == 'sent' ||
+        lower == 'expected' ||
+        lower == 'open' ||
+        lower == 'new' ||
+        lower == 'contacted' ||
+        lower == 'booked' ||
+        lower == 'confirmed' ||
+        lower == 'on_leave') {
       return (bg: AppTheme.warningSoft, text: AppTheme.warningText);
     }
+
+    // Everything else (draft, unknown) stays neutral on purpose.
     return (
       bg: Theme.of(context).colorScheme.surfaceContainerHighest,
       text: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -200,12 +285,17 @@ class ListCard extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.subtitleWidget,
     this.trailing,
     this.onTap,
   });
 
   final String title;
   final String? subtitle;
+
+  /// Richer content under the title, for rows that need more than one line
+  /// (for example the admin's decision note on a leave application).
+  final Widget? subtitleWidget;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -216,7 +306,8 @@ class ListCard extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: subtitle == null ? null : Text(subtitle!),
+        subtitle: subtitleWidget ??
+            (subtitle == null ? null : Text(subtitle!)),
         trailing: trailing,
       ),
     );
@@ -330,6 +421,34 @@ String formatMoney(num? amount) {
   final v = amount ?? 0;
   return NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0)
       .format(v);
+}
+
+/// Money line for an invoice row.
+///
+/// `balance` is computed by the server (total minus settled payments) and is
+/// the same number the UPI QR is built from, so it is never derived on the
+/// client. When the server does not report a balance the line says so
+/// instead of asserting a wrong amount.
+String invoiceMoneyLine(Map<String, dynamic> invoice) {
+  final month = (invoice['month'] ?? '').toString();
+  final total = formatMoney(invoice['totalAmount'] as num?);
+  final balance = (invoice['balance'] as num?)?.toDouble();
+  final status = (invoice['status']?.toString() ?? '').toLowerCase();
+
+  final String money;
+  if (balance == null) {
+    if (status == 'paid' || status == 'cancelled') {
+      money = 'settled';
+    } else {
+      money = 'total $total · balance unavailable';
+    }
+  } else if (balance <= 0.001) {
+    money = 'settled';
+  } else {
+    money = 'due ${formatMoney(balance)} of $total';
+  }
+
+  return month.isEmpty ? money : '$month · $money';
 }
 
 String formatDate(dynamic value) {

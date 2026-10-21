@@ -126,7 +126,7 @@ class _TenantMyRoomScreenState extends ConsumerState<TenantMyRoomScreen> {
                 ? ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
-                      ErrorBanner(message: _error!),
+                      ErrorBanner(message: _error!, onRetry: _load),
                       const SizedBox(height: 24),
                       Center(
                         child: OutlinedButton.icon(

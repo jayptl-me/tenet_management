@@ -143,7 +143,7 @@ class _TenantComplaintDetailScreenState
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_error != null) ...[
-                    ErrorBanner(message: _error!),
+                    ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
                   if (_complaint != null) _buildContent(context, _complaint!),

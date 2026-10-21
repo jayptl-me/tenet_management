@@ -12,6 +12,7 @@ import '../../features/guardian/presentation/guardian_notices_screen.dart';
 import '../../features/guardian/presentation/guardian_profile_screen.dart';
 import '../../features/tenant/presentation/complaint_detail_screen.dart';
 import '../../features/tenant/presentation/complaints_screen.dart';
+import '../../features/tenant/presentation/dues_screen.dart';
 import '../../features/tenant/presentation/electricity_screen.dart';
 import '../../features/tenant/presentation/home_screen.dart';
 import '../../features/tenant/presentation/invoice_detail_screen.dart';
@@ -114,6 +115,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/tenant/invoices',
                 builder: (_, __) => const TenantInvoicesScreen(),
+              ),
+              GoRoute(
+                path: '/tenant/dues',
+                builder: (_, __) => const TenantDuesScreen(),
               ),
             ],
           ),

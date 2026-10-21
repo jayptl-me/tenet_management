@@ -175,7 +175,7 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             if (_error != null) ...[
-              ErrorBanner(message: _error!),
+              ErrorBanner(message: _error!, onRetry: _load),
               const SizedBox(height: 12),
             ],
             // 7-day date selector bar
@@ -244,6 +244,8 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                 message: _selectedDayOffset == 0
                     ? 'No menu published for today'
                     : 'No menu published for ${DateFormat('EEEE, d MMM').format(_selectedDate)}',
+                hint: 'The kitchen publishes the menu for each day. '
+                    'Nothing to do here.',
                 icon: Icons.restaurant_menu_outlined,
               )
             else
@@ -433,7 +435,11 @@ class _TenantMealsScreenState extends ConsumerState<TenantMealsScreen> {
                 ),
                 const SizedBox(height: 8),
                 if (_feedbackHistory.isEmpty)
-                  const EmptyState(message: 'No feedback submitted yet')
+                  const EmptyState(
+                    message: 'No feedback submitted yet',
+                    hint: 'Rate the meal above to send feedback to the '
+                        'kitchen.',
+                  )
                 else
                   ..._feedbackHistory.map((f) {
                     final mealType = f['mealType']?.toString() ?? '--';

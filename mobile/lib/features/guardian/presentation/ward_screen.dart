@@ -140,11 +140,18 @@ class _GuardianWardScreenState extends ConsumerState<GuardianWardScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (_error != null) ErrorBanner(message: _error!),
+                  if (_error != null) ...[
+                    ErrorBanner(message: _error!, onRetry: _load),
+                    const SizedBox(height: 12),
+                  ],
                   if (_loading)
                     const SkeletonList(cardCount: 3, height: 110)
                   else if (_ward == null)
-                    const EmptyState(message: 'No ward linked to this account')
+                    const EmptyState(
+                      message: 'No ward linked to this account',
+                      hint: 'A ward has to be linked to this account before '
+                          'anything can be shown here.',
+                    )
                   else ...[
                     // ── Ward card ──────────────────────────────
                     Card(

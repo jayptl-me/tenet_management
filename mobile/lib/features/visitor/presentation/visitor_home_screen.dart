@@ -99,11 +99,17 @@ class _VisitorHomeScreenState extends ConsumerState<VisitorHomeScreen> {
             style: TextStyle(color: AppTheme.muted, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          if (_error != null) ErrorBanner(message: _error!),
+          if (_error != null) ErrorBanner(message: _error!, onRetry: _load),
           if (_loading)
             const SkeletonList(cardCount: 4, height: 72)
           else if (_rows.isEmpty)
-            const EmptyState(message: 'No visitors yet. Register one from the next tab.')
+            EmptyState(
+              message: 'No visitors yet',
+              hint: 'Pre-register a guest so the gate knows they are coming.',
+              icon: Icons.people_outline,
+              actionLabel: 'Register a visitor',
+              onAction: () => context.go('/visitor/register'),
+            )
           else
             ..._rows.map((v) {
               final id = v['_id']?.toString() ?? '';

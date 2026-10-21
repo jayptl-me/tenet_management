@@ -129,18 +129,38 @@ class _TenantLeavesScreenState extends ConsumerState<TenantLeavesScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null) ...[
+                        ErrorBanner(message: _error!, onRetry: _load),
+                        const SizedBox(height: 12),
+                      ],
                       if (_leaves.isEmpty)
-                        const EmptyState(message: 'No leave applications')
+                        EmptyState(
+                          message: 'No leave applications',
+                          hint: 'Apply for leave and the manager will decide '
+                              'on it. You will get a notification with the '
+                              'reason.',
+                          actionLabel: 'Apply for leave',
+                          onAction: _showCreateDialog,
+                        )
                       else
                         ..._leaves.map((l) {
                           final status = l['status']?.toString() ?? '--';
                           final id = (l['_id'] ?? l['id'])?.toString() ?? '';
                           final pending = status == 'pending';
+                          final reason = (l['reason']?.toString() ?? '').trim();
+                          final adminNotes =
+                              (l['adminNotes']?.toString() ?? '').trim();
                           return ListCard(
                             title:
                                 '${formatDate(l['fromDate'] ?? l['startDate'])} - ${formatDate(l['toDate'] ?? l['endDate'])}',
-                            subtitle: l['reason']?.toString() ?? '',
+                            subtitle: reason.isEmpty ? null : reason,
+                            subtitleWidget: adminNotes.isEmpty
+                                ? null
+                                : _LeaveSubtitle(
+                                    reason: reason,
+                                    adminNotes: adminNotes,
+                                    status: status,
+                                  ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -159,6 +179,73 @@ class _TenantLeavesScreenState extends ConsumerState<TenantLeavesScreen> {
                     ],
                   ),
       ),
+    );
+  }
+}
+
+/// The body of a leave application row: the resident's own reason and the
+/// manager's decision note.
+///
+/// The API returns `adminNotes` on the leave map. Without this the resident
+/// sees "rejected" and nothing else, which is a dead end: they cannot tell
+/// why the decision was made.
+class _LeaveSubtitle extends StatelessWidget {
+  const _LeaveSubtitle({
+    required this.reason,
+    required this.adminNotes,
+    required this.status,
+  });
+
+  final String reason;
+  final String adminNotes;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final rejected = status.toLowerCase() == 'rejected';
+    final bg = rejected ? AppTheme.dangerSoft : AppTheme.warningSoft;
+    final fg = rejected ? AppTheme.dangerText : AppTheme.warningText;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (reason.isNotEmpty) Text(reason),
+        if (reason.isNotEmpty) const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                  Text(
+                    rejected ? 'Reason for rejection' : 'Manager note',
+                    style: TextStyle(
+                      color: fg,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                adminNotes,
+                style: TextStyle(color: fg, fontSize: 13, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -23,6 +23,7 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
   int _items = 5;
   final _notesController = TextEditingController();
+  final _scrollController = ScrollController();
   bool _booking = false;
   String? _cancellingId;
 
@@ -35,7 +36,19 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
   @override
   void dispose() {
     _notesController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Bring the booking form back into view: it is the next step when no
+  /// slot has been booked yet.
+  void _scrollToBooking() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _load() async {
@@ -176,9 +189,13 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
                     ],
                   )
                 : ListView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     children: [
-                      if (_error != null) ErrorBanner(message: _error!),
+                      if (_error != null) ...[
+                        ErrorBanner(message: _error!, onRetry: _load),
+                        const SizedBox(height: 12),
+                      ],
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -265,7 +282,13 @@ class _TenantLaundryScreenState extends ConsumerState<TenantLaundryScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (_slots.isEmpty)
-                        const EmptyState(message: 'No laundry slots')
+                        EmptyState(
+                          message: 'No laundry slots',
+                          hint: 'No slot is booked yet. Use the booking form '
+                              'above to pick a date and time.',
+                          actionLabel: 'Book a slot',
+                          onAction: _scrollToBooking,
+                        )
                       else
                         ..._slots.map((s) {
                           final status = s['status']?.toString() ?? '--';

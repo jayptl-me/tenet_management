@@ -130,7 +130,7 @@ class _TenantElectricityScreenState
             ),
             const SizedBox(height: 16),
             if (_error != null) ...[
-              ErrorBanner(message: _error!),
+              ErrorBanner(message: _error!, onRetry: _load),
               const SizedBox(height: 12),
             ],
             if (_loading)
@@ -138,6 +138,8 @@ class _TenantElectricityScreenState
             else if (_readings.isEmpty)
               const EmptyState(
                 message: 'No electricity readings found for your room.',
+                hint: 'A meter reading has not been recorded for your room '
+                    'yet. Nothing to do here.',
                 icon: Icons.electric_meter_outlined,
               )
             else ...[
