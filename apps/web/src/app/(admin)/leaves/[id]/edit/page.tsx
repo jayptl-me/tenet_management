@@ -1,333 +1,400 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  CalendarDays,
-  UserRound,
-  Phone,
-  DoorOpen,
+  Ban,
   Building2,
-  BedDouble,
   Check,
-  X,
+  DoorOpen,
   ExternalLink,
+  Info,
+  UserRound,
+  X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
-import { Textarea } from '@/components/ui/Textarea';
-import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
-import { FormPage } from '@/components/ui/FormPage';
-import { FormCard } from '@/components/ui/FormCard';
-import { FormActions } from '@/components/ui/FormActions';
-import { FormSection, FormGrid, FormFullWidth } from '@/components/ui/FormSection';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormPage } from '@/components/ui/FormPage';
+import { FormSection } from '@/components/ui/FormSection';
 import { LeaveAttendanceImpact } from '@/components/ui/LeaveAttendanceImpact';
-import { surfaceNestedClass } from '@/lib/field-styles';
-import { clsx } from 'clsx';
+import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { Textarea } from '@/components/ui/Textarea';
+import { useApiQuery } from '@/hooks/useApiQuery';
+
+// ── Shapes ────────────────────────────────────────────────────────────────────
+// Every field below is read out of the API response, never invented:
+//   GET /leaves/:id apps/api/src/routes/leaves.ts:450-494
 
 interface LeaveDetail {
   _id: string;
-  fromDate: string;
-  toDate: string;
+  tenant?: {
+    _id?: string;
+    bedId?: string | null;
+    user?: { _id?: string; name?: string; phone?: string } | null;
+    room?: { _id?: string; roomNumber?: string; floor?: { label?: string } | null } | null;
+  } | null;
+  fromDate?: string;
+  toDate?: string;
   startDate?: string;
   endDate?: string;
-  reason: string;
-  status: string;
+  reason?: string;
+  status?: string;
   adminNotes?: string;
-  tenant?: {
-    _id: string;
-    bedId?: string | null;
-    user?: { _id: string; name: string; phone: string };
-    room?: { _id: string; roomNumber: string; floor?: { label?: string } | null };
-  };
-  approvedAt?: string;
-  approvedByName?: string;
-  createdAt: string;
+  approvedByName?: string | null;
+  approvedAt?: string | null;
+  createdAt?: string;
 }
 
-function formatDate(d: string): string {
-  try {
-    return new Date(d).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return d;
-  }
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fromOf(leave: LeaveDetail): string {
+  return leave.fromDate ?? leave.startDate ?? '';
 }
 
-function daysBetween(from: string, to: string): number {
-  const f = new Date(from);
-  const t = new Date(to);
-  return Math.max(1, Math.floor((t.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+function toOf(leave: LeaveDetail): string {
+  return leave.toDate ?? leave.endDate ?? '';
 }
 
-export default function EditLeavePage() {
+/** The days of the window, counted the way the server counts them. */
+function inclusiveDays(from: string, to: string): number {
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return 0;
+  return Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// ── The decision screen ───────────────────────────────────────────────────────
+
+/**
+ * The review of one leave request.
+ *
+ * The component is mounted with the record in hand, so the note the office
+ * writes starts from what the record holds without a second read.
+ */
+function LeaveReview({ leave }: { leave: LeaveDetail }) {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
+  const queryClient = useQueryClient();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [submitError, setSubmitError] = useState('');
-  const [leaveData, setLeaveData] = useState<LeaveDetail | null>(null);
-  const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(null);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [adminNotes, setAdminNotes] = useState(leave.adminNotes ?? '');
+  const [actionBusy, setActionBusy] = useState<'approve' | 'reject' | 'cancel' | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showReject, setShowReject] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`leaves/${id}`)
-      .json<{ success: boolean; data: LeaveDetail }>()
-      .then((res) => {
-        setLeaveData(res.data);
-        setAdminNotes(res.data.adminNotes ?? '');
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-      })
-      .finally(() => setIsLoading(false));
-  }, [id]);
+  const from = fromOf(leave);
+  const to = toOf(leave);
+  const days = inclusiveDays(from, to);
+  const status = leave.status ?? '';
+  const isPending = status === 'pending';
+  const tenant = leave.tenant ?? null;
+  const tenantId = tenant?._id ?? '';
 
-  const handleApprove = async () => {
-    setActionLoading('approve');
-    setSubmitError('');
+  const runDecision = async (action: 'approve' | 'reject' | 'cancel') => {
+    setActionBusy(action);
+    setActionError('');
     try {
-      await api.put(`leaves/${id}/approve`, { json: {} }).json();
-      router.push(`/leaves/${id}`);
+      if (action === 'approve') {
+        await api
+          .put(`leaves/${leave._id}/approve`, { json: {} })
+          .json<{ success: boolean; data: LeaveDetail }>();
+      } else if (action === 'reject') {
+        await api
+          .put(`leaves/${leave._id}/reject`, { json: { adminNotes: adminNotes.trim() } })
+          .json<{ success: boolean; data: LeaveDetail }>();
+      } else {
+        await api.post(`leaves/${leave._id}/cancel`, { json: {} }).json();
+      }
+      queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      router.push(`/leaves/${leave._id}`);
     } catch (err) {
-      setSubmitError((await parseApiError(err)).message);
+      // The server's answer is the one that matters: it refuses with
+      // LEAVE_NOT_PENDING or OVERLAPPING_LEAVE.
+      setActionError((await parseApiError(err)).message);
     } finally {
-      setActionLoading(null);
+      setActionBusy(null);
+      setConfirmCancel(false);
     }
   };
-
-  const handleReject = async () => {
-    setActionLoading('reject');
-    setSubmitError('');
-    try {
-      await api
-        .put(`leaves/${id}/reject`, {
-          json: { adminNotes: adminNotes.trim() || undefined },
-        })
-        .json();
-      router.push(`/leaves/${id}`);
-    } catch (err) {
-      setSubmitError((await parseApiError(err)).message);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const tenant = leaveData?.tenant;
-  const from = leaveData?.fromDate ?? '';
-  const to = leaveData?.toDate ?? '';
 
   return (
     <FormPage
-      title="Review Leave"
-      description="Approve or reject this leave request"
-      backHref={leaveData ? `/leaves/${leaveData._id}` : '/leaves'}
-      error={submitError}
-      isLoading={isLoading}
+      title="Decide on this leave"
+      description={`${tenant?.user?.name ?? 'Unknown resident'} · ${formatDate(from)} to ${formatDate(to)} · ${days} day${days === 1 ? '' : 's'}`}
+      backHref={`/leaves/${leave._id}`}
+      error={actionError}
       maxWidth="form"
+      badge={<StatusBadge variant={statusToVariant(status)} label={status.replace(/_/g, ' ')} />}
     >
-      {leaveData && (
-        <div className="space-y-5">
-          {tenant && (
-            <DetailCard title="Applicant" icon={<UserRound />}>
-              <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={
-                    tenant._id ? (
-                      <Link
-                        href={`/tenants/${tenant._id}`}
-                        className="inline-flex items-center gap-1 font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
-                      >
-                        {tenant.user?.name ?? 'View tenant'}
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    ) : (
-                      (tenant.user?.name ?? 'N/A')
-                    )
-                  }
-                />
-                <DetailRow
-                  label="Phone"
-                  value={
-                    <span className="inline-flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                      {tenant.user?.phone ?? 'N/A'}
-                    </span>
-                  }
-                />
-                <DetailRow
-                  label="Room & Bed"
-                  value={
-                    <span className="inline-flex items-center gap-1.5">
-                      <DoorOpen className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                      {tenant.room?.roomNumber ?? 'N/A'} · Bed {tenant.bedId ?? 'N/A'}
-                    </span>
-                  }
-                />
-                {tenant.room?.floor?.label && (
-                  <DetailRow
-                    label="Floor"
-                    value={
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                        {tenant.room.floor.label}
-                      </span>
-                    }
-                  />
-                )}
-                {tenant.bedId && (
-                  <DetailRow
-                    label="Bed"
-                    value={
-                      <span className="inline-flex items-center gap-1.5">
-                        <BedDouble className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                        {tenant.bedId}
-                      </span>
-                    }
-                  />
-                )}
-              </DetailList>
-            </DetailCard>
-          )}
-
-          <FormCard>
-            <FormSection title="Leave details" description="Period, reason, and current status">
-              <FormGrid cols={2}>
-                <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
-                    Period
-                  </p>
-                  <p className="mt-1 flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
-                    <CalendarDays className="h-4 w-4 text-(--color-text-muted)" />
-                    {formatDate(from)} — {formatDate(to)}
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-(--color-text-secondary)">
-                    {daysBetween(from, to)} day{daysBetween(from, to) !== 1 ? 's' : ''} inclusive
-                  </p>
-                </div>
-
-                <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-2xs font-semibold tracking-wider text-(--color-text-muted) uppercase">
-                    Status
-                  </p>
-                  <div className="mt-1.5">
-                    <StatusBadge
-                      variant={statusToVariant(leaveData.status)}
-                      label={leaveData.status.replace(/_/g, ' ')}
-                    />
-                  </div>
-                  {leaveData.approvedByName && (
-                    <p className="mt-1 text-xs font-medium text-(--color-text-muted)">
-                      by {leaveData.approvedByName}
-                      {leaveData.approvedAt && ` on ${formatDate(leaveData.approvedAt)}`}
-                    </p>
-                  )}
-                </div>
-              </FormGrid>
-              <div className={clsx(surfaceNestedClass, 'mt-4 p-4')}>
-                <LeaveAttendanceImpact
-                  tenantId={tenant?._id}
-                  fromDate={from}
-                  toDate={to}
-                  status={leaveData.status}
-                />
-              </div>
-            </FormSection>
-
-            <FormSection title="Reason" divided>
-              <div className={clsx(surfaceNestedClass, 'p-4')}>
-                <p className="text-sm leading-relaxed text-(--color-text-primary)">
-                  {leaveData.reason}
-                </p>
-              </div>
-            </FormSection>
-
-            {leaveData.status === 'pending' && (
-              <FormSection
-                title="Admin notes"
-                description="Optional notes visible to the tenant"
-                divided
-              >
-                <FormFullWidth>
-                  <Textarea
-                    label="Admin notes"
-                    rows={3}
-                    placeholder="Reason for rejection or any additional notes..."
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    maxLength={500}
-                  />
-                  <p className="text-2xs mt-1 text-right text-(--color-text-muted)">
-                    {adminNotes.length}/500
-                  </p>
-                </FormFullWidth>
-              </FormSection>
-            )}
-
-            {leaveData.status === 'pending' && (
-              <FormActions
-                loading={false}
-                cancelHref={`/leaves/${leaveData._id}`}
-                submitLabel="Approve"
-                hideSubmit
-                divided
-                leading={
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      type="button"
-                      loading={actionLoading === 'reject'}
-                      onClick={handleReject}
-                    >
-                      <X className="h-4 w-4 text-(--color-danger-600)" />
-                      Reject
-                    </Button>
-                    <Button
-                      variant="primary"
-                      type="button"
-                      loading={actionLoading === 'approve'}
-                      onClick={handleApprove}
-                    >
-                      <Check className="h-4 w-4" />
-                      Approve
-                    </Button>
-                  </div>
+      <div className="space-y-4">
+        <DetailCard title="The resident" icon={<UserRound />}>
+          <DetailList>
+            <DetailRow
+              label="Name"
+              value={
+                tenantId ? (
+                  <Link
+                    href={`/tenants/${tenantId}`}
+                    className="inline-flex items-center gap-1 font-bold text-(--color-brand-600) underline-offset-2 hover:underline"
+                  >
+                    {tenant?.user?.name ?? 'View the resident'}
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  (tenant?.user?.name ?? 'Unknown resident')
+                )
+              }
+            />
+            <DetailRow label="Phone" value={tenant?.user?.phone ?? 'Not on the record'} />
+            <DetailRow
+              label="Room and bed"
+              value={
+                <span className="inline-flex items-center gap-1.5">
+                  <DoorOpen className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                  {tenant?.room?.roomNumber ?? 'No room'} · Bed {tenant?.bedId ?? 'no bed'}
+                </span>
+              }
+            />
+            {tenant?.room?.floor?.label && (
+              <DetailRow
+                label="Floor"
+                value={
+                  <span className="inline-flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                    {tenant.room.floor.label}
+                  </span>
                 }
               />
             )}
+          </DetailList>
+        </DetailCard>
 
-            {leaveData.status !== 'pending' && (
-              <FormActions
-                loading={false}
-                cancelHref={`/leaves/${leaveData._id}`}
-                submitLabel=""
-                hideSubmit
-                divided
+        <FormCard>
+          <FormSection
+            title="The request"
+            description="The window, the reason and what the request would write"
+          >
+            <DetailList>
+              <DetailRow label="From" value={formatDate(from)} />
+              <DetailRow label="To" value={formatDate(to)} />
+              <DetailRow label="Days" value={`${days} day${days === 1 ? '' : 's'}`} />
+              <DetailRow
+                label="Status"
+                value={
+                  <StatusBadge variant={statusToVariant(status)} label={status.replace(/_/g, ' ')} />
+                }
               />
-            )}
+              {leave.approvedByName && (
+                <DetailRow
+                  label="Decided by"
+                  value={`${leave.approvedByName}${
+                    leave.approvedAt ? ` on ${formatDate(leave.approvedAt)}` : ''
+                  }`}
+                />
+              )}
+            </DetailList>
 
-            {leaveData.adminNotes && (
-              <FormSection title="Existing admin notes" divided>
-                <div className={clsx(surfaceNestedClass, 'p-4')}>
-                  <p className="text-sm leading-relaxed text-(--color-text-secondary)">
-                    {leaveData.adminNotes}
+            <div className="mt-4">
+              <p className="text-2xs font-bold tracking-wider text-(--color-text-muted) uppercase">
+                The reason the resident gave
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-(--color-text-primary)">
+                {leave.reason ?? 'No reason was given'}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <LeaveAttendanceImpact tenantId={tenantId} fromDate={from} toDate={to} status={status} />
+            </div>
+          </FormSection>
+
+          {!isPending && leave.adminNotes && (
+            <FormSection title="The reason the office wrote" divided>
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
+                {leave.adminNotes}
+              </p>
+            </FormSection>
+          )}
+
+          {isPending ? (
+            <FormSection title="The decision" divided>
+              <ul className="space-y-2 text-sm leading-relaxed text-(--color-text-secondary)">
+                <li>
+                  <strong className="text-(--color-text-primary)">Approve</strong> marks each of the{' '}
+                  {days} day{days === 1 ? '' : 's'} of the window as an on-leave record on the
+                  attendance board, writes the entry in the audit log and pushes a service_update
+                  notification to the resident. The approval carries no note: the server takes no
+                  body on that route, so the resident reads the outcome alone.
+                </li>
+                <li>
+                  <strong className="text-(--color-text-primary)">Reject</strong> keeps the request on
+                  file with the reason of the office, writes the entry in the audit log and pushes a
+                  service_update notification that carries the reason in its body.
+                </li>
+                <li>
+                  <strong className="text-(--color-text-primary)">Cancel</strong> withdraws the
+                  request, writes the entry in the audit log and pushes a service_update notification
+                  that says the leave was cancelled by the PG office.
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-text-muted)" />
+                  The rent does not change in any of the three: the monthly bill is raised from the
+                  resident&apos;s own record.
+                </li>
+              </ul>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  loading={actionBusy === 'approve'}
+                  disabled={actionBusy !== null}
+                  onClick={() => void runDecision('approve')}
+                >
+                  <Check className="h-4 w-4" />
+                  Approve
+                </Button>
+                {!showReject && (
+                  <Button
+                    variant="danger"
+                    disabled={actionBusy !== null}
+                    onClick={() => setShowReject(true)}
+                  >
+                    <X className="h-4 w-4" />
+                    Reject with a reason
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  loading={actionBusy === 'cancel'}
+                  disabled={actionBusy !== null}
+                  onClick={() => setConfirmCancel(true)}
+                >
+                  <Ban className="h-4 w-4" />
+                  Cancel the request
+                </Button>
+              </div>
+
+              {showReject && (
+                <div className="mt-4">
+                  <Textarea
+                    label="Reason for the rejection"
+                    rows={3}
+                    placeholder="Why the leave is refused..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    maxLength={500}
+                    helperText="The reason travels to the resident in the notification: the portal leave card does not show the office notes, so a rejection without a reason tells the resident nothing."
+                  />
+                  <p className="text-2xs mt-1 text-right font-medium text-(--color-text-muted)">
+                    {adminNotes.length}/500
                   </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="danger"
+                      loading={actionBusy === 'reject'}
+                      disabled={actionBusy !== null || adminNotes.trim().length === 0}
+                      onClick={() => void runDecision('reject')}
+                    >
+                      <X className="h-4 w-4" />
+                      Reject with this reason
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={actionBusy !== null}
+                      onClick={() => setShowReject(false)}
+                    >
+                      Keep the request open
+                    </Button>
+                  </div>
                 </div>
-              </FormSection>
-            )}
-          </FormCard>
-        </div>
-      )}
+              )}
+            </FormSection>
+          ) : (
+            <FormSection title="The decision" divided>
+              <p className="text-sm leading-relaxed text-(--color-text-secondary)">
+                This request was {status.replace(/_/g, ' ')}
+                {leave.approvedByName ? ` by ${leave.approvedByName}` : ''}
+                {leave.approvedAt ? ` on ${formatDate(leave.approvedAt)}` : ''}. The server refuses to
+                move it again: only a pending request can be approved, rejected or cancelled.
+              </p>
+            </FormSection>
+          )}
+        </FormCard>
+      </div>
+
+      <ConfirmModal
+        open={confirmCancel}
+        title="Cancel this request"
+        message="The server sets the status to cancelled, writes the entry in the audit log and pushes a service_update notification to the resident: the body says the leave was cancelled by the PG office. The attendance board is not touched, and the request cannot be answered afterwards."
+        confirmLabel="Cancel the request"
+        cancelLabel="Keep it open"
+        variant="warning"
+        loading={actionBusy === 'cancel'}
+        onConfirm={() => void runDecision('cancel')}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </FormPage>
   );
+}
+
+// ── The page ──────────────────────────────────────────────────────────────────
+
+export default function EditLeavePage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? '';
+
+  /**
+   * The record, read with the shared query stack.
+   *
+   * The page is re-read from the server after every write, so the office always
+   * decides on what the server holds and not on a copy.
+   */
+  const {
+    data: rawLeave,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<LeaveDetail>(['leaves', 'detail', id], `leaves/${id}`, { enabled: !!id });
+
+  const leave: LeaveDetail | null =
+    rawLeave && typeof rawLeave === 'object' && !Array.isArray(rawLeave) ? rawLeave : null;
+
+  if (!isLoading && (queryError || !leave)) {
+    return (
+      <FormPage
+        title="Decide on this leave"
+        description="One leave application"
+        backHref="/leaves"
+        error={queryError?.message ?? 'The server reports no leave for this id.'}
+        maxWidth="form"
+      />
+    );
+  }
+
+  if (!leave) {
+    return (
+      <FormPage
+        title="Decide on this leave"
+        description="One leave application"
+        backHref="/leaves"
+        isLoading
+        maxWidth="form"
+      />
+    );
+  }
+
+  // The key resets the screen when another record is opened, so the note the
+  // office writes starts from the record in hand.
+  return leave ? <LeaveReview key={leave._id} leave={leave} /> : null;
 }
