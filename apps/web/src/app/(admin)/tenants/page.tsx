@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Users, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiBodyQuery } from '@/hooks/useApiQuery';
+import { useUrlSearch, useUrlState, useUrlStateWriter } from '@/hooks/useUrlState';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import { Select } from '@/components/ui/Select';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { PageBand } from '@/components/ui/PageBand';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
@@ -54,6 +56,15 @@ function kycStatus(t: TenantRow): { label: string; variant: 'success' | 'warning
 
 const TENANTS_KEY = ['tenants', 'list'] as const;
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Checked Out' },
+];
+
+/** The values the status filter may take in the address bar. */
+const STATUS_FILTERS = STATUS_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+
 interface TenantsListBody {
   success: boolean;
   data: TenantRow[];
@@ -61,13 +72,42 @@ interface TenantsListBody {
 }
 
 export default function TenantsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <TenantsContent />
+    </Suspense>
+  );
+}
+
+function TenantsContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // The filters live in the address bar: the "convert a lead" link lands on the
+  // tenant it names, and the roster can be shared, bookmarked and cited.
+  const searchState = useUrlSearch('search');
+  const statusState = useUrlState<string>('status', { defaultValue: '', allowed: STATUS_FILTERS });
+  // The status filter answers to both names: `status` is what the control
+  // writes, `isActive` is what the list API calls it.
+  const isActiveState = useUrlState<string>('isActive', {
+    defaultValue: '',
+    allowed: STATUS_FILTERS,
+  });
+  const floorState = useUrlState<string>('floorId', { defaultValue: '' });
+  const { write: writeUrl } = useUrlStateWriter();
+
+  const search = searchState.value;
+  const statusFilter = statusState.value || isActiveState.value;
+  const floorFilter = floorState.value;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [floorFilter, setFloorFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -205,7 +245,7 @@ export default function TenantsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Tenants"
         description="Manage all PG residents"
@@ -218,50 +258,52 @@ export default function TenantsPage() {
       />
       <ErrorBanner message={errorMessage(queryError) || error} />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          placeholder="Search by name..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-xs"
-        />
-        <Select
-          options={[
-            { value: '', label: 'All Status' },
-            { value: 'true', label: 'Active' },
-            { value: 'false', label: 'Checked Out' },
-          ]}
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="max-w-[180px]"
-        />
-        <ResourceSelect
-          endpoint="floors"
-          value={floorFilter}
-          onChange={(val) => {
-            setFloorFilter(val);
-            setPage(1);
-          }}
-          placeholder="All Floors"
-          valueKey="_id"
-          labelKey={(item) => {
-            const f = item as unknown as { label: string; floorNumber?: number };
-            return f.label ?? `Floor ${f.floorNumber ?? ''}`;
-          }}
-          dataPath="data"
-          className="max-w-[200px]"
-        />
-        <Button variant="outline" onClick={handleExportCsv} disabled={tenants.length === 0}>
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
-      </div>
+      {/* The compact band: the filters of the roster in one surface, so the
+          first data row is reachable without scrolling past chrome. */}
+      <PageBand>
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
+            placeholder="Search by name..."
+            value={searchState.text}
+            onChange={(e) => {
+              searchState.onChange(e.target.value);
+              setPage(1);
+            }}
+            className="max-w-xs"
+          />
+          <Select
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(e) => {
+              // One write: the canonical name is set and the alias is taken out,
+              // so the address bar carries one status and not two.
+              writeUrl({ status: e.target.value || null, isActive: null });
+              setPage(1);
+            }}
+            className="max-w-[180px]"
+          />
+          <ResourceSelect
+            endpoint="floors"
+            value={floorFilter}
+            onChange={(val) => {
+              floorState.setValue(val);
+              setPage(1);
+            }}
+            placeholder="All Floors"
+            valueKey="_id"
+            labelKey={(item) => {
+              const f = item as unknown as { label: string; floorNumber?: number };
+              return f.label ?? `Floor ${f.floorNumber ?? ''}`;
+            }}
+            dataPath="data"
+            className="max-w-[200px]"
+          />
+          <Button variant="outline" onClick={handleExportCsv} disabled={tenants.length === 0}>
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
+      </PageBand>
 
       <DataTable
         columns={columns}

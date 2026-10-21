@@ -33,6 +33,12 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HeatmapCalendar } from '@/components/ui/HeatmapCalendar';
 import { useSSE } from '@/hooks/useSSE';
+import {
+  useUrlSearch,
+  useUrlState,
+  useUrlStateWriter,
+  readUrlDateRange,
+} from '@/hooks/useUrlState';
 import type { DataTableColumn } from '@/components/ui/DataTable';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -86,28 +92,6 @@ interface ComplaintsListBody {
   meta: { total: number };
 }
 
-/**
- * Deep-linked date filters: `?date=` pins both ends, otherwise `fromDate` /
- * `toDate` are read independently (invalid values are ignored).
- */
-function readUrlDates(params: URLSearchParams): { fromDate: string; toDate: string } {
-  const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
-  const dateParam = params.get('date') ?? '';
-  const fromParam = params.get('fromDate') ?? '';
-  const toParam = params.get('toDate') ?? '';
-
-  if (isDate(dateParam)) {
-    return { fromDate: dateParam, toDate: dateParam };
-  }
-  if (isDate(fromParam)) {
-    return { fromDate: fromParam, toDate: isDate(toParam) ? toParam : fromParam };
-  }
-  if (isDate(toParam)) {
-    return { fromDate: '', toDate: toParam };
-  }
-  return { fromDate: '', toDate: '' };
-}
-
 const KANBAN_STATUSES = ['open', 'in_progress', 'resolved', 'dismissed'] as const;
 
 const kanbanMeta: Record<string, { label: string; color: string }> = {
@@ -151,6 +135,23 @@ const PRIORITY_OPTIONS = [
   { value: 'high', label: 'High' },
   { value: 'urgent', label: 'Urgent' },
 ];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'dismissed', label: 'Dismissed' },
+];
+
+/**
+ * The values each filter may take in the address bar. A parameter outside the
+ * list is ignored, so a broken link leaves the list unfiltered instead of
+ * filtering it down to nothing.
+ */
+const STATUS_FILTERS = STATUS_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+const CATEGORY_FILTERS = CATEGORY_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+const PRIORITY_FILTERS = PRIORITY_OPTIONS.map((option) => option.value).filter((v) => v !== '');
 
 function sanitizeCSVValue(val: unknown): string {
   if (val === null || val === undefined) return '""';
@@ -285,15 +286,32 @@ function ComplaintsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const urlDates = readUrlDates(searchParams);
+
+  // The filters live in the address bar: a triage link lands filtered, and the
+  // view can be shared, bookmarked and cited.
+  const statusState = useUrlState<string>('status', { defaultValue: '', allowed: STATUS_FILTERS });
+  const categoryState = useUrlState<string>('category', {
+    defaultValue: '',
+    allowed: CATEGORY_FILTERS,
+  });
+  const priorityState = useUrlState<string>('priority', {
+    defaultValue: '',
+    allowed: PRIORITY_FILTERS,
+  });
+  const searchState = useUrlSearch('search');
+  const { write: writeUrl } = useUrlStateWriter();
+
+  const searchFilter = searchState.value;
+  const statusFilter = statusState.value;
+  const categoryFilter = categoryState.value;
+  const priorityFilter = priorityState.value;
+
+  const urlDates = readUrlDateRange(searchParams);
+  const fromDate = urlDates.fromDate;
+  const toDate = urlDates.toDate;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
-  const [searchFilter, setSearchFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
-  const [fromDate, setFromDate] = useState(urlDates.fromDate);
-  const [toDate, setToDate] = useState(urlDates.toDate);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isExporting, setIsExporting] = useState(false);
   // Mutation (delete/export/quick-resolve) failures; list failures come from the queries.
@@ -598,23 +616,34 @@ function ComplaintsContent() {
   );
 
   const handleClearFilters = () => {
-    setSearchFilter('');
-    setStatusFilter('');
-    setCategoryFilter('');
-    setPriorityFilter('');
-    setFromDate('');
-    setToDate('');
+    // One write, one address bar: writing the filters one by one would let a
+    // later write be built on an address bar that does not carry the earlier one.
+    searchState.cancel();
+    writeUrl({
+      search: null,
+      status: null,
+      category: null,
+      priority: null,
+      fromDate: null,
+      toDate: null,
+      date: null,
+    });
     setPage(1);
   };
 
   const handleStatusCardClick = (statusKey: string) => {
     if (statusFilter === statusKey) {
-      setStatusFilter('');
+      statusState.setValue('');
     } else {
-      setStatusFilter(statusKey);
+      statusState.setValue(statusKey);
       setViewMode('table');
     }
     setPage(1);
+  };
+
+  /** Writes the date range into the address bar. `?date=` is the alias it replaces. */
+  const handleDateRangeChange = (nextFrom: string, nextTo: string) => {
+    writeUrl({ fromDate: nextFrom || null, toDate: nextTo || null, date: null });
   };
 
   const columns: DataTableColumn<ComplaintRow>[] = [
@@ -807,7 +836,7 @@ function ComplaintsContent() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => {
-                    setCategoryFilter(active ? '' : cat);
+                    categoryState.setValue(active ? '' : cat);
                     setPage(1);
                   }}
                   className={
@@ -836,9 +865,9 @@ function ComplaintsContent() {
           <div className="relative min-w-[220px] flex-1">
             <Input
               placeholder="Search title, description, or tenant..."
-              value={searchFilter}
+              value={searchState.text}
               onChange={(e) => {
-                setSearchFilter(e.target.value);
+                searchState.onChange(e.target.value);
                 setPage(1);
               }}
               leftIcon={<Search className="h-4 w-4 text-(--color-text-muted)" />}
@@ -847,16 +876,10 @@ function ComplaintsContent() {
           </div>
 
           <Select
-            options={[
-              { value: '', label: 'All Statuses' },
-              { value: 'open', label: 'Open' },
-              { value: 'in_progress', label: 'In Progress' },
-              { value: 'resolved', label: 'Resolved' },
-              { value: 'dismissed', label: 'Dismissed' },
-            ]}
+            options={STATUS_OPTIONS}
             value={statusFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value);
+              statusState.setValue(e.target.value);
               setPage(1);
             }}
             className="sm:w-[160px]"
@@ -867,7 +890,7 @@ function ComplaintsContent() {
             options={CATEGORY_OPTIONS}
             value={categoryFilter}
             onChange={(e) => {
-              setCategoryFilter(e.target.value);
+              categoryState.setValue(e.target.value);
               setPage(1);
             }}
             className="sm:w-[180px]"
@@ -878,7 +901,7 @@ function ComplaintsContent() {
             options={PRIORITY_OPTIONS}
             value={priorityFilter}
             onChange={(e) => {
-              setPriorityFilter(e.target.value);
+              priorityState.setValue(e.target.value);
               setPage(1);
             }}
             className="sm:w-[150px]"
@@ -889,11 +912,11 @@ function ComplaintsContent() {
             fromDate={fromDate}
             toDate={toDate}
             onFromChange={(value) => {
-              setFromDate(value);
+              handleDateRangeChange(value, toDate);
               setPage(1);
             }}
             onToChange={(value) => {
-              setToDate(value);
+              handleDateRangeChange(fromDate, value);
               setPage(1);
             }}
             className="sm:w-[320px] sm:shrink-0"
@@ -931,8 +954,7 @@ function ComplaintsContent() {
             colorScale="danger"
             size={14}
             onDayClick={(date) => {
-              setFromDate(date);
-              setToDate(date);
+              handleDateRangeChange(date, date);
               setPage(1);
             }}
           />

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, DoorOpen, Download } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiBodyQuery } from '@/hooks/useApiQuery';
+import { useUrlSearch, useUrlState } from '@/hooks/useUrlState';
 import { DataTable } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -56,6 +57,8 @@ function formatShortDate(value?: string): string {
 
 const VISITORS_KEY = ['visitors', 'list'] as const;
 
+const VISITOR_STATUSES = ['expected', 'arrived', 'departed', 'cancelled'] as const;
+
 interface VisitorsListBody {
   success: boolean;
   data: VisitorRow[];
@@ -63,13 +66,38 @@ interface VisitorsListBody {
 }
 
 export default function VisitorsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <VisitorsContent />
+    </Suspense>
+  );
+}
+
+function VisitorsContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // The filters live in the address bar: the register can be shared, bookmarked
+  // and cited, and a link that names a status lands filtered.
+  const statusState = useUrlState<string>('status', {
+    defaultValue: '',
+    allowed: VISITOR_STATUSES,
+  });
+  const tenantState = useUrlState<string>('tenantId', { defaultValue: '' });
+  const searchState = useUrlSearch('search');
+
+  const statusFilter = statusState.value;
+  const tenantFilter = tenantState.value;
+  const search = searchState.value;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [search, setSearch] = useState('');
-  const [tenantFilter, setTenantFilter] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<VisitorRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -242,9 +270,9 @@ export default function VisitorsPage() {
         <Input
           placeholder="Search by visitor name or phone..."
           aria-label="Search visitors"
-          value={search}
+          value={searchState.text}
           onChange={(e) => {
-            setSearch(e.target.value);
+            searchState.onChange(e.target.value);
             setPage(1);
           }}
           className="max-w-xs"
@@ -253,7 +281,7 @@ export default function VisitorsPage() {
           endpoint="tenants"
           value={tenantFilter}
           onChange={(val) => {
-            setTenantFilter(val);
+            tenantState.setValue(val);
             setPage(1);
           }}
           placeholder="All Tenants"
@@ -265,10 +293,10 @@ export default function VisitorsPage() {
         <StatusFilterSelect
           value={statusFilter}
           onChange={(v) => {
-            setStatusFilter(v);
+            statusState.setValue(v);
             setPage(1);
           }}
-          statuses={['expected', 'arrived', 'departed', 'cancelled']}
+          statuses={[...VISITOR_STATUSES]}
           className="max-w-[200px]"
         />
       </div>

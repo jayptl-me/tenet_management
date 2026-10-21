@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -18,6 +18,12 @@ import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
+import {
+  useUrlSearch,
+  useUrlState,
+  useUrlStateWriter,
+  readUrlDateRange,
+} from '@/hooks/useUrlState';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -88,6 +94,14 @@ const SOURCE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+/**
+ * The values each filter may take in the address bar. A parameter outside the
+ * list is ignored, so a broken link leaves the list unfiltered instead of
+ * filtering it down to nothing.
+ */
+const STATUS_FILTERS = STATUS_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+const SOURCE_FILTERS = SOURCE_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+
 interface EnquiriesListBody {
   success: boolean;
   data: EnquiryRow[];
@@ -98,53 +112,62 @@ const ENQUIRIES_KEY = ['enquiries'] as const;
 const ENQUIRIES_STATS_KEY = ['enquiries', 'stats'] as const;
 
 export default function EnquiriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <EnquiriesContent />
+    </Suspense>
+  );
+}
+
+function EnquiriesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
+  // The filters live in the address bar: the "new leads" triage link lands
+  // filtered, and the view can be shared, bookmarked and cited.
+  const statusState = useUrlState<string>('status', { defaultValue: '', allowed: STATUS_FILTERS });
+  const sourceState = useUrlState<string>('source', { defaultValue: '', allowed: SOURCE_FILTERS });
+  const searchState = useUrlSearch('search');
+  const { write: writeUrl } = useUrlStateWriter();
+
+  const search = searchState.value;
+  const statusFilter = statusState.value;
+  const sourceFilter = sourceState.value;
+
+  const urlDates = readUrlDateRange(searchParams);
+  const fromDate = urlDates.fromDate;
+  const toDate = urlDates.toDate;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<EnquiryRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const params = new URLSearchParams();
   params.set('page', String(page));
   params.set('limit', String(perPage));
   if (statusFilter) params.set('status', statusFilter);
   if (sourceFilter) params.set('source', sourceFilter);
-  if (debouncedSearch) params.set('search', debouncedSearch);
+  if (search) params.set('search', search);
   if (fromDate) params.set('fromDate', fromDate);
   if (toDate) params.set('toDate', toDate);
 
-  const { data: listBody, isPending: isLoading, error: queryError } =
-    useApiBodyQuery<EnquiriesListBody>(
-      [
-        ...ENQUIRIES_KEY,
-        'list',
-        page,
-        perPage,
-        statusFilter,
-        sourceFilter,
-        debouncedSearch,
-        fromDate,
-        toDate,
-      ],
-      `enquiries?${params.toString()}`,
-    );
+  const {
+    data: listBody,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiBodyQuery<EnquiriesListBody>(
+    [...ENQUIRIES_KEY, 'list', page, perPage, statusFilter, sourceFilter, search, fromDate, toDate],
+    `enquiries?${params.toString()}`,
+  );
   const fetchErrorMessage = errorMessage(queryError);
   const enquiries = listBody?.data ?? [];
   const total = listBody?.meta.total ?? 0;
@@ -170,12 +193,23 @@ export default function EnquiriesPage() {
   const hasActiveFilters = Boolean(search || statusFilter || sourceFilter || fromDate || toDate);
 
   const handleClearFilters = () => {
-    setSearch('');
-    setStatusFilter('');
-    setSourceFilter('');
-    setFromDate('');
-    setToDate('');
+    // One write, one address bar: writing the filters one by one would let a
+    // later write be built on an address bar that does not carry the earlier one.
+    searchState.cancel();
+    writeUrl({
+      search: null,
+      status: null,
+      source: null,
+      fromDate: null,
+      toDate: null,
+      date: null,
+    });
     setPage(1);
+  };
+
+  /** Writes the date range into the address bar. */
+  const handleDateRangeChange = (nextFrom: string, nextTo: string) => {
+    writeUrl({ fromDate: nextFrom || null, toDate: nextTo || null, date: null });
   };
 
   const columns: DataTableColumn<EnquiryRow>[] = [
@@ -324,14 +358,17 @@ export default function EnquiriesPage() {
         <div className="relative flex-1 sm:max-w-xs">
           <Input
             placeholder="Search by name, phone, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchState.text}
+            onChange={(e) => {
+              searchState.onChange(e.target.value);
+              setPage(1);
+            }}
             leftIcon={<Search className="h-4 w-4 text-(--color-text-muted)" />}
             aria-label="Search enquiries"
           />
-          {search && (
+          {searchState.text && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => searchState.clear()}
               className="absolute top-1/2 right-3 -translate-y-1/2 text-(--color-text-muted) hover:text-(--color-text-primary)"
               aria-label="Clear search"
             >
@@ -346,7 +383,7 @@ export default function EnquiriesPage() {
             options={STATUS_OPTIONS}
             value={statusFilter}
             onChange={(e) => {
-              setStatusFilter(e.target.value);
+              statusState.setValue(e.target.value);
               setPage(1);
             }}
             className="w-full sm:w-[180px]"
@@ -356,7 +393,7 @@ export default function EnquiriesPage() {
             options={SOURCE_OPTIONS}
             value={sourceFilter}
             onChange={(e) => {
-              setSourceFilter(e.target.value);
+              sourceState.setValue(e.target.value);
               setPage(1);
             }}
             className="w-full sm:w-[180px]"
@@ -366,11 +403,11 @@ export default function EnquiriesPage() {
             fromDate={fromDate}
             toDate={toDate}
             onFromChange={(value) => {
-              setFromDate(value);
+              handleDateRangeChange(value, toDate);
               setPage(1);
             }}
             onToChange={(value) => {
-              setToDate(value);
+              handleDateRangeChange(fromDate, value);
               setPage(1);
             }}
             className="w-full sm:w-[300px]"

@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, ClipboardCheck, Download, CalendarDays } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
+import {
+  useUrlSearch,
+  useUrlState,
+  useUrlStateWriter,
+  readUrlDateRange,
+} from '@/hooks/useUrlState';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
@@ -25,7 +31,7 @@ import {
 } from '@/components/ui/AttendanceMonthCalendar';
 import { AttendanceRangeFilter } from '@/components/ui/AttendanceRangeFilter';
 import { AttendanceDayDetail, type AttendanceDayRecord } from '@/components/ui/AttendanceDayDetail';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { IAttendanceSummaryResponse } from '@pg/types';
 
 interface AttendanceRow {
@@ -64,6 +70,14 @@ const METHOD_OPTIONS = [
   { value: 'app', label: 'Mobile App' },
   { value: 'qr', label: 'QR Scan' },
 ];
+
+/**
+ * The values each filter may take in the address bar. A parameter outside the
+ * list is ignored, so a broken link leaves the list unfiltered instead of
+ * filtering it down to nothing.
+ */
+const STATUS_FILTERS = STATUS_OPTIONS.map((option) => option.value).filter((v) => v !== '');
+const METHOD_FILTERS = METHOD_OPTIONS.map((option) => option.value).filter((v) => v !== '');
 
 function tenantNameOf(row: AttendanceRow): string {
   if (row.tenant?.user?.name) return row.tenant.user.name;
@@ -132,16 +146,43 @@ interface AttendanceListBody {
 }
 
 export default function AttendancePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <AttendanceContent />
+    </Suspense>
+  );
+}
+
+function AttendanceContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
+  // The filters live in the address bar: the register can be shared, bookmarked
+  // and cited, and a link that names a status or a day lands filtered.
+  const statusState = useUrlState<string>('status', { defaultValue: '', allowed: STATUS_FILTERS });
+  const methodState = useUrlState<string>('method', { defaultValue: '', allowed: METHOD_FILTERS });
+  const tenantState = useUrlState<string>('tenantId', { defaultValue: '' });
+  const searchState = useUrlSearch('search');
+  const { write: writeUrl } = useUrlStateWriter();
+
+  const statusFilter = statusState.value;
+  const methodFilter = methodState.value;
+  const tenantFilter = tenantState.value;
+  const search = searchState.value;
+
+  const urlDates = readUrlDateRange(searchParams);
+  const fromDate = urlDates.fromDate;
+  const toDate = urlDates.toDate;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [methodFilter, setMethodFilter] = useState('');
-  const [tenantFilter, setTenantFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -151,6 +192,11 @@ export default function AttendancePage() {
   const [showCalendar, setShowCalendar] = useState(true);
 
   const rangeInvalid = fromDate !== '' && toDate !== '' && fromDate > toDate;
+
+  /** Writes the date range into the address bar. */
+  const handleDateRangeChange = (nextFrom: string, nextTo: string) => {
+    writeUrl({ fromDate: nextFrom || null, toDate: nextTo || null, date: null });
+  };
 
   const listParams = new URLSearchParams();
   listParams.set('page', String(page));
@@ -196,14 +242,7 @@ export default function AttendancePage() {
   if (search.trim()) dayParams.set('search', search.trim());
 
   const dayQuery = useApiQuery<AttendanceDayRecord[]>(
-    [
-      ...ATTENDANCE_DAY_KEY,
-      selectedDay ?? '',
-      statusFilter,
-      methodFilter,
-      tenantFilter,
-      search,
-    ],
+    [...ATTENDANCE_DAY_KEY, selectedDay ?? '', statusFilter, methodFilter, tenantFilter, search],
     `attendance?${dayParams.toString()}`,
     { enabled: selectedDay !== null },
   );
@@ -282,6 +321,12 @@ export default function AttendancePage() {
 
   const resetPage = () => setPage(1);
 
+  /** Takes the tenant, method and date filters out of the address bar. */
+  const handleClearFilters = () => {
+    writeUrl({ tenantId: null, method: null, fromDate: null, toDate: null, date: null });
+    resetPage();
+  };
+
   const columns: DataTableColumn<AttendanceRow>[] = [
     {
       header: 'Tenant',
@@ -346,7 +391,7 @@ export default function AttendancePage() {
       <TodayAttendanceBoard
         selectedStatus={statusFilter}
         onSelectStatus={(status) => {
-          setStatusFilter(status);
+          statusState.setValue(status);
           resetPage();
         }}
       />
@@ -376,21 +421,19 @@ export default function AttendancePage() {
         fromDate={fromDate}
         toDate={toDate}
         onFromChange={(v) => {
-          setFromDate(v);
+          handleDateRangeChange(v, toDate);
           resetPage();
         }}
         onToChange={(v) => {
-          setToDate(v);
+          handleDateRangeChange(fromDate, v);
           resetPage();
         }}
         onPreset={(from, to) => {
-          setFromDate(from);
-          setToDate(to);
+          handleDateRangeChange(from, to);
           resetPage();
         }}
         onClear={() => {
-          setFromDate('');
-          setToDate('');
+          handleDateRangeChange('', '');
           resetPage();
         }}
       />
@@ -398,9 +441,9 @@ export default function AttendancePage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Input
           placeholder="Search by tenant name..."
-          value={search}
+          value={searchState.text}
           onChange={(e) => {
-            setSearch(e.target.value);
+            searchState.onChange(e.target.value);
             resetPage();
           }}
           className="max-w-xs"
@@ -409,7 +452,7 @@ export default function AttendancePage() {
           options={STATUS_OPTIONS}
           value={statusFilter}
           onChange={(e) => {
-            setStatusFilter(e.target.value);
+            statusState.setValue(e.target.value);
             resetPage();
           }}
           className="max-w-[200px]"
@@ -418,7 +461,7 @@ export default function AttendancePage() {
           options={METHOD_OPTIONS}
           value={methodFilter}
           onChange={(e) => {
-            setMethodFilter(e.target.value);
+            methodState.setValue(e.target.value);
             resetPage();
           }}
           className="max-w-[200px]"
@@ -429,7 +472,7 @@ export default function AttendancePage() {
             endpoint="tenants?isActive=true"
             value={tenantFilter}
             onChange={(v) => {
-              setTenantFilter(v);
+              tenantState.setValue(v);
               resetPage();
             }}
             placeholder="Filter by tenant..."
@@ -442,16 +485,7 @@ export default function AttendancePage() {
           />
         </div>
         {(tenantFilter !== '' || methodFilter !== '' || fromDate !== '' || toDate !== '') && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setTenantFilter('');
-              setMethodFilter('');
-              setFromDate('');
-              setToDate('');
-              resetPage();
-            }}
-          >
+          <Button variant="ghost" onClick={handleClearFilters}>
             Clear filters
           </Button>
         )}
