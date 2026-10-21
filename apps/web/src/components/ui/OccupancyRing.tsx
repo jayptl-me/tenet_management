@@ -110,7 +110,7 @@ export function OccupancyRing({
             {clamped}%
           </span>
           {size >= 80 && (
-            <span className="mt-0.5 text-[10px] font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+            <span className="text-10 mt-0.5 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
               occupied
             </span>
           )}

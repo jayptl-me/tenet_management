@@ -49,7 +49,7 @@ export function Timeline({
   if (events.length === 0) {
     return (
       <div className={clsx('py-8 text-center', className)}>
-        <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
           No events recorded
         </p>
       </div>
@@ -81,10 +81,10 @@ export function Timeline({
               {/* Content */}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <p className="text-[11px] font-semibold text-[color:var(--color-text-muted)]">
+                  <p className="text-11 font-semibold text-[color:var(--color-text-muted)]">
                     {formatDate(event.date)}
                   </p>
-                  <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                  <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
                     {event.title}
                   </p>
                   {showIcons && event.icon && (
@@ -92,7 +92,7 @@ export function Timeline({
                   )}
                 </div>
                 {event.description && (
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-[color:var(--color-text-muted)]">
+                  <p className="text-11 mt-0.5 leading-relaxed text-[color:var(--color-text-muted)]">
                     {event.description}
                   </p>
                 )}

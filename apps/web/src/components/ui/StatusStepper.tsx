@@ -102,7 +102,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
                   aria-hidden
                   title={stepTitle(step)}
                   className={clsx(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-default)] text-[11px] font-bold',
+                    'text-11 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-default)] font-bold',
                     reached
                       ? 'border-[color:var(--color-success-500)] bg-[color:var(--color-success-500)] text-[color:var(--color-on-success)]'
                       : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
@@ -128,7 +128,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
               </div>
               <p
                 className={clsx(
-                  compact ? 'mt-1 text-[11px]' : 'mt-1.5 text-xs',
+                  compact ? 'text-11 mt-1' : 'mt-1.5 text-xs',
                   'font-bold',
                   reached
                     ? 'text-[color:var(--color-text-primary)]'
@@ -152,7 +152,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
             <p className="text-xs font-bold text-[color:var(--color-danger-700)]">
               {branch.label} - the record left the normal path at {anchor.label}.
             </p>
-            <p className="mt-0.5 text-[11px] font-semibold text-[color:var(--color-danger-700)]">
+            <p className="text-11 mt-0.5 font-semibold text-[color:var(--color-danger-700)]">
               {branch.endpoint} ({branch.actor})
             </p>
           </div>

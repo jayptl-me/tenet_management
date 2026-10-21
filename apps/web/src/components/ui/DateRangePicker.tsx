@@ -29,7 +29,7 @@ export function DateRangePicker({
   return (
     <div className={clsx('flex flex-col gap-1.5', className)}>
       {label && !compact && (
-        <span className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+        <span className="text-13 font-semibold text-[color:var(--color-text-primary)]">
           {label}
         </span>
       )}
@@ -45,7 +45,7 @@ export function DateRangePicker({
         </div>
         <span
           className={clsx(
-            'shrink-0 text-[13px] font-medium text-[color:var(--color-text-muted)]',
+            'text-13 shrink-0 font-medium text-[color:var(--color-text-muted)]',
             !compact && 'pb-2',
           )}
         >

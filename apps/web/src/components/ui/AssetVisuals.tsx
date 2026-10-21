@@ -70,7 +70,7 @@ export function AssetStockMeter({
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
           <div className="h-full w-full rounded-full bg-[color:var(--color-surface-300)]" />
         </div>
-        <p className="mt-1 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-1 font-medium text-[color:var(--color-text-muted)]">
           Qty {qty} · no threshold set
         </p>
       </div>
@@ -98,7 +98,7 @@ export function AssetStockMeter({
       </div>
       <p
         className={clsx(
-          'mt-1 text-[11px] font-semibold',
+          'text-11 mt-1 font-semibold',
           low ? 'text-[color:var(--color-warning-700)]' : 'text-[color:var(--color-text-muted)]',
         )}
       >
@@ -168,7 +168,7 @@ export function AssetServiceTimeline({
                 <span
                   aria-hidden
                   className={clsx(
-                    'absolute top-5 bottom-0 left-[15px] w-0.5 sm:top-[15px] sm:right-0 sm:bottom-auto sm:left-[32px] sm:h-0.5 sm:w-auto',
+                    'absolute top-5 bottom-0 left-[15px] w-0.5 sm:top-[15px] sm:right-0 sm:bottom-auto sm:left-8 sm:h-0.5 sm:w-auto',
                     done ? 'bg-[color:var(--color-success-400)]' : 'bg-[color:var(--border-color)]',
                   )}
                 />

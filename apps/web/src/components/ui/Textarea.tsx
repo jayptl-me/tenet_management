@@ -51,7 +51,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             rows={rows}
             className={clsx(
               fieldControlBase,
-              'min-h-[5.5rem] resize-y py-2.5',
+              'min-h-22 resize-y py-2.5',
               leftIcon && 'pl-9',
               error ? fieldControlBorderError : fieldControlBorderOk,
               className,

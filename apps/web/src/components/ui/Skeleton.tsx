@@ -57,7 +57,7 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
   return (
     <div
       className={clsx(
-        'relative flex h-full min-h-[148px] flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'relative flex h-full min-h-37 flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >

@@ -95,13 +95,13 @@ export function ConfirmModal({
                 <div>
                   <h3
                     id="confirm-modal-title"
-                    className="text-[15px] font-bold text-[color:var(--color-text-primary)]"
+                    className="text-15 font-bold text-[color:var(--color-text-primary)]"
                   >
                     {title}
                   </h3>
                   <p
                     id="confirm-modal-desc"
-                    className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]"
+                    className="text-13 mt-1 leading-relaxed text-[color:var(--color-text-secondary)]"
                   >
                     {message}
                   </p>

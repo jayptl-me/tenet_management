@@ -105,10 +105,10 @@ export function FloorStackPreview({
   return (
     <div className={clsx('flex flex-col gap-1.5', className)}>
       <div className="flex items-center justify-between">
-        <p className="text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)]">
+        <p className="text-13 font-bold tracking-tight text-[color:var(--color-text-primary)]">
           Building preview
         </p>
-        <span className="text-[10px] font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+        <span className="text-10 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
           {mode === 'new' ? 'New floor' : 'This floor'} highlighted
         </span>
       </div>
@@ -126,7 +126,7 @@ export function FloorStackPreview({
           >
             <span
               className={clsx(
-                'inline-flex h-5 min-w-5 items-center justify-center rounded-[var(--radius-xs)] px-1 text-[10px] font-bold tabular-nums',
+                'text-10 inline-flex h-5 min-w-5 items-center justify-center rounded-[var(--radius-xs)] px-1 font-bold tabular-nums',
                 badgeStyles[row.state],
               )}
             >
@@ -134,7 +134,7 @@ export function FloorStackPreview({
             </span>
             <span className="min-w-0 flex-1 truncate text-xs font-semibold">{row.label}</span>
             {typeof row.totalRooms === 'number' && (
-              <span className="text-[10px] font-medium opacity-75">{row.totalRooms} rooms</span>
+              <span className="text-10 font-medium opacity-75">{row.totalRooms} rooms</span>
             )}
             {row.state === 'conflict' && (
               <AlertTriangle className="h-3 w-3 shrink-0" aria-label="Floor number conflict" />
@@ -144,13 +144,13 @@ export function FloorStackPreview({
       </div>
 
       {conflict && (
-        <p className="flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-2.5 py-1.5 text-[11px] font-semibold text-[color:var(--badge-danger-text)]">
+        <p className="text-11 flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-2.5 py-1.5 font-semibold text-[color:var(--badge-danger-text)]">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           Floor number {current.floorNumber} already exists. Pick a different number.
         </p>
       )}
       {!conflict && (
-        <p className="flex items-center gap-1.5 px-1 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-11 flex items-center gap-1.5 px-1 font-medium text-[color:var(--color-text-muted)]">
           <Building2 className="h-3 w-3" />
           Positioned at floor number {current.floorNumber}.
         </p>

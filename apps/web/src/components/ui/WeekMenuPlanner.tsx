@@ -167,10 +167,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       </div>
 
       {error && (
-        <p
-          className="mb-3 text-[12px] font-medium text-[color:var(--color-danger-600)]"
-          role="alert"
-        >
+        <p className="text-12 mb-3 font-medium text-[color:var(--color-danger-600)]" role="alert">
           {error}
         </p>
       )}
@@ -195,7 +192,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
             >
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-11 font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
                     {DAY_NAMES[idx]}
                   </p>
                   <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
@@ -226,11 +223,11 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                       <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[color:var(--color-text-muted)]" />
                       <div className="min-w-0 flex-1">
                         {items.length === 0 ? (
-                          <p className="text-[11px] text-[color:var(--color-text-muted)] italic">
+                          <p className="text-11 text-[color:var(--color-text-muted)] italic">
                             Not set
                           </p>
                         ) : (
-                          <p className="truncate text-[11px] font-medium text-[color:var(--color-text-secondary)]">
+                          <p className="text-11 truncate font-medium text-[color:var(--color-text-secondary)]">
                             {items.map((i) => i.name).join(', ')}
                           </p>
                         )}
@@ -246,7 +243,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                     type="button"
                     onClick={() => handleCopy(date)}
                     disabled={copyLoading && copyTarget === date}
-                    className="text-[11px] font-semibold text-[color:var(--color-brand-600)] hover:underline disabled:opacity-50"
+                    className="text-11 font-semibold text-[color:var(--color-brand-600)] hover:underline disabled:opacity-50"
                   >
                     {copyLoading && copyTarget === date ? 'Copying...' : 'Paste here'}
                   </button>
@@ -255,7 +252,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                     <button
                       type="button"
                       onClick={() => onDayClick(date, menu ?? null)}
-                      className="text-[11px] font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      className="text-11 font-semibold text-[color:var(--color-brand-600)] hover:underline"
                     >
                       {menu ? 'View' : 'Create'}
                     </button>

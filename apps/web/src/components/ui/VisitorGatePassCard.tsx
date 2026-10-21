@@ -86,7 +86,7 @@ export function VisitorGatePassCard({ visit, host, className }: VisitorGatePassC
     <div className={className}>
       <div className="visitor-pass-print-area rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--color-brand-300)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-sm)]">
         <div className="flex items-center justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.12em] text-[color:var(--color-text-muted)] uppercase">
+          <p className="text-11 flex items-center gap-1.5 font-extrabold tracking-[0.12em] text-[color:var(--color-text-muted)] uppercase">
             <BadgeCheck className="h-4 w-4 text-[color:var(--color-brand-600)]" />
             Visitor Gate Pass
           </p>
@@ -111,7 +111,7 @@ export function VisitorGatePassCard({ visit, host, className }: VisitorGatePassC
             </p>
           </div>
         </div>
-        <dl className="mt-4 space-y-2 rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] p-3 text-[13px]">
+        <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] p-3">
           <div className="flex items-center justify-between gap-3">
             <dt className="font-semibold text-[color:var(--color-text-muted)]">Host resident</dt>
             <dd className="text-right font-bold text-[color:var(--color-text-primary)]">

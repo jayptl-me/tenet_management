@@ -103,9 +103,9 @@ const sizeStyles: Record<ButtonSize, string> = {
 // without emitting two competing font-size classes.
 const sizeTextStyles: Record<ButtonSize, string> = {
   xs: 'text-xs',
-  sm: 'text-[13px]',
+  sm: 'text-13',
   md: 'text-sm',
-  lg: 'text-[15px]',
+  lg: 'text-15',
   icon: '',
 };
 

@@ -88,7 +88,7 @@ export function BarChart({
         role="img"
         aria-label="No bar chart data"
       >
-        <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
           No data to display
         </p>
       </div>

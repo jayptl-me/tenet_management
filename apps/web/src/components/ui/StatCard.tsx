@@ -78,7 +78,7 @@ function renderDeltaPill(
     <span key={key} className="inline-flex items-center gap-1.5">
       <span
         className={clsx(
-          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-tight font-semibold tabular-nums',
+          'text-11 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 leading-tight font-semibold tabular-nums',
           isUp &&
             'border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]',
           isDown &&
@@ -94,7 +94,7 @@ function renderDeltaPill(
         <span>{item.value}</span>
       </span>
       {item.label && (
-        <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+        <span className="text-11 font-medium text-[color:var(--color-text-muted)]">
           {item.label}
         </span>
       )}
@@ -131,7 +131,7 @@ export function StatCard({
 
   const sharedClasses = clsx(
     surfaceCardClass,
-    '@container group relative flex h-full min-h-[148px] flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] p-5 text-left',
+    '@container group relative flex h-full min-h-37 flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] p-5 text-left',
     'transition-[border-color,box-shadow,transform] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
     'hover:border-[color:var(--border-color-hover)] hover:shadow-[var(--shadow-card-hover)]',
     isInteractive && 'cursor-pointer',
@@ -144,7 +144,7 @@ export function StatCard({
       {/* Top Row: Metric Label + Tone-Aware Accent Icon Tile */}
       <div>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[12px] font-semibold tracking-wide text-[color:var(--color-text-secondary)] uppercase">
+          <p className="text-12 font-semibold tracking-wide text-[color:var(--color-text-secondary)] uppercase">
             {title}
           </p>
           {icon && (
@@ -162,14 +162,14 @@ export function StatCard({
 
         {/* Primary Metric Value */}
         <div className="mt-2 flex items-baseline gap-2">
-          <p className="font-display text-[28px] leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums sm:text-[32px]">
+          <p className="font-display text-2xl leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums sm:text-3xl">
             {value}
           </p>
         </div>
 
         {/* Contextual Subtitle */}
         {subtitle && (
-          <p className="mt-1.5 truncate text-[11px] font-medium text-[color:var(--color-text-muted)]">
+          <p className="text-11 mt-1.5 truncate font-medium text-[color:var(--color-text-muted)]">
             {subtitle}
           </p>
         )}
@@ -188,7 +188,7 @@ export function StatCard({
             />
           </div>
           {progress.label && (
-            <div className="flex items-center justify-between text-[10px] font-medium text-[color:var(--color-text-muted)]">
+            <div className="text-10 flex items-center justify-between font-medium text-[color:var(--color-text-muted)]">
               <span>{progress.label}</span>
             </div>
           )}

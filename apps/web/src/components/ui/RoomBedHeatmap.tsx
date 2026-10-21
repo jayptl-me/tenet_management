@@ -61,16 +61,16 @@ function FloorScrollRow({
       {/* Floor Subheader */}
       <div className="flex items-center justify-between border-b border-[color:var(--border-color)]/60 pb-2">
         <div className="flex items-center gap-2">
-          <span className="font-display text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          <span className="font-display text-13 font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {group.label}
           </span>
-          <span className="rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--color-text-muted)]">
+          <span className="text-10 rounded-full bg-[color:var(--color-surface-100)] px-2 py-0.5 font-bold text-[color:var(--color-text-muted)]">
             {group.rooms.length} {group.rooms.length === 1 ? 'room' : 'rooms'}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+          <div className="text-11 flex items-center gap-1.5 font-medium text-[color:var(--color-text-muted)]">
             <span className="font-semibold text-[color:var(--color-text-secondary)] tabular-nums">
               {floorOccupied}/{floorTotalBeds}
             </span>{' '}
@@ -127,19 +127,19 @@ function FloorScrollRow({
               }}
               className={clsx(
                 surfaceCardClass,
-                'group relative flex w-[220px] flex-shrink-0 cursor-pointer snap-start flex-col justify-between rounded-[var(--radius-lg)] p-3 text-left transition-all duration-200',
+                'group relative flex w-55 flex-shrink-0 cursor-pointer snap-start flex-col justify-between rounded-[var(--radius-lg)] p-3 text-left transition-all duration-200',
                 'hover:border-[color:var(--color-brand-400)] hover:shadow-[var(--shadow-sm)]',
               )}
             >
               {/* Room Title + Occupancy Tag */}
               <div>
                 <div className="flex items-center justify-between gap-1.5">
-                  <span className="font-display text-[13px] font-bold tracking-tight text-[color:var(--color-text-primary)] transition-colors group-hover:text-[color:var(--color-brand-600)]">
+                  <span className="font-display text-13 font-bold tracking-tight text-[color:var(--color-text-primary)] transition-colors group-hover:text-[color:var(--color-brand-600)]">
                     Room {room.roomNumber}
                   </span>
                   <span
                     className={clsx(
-                      'rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-tight',
+                      'text-10 rounded-full px-1.5 py-0.5 font-bold tracking-tight',
                       isFull &&
                         'border border-[color:var(--badge-neutral-border)] bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)]',
                       !isFull &&
@@ -153,7 +153,7 @@ function FloorScrollRow({
                   </span>
                 </div>
 
-                <p className="mt-0.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                <p className="text-11 mt-0.5 font-medium text-[color:var(--color-text-muted)]">
                   {room.sharingType} Sharing · ₹{room.monthlyRent.toLocaleString('en-IN')}/mo
                 </p>
               </div>
@@ -170,7 +170,7 @@ function FloorScrollRow({
                           : `Bed ${bed.bedId}: Vacant (₹${room.monthlyRent.toLocaleString('en-IN')}/mo)`
                       }
                       className={clsx(
-                        'flex h-6 flex-1 items-center justify-center rounded-[var(--radius-sm)] text-[10px] font-bold transition-all',
+                        'text-10 flex h-6 flex-1 items-center justify-center rounded-[var(--radius-sm)] font-bold transition-all',
                         bed.isOccupied
                           ? 'bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)] shadow-[var(--shadow-xs)]'
                           : 'border border-dashed border-[color:var(--color-surface-400)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)] group-hover:border-[color:var(--border-color-hover)]',
@@ -183,7 +183,7 @@ function FloorScrollRow({
               </div>
 
               {/* Card Footer: Simple Bed Count */}
-              <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--border-color)]/60 pt-2 text-[10px] text-[color:var(--color-text-muted)]">
+              <div className="text-10 mt-2.5 flex items-center justify-between border-t border-[color:var(--border-color)]/60 pt-2 text-[color:var(--color-text-muted)]">
                 <span>
                   {room.occupiedBeds} of {room.totalBeds} filled
                 </span>
@@ -261,7 +261,7 @@ export function RoomBedHeatmap({ rooms, isLoading, className }: RoomBedHeatmapPr
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-28 w-[220px] flex-shrink-0 animate-pulse rounded-[var(--radius-lg)] bg-[color:var(--color-surface-100)]"
+              className="h-28 w-55 flex-shrink-0 animate-pulse rounded-[var(--radius-lg)] bg-[color:var(--color-surface-100)]"
             />
           ))}
         </div>
@@ -297,7 +297,7 @@ export function RoomBedHeatmap({ rooms, isLoading, className }: RoomBedHeatmapPr
             type="button"
             onClick={() => setSelectedFloor('all')}
             className={clsx(
-              'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors',
+              'text-11 rounded-full px-2.5 py-1 font-semibold transition-colors',
               selectedFloor === 'all'
                 ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-page-bg)] shadow-[var(--shadow-xs)]'
                 : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-200)]',
@@ -311,7 +311,7 @@ export function RoomBedHeatmap({ rooms, isLoading, className }: RoomBedHeatmapPr
               type="button"
               onClick={() => setSelectedFloor(g.label)}
               className={clsx(
-                'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                'text-11 rounded-full px-2.5 py-1 font-semibold transition-colors',
                 selectedFloor === g.label
                   ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-page-bg)] shadow-[var(--shadow-xs)]'
                   : 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-200)]',
@@ -323,7 +323,7 @@ export function RoomBedHeatmap({ rooms, isLoading, className }: RoomBedHeatmapPr
         </div>
 
         {/* Minimalist Capacity Status & Legend */}
-        <div className="flex items-center gap-4 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+        <div className="text-11 flex items-center gap-4 font-medium text-[color:var(--color-text-muted)]">
           <div className="flex items-center gap-1.5">
             <span
               className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]"

@@ -41,7 +41,7 @@ export function ErrorState({ title, description, errorCode, onRetry, className }
             </p>
           )}
           {errorCode && (
-            <p className="mt-2 font-mono text-[11px] font-medium tracking-wider text-[color:var(--color-danger-400)] uppercase">
+            <p className="text-11 mt-2 font-mono font-medium tracking-wider text-[color:var(--color-danger-400)] uppercase">
               {errorCode}
             </p>
           )}

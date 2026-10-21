@@ -134,7 +134,7 @@ export function LeaveAttendanceImpact({
                     : `${d}: no record yet`
               }
               className={clsx(
-                'rounded-full border px-2.5 py-1 text-[11px] font-bold',
+                'text-11 rounded-full border px-2.5 py-1 font-bold',
                 kept
                   ? 'border-[color:var(--color-success-300)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)]'
                   : record?.status === 'on_leave'
@@ -148,7 +148,7 @@ export function LeaveAttendanceImpact({
         })}
       </div>
       {loading && (
-        <p className="mt-2 text-[11px] font-semibold text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-2 font-semibold text-[color:var(--color-text-muted)]">
           Loading attendance rows…
         </p>
       )}

@@ -35,7 +35,7 @@ export function FilterChips({ chips, onClearAll, className }: FilterChipsProps) 
           className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] py-1 pr-1.5 pl-2.5 text-xs font-semibold text-[color:var(--color-brand-800)]"
         >
           <span className="text-[color:var(--color-brand-600)]">{chip.label}:</span>
-          <span className="max-w-[180px] truncate">{chip.value}</span>
+          <span className="max-w-45 truncate">{chip.value}</span>
           <button
             type="button"
             onClick={chip.onRemove}

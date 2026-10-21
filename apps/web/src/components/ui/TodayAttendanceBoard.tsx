@@ -49,7 +49,7 @@ export function TodayAttendanceBoard({
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-[88px] animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
+            className="h-22 animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
           />
         ))}
       </div>
@@ -75,7 +75,7 @@ export function TodayAttendanceBoard({
   return (
     <div className="space-y-3">
       {formattedDate && (
-        <p className="text-[13px] font-semibold text-[color:var(--color-text-muted)]">
+        <p className="text-13 font-semibold text-[color:var(--color-text-muted)]">
           Today&apos;s attendance — {formattedDate}
         </p>
       )}

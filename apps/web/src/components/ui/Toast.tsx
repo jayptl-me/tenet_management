@@ -104,7 +104,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`animate-fade-in-up pointer-events-auto flex max-w-[420px] items-start gap-3 rounded-[var(--radius-lg)] border-[length:var(--bw-default)] p-4 shadow-[var(--shadow-dropdown)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] ${BG_COLORS[toast.type]} ${BORDER_COLORS[toast.type]}`}
+                className={`animate-fade-in-up pointer-events-auto flex max-w-105 items-start gap-3 rounded-[var(--radius-lg)] border-[length:var(--bw-default)] p-4 shadow-[var(--shadow-dropdown)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] ${BG_COLORS[toast.type]} ${BORDER_COLORS[toast.type]}`}
                 role="alert"
               >
                 <span className={`flex-shrink-0 ${TEXT_COLORS[toast.type]}`}>

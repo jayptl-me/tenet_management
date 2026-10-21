@@ -51,7 +51,7 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
             type="button"
             onClick={() => onChange(tab.key)}
             className={clsx(
-              'relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-[13px] transition-colors',
+              'text-13 relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 transition-colors',
               selected
                 ? 'font-bold text-[color:var(--color-text-primary)]'
                 : 'font-medium text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]',
@@ -61,7 +61,7 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
             {tab.count != null && (
               <span
                 className={clsx(
-                  'rounded-[var(--radius-full)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                  'text-10 rounded-[var(--radius-full)] px-1.5 py-0.5 font-bold tabular-nums',
                   selected
                     ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
                     : countTone[tab.tone ?? 'default'],

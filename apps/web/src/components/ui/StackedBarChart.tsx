@@ -60,7 +60,7 @@ export function StackedBarChart({
   if (safeBars.length === 0) {
     return (
       <div className={className} role="img" aria-label="No stacked bar data">
-        <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 py-8 text-center font-medium text-[color:var(--color-text-muted)]">
           No data to display
         </p>
       </div>
@@ -210,7 +210,7 @@ export function StackedBarChart({
 
       {hover && (
         <div
-          className={clsx(chartTooltipClass, 'absolute text-[11px]')}
+          className={clsx(chartTooltipClass, 'text-11 absolute')}
           style={{
             left: hover.x,
             top: hover.y,
@@ -228,7 +228,7 @@ export function StackedBarChart({
       {showLegend && legendItems.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           {legendItems.map((item) => (
-            <div key={item.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
+            <div key={item.label} className="text-11 flex items-center gap-1.5 font-semibold">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
                 style={{ backgroundColor: item.color }}

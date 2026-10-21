@@ -63,7 +63,7 @@ export function AgingBars({
           <p className="font-display text-lg font-bold text-[color:var(--color-text-primary)] tabular-nums">
             {isLoading ? '—' : fmt(totalOutstanding)}
           </p>
-          <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+          <p className="text-11 font-medium text-[color:var(--color-text-muted)]">
             total outstanding
           </p>
         </div>
@@ -103,7 +103,7 @@ export function AgingBars({
                     }}
                   />
                 </span>
-                <span className="w-8 text-right text-[11px] font-semibold text-[color:var(--color-text-muted)] tabular-nums">
+                <span className="text-11 w-8 text-right font-semibold text-[color:var(--color-text-muted)] tabular-nums">
                   {bucket.count}
                 </span>
               </span>

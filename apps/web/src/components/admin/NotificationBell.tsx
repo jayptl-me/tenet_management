@@ -155,11 +155,11 @@ export function NotificationBell() {
                           {notif.title}
                         </p>
                         {isUnread ? (
-                          <span className="flex-shrink-0 rounded-full bg-[color:var(--color-warning-100)] px-1.5 py-0.5 text-[9px] font-bold text-[color:var(--color-warning-800)]">
+                          <span className="text-10 flex-shrink-0 rounded-full bg-[color:var(--color-warning-100)] px-1.5 py-0.5 font-bold text-[color:var(--color-warning-800)]">
                             {notif.unreadBy.length} unread
                           </span>
                         ) : (
-                          <span className="flex-shrink-0 rounded-full bg-[color:var(--color-success-100)] px-1.5 py-0.5 text-[9px] font-bold text-[color:var(--color-success-800)]">
+                          <span className="text-10 flex-shrink-0 rounded-full bg-[color:var(--color-success-100)] px-1.5 py-0.5 font-bold text-[color:var(--color-success-800)]">
                             All read
                           </span>
                         )}

@@ -198,7 +198,7 @@ export function DocumentUpload({
           </div>
 
           {selectedIdType === 'aadhaar' && (
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/70 p-2 text-[11px] text-[color:var(--color-brand-900)]">
+            <div className="text-11 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/70 p-2 text-[color:var(--color-brand-900)]">
               <span className="font-semibold">UIDAI Advisory:</span> Upload a Masked Aadhaar (first
               8 digits hidden). Residents can download this at{' '}
               <a
@@ -213,7 +213,7 @@ export function DocumentUpload({
             </div>
           )}
 
-          <label className="flex cursor-pointer items-start gap-2 pt-0.5 text-[11px] text-[color:var(--color-text-secondary)]">
+          <label className="text-11 flex cursor-pointer items-start gap-2 pt-0.5 text-[color:var(--color-text-secondary)]">
             <input
               type="checkbox"
               checked={consentGiven}

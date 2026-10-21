@@ -48,7 +48,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           </span>
         </label>
         {error && (
-          <p className="text-[12px] font-medium text-[color:var(--color-danger-600)]">{error}</p>
+          <p className="text-12 font-medium text-[color:var(--color-danger-600)]">{error}</p>
         )}
       </div>
     );

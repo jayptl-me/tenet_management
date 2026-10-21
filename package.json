@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "check:contracts": "bun scripts/audit/check-contracts.ts",
     "check:layout": "bun scripts/audit/check-layout-frame.mjs",
+    "check:type-scale": "bun scripts/audit/check-type-scale.ts",
     "gen:lifecycle": "bun scripts/audit/gen-lifecycle-dart.ts",
     "check:lifecycle": "bun scripts/audit/check-lifecycle-parity.ts",
     "seed": "bun --filter '@pg/api' seed",

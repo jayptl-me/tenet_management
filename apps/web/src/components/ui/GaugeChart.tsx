@@ -74,7 +74,7 @@ export function GaugeChart({
         </span>
       )}
       {sublabel && (
-        <span className="text-[11px] font-medium text-[color:var(--color-text-secondary)]">
+        <span className="text-11 font-medium text-[color:var(--color-text-secondary)]">
           {sublabel}
         </span>
       )}

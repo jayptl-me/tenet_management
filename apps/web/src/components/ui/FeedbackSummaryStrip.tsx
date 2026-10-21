@@ -73,7 +73,7 @@ export function FeedbackSummaryStrip() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className={clsx(surfaceCardClass, 'h-[88px] animate-pulse px-5 py-4')}
+            className={clsx(surfaceCardClass, 'h-22 animate-pulse px-5 py-4')}
             aria-hidden
           />
         ))}
@@ -150,7 +150,7 @@ export function FeedbackSummaryStrip() {
             animate={false}
           >
             {agg && (
-              <p className="mt-1.5 text-[11px] font-medium text-[color:var(--color-text-muted)]">
+              <p className="text-11 mt-1.5 font-medium text-[color:var(--color-text-muted)]">
                 {agg.count} {agg.count === 1 ? 'entry' : 'entries'}
               </p>
             )}

@@ -75,7 +75,7 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
               className={clsx('absolute inset-x-0 top-0 h-0.5', toneAccent[item.tone ?? 'default'])}
             />
             <div className="flex items-start justify-between gap-3">
-              <p className="text-[11px] font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
+              <p className="text-11 font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
                 {item.label}
               </p>
               {item.icon && (
@@ -84,14 +84,14 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
                 </span>
               )}
             </div>
-            <p className="font-display mt-2 text-[26px] leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
+            <p className="font-display mt-2 text-2xl leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
               {item.value}
             </p>
             <div className="mt-2.5 flex min-h-5 items-center gap-2">
               {item.delta && (
                 <span
                   className={clsx(
-                    'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-bold',
+                    'text-10 inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 font-bold',
                     deltaTone(item.delta.percent),
                   )}
                 >
@@ -110,12 +110,12 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
                 </span>
               )}
               {item.delta?.label && (
-                <span className="truncate text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                <span className="text-11 truncate font-medium text-[color:var(--color-text-muted)]">
                   {item.delta.label}
                 </span>
               )}
               {!item.delta && item.sub && (
-                <span className="truncate text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                <span className="text-11 truncate font-medium text-[color:var(--color-text-muted)]">
                   {item.sub}
                 </span>
               )}

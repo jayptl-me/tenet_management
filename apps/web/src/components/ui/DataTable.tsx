@@ -156,7 +156,7 @@ export function DataTable<T>({
           role="region"
           aria-label="Bulk actions"
         >
-          <span className="text-[13px] font-bold text-[color:var(--color-brand-800)] tabular-nums">
+          <span className="text-13 font-bold text-[color:var(--color-brand-800)] tabular-nums">
             {selection.size} selected
           </span>
           <div className="flex flex-wrap items-center gap-2">{bulkActions}</div>
@@ -180,10 +180,10 @@ export function DataTable<T>({
             <div className="rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
               {emptyState ?? (
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
+                  <p className="text-15 font-semibold text-[color:var(--color-text-muted)]">
                     No data found
                   </p>
-                  <p className="text-[13px] text-[color:var(--color-text-muted)]">
+                  <p className="text-13 text-[color:var(--color-text-muted)]">
                     Try adjusting your search or filters
                   </p>
                 </div>
@@ -235,7 +235,7 @@ export function DataTable<T>({
                 <th
                   key={i}
                   className={clsx(
-                    'border-b border-b-[color:var(--border-color)] px-4 py-3 text-left text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase',
+                    'text-11 border-b border-b-[color:var(--border-color)] px-4 py-3 text-left font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase',
                     col.className,
                   )}
                 >
@@ -257,10 +257,10 @@ export function DataTable<T>({
                 >
                   {emptyState ?? (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-[15px] font-semibold text-[color:var(--color-text-muted)]">
+                      <p className="text-15 font-semibold text-[color:var(--color-text-muted)]">
                         No data found
                       </p>
-                      <p className="text-[13px] text-[color:var(--color-text-muted)]">
+                      <p className="text-13 text-[color:var(--color-text-muted)]">
                         Try adjusting your search or filters
                       </p>
                     </div>
@@ -298,7 +298,7 @@ export function DataTable<T>({
                       <td
                         key={colIdx}
                         className={clsx(
-                          'px-4 py-3 text-[13px] font-medium text-[color:var(--color-text-primary)]',
+                          'text-13 px-4 py-3 font-medium text-[color:var(--color-text-primary)]',
                           col.className,
                         )}
                       >
@@ -319,7 +319,7 @@ export function DataTable<T>({
       {pagination && pages > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+            <span className="text-13 font-medium text-[color:var(--color-text-muted)]">
               Rows per page:
             </span>
             <Select
@@ -327,12 +327,12 @@ export function DataTable<T>({
               value={String(pagination.perPage)}
               aria-label="Rows per page"
               onChange={(e) => pagination.onPerPageChange(Number(e.target.value))}
-              className="min-h-8 w-[4.5rem] py-1 text-[13px] font-semibold"
+              className="text-13 min-h-8 w-18 py-1 font-semibold"
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+            <span className="text-13 font-medium text-[color:var(--color-text-muted)]">
               Page {pagination.page} of {pages} ({pagination.total} total)
             </span>
             <div className="flex gap-1">

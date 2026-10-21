@@ -141,10 +141,11 @@
   --font-body: 'Inter', 'SF Pro Text', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
-  /* Font sizes — rational scale */
-  --text-xs: 0.75rem; /* 12px */
-  --text-sm: 0.8125rem; /* 13px — slightly larger for readability */
-  --text-base: 0.9375rem; /* 15px */
+  /* Font sizes — aliased to the canonical scale, never declared here, so a
+     second scale cannot creep back in. The values are unchanged. */
+  --text-xs: var(--text-12); /* 12px */
+  --text-sm: var(--text-13); /* 13px — slightly larger for readability */
+  --text-base: var(--text-15); /* 15px */
   --text-lg: 1.0625rem; /* 17px */
   --text-xl: 1.25rem; /* 20px */
   --text-2xl: 1.5rem; /* 24px */

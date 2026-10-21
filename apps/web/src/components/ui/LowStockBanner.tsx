@@ -69,7 +69,7 @@ export function LowStockBanner({ onFilterLowStock }: LowStockBannerProps) {
         <p className="text-sm font-bold text-[color:var(--color-warning-800)]">
           {items.length} {items.length === 1 ? 'item is' : 'items are'} running low on stock
         </p>
-        <p className="mt-0.5 text-[13px] text-[color:var(--color-warning-800)] opacity-80">
+        <p className="text-13 mt-0.5 text-[color:var(--color-warning-800)] opacity-80">
           {itemNames}
           {remaining > 0 && ` and ${remaining} more`}
           {onFilterLowStock && ' — click to filter'}

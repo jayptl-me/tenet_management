@@ -41,7 +41,7 @@ export interface StatusBadgeProps {
 
 const sizeStyles = {
   md: 'px-2.5 py-1 text-xs font-semibold',
-  xs: 'px-2 py-0.5 text-[10px] font-semibold',
+  xs: 'px-2 py-0.5 text-10 font-semibold',
 } as const;
 
 export function StatusBadge({

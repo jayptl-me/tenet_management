@@ -38,7 +38,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           />
           <span
             className={clsx(
-              'absolute top-[1px] left-[1px] h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-all duration-200 ease-out',
+              'absolute top-px left-px h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-all duration-200 ease-out',
               'peer-checked:translate-x-5 peer-checked:bg-white',
             )}
           />

@@ -76,7 +76,7 @@ export function Modal({
                   {title && (
                     <h3
                       id="modal-title"
-                      className="font-display text-[15px] font-bold tracking-tight text-[color:var(--color-text-primary)]"
+                      className="font-display text-15 font-bold tracking-tight text-[color:var(--color-text-primary)]"
                     >
                       {title}
                     </h3>

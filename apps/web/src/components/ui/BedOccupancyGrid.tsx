@@ -148,7 +148,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
               <Users className="h-4 w-4" />
               <span className="text-xs font-semibold tracking-wider uppercase">Available</span>
             </div>
-            <span className="rounded-full bg-[color:var(--color-success-200)] px-2 py-0.5 text-[11px] font-bold text-[color:var(--color-success-800)]">
+            <span className="text-11 rounded-full bg-[color:var(--color-success-200)] px-2 py-0.5 font-bold text-[color:var(--color-success-800)]">
               {stats.occupancyRate}% full
             </span>
           </div>
@@ -198,7 +198,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                           </p>
                         </div>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`text-10 rounded-full px-2 py-0.5 font-bold ${
                             availableBedList.length > 0
                               ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
                               : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]'
@@ -229,9 +229,9 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                                   <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-success-500)] group-hover/bed:bg-[color:var(--color-brand-500)]" />
                                 </div>
 
-                                <div className="mt-2 flex items-center justify-between truncate text-[11px] font-semibold text-[color:var(--color-success-700)] group-hover/bed:text-[color:var(--color-brand-700)]">
+                                <div className="text-11 mt-2 flex items-center justify-between truncate font-semibold text-[color:var(--color-success-700)] group-hover/bed:text-[color:var(--color-brand-700)]">
                                   <span>Available</span>
-                                  <span className="text-[10px] font-bold opacity-0 transition-opacity group-hover/bed:opacity-100">
+                                  <span className="text-10 font-bold opacity-0 transition-opacity group-hover/bed:opacity-100">
                                     Assign +
                                   </span>
                                 </div>
@@ -251,7 +251,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                                 <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
                               </div>
 
-                              <div className="mt-2 truncate text-[11px] font-semibold">
+                              <div className="text-11 mt-2 truncate font-semibold">
                                 {bed.tenantId ? (
                                   <Link
                                     href={`/tenants/${bed.tenantId}`}
@@ -297,7 +297,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                           Assign
                         </Button>
                       ) : (
-                        <span className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+                        <span className="text-11 font-medium text-[color:var(--color-text-muted)]">
                           Occupied
                         </span>
                       )}

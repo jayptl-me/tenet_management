@@ -56,10 +56,10 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
     return (
       <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
         <Wifi className="mb-2 h-10 w-10 text-[color:var(--color-text-muted)]" />
-        <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+        <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
           No amenities configured
         </p>
-        <p className="mt-1 max-w-xs text-[11px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-1 max-w-xs font-medium text-[color:var(--color-text-muted)]">
           Service monitoring will appear once floor amenities are configured.
         </p>
       </div>
@@ -104,10 +104,10 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
                   {getAmenityIcon(key)}
                 </div>
                 <div>
-                  <p className="text-[12px] font-bold text-[color:var(--color-text-primary)]">
+                  <p className="text-12 font-bold text-[color:var(--color-text-primary)]">
                     {formatAmenityTitle(key)}
                   </p>
-                  <p className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+                  <p className="text-10 font-medium text-[color:var(--color-text-muted)]">
                     {total} checks across floors
                   </p>
                 </div>
@@ -116,7 +116,7 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
               {/* Status Badge */}
               <span
                 className={clsx(
-                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-tight',
+                  'text-10 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-bold tracking-tight',
                   statusTone === 'success' &&
                     'border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]',
                   statusTone === 'warning' &&
@@ -138,7 +138,7 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
 
             {/* Health Meter */}
             <div className="mt-3 space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] font-medium">
+              <div className="text-10 flex items-center justify-between font-medium">
                 <span className="text-[color:var(--color-text-muted)]">Health index</span>
                 <span className="font-mono font-bold text-[color:var(--color-text-primary)] tabular-nums">
                   {uptimePct}%
@@ -158,7 +158,7 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
             </div>
 
             {/* Footer Breakdown Chips */}
-            <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-color)]/50 pt-2 text-[10px]">
+            <div className="text-10 mt-3 flex items-center justify-between border-t border-[color:var(--border-color)]/50 pt-2">
               <div className="flex items-center gap-1.5 text-[color:var(--color-text-secondary)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-success-500)]" />
                 <span>{data.operational} operational</span>

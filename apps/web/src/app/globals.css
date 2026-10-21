@@ -230,14 +230,40 @@
   --scale-press: 0.98;
   --translate-hover: -2px;
 
-  /* ── Extended Typography Tokens (NEW) ──────────────────── */
-  --text-5xl: 3rem;
-  --text-2xs: 0.6875rem;
-  --text-3xs: 0.625rem;
+  /* ── TYPE SCALE (canonical: numeric) ────────────────────────
+     ONE scale for the whole admin app. The canonical names are
+     numeric: every step states the pixel size it renders, so a
+     size is read off the token and never guessed.
+
+       --text-10  10px  floor for dense labels (nothing below 10px)
+       --text-11  11px
+       --text-12  12px
+       --text-13  13px
+       --text-14  14px
+       --text-15  15px
+       --text-16  16px
+       --text-lg  17px   --text-xl  20px   --text-2xl 24px
+       --text-3xl 30px   --text-4xl 36px   --text-5xl 48px
+
+     The semantic names are ALIASES of this scale (see the alias
+     block below): --text-3xs, --text-2xs, --text-xs, --text-sm
+     and --text-base render at exactly the same size as the
+     canonical token they point at, so a page may use either name.
+
+     Mechanical guard: bun run check:type-scale                  */
+  --text-10: 0.625rem;
+  --text-11: 0.6875rem;
   --text-12: 0.75rem;
   --text-13: 0.8125rem;
+  --text-14: 0.875rem;
   --text-15: 0.9375rem;
   --text-16: 1rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
   --tracking-label: 0.08em;
   --text-body-lg: 1.0625rem;
   --leading-tight: 1.2;
@@ -381,15 +407,16 @@
   --tooltip-radius: var(--radius-md);
   --tooltip-padding: 6px 10px;
 
-  /* ── Font sizes (rational scale) ─────────────────────────── */
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-lg: 1.0625rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
+  /* ── Semantic aliases into the canonical type scale ─────────
+     These names are aliases, not a second scale: each one renders
+     at the same size as the canonical token it points at, so
+     `text-xs` and `text-12` are the same 12px. The canonical
+     numeric scale lives in the TYPE SCALE block above.            */
+  --text-3xs: var(--text-10);
+  --text-2xs: var(--text-11);
+  --text-xs: var(--text-12);
+  --text-sm: var(--text-13);
+  --text-base: var(--text-15);
 
   /* ── Letter spacing ──────────────────────────────────────── */
   --tracking-tight: -0.02em;
@@ -474,11 +501,16 @@
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
 
-  /* Micro type sizes (font-size only, no line-height companion). */
+  /* Micro type sizes (font-size only, no line-height companion).
+     Every step of the canonical scale is registered here so the
+     matching `text-*` utility exists. */
   --text-3xs: var(--text-3xs);
   --text-2xs: var(--text-2xs);
+  --text-10: var(--text-10);
+  --text-11: var(--text-11);
   --text-12: var(--text-12);
   --text-13: var(--text-13);
+  --text-14: var(--text-14);
   --text-15: var(--text-15);
   --text-16: var(--text-16);
   --tracking-label: var(--tracking-label);
@@ -573,6 +605,9 @@
   --color-neutral-800: var(--color-neutral-800);
   --color-neutral-900: var(--color-neutral-900);
 
+  /* Radius scale. --radius-xs is registered so `rounded-xs` is the
+     theme radius (4px), not Tailwind's default 2px. */
+  --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);

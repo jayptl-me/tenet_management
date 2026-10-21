@@ -319,7 +319,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                             title={opt.name}
                           >
                             {opt.icon}
-                            <span className="text-[9px] leading-none">{opt.name}</span>
+                            <span className="text-10 leading-none">{opt.name}</span>
                           </button>
                         ))}
                       </div>
@@ -553,7 +553,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                         (def.applicableComplaintCategories ?? []).map((cat) => (
                           <span
                             key={cat}
-                            className="inline-flex items-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-2 py-0.5 font-mono text-[9px] font-semibold text-[color:var(--color-surface-600)]"
+                            className="text-10 inline-flex items-center rounded-full border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-2 py-0.5 font-mono font-semibold text-[color:var(--color-surface-600)]"
                           >
                             {cat}
                           </span>

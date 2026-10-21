@@ -69,7 +69,7 @@ export function ServiceDueBanner({ onFilterServiceDue }: ServiceDueBannerProps) 
           {items.length} {items.length === 1 ? 'asset requires' : 'assets require'} service within
           30 days
         </p>
-        <p className="mt-0.5 text-[13px] text-[color:var(--color-brand-800)] opacity-80">
+        <p className="text-13 mt-0.5 text-[color:var(--color-brand-800)] opacity-80">
           {itemNames}
           {remaining > 0 && ` and ${remaining} more`}
           {onFilterServiceDue && ' — click to filter'}

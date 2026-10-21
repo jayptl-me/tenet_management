@@ -82,13 +82,13 @@ export function TempCredentialsDialog({
                 <div>
                   <h3
                     id="temp-creds-title"
-                    className="text-[15px] font-bold text-[color:var(--color-text-primary)]"
+                    className="text-15 font-bold text-[color:var(--color-text-primary)]"
                   >
                     {entityLabel} created
                   </h3>
                   <p
                     id="temp-creds-desc"
-                    className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-text-secondary)]"
+                    className="text-13 mt-1 leading-relaxed text-[color:var(--color-text-secondary)]"
                   >
                     A login account was created for this {entityLabel.toLowerCase()}.
                   </p>
@@ -105,7 +105,7 @@ export function TempCredentialsDialog({
 
             {/* Warning + password display */}
             <div className="mt-5 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-4">
-              <p className="text-[13px] font-semibold text-[color:var(--color-warning-800)]">
+              <p className="text-13 font-semibold text-[color:var(--color-warning-800)]">
                 Share this temporary password once. It will not be shown again.
               </p>
               <div className="mt-3 flex items-center gap-2">

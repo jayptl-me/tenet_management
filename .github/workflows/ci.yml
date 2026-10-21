@@ -30,11 +30,15 @@ jobs:
         with:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      # Two separate steps, each of which has to pass on its own. The old single step ran
+      # Three separate steps, each of which has to pass on its own. The old single step ran
       # `bun run lint || bun run format:check`, so a green lint hid a red format gate.
       # CI must not hide a failing gate.
       - run: bun run lint
       - run: bun run format:check
+      # The admin app has ONE type scale. This gate fails on an arbitrary text size, on text
+      # that renders below 10px, and on a hardcoded px dimension where a token does the job.
+      # It has its own step so a green lint cannot hide a red scale.
+      - run: bun run check:type-scale
 
   contracts:
     runs-on: ubuntu-latest

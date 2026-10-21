@@ -106,7 +106,7 @@ export function LineChart({
   const legend = showLegend && lines.length > 0 && (
     <div className="mt-3.5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
       {lines.map((line) => (
-        <div key={line.key} className="flex items-center gap-2 text-[11px] font-semibold">
+        <div key={line.key} className="text-11 flex items-center gap-2 font-semibold">
           <span
             className="h-2 w-2 shrink-0 rounded-full shadow-[var(--shadow-xs)]"
             style={{ backgroundColor: line.color || chartTokens.brand }}
@@ -151,7 +151,7 @@ export function LineChart({
                   className="absolute right-2 text-right"
                   style={{ top: gr.y, transform: 'translateY(-50%)' }}
                 >
-                  <span className="font-mono text-[10px] font-medium whitespace-nowrap text-[color:var(--chart-axis)] tabular-nums">
+                  <span className="text-10 font-mono font-medium whitespace-nowrap text-[color:var(--chart-axis)] tabular-nums">
                     {formatVal(gr.value)}
                   </span>
                 </div>
@@ -178,7 +178,7 @@ export function LineChart({
                 />
               ))}
             <div
-              className="relative flex items-end gap-[6px] sm:gap-2"
+              className="relative flex items-end gap-1.5 sm:gap-2"
               style={{ height: chartAreaH }}
             >
               {bars.map((barGroup, i) => (
@@ -189,7 +189,7 @@ export function LineChart({
                   onMouseEnter={() => setHoverIdx(i)}
                   onMouseLeave={() => setHoverIdx(null)}
                 >
-                  <div className="absolute right-0 bottom-0 left-0 flex flex-row items-end justify-center gap-[2px] px-0.5">
+                  <div className="absolute right-0 bottom-0 left-0 flex flex-row items-end justify-center gap-0.5 px-0.5">
                     {barGroup.map((seg) => (
                       <div
                         key={seg.key}
@@ -215,22 +215,22 @@ export function LineChart({
                 }}
               >
                 <div className={clsx(chartTooltipClass, 'shadow-[var(--shadow-md)]')}>
-                  <p className="mb-1 border-b border-[color:var(--border-color)]/50 pb-1 text-[11px] font-bold">
+                  <p className="text-11 mb-1 border-b border-[color:var(--border-color)]/50 pb-1 font-bold">
                     {labels[hoverIdx]}
                   </p>
                   {lines.map((line) => (
-                    <p key={line.key} className="text-[10px] font-medium opacity-90">
+                    <p key={line.key} className="text-10 font-medium opacity-90">
                       {line.label}: {formatVal(data[hoverIdx]![line.key] ?? 0)}
                     </p>
                   ))}
                 </div>
               </div>
             )}
-            <div className="mt-1 flex gap-[6px] sm:gap-2">
+            <div className="mt-1 flex gap-1.5 sm:gap-2">
               {labels.map((lab, i) => (
                 <div key={i} className="flex-1 text-center" style={{ minWidth: 24 }}>
                   {i % labelInterval === 0 && (
-                    <span className="text-[10px] font-medium text-[color:var(--chart-axis)]">
+                    <span className="text-10 font-medium text-[color:var(--chart-axis)]">
                       {lab}
                     </span>
                   )}
@@ -281,7 +281,7 @@ export function LineChart({
                 className="absolute right-2 text-right"
                 style={{ top: gr.y, transform: 'translateY(-50%)' }}
               >
-                <span className="font-mono text-[10px] font-medium text-[color:var(--chart-axis)] tabular-nums">
+                <span className="text-10 font-mono font-medium text-[color:var(--chart-axis)] tabular-nums">
                   {formatVal(gr.value)}
                 </span>
               </div>
@@ -435,7 +435,7 @@ export function LineChart({
               }}
             >
               <div className={clsx(chartTooltipClass, 'min-w-[130px] shadow-[var(--shadow-md)]')}>
-                <p className="mb-1.5 border-b border-[color:var(--border-color)]/60 pb-1 text-[11px] font-bold text-[color:var(--color-text-primary)]">
+                <p className="text-11 mb-1.5 border-b border-[color:var(--border-color)]/60 pb-1 font-bold text-[color:var(--color-text-primary)]">
                   {labels[hoverIdx]}
                 </p>
                 <div className="space-y-1">
@@ -444,7 +444,7 @@ export function LineChart({
                     return (
                       <div
                         key={line.key}
-                        className="flex items-center justify-between gap-3 text-[11px]"
+                        className="text-11 flex items-center justify-between gap-3"
                       >
                         <span className="flex items-center gap-1.5 text-[color:var(--color-text-secondary)]">
                           <span
@@ -471,7 +471,7 @@ export function LineChart({
                 <span
                   key={i}
                   className={clsx(
-                    'text-[10px] font-medium text-[color:var(--chart-axis)] transition-colors',
+                    'text-10 font-medium text-[color:var(--chart-axis)] transition-colors',
                     hoverIdx === i && 'font-bold text-[color:var(--color-text-primary)]',
                   )}
                 >

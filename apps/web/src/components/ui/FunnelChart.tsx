@@ -23,7 +23,7 @@ export function FunnelChart({
   if (stages.length === 0) {
     return (
       <div className={className} role="img" aria-label="No funnel data">
-        <p className="py-8 text-center text-[13px] font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 py-8 text-center font-medium text-[color:var(--color-text-muted)]">
           No data to display
         </p>
       </div>
@@ -109,7 +109,7 @@ export function FunnelChart({
 
       <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {stages.map((stage) => (
-          <div key={stage.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
+          <div key={stage.label} className="text-11 flex items-center gap-1.5 font-semibold">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: stage.color }}

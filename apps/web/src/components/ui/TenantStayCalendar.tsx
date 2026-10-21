@@ -179,7 +179,7 @@ export function TenantStayCalendar({
         {DAY_NAMES.map((d) => (
           <p
             key={d}
-            className="pb-1 text-center text-[10px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase"
+            className="text-10 pb-1 text-center font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase"
           >
             {d}
           </p>
@@ -217,7 +217,7 @@ export function TenantStayCalendar({
             >
               <span
                 className={clsx(
-                  'flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold',
+                  'text-11 flex h-5 w-5 items-center justify-center rounded-full font-bold',
                   isToday
                     ? 'bg-[color:var(--color-brand-solid)] text-[color:var(--color-on-brand-solid)]'
                     : isMoveIn || isMoveOut
@@ -236,7 +236,7 @@ export function TenantStayCalendar({
                     />
                   ))}
                   {dayEvents.length > 3 && (
-                    <span className="text-[8px] font-bold text-[color:var(--color-text-muted)]">
+                    <span className="text-10 font-bold text-[color:var(--color-text-muted)]">
                       +{dayEvents.length - 3}
                     </span>
                   )}
@@ -247,7 +247,7 @@ export function TenantStayCalendar({
         })}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] font-semibold text-[color:var(--color-text-muted)]">
+      <div className="text-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-semibold text-[color:var(--color-text-muted)]">
         <span className="inline-flex items-center gap-1">
           <span className="h-2 w-2 rounded-sm border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]" />
           In stay

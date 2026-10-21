@@ -135,7 +135,7 @@ export function DonutChart({
       {/* Legend */}
       <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
         {segments.map((segment) => (
-          <div key={segment.label} className="flex items-center gap-1.5 text-[11px] font-semibold">
+          <div key={segment.label} className="text-11 flex items-center gap-1.5 font-semibold">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-[var(--chart-cell-radius)]"
               style={{ backgroundColor: segment.color }}

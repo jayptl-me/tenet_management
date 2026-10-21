@@ -69,10 +69,10 @@ export function ComplaintCategoryMatrix({
       <div
         className={clsx('flex flex-col items-center justify-center py-8 text-center', className)}
       >
-        <p className="text-[13px] font-medium text-[color:var(--color-text-secondary)]">
+        <p className="text-13 font-medium text-[color:var(--color-text-secondary)]">
           No complaints logged in this period
         </p>
-        <p className="mt-1 text-[11px] text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
           All systems and resident amenities operating smoothly
         </p>
       </div>
@@ -85,11 +85,11 @@ export function ComplaintCategoryMatrix({
   return (
     <div className={clsx('space-y-3', className)}>
       {/* ── Subtitle / Filter Hint ── */}
-      <div className="flex items-center justify-between border-b border-[color:var(--border-color)] pb-2 text-[11px]">
+      <div className="text-11 flex items-center justify-between border-b border-[color:var(--border-color)] pb-2">
         <span className="font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
           Ranked Category Distribution
         </span>
-        <span className="text-[10px] font-medium text-[color:var(--color-text-muted)]">
+        <span className="text-10 font-medium text-[color:var(--color-text-muted)]">
           Click category to filter
         </span>
       </div>
@@ -115,11 +115,11 @@ export function ComplaintCategoryMatrix({
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] group-hover:text-[color:var(--color-brand-600)]">
                     {getCategoryIcon(item._id)}
                   </div>
-                  <span className="truncate text-[12px] font-semibold text-[color:var(--color-text-primary)]">
+                  <span className="text-12 truncate font-semibold text-[color:var(--color-text-primary)]">
                     {formatCategoryName(item._id)}
                   </span>
                   {item.hasOverdue && (
-                    <span className="py-0.2 flex items-center gap-0.5 rounded-full border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-1.5 text-[9px] font-bold text-[color:var(--badge-danger-text)]">
+                    <span className="py-0.2 text-10 flex items-center gap-0.5 rounded-full border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-1.5 font-bold text-[color:var(--badge-danger-text)]">
                       <AlertCircle className="h-2.5 w-2.5" />
                       Overdue
                     </span>
@@ -127,10 +127,10 @@ export function ComplaintCategoryMatrix({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="font-mono text-[11px] font-bold text-[color:var(--color-text-primary)]">
+                  <span className="text-11 font-mono font-bold text-[color:var(--color-text-primary)]">
                     {item.count}
                   </span>
-                  <span className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
+                  <span className="text-10 font-mono text-[color:var(--color-text-muted)]">
                     ({pct}%)
                   </span>
                   <ArrowRight className="h-3 w-3 text-[color:var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
@@ -150,7 +150,7 @@ export function ComplaintCategoryMatrix({
       </div>
 
       {/* ── Footer Telemetry Hint ── */}
-      <div className="flex items-center justify-between pt-1 text-[10px] text-[color:var(--color-text-muted)]">
+      <div className="text-10 flex items-center justify-between pt-1 text-[color:var(--color-text-muted)]">
         <span>Showing top {Math.min(categories.length, 6)} categories</span>
         <span className="font-mono font-medium">Total: {totalComplaints} tickets</span>
       </div>

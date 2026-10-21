@@ -113,11 +113,11 @@ export function HeatmapCalendar({
       {/* ── Top Header Bar ───────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-[color:var(--border-color)]/60 pb-2.5">
         <div className="flex items-center gap-2">
-          <span className="font-display text-[14px] font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          <span className="font-display text-14 font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {monthLabel}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-[color:var(--color-surface-100)] px-2.5 py-0.5 text-[11px] font-semibold text-[color:var(--color-text-secondary)]">
+        <div className="text-11 flex items-center gap-1.5 rounded-full bg-[color:var(--color-surface-100)] px-2.5 py-0.5 font-semibold text-[color:var(--color-text-secondary)]">
           <span className="font-bold text-[color:var(--color-text-primary)] tabular-nums">
             {totalActivity}
           </span>
@@ -131,12 +131,12 @@ export function HeatmapCalendar({
       <div className="flex justify-center">
         <div className="flex items-start gap-2.5">
           {/* Day of Week Axis */}
-          <div className="flex flex-col gap-1.5 pt-0.5 text-[10px] font-semibold text-[color:var(--color-text-muted)]">
+          <div className="text-10 flex flex-col gap-1.5 pt-0.5 font-semibold text-[color:var(--color-text-muted)]">
             {DAY_LABELS.map((label, idx) => (
               <span
                 key={label}
                 className={clsx(
-                  'flex h-6 items-center justify-end pr-1 text-[10px]',
+                  'text-10 flex h-6 items-center justify-end pr-1',
                   idx === 1 || idx === 3 || idx === 5 ? 'invisible' : '',
                 )}
                 aria-hidden="true"
@@ -155,7 +155,7 @@ export function HeatmapCalendar({
                     return (
                       <div
                         key={`pad-${weekIdx}-${dayIdx}`}
-                        className="h-6 w-6 rounded-[4px] bg-transparent opacity-0"
+                        className="h-6 w-6 rounded-xs bg-transparent opacity-0"
                         aria-hidden="true"
                       />
                     );
@@ -189,7 +189,7 @@ export function HeatmapCalendar({
                       }}
                       onMouseLeave={() => setActiveTooltip(null)}
                       className={clsx(
-                        'relative flex h-6 w-6 items-center justify-center rounded-[4px] text-[10px] font-semibold transition-all duration-150',
+                        'text-10 relative flex h-6 w-6 items-center justify-center rounded-xs font-semibold transition-all duration-150',
                         isEmpty
                           ? 'cursor-default border border-[color:var(--border-color)]/80 bg-[color:var(--color-surface-100)] text-[color:var(--color-text-muted)]'
                           : clsx(
@@ -204,7 +204,7 @@ export function HeatmapCalendar({
                     >
                       <span
                         className={clsx(
-                          'text-[9px] tabular-nums',
+                          'text-10 tabular-nums',
                           isEmpty ? 'opacity-40' : 'font-bold opacity-90',
                         )}
                       >
@@ -224,7 +224,7 @@ export function HeatmapCalendar({
         <div
           className={clsx(
             chartTooltipClass,
-            'pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full rounded-[var(--radius-md)] px-2.5 py-1.5 text-[11px] shadow-[var(--shadow-md)]',
+            'text-11 pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full rounded-[var(--radius-md)] px-2.5 py-1.5 shadow-[var(--shadow-md)]',
           )}
           style={{
             left: activeTooltip.x,
@@ -245,10 +245,10 @@ export function HeatmapCalendar({
       )}
 
       {/* ── Bottom Legend ────────────────────────────────── */}
-      <div className="flex items-center justify-between pt-1 text-[11px] text-[color:var(--color-text-muted)]">
-        <span className="text-[10px]">Click active dates to filter</span>
+      <div className="text-11 flex items-center justify-between pt-1 text-[color:var(--color-text-muted)]">
+        <span className="text-10">Click active dates to filter</span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px]">0</span>
+          <span className="text-10">0</span>
           {colors.map((c, i) => (
             <span
               key={i}
@@ -257,7 +257,7 @@ export function HeatmapCalendar({
               aria-hidden="true"
             />
           ))}
-          <span className="text-[10px]">{computedMax}+</span>
+          <span className="text-10">{computedMax}+</span>
         </div>
       </div>
     </div>

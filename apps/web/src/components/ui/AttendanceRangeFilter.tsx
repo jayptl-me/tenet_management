@@ -62,13 +62,13 @@ export function AttendanceRangeFilter({
           label="From"
           value={fromDate}
           onChange={(val: string) => onFromChange(val)}
-          className="w-full sm:w-[180px]"
+          className="w-full sm:w-45"
         />
         <DatePicker
           label="To"
           value={toDate}
           onChange={(val: string) => onToChange(val)}
-          className="w-full sm:w-[180px]"
+          className="w-full sm:w-45"
         />
         <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
           <button
