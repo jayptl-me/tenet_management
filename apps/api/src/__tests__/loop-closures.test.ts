@@ -92,12 +92,6 @@ function dataOf(doc: AnyDoc): Record<string, string> {
   return {};
 }
 
-/** Every notification in the database, newest first. */
-async function allNotifications(): Promise<AnyDoc[]> {
-  const docs = await Notification.find({}).sort({ createdAt: -1 }).lean();
-  return docs as unknown as AnyDoc[];
-}
-
 /** The notifications addressed to one user. */
 async function notificationsFor(userId: string): Promise<AnyDoc[]> {
   const docs = await Notification.find({ recipientUserIds: userId }).sort({ createdAt: -1 }).lean();

@@ -14,6 +14,9 @@ audit.get('/', authGuard, adminOnly, async (c) => {
   const { page, limit, skip } = parsePagination(c);
   const action = c.req.query('action');
   const resource = c.req.query('resource');
+  // The record the entry is about. A trail that says "everything that ever
+  // happened to any payment" is not the trail of one payment.
+  const resourceId = c.req.query('resourceId');
   const userId = c.req.query('userId');
   const fromDate = c.req.query('fromDate');
   const toDate = c.req.query('toDate');
@@ -21,6 +24,7 @@ audit.get('/', authGuard, adminOnly, async (c) => {
   const filter: Record<string, unknown> = {};
   if (action) filter.action = action;
   if (resource) filter.resource = resource;
+  if (resourceId) filter.resourceId = resourceId;
   if (userId) filter.userId = userId;
 
   if (fromDate || toDate) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from '@/hooks/useApiQuery';
@@ -17,6 +18,8 @@ import {
   Phone,
   CheckCircle2,
   Zap,
+  Bell,
+  Scale,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -25,8 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { FormPage } from '@/components/ui/FormPage';
 import { surfaceCardClass, surfaceNestedClass } from '@/lib/field-styles';
 import { tenantLabel, tenantSublabel } from '@/lib/resource-select-presets';
 import { clsx } from 'clsx';
@@ -45,6 +47,59 @@ interface PopulatedTenantDetail {
   securityDeposit?: number;
   status?: string;
 }
+
+/** The invoice that already exists for this resident and month. */
+interface ExistingInvoice {
+  _id: string;
+  invoiceNumber?: string;
+  status?: string;
+  totalAmount?: number;
+  dueDate?: string;
+}
+
+/** The money the resident owes across every open invoice. */
+interface TenantDues {
+  totalDue?: number;
+  unpaidInvoices?: Array<{
+    _id: string;
+    invoiceNumber?: string;
+    month?: string;
+    remaining?: number | null;
+    status?: string;
+  }>;
+  pendingPayments?: number;
+}
+
+interface ElectricityShareInfo {
+  billId: string;
+  month: string;
+  status: string;
+  roomNumber: string;
+  previousReading: number;
+  currentReading: number;
+  unitsConsumed: number;
+  ratePerUnit: number;
+  roomTotalAmount: number;
+  occupantCount: number;
+  tenantShare: number;
+}
+
+/** A billing month is YYYY-MM. */
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
+
+const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
+
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+
+const DUPLICATE_INVOICE_KEY = (tenantId: string, month: string) =>
+  ['invoices', 'duplicate-check', tenantId, month] as const;
+
+const ELECTRICITY_SHARE_KEY = (tenantId: string, month: string) =>
+  ['electricity', 'share', tenantId, month] as const;
 
 function currentMonth(): string {
   const d = new Date();
@@ -86,34 +141,6 @@ function fmtMoney(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
-interface ElectricityShareInfo {
-  billId: string;
-  month: string;
-  status: string;
-  roomNumber: string;
-  previousReading: number;
-  currentReading: number;
-  unitsConsumed: number;
-  ratePerUnit: number;
-  roomTotalAmount: number;
-  occupantCount: number;
-  tenantShare: number;
-}
-
-const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
-
-const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
-
-const INVOICES_PREFIX = ['invoices'] as const;
-
-const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
-
-const DUPLICATE_INVOICE_KEY = (tenantId: string, month: string) =>
-  ['invoices', 'duplicate-check', tenantId, month] as const;
-
-const ELECTRICITY_SHARE_KEY = (tenantId: string, month: string) =>
-  ['electricity', 'share', tenantId, month] as const;
-
 function NewInvoiceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -136,26 +163,35 @@ function NewInvoiceForm() {
     { enabled: Boolean(tenantId) },
   );
 
-  // Duplicate-invoice check for the selected tenant and billing month.
-  const { data: duplicateMatches } = useApiQuery<
-    Array<{ invoiceNumber?: string; status?: string }>
-  >(
+  // The invoice that already exists for this resident and this month.
+  const { data: duplicateMatches, isPending: duplicatePending } = useApiQuery<ExistingInvoice[]>(
     DUPLICATE_INVOICE_KEY(tenantId, month),
     `invoices?tenantId=${tenantId}&month=${month}&limit=1`,
-    { enabled: Boolean(tenantId) && /^\d{4}-\d{2}$/.test(month) },
+    { enabled: Boolean(tenantId) && MONTH_PATTERN.test(month) },
   );
+  const duplicate = (duplicateMatches ?? [])[0] ?? null;
+
+  // What the resident already owes, so a second bill is never issued blind.
+  const { data: residentDues = null } = useApiQuery<TenantDues>(
+    TENANT_DUES_KEY(tenantId),
+    `tenants/${tenantId}/dues`,
+    { enabled: Boolean(tenantId) },
+  );
+  const residentOpenInvoices =
+    residentDues && Array.isArray(residentDues.unpaidInvoices) ? residentDues.unpaidInvoices : [];
+  const residentTotalDue =
+    residentDues && typeof residentDues.totalDue === 'number' ? residentDues.totalDue : null;
+  const residentPendingPayments =
+    residentDues && typeof residentDues.pendingPayments === 'number'
+      ? residentDues.pendingPayments
+      : null;
 
   // Electricity share for the selected tenant and billing month.
   const { data: elecShareData } = useApiQuery<ElectricityShareInfo | null>(
     ELECTRICITY_SHARE_KEY(tenantId, month),
     `electricity/share?tenantId=${tenantId}&month=${month}`,
-    { enabled: Boolean(tenantId) && /^\d{4}-\d{2}$/.test(month) },
+    { enabled: Boolean(tenantId) && MONTH_PATTERN.test(month) },
   );
-
-  const duplicateMatch = (duplicateMatches ?? [])[0];
-  const duplicateWarning = duplicateMatch
-    ? `An invoice${duplicateMatch.invoiceNumber ? ` (${duplicateMatch.invoiceNumber})` : ''} already exists for this tenant and month${duplicateMatch.status ? ` (Status: ${duplicateMatch.status.replace(/_/g, ' ')})` : ''}. Generating a new one will create a separate invoice record.`
-    : '';
 
   const elecShare = elecShareData && elecShareData.tenantShare > 0 ? elecShareData : null;
 
@@ -247,6 +283,13 @@ function NewInvoiceForm() {
 
   const totalInvoiceAmount = lineItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
+  // The office cannot issue a second bill for a month that already has one:
+  // the server keeps one invoice per resident and month, so the write would be
+  // refused by the database.
+  const blockedByDuplicate = duplicate !== null;
+  const submitBlocked =
+    !tenantId || lineItems.length === 0 || blockedByDuplicate || duplicatePending;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
@@ -255,12 +298,18 @@ function NewInvoiceForm() {
       setSubmitError('Please select a target tenant.');
       return;
     }
-    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    if (!month || !MONTH_PATTERN.test(month)) {
       setSubmitError('Please provide a valid billing month (YYYY-MM).');
       return;
     }
     if (lineItems.length === 0) {
       setSubmitError('Please add at least one line item to the invoice.');
+      return;
+    }
+    if (blockedByDuplicate) {
+      setSubmitError(
+        'An invoice already exists for this resident and month. Open it instead of issuing a second one.',
+      );
       return;
     }
 
@@ -291,28 +340,24 @@ function NewInvoiceForm() {
       const createdId = res.data?._id;
       router.push(createdId ? `/invoices/${createdId}` : '/invoices');
     } catch (err) {
-      const parsed = await parseApiError(err);
-      setSubmitError(parsed.message || 'Failed to generate invoice.');
-      toast.error(parsed.message || 'Failed to generate invoice.');
+      setSubmitError((await parseApiError(err)).message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Compose Invoice"
-        description="Create an itemized billing invoice for rent, electricity, maintenance, or custom charges"
-        backHref="/invoices"
-      />
-
-      <ErrorBanner message={submitError} />
-
+    <FormPage
+      title="Compose Invoice"
+      description="Create an itemized billing invoice for rent, electricity, maintenance, or custom charges"
+      backHref="/invoices"
+      error={submitError}
+      maxWidth="form"
+    >
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Main Column: Target & Line Items */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-6 xl:col-span-2">
             {/* Target & Billing Cycle */}
             <div className={clsx(surfaceCardClass, 'p-6')}>
               <div className="flex items-center gap-2.5 pb-4">
@@ -397,10 +442,62 @@ function NewInvoiceForm() {
                 </div>
               </div>
 
-              {duplicateWarning && (
-                <div className="mt-4 flex items-start gap-2.5 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-3 text-xs font-medium text-(--color-warning-900)">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-warning-600)" />
-                  <span>{duplicateWarning}</span>
+              {/* The duplicate is a wall, not a warning: the server keeps one
+                  invoice per resident and month, so a second write for this
+                  month is refused. */}
+              {blockedByDuplicate && duplicate && (
+                <div className="mt-4 flex items-start gap-2.5 rounded-(--radius-md) border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-xs font-medium text-(--color-danger-900)">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-danger-600)" />
+                  <div>
+                    <p className="font-bold">This resident already has an invoice for {month}.</p>
+                    <p className="mt-1">
+                      The server keeps one invoice per resident and month, so a second one is
+                      refused. Open the invoice below and edit it, or bill a different month.
+                    </p>
+                    <Link
+                      href={`/invoices/${duplicate._id}`}
+                      className="mt-1.5 inline-flex items-center gap-1 font-bold text-(--color-danger-800) underline underline-offset-2"
+                    >
+                      {duplicate.invoiceNumber ?? 'Open the existing invoice'}
+                      {duplicate.status ? ` · ${duplicate.status.replace(/_/g, ' ')}` : ''}
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* What the resident already carries. A second bill on top of an
+                  open one is a decision the office makes on purpose. */}
+              {tenantId && residentOpenInvoices.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-2xs tracking-label mb-1.5 font-bold text-(--color-text-muted) uppercase">
+                    Already open for this resident
+                  </p>
+                  <div className="space-y-1.5">
+                    {residentOpenInvoices.map((open) => (
+                      <Link
+                        key={open._id}
+                        href={`/invoices/${open._id}`}
+                        className="flex items-center justify-between gap-2 rounded-(--radius-md) border border-(--border-color) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) hover:border-(--color-brand-300)"
+                      >
+                        <span>
+                          {open.invoiceNumber ?? open._id.slice(-6)}
+                          {open.month ? ` · ${open.month}` : ''}
+                          {open.status ? ` · ${open.status.replace(/_/g, ' ')}` : ''}
+                        </span>
+                        <span className="tabular-nums">
+                          {typeof open.remaining === 'number'
+                            ? `${fmtMoney(open.remaining)} due`
+                            : 'balance not reported'}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                  {residentTotalDue != null && (
+                    <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                      The resident owes {fmtMoney(residentTotalDue)} in total across these invoices.
+                      The number is the server&apos;s dues summary.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -414,10 +511,10 @@ function NewInvoiceForm() {
                   </div>
                   <div>
                     <h3 className="font-display text-base font-bold text-(--color-text-primary)">
-                      Itemized Charges & Adjustments
+                      Itemized Charges
                     </h3>
                     <p className="text-xs text-(--color-text-muted)">
-                      Itemize charges or discounts for this invoice
+                      Itemize the charges of this invoice
                     </p>
                   </div>
                 </div>
@@ -451,14 +548,6 @@ function NewInvoiceForm() {
                     onClick={() => addLineItem('Maintenance / Amenities Fee', 500)}
                   >
                     + Maintenance
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addLineItem('Discount / Adjustment', -500)}
-                  >
-                    - Discount
                   </Button>
                 </div>
               </div>
@@ -621,6 +710,11 @@ function NewInvoiceForm() {
                   </div>
                 </div>
               )}
+
+              <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                The server accepts a non-negative amount on every line. A discount is applied by
+                lowering the charge it belongs to, not by a negative line.
+              </p>
             </div>
           </div>
 
@@ -699,7 +793,7 @@ function NewInvoiceForm() {
                 <div className="flex justify-between text-(--color-text-secondary)">
                   <span>Due Date</span>
                   <span className="font-semibold text-(--color-text-primary)">
-                    {dueDate || 'Immediate'}
+                    {dueDate || '5th of the billing month'}
                   </span>
                 </div>
                 <div className="flex justify-between text-(--color-text-secondary)">
@@ -712,7 +806,7 @@ function NewInvoiceForm() {
                 <div className="border-t border-(--border-color) pt-3">
                   <div className="flex items-baseline justify-between">
                     <span className="font-display text-sm font-bold text-(--color-text-primary)">
-                      Total Payable
+                      Resident is charged
                     </span>
                     <span className="font-display text-2xl font-extrabold text-(--color-brand-600) tabular-nums">
                       {fmtMoney(totalInvoiceAmount)}
@@ -720,10 +814,34 @@ function NewInvoiceForm() {
                   </div>
                   <p className="text-2xs mt-1 flex items-center gap-1 text-(--color-text-muted)">
                     <Clock className="h-3 w-3" />
-                    The server issues this invoice as Sent and opens a pending UPI payment for the
-                    full amount.
+                    The server adds the line items up and splits them into rent, electricity and
+                    other charges by the wording of the description.
                   </p>
                 </div>
+              </div>
+
+              {/* What the write does, said before it happens. */}
+              <div className="text-2xs mt-4 space-y-2 rounded-(--radius-md) border border-(--border-color) bg-(--color-surface-sunken) p-3 font-medium text-(--color-text-secondary)">
+                <p className="flex items-start gap-1.5">
+                  <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-(--color-success-600)" />
+                  The server issues the invoice as <strong>sent</strong>, not as a draft.
+                </p>
+                <p className="flex items-start gap-1.5">
+                  <Scale className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                  It opens one pending UPI obligation of {fmtMoney(totalInvoiceAmount)} for the
+                  resident.
+                </p>
+                <p className="flex items-start gap-1.5">
+                  <Bell className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                  It notifies the resident with the invoice number, the amount and the due date.
+                </p>
+                {residentPendingPayments ? (
+                  <p className="flex items-start gap-1.5">
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-(--color-warning-600)" />
+                    The resident already carries {residentPendingPayments} open payment
+                    obligation(s).
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-5 space-y-2">
@@ -732,10 +850,12 @@ function NewInvoiceForm() {
                   variant="primary"
                   className="w-full justify-center"
                   loading={isSubmitting}
-                  disabled={!tenantId || lineItems.length === 0}
+                  disabled={submitBlocked}
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  Generate Invoice · {fmtMoney(totalInvoiceAmount)}
+                  {blockedByDuplicate
+                    ? 'Invoice already exists'
+                    : `Issue Invoice · ${fmtMoney(totalInvoiceAmount)}`}
                 </Button>
                 <Button
                   type="button"
@@ -751,7 +871,7 @@ function NewInvoiceForm() {
           </div>
         </div>
       </form>
-    </div>
+    </FormPage>
   );
 }
 
@@ -759,9 +879,15 @@ export default function NewInvoicePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
-        </div>
+        <FormPage
+          title="Compose Invoice"
+          description="Create an itemized billing invoice for rent, electricity, maintenance, or custom charges"
+          backHref="/invoices"
+          isLoading
+          maxWidth="form"
+        >
+          {null}
+        </FormPage>
       }
     >
       <NewInvoiceForm />

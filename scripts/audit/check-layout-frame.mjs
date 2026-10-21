@@ -100,6 +100,7 @@ const PAGE_RULES = [
   { path: '/tenants', expect: 'full', firstRow: true },
 
   // ── form pages: the form measure ─────────────────────────────────────
+  { path: '/invoices/new', expect: 'form' },
   { path: '/enquiries/enquiry-1/edit', expect: 'form' },
   { path: '/guardians/new', expect: 'form' },
   { path: '/rooms/room-1/edit', expect: 'form' },

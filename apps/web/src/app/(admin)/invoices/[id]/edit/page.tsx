@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
@@ -17,13 +17,15 @@ import {
   Lock,
   AlertTriangle,
   CreditCard,
+  Bell,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
-import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -81,6 +83,8 @@ function fmtMoney(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+const INVOICE_KEY = (id: string) => ['invoices', id] as const;
+
 const INVOICES_PREFIX = ['invoices'] as const;
 
 const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
@@ -90,9 +94,7 @@ export default function EditInvoicePage() {
   const params = useParams();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [initial, setInitial] = useState<Partial<FormData>>({});
 
   const {
@@ -105,6 +107,41 @@ export default function EditInvoicePage() {
     resolver: zodResolver(schema),
   });
 
+  /**
+   * The invoice is read through the shared query stack, like every other
+   * record: the load takes part in the cache and a write invalidates it.
+   */
+  const {
+    data: invoiceData = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<InvoiceData>(INVOICE_KEY(id), `invoices/${id}`, { enabled: Boolean(id) });
+
+  // The id whose values are already in the form. A refetch of the same record
+  // must never wipe what the operator is typing.
+  const loadedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!invoiceData || loadedIdRef.current === id) return;
+    loadedIdRef.current = id;
+    const status = invoiceData.status;
+    // Never coerce paid/partial -> sent (that clobbers payment-driven status on save)
+    const editableStatus = (['draft', 'sent', 'overdue', 'cancelled'] as const).includes(
+      status as 'draft' | 'sent' | 'overdue' | 'cancelled',
+    )
+      ? (status as FormData['status'])
+      : 'sent';
+    const values: FormData = {
+      rentAmount: invoiceData.rentAmount,
+      electricityAmount: invoiceData.electricityAmount,
+      otherCharges: invoiceData.otherCharges,
+      dueDate: invoiceData.dueDate ? String(invoiceData.dueDate).slice(0, 10) : '',
+      status: editableStatus,
+    };
+    reset(values);
+    setInitial(values);
+  }, [invoiceData, id, reset]);
+
   const rentAmount = useWatch({ control, name: 'rentAmount' });
   const electricityAmount = useWatch({ control, name: 'electricityAmount' });
   const otherCharges = useWatch({ control, name: 'otherCharges' });
@@ -114,42 +151,6 @@ export default function EditInvoicePage() {
       (Number(rentAmount) || 0) + (Number(electricityAmount) || 0) + (Number(otherCharges) || 0)
     );
   }, [rentAmount, electricityAmount, otherCharges]);
-
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`invoices/${id}`)
-      .json<{ success: boolean; data: InvoiceData }>()
-      .then((res) => {
-        setInvoiceData(res.data);
-        const status = res.data.status;
-        // Never coerce paid/partial -> sent (that clobbers payment-driven status on save)
-        const editableStatus = (['draft', 'sent', 'overdue', 'cancelled'] as const).includes(
-          status as 'draft' | 'sent' | 'overdue' | 'cancelled',
-        )
-          ? (status as FormData['status'])
-          : 'sent';
-        if (status === 'paid') {
-          setSubmitError(
-            'Paid invoices are locked. Amounts and status cannot be edited; adjust via payments if needed.',
-          );
-        }
-        const values: FormData = {
-          rentAmount: res.data.rentAmount,
-          electricityAmount: res.data.electricityAmount,
-          otherCharges: res.data.otherCharges,
-          dueDate: res.data.dueDate ? String(res.data.dueDate).slice(0, 10) : '',
-          status: editableStatus,
-        };
-        reset(values);
-        setInitial(values);
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-        setIsLoading(false);
-      });
-  }, [id, reset]);
 
   const watched = useWatch({ control });
   const isDirty = useMemo(() => {
@@ -169,7 +170,13 @@ export default function EditInvoicePage() {
 
   const originalTotal = invoiceData?.totalAmount ?? 0;
   const totalDelta = autoTotal - originalTotal;
-  const balanceAfter = invoiceData?.balance != null ? invoiceData.balance + totalDelta : null;
+  // The balance the server reports now. The page never derives a balance: the
+  // projection below is a projection from that number, and it is labelled as
+  // one.
+  const reportedBalance = typeof invoiceData?.balance === 'number' ? invoiceData.balance : null;
+  const balanceAfter = reportedBalance == null ? null : Math.max(0, reportedBalance + totalDelta);
+  const statusIsCancel = watched.status === 'cancelled';
+  const statusIsSent = watched.status === 'sent';
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -192,6 +199,7 @@ export default function EditInvoicePage() {
       // The server wrote the change: re-read the invoice so the detail page
       // shows the server balance and status, not a local guess.
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: INVOICE_KEY(id) }),
         queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
         queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX }),
       ]);
@@ -213,7 +221,7 @@ export default function EditInvoicePage() {
         descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update invoice line items'
       }
       backHref={`/invoices/${id}`}
-      error={submitError}
+      error={submitError || errorMessage(queryError)}
       isLoading={isLoading}
       maxWidth="form"
     >
@@ -230,7 +238,16 @@ export default function EditInvoicePage() {
           </div>
         )}
         {invoiceData?.status === 'partial' && (
-          <ErrorBanner message="This invoice is partially paid. Amounts may still be adjusted; paid/partial status is controlled by payments and cannot be set manually." />
+          <div className="flex items-start gap-3 rounded-(--radius-lg) border border-(--color-info-200) bg-(--color-info-50) p-4">
+            <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-(--color-brand-600)" />
+            <div className="text-sm font-semibold text-(--color-info-900)">
+              <p>This invoice is partially paid.</p>
+              <p className="mt-1 text-xs font-medium text-(--color-info-800)">
+                Amounts may still be adjusted; the paid and partial status is controlled by the
+                payments and cannot be set by hand.
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -340,13 +357,11 @@ export default function EditInvoicePage() {
                     <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-(--color-warning-700)">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                       {totalDelta > 0
-                        ? `Increases total by ${fmtMoney(totalDelta)}`
-                        : `Decreases total by ${fmtMoney(Math.abs(totalDelta))}`}
-                      {balanceAfter != null && balanceAfter > 0
-                        ? ` — the balance reported now would become ${fmtMoney(balanceAfter)} if saved`
-                        : balanceAfter != null
-                          ? ' — this would leave nothing outstanding if saved'
-                          : ''}
+                        ? `Increases the bill by ${fmtMoney(totalDelta)}`
+                        : `Decreases the bill by ${fmtMoney(Math.abs(totalDelta))}`}
+                      {balanceAfter != null
+                        ? ` — the balance the server reports now (${fmtMoney(reportedBalance)}) would become ${fmtMoney(balanceAfter)}`
+                        : ' — the server has not reported a balance for this invoice, so the new one is unknown until it is saved'}
                     </p>
                   )}
                 </div>
@@ -397,7 +412,7 @@ export default function EditInvoicePage() {
                   </div>
                   {typeof invoiceData.paidAmount === 'number' ? (
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-(--color-text-muted)">Paid</span>
+                      <span className="font-medium text-(--color-text-muted)">Settled</span>
                       <span className="font-semibold text-(--color-success-600) tabular-nums">
                         {fmtMoney(invoiceData.paidAmount)}
                       </span>
@@ -406,9 +421,7 @@ export default function EditInvoicePage() {
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Balance</span>
                     <span className="font-display text-base font-bold text-(--color-danger-600) tabular-nums">
-                      {typeof invoiceData.balance === 'number'
-                        ? fmtMoney(invoiceData.balance)
-                        : 'Not reported'}
+                      {reportedBalance == null ? 'Not reported' : fmtMoney(reportedBalance)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
@@ -426,6 +439,33 @@ export default function EditInvoicePage() {
                     payments are verified.
                   </p>
                 )}
+
+                {/* What the save does to the resident. An edit moves what the
+                    resident owes, and the server tells them. */}
+                <div className="space-y-2 border-t border-(--border-color) pt-3">
+                  <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
+                    What this save does
+                  </p>
+                  <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-text-secondary)">
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-(--color-warning-600)" />
+                    Changing the amounts moves what the resident owes. The server notifies the
+                    resident with the old and the new number.
+                  </p>
+                  {statusIsCancel && (
+                    <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-danger-700)">
+                      <Bell className="mt-0.5 h-3 w-3 shrink-0" />
+                      Cancelling voids the bill and notifies the resident. The server refuses the
+                      cancel while the invoice still carries a balance.
+                    </p>
+                  )}
+                  {statusIsSent && (
+                    <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-text-secondary)">
+                      <Bell className="mt-0.5 h-3 w-3 shrink-0" />
+                      Sending a draft does not notify the resident: only a moved amount and a
+                      cancellation do.
+                    </p>
+                  )}
+                </div>
 
                 {!isPaidLocked && isDirty && (
                   <div className="flex items-start gap-2 rounded-(--radius-md) border border-(--color-info-200) bg-(--color-info-50) px-3 py-2 text-xs font-semibold text-(--color-info-800)">

@@ -21,24 +21,34 @@ import {
   MapPin,
   Phone,
   Mail,
-  Receipt,
+  History,
   ExternalLink,
   Zap,
+  Ban,
+  Scale,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { StatusStepper } from '@/components/ui/StatusStepper';
 import { Timeline } from '@/components/ui/Timeline';
 import { StatCard } from '@/components/ui/StatCard';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { FormPage } from '@/components/ui/FormPage';
+import { ContentFrame } from '@/components/ui/ContentFrame';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { Modal } from '@/components/ui/Modal';
-import { RecordPaymentModal } from '@/components/admin/RecordPaymentModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import {
+  RecordPaymentModal,
+  type RecordPaymentTarget,
+} from '@/components/admin/RecordPaymentModal';
 import {
   buildPaymentReceipt,
   ReceiptDocument,
@@ -57,8 +67,11 @@ interface PaymentRecord {
   amount: number;
   method: string;
   status: string;
+  type?: string;
   paidAt?: string;
+  createdAt?: string;
   utrNumber?: string;
+  notes?: string;
 }
 
 interface UserInfo {
@@ -134,6 +147,28 @@ interface InvoiceDetail {
   electricityDetails?: ElectricityDetails | null;
 }
 
+/** The money the resident owes across every open invoice (GET /tenants/:id/dues). */
+interface TenantDues {
+  totalDue?: number;
+  unpaidInvoices?: Array<{
+    _id: string;
+    invoiceNumber?: string;
+    month?: string;
+    remaining?: number | null;
+    status?: string;
+  }>;
+}
+
+/** One audit entry of the invoice (GET /audit-logs). */
+interface AuditEvent {
+  _id?: string;
+  id?: string;
+  action: string;
+  resourceId?: string;
+  timestamp?: string;
+  details?: Record<string, unknown>;
+}
+
 function formatCurrency(amount: number | null | undefined): string {
   if (amount == null) return '₹0';
   try {
@@ -192,7 +227,63 @@ function daysPastDue(dueDate: string | undefined): number | null {
   return Math.floor((Date.now() - due.getTime()) / (24 * 60 * 60 * 1000));
 }
 
+/** The title of an audit entry, in the language of the office. */
+function auditTitle(event: AuditEvent): string {
+  switch (event.action) {
+    case 'create':
+      return 'Invoice issued';
+    case 'update':
+      return 'Invoice updated';
+    case 'delete':
+      return 'Invoice deleted';
+    case 'export':
+      return 'Invoice exported';
+    default:
+      return event.action.replace(/_/g, ' ');
+  }
+}
+
+/** The detail of an audit entry, read from what the server wrote. */
+function auditDescription(event: AuditEvent): string | undefined {
+  const details = event.details;
+  if (!details) return undefined;
+  const parts: string[] = [];
+  if (typeof details.status === 'string') parts.push(`status ${details.status}`);
+  if (typeof details.totalAmount === 'number') parts.push(formatCurrency(details.totalAmount));
+  if (typeof details.month === 'string') parts.push(details.month);
+  if (typeof details.invoiceNumber === 'string') parts.push(details.invoiceNumber);
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
+const INVOICE_KEY = (id: string) => ['invoices', id] as const;
+
+const INVOICE_EVENTS_KEY = (id: string) => ['invoices', id, 'audit-logs'] as const;
+
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+
+const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
+
+/**
+ * The columns of the payment history.
+ *
+ * Every row is a payment record of its own, so every row links to it: the
+ * office can open the record instead of guessing which row it was.
+ */
 const paymentColumns: DataTableColumn<PaymentRecord>[] = [
+  {
+    header: 'Payment',
+    accessor: (p) => (
+      <Link
+        href={`/payments/${p._id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="font-mono text-xs font-bold text-(--color-brand-600) hover:underline"
+      >
+        {p.utrNumber ? `UTR ${p.utrNumber}` : p._id.slice(-8)}
+      </Link>
+    ),
+  },
   {
     header: 'Amount',
     accessor: (p) => (
@@ -212,25 +303,26 @@ const paymentColumns: DataTableColumn<PaymentRecord>[] = [
     accessor: (p) => (
       <StatusBadge variant={statusToVariant(p.status)} label={p.status.replace('_', ' ')} />
     ),
-    className: 'text-right',
+  },
+  {
+    header: 'Date',
+    accessor: (p) => formatDate(p.paidAt ?? p.createdAt),
   },
 ];
-
-const INVOICE_KEY = (id: string) => ['invoices', id] as const;
-
-const INVOICES_PREFIX = ['invoices'] as const;
-
-const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [recordTarget, setRecordTarget] = useState<
-    import('@/components/admin/RecordPaymentModal').RecordPaymentTarget | null
-  >(null);
+  const [recordTarget, setRecordTarget] = useState<RecordPaymentTarget | null>(null);
   // Server-issued receipt of the payment that was just recorded.
   const [receipt, setReceipt] = useState<PaymentReceiptSource | null>(null);
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
+  // A refusal from the server, named as the server named it.
+  const [writeError, setWriteError] = useState('');
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const {
     data: invoice = null,
@@ -238,6 +330,78 @@ export default function InvoiceDetailPage() {
     error: queryError,
   } = useApiQuery<InvoiceDetail>(INVOICE_KEY(params.id), `invoices/${params.id}`);
   const queryErrorMessage = errorMessage(queryError);
+
+  const tenantRaw = invoice?.tenantId;
+  const tenantObj = typeof tenantRaw === 'object' && tenantRaw !== null ? tenantRaw : undefined;
+  const tenantId = tenantObj?._id ?? (typeof tenantRaw === 'string' ? tenantRaw : undefined);
+
+  /**
+   * The resident's own picture of what they owe.
+   *
+   * The dues summary is the server's: the total across every open invoice and
+   * the balance each one still carries. The page never adds up the invoices
+   * itself.
+   */
+  const { data: tenantDues = null, isPending: duesPending } = useApiQuery<TenantDues>(
+    TENANT_DUES_KEY(tenantId ?? ''),
+    `tenants/${tenantId}/dues`,
+    { enabled: Boolean(tenantId) },
+  );
+
+  /**
+   * The trail of this invoice.
+   *
+   * The audit route cannot filter by record id, so the newest invoice entries
+   * are read and the ones of this invoice are picked out here. The card says
+   * so, because a trail that is silently incomplete is a lie.
+   */
+  const { data: auditRows = [] } = useApiQuery<AuditEvent[]>(
+    INVOICE_EVENTS_KEY(params.id),
+    `audit-logs?resource=invoice&limit=100`,
+  );
+  const events = auditRows.filter((event) => event.resourceId === params.id);
+
+  /**
+   * Re-read the invoice and everything that hangs off it, so the page renders
+   * the server state instead of a locally asserted outcome.
+   */
+  const refreshAfterMutation = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: INVOICE_KEY(params.id) }),
+      queryClient.invalidateQueries({ queryKey: INVOICE_EVENTS_KEY(params.id) }),
+      queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+      queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX }),
+      ...(tenantId ? [queryClient.invalidateQueries({ queryKey: TENANT_DUES_KEY(tenantId) })] : []),
+    ]);
+  };
+
+  /**
+   * Void the bill.
+   *
+   * The server refuses a cancel while the invoice still carries a balance
+   * (INVOICE_HAS_BALANCE) and refuses to edit a paid one. The refusal is
+   * shown as the server wrote it, and the invoice is read again afterwards.
+   */
+  const handleCancel = async () => {
+    if (!invoice) return;
+    setCancelling(true);
+    setWriteError('');
+    try {
+      const res = await api
+        .put(`invoices/${invoice._id}`, { json: { status: 'cancelled' } })
+        .json<{ success: boolean; data?: { status?: string } }>();
+      setCancelOpen(false);
+      await refreshAfterMutation();
+      setWriteResult(
+        `Cancellation saved. Server status of the invoice: ${res.data?.status ?? 'unknown'}. The resident was notified.`,
+      );
+    } catch (err) {
+      setCancelOpen(false);
+      setWriteError((await parseApiError(err)).message);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (!isLoading && (queryErrorMessage || !invoice)) {
     return (
@@ -251,9 +415,6 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  const tenantRaw = invoice?.tenantId;
-  const tenantObj = typeof tenantRaw === 'object' && tenantRaw !== null ? tenantRaw : undefined;
-  const tenantId = tenantObj?._id ?? (typeof tenantRaw === 'string' ? tenantRaw : undefined);
   const tenantName = tenantObj?.userId?.name ?? 'N/A';
   const tenantPhone = tenantObj?.userId?.phone;
 
@@ -280,6 +441,7 @@ export default function InvoiceDetailPage() {
   // A cancelled invoice cannot be collected: the server refuses a payment on
   // it, so the page must not offer a collectible-looking balance.
   const isCancelled = invoice?.status === 'cancelled';
+  const isPaid = invoice?.status === 'paid';
   const isCollectible =
     invoice != null && invoice.status !== 'paid' && invoice.status !== 'cancelled';
 
@@ -289,6 +451,12 @@ export default function InvoiceDetailPage() {
     invoice && typeof invoice.paidAmount === 'number' && invoice.totalAmount > 0
       ? Math.min(100, Math.round((invoice.paidAmount / invoice.totalAmount) * 100))
       : null;
+
+  // The dues summary is only read as a number when the server sent one.
+  const residentTotalDue =
+    tenantDues && typeof tenantDues.totalDue === 'number' ? tenantDues.totalDue : null;
+  const residentOpenInvoices =
+    tenantDues && Array.isArray(tenantDues.unpaidInvoices) ? tenantDues.unpaidInvoices : null;
 
   const openRecordModal = () => {
     if (!tenantId) return;
@@ -346,6 +514,12 @@ export default function InvoiceDetailPage() {
                 Record Payment
               </Button>
             )}
+            {isCollectible && (
+              <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
+                <Ban className="h-4 w-4" />
+                Cancel invoice
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <FileDown className="h-4 w-4" />
               Print
@@ -364,6 +538,13 @@ export default function InvoiceDetailPage() {
     >
       {invoice && (
         <div className="space-y-6">
+          {writeResult && (
+            <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+              {writeResult}
+            </div>
+          )}
+          <ErrorBanner message={writeError} />
+
           {/* Executive Metric Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
@@ -420,9 +601,290 @@ export default function InvoiceDetailPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          {/* The context rail is a slot of the shell frame, not a grid this
+              page builds for itself: the resident, the money they owe and the
+              office actions stay in view while the invoice scrolls. */}
+          <ContentFrame
+            rail={
+              <>
+                <DetailCard title="Resident" icon={<User />}>
+                  <DetailList>
+                    <DetailRow
+                      label="Name"
+                      value={
+                        tenantId ? (
+                          <Link
+                            href={`/tenants/${tenantId}`}
+                            className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
+                          >
+                            {tenantName}
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        ) : (
+                          tenantName
+                        )
+                      }
+                    />
+                    <DetailRow
+                      label="Room"
+                      value={
+                        roomId ? (
+                          <Link
+                            href={`/rooms/${roomId}`}
+                            className="font-semibold text-(--color-brand-600) hover:underline"
+                          >
+                            Room {roomNumber}
+                          </Link>
+                        ) : (
+                          roomNumber
+                        )
+                      }
+                    />
+                    {tenantObj?.bedId ? <DetailRow label="Bed" value={tenantObj.bedId} /> : null}
+                    <DetailRow
+                      label="Floor"
+                      value={
+                        floorId ? (
+                          <Link
+                            href={`/floors/${floorId}`}
+                            className="font-semibold text-(--color-brand-600) hover:underline"
+                          >
+                            {floorName}
+                          </Link>
+                        ) : (
+                          floorName
+                        )
+                      }
+                    />
+                    {tenantPhone ? <DetailRow label="Phone" value={tenantPhone} /> : null}
+                  </DetailList>
+                </DetailCard>
+
+                {/* What the resident owes next, in the resident's own view.
+                    The numbers are the server's dues summary. */}
+                <DetailCard title="Resident dues" icon={<Scale />}>
+                  <DetailList>
+                    <DetailRow
+                      label="Owes in total"
+                      value={
+                        residentTotalDue != null ? (
+                          <span
+                            className={clsx(
+                              'tabular-nums',
+                              residentTotalDue > 0
+                                ? 'text-(--color-danger-600)'
+                                : 'text-(--color-success-600)',
+                            )}
+                          >
+                            {formatCurrency(residentTotalDue)}
+                          </span>
+                        ) : duesPending ? (
+                          'loading'
+                        ) : (
+                          'not reported'
+                        )
+                      }
+                    />
+                    <DetailRow
+                      label="Open invoices"
+                      value={
+                        residentOpenInvoices
+                          ? String(residentOpenInvoices.length)
+                          : duesPending
+                            ? 'loading'
+                            : 'not reported'
+                      }
+                    />
+                    <DetailRow
+                      label="This invoice"
+                      value={
+                        reportedBalance == null
+                          ? 'not reported'
+                          : `${formatCurrency(reportedBalance)} due`
+                      }
+                    />
+                  </DetailList>
+                  {residentOpenInvoices && residentOpenInvoices.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      {residentOpenInvoices.map((open) => (
+                        <Link
+                          key={open._id}
+                          href={`/invoices/${open._id}`}
+                          className="flex items-center justify-between gap-2 rounded-(--radius-md) border border-(--border-color) px-2.5 py-1.5 text-xs font-semibold text-(--text-secondary) hover:border-(--color-brand-300)"
+                        >
+                          <span>
+                            {open.invoiceNumber ?? open._id.slice(-6)}
+                            {open.month ? ` · ${open.month}` : ''}
+                          </span>
+                          <span className="tabular-nums">
+                            {typeof open.remaining === 'number'
+                              ? formatCurrency(open.remaining)
+                              : 'not reported'}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                    The dues summary is the server&apos;s. A balance the server did not report is
+                    never read as zero.
+                  </p>
+                </DetailCard>
+
+                <DetailCard title="Office actions" icon={<CreditCard />}>
+                  <div className="flex flex-col gap-3">
+                    {isCollectible && tenantId && (
+                      <Button variant="primary" onClick={openRecordModal}>
+                        <CreditCard className="h-4 w-4" />
+                        Record Payment
+                      </Button>
+                    )}
+                    {isCollectible && (
+                      <Button variant="outline" onClick={() => setCancelOpen(true)}>
+                        <Ban className="h-4 w-4" />
+                        Cancel invoice
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={downloadPdf}>
+                      <FileDown className="h-4 w-4" />
+                      Download PDF
+                    </Button>
+                    {tenantPhone && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const text = [
+                            `Invoice ${invoice.invoiceNumber}`,
+                            `Amount: ${formatCurrency(invoice.totalAmount)}`,
+                            `Balance: ${formatMoneyOrNotReported(reportedBalance)}`,
+                            'Please check the resident portal or contact the admin for the PDF copy.',
+                          ].join('\n');
+                          window.open(
+                            generateWhatsAppUrl(tenantPhone, text),
+                            '_blank',
+                            'noopener,noreferrer',
+                          );
+                        }}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Share via WhatsApp
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
+                    >
+                      Edit Line Items
+                    </Button>
+                  </div>
+                  {isCancelled && (
+                    <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                      This invoice was cancelled, so it is not collectible. The server refuses a
+                      payment against it.
+                    </p>
+                  )}
+                  {isPaid && (
+                    <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                      This invoice is settled. The server locks its amounts and its status.
+                    </p>
+                  )}
+                </DetailCard>
+
+                {invoice.electricityDetails ? (
+                  <DetailCard
+                    title="Electricity Meter Breakdown"
+                    icon={<Zap />}
+                    action={
+                      <Link
+                        href={`/electricity/${invoice.electricityDetails.billId}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-brand-600) hover:underline"
+                      >
+                        View Master Bill
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    }
+                  >
+                    <DetailList>
+                      <DetailRow
+                        label="Bill Status"
+                        value={
+                          <StatusBadge
+                            variant={statusToVariant(invoice.electricityDetails.billStatus)}
+                            label={invoice.electricityDetails.billStatus}
+                          />
+                        }
+                      />
+                      <DetailRow
+                        label="Meter Readings"
+                        value={`${invoice.electricityDetails.previousReading} -> ${invoice.electricityDetails.currentReading}`}
+                      />
+                      <DetailRow
+                        label="Units Consumed"
+                        value={`${invoice.electricityDetails.unitsConsumed} units`}
+                      />
+                      <DetailRow
+                        label="Rate per Unit"
+                        value={`₹${invoice.electricityDetails.ratePerUnit}`}
+                      />
+                      <DetailRow
+                        label="Room Total"
+                        value={formatCurrency(invoice.electricityDetails.roomTotalAmount)}
+                      />
+                      <DetailRow
+                        label="Tenant Share"
+                        value={
+                          <span className="font-bold text-(--color-brand-600)">
+                            {formatCurrency(invoice.electricityDetails.tenantShare)}
+                          </span>
+                        }
+                      />
+                    </DetailList>
+                  </DetailCard>
+                ) : invoice.electricityAmount > 0 ? (
+                  <DetailCard title="Electricity Charge" icon={<Zap />}>
+                    <DetailList>
+                      <DetailRow
+                        label="Billed Electricity"
+                        value={
+                          <span className="font-bold text-(--color-brand-600)">
+                            {formatCurrency(invoice.electricityAmount)}
+                          </span>
+                        }
+                      />
+                      <DetailRow
+                        label="Status"
+                        value="Electricity charge applied to invoice line items"
+                      />
+                    </DetailList>
+                  </DetailCard>
+                ) : null}
+
+                <DetailCard title="Invoice Meta" icon={<Hash />}>
+                  <DetailList>
+                    <DetailRow label="Invoice #" value={invoice.invoiceNumber} />
+                    <DetailRow label="Billing month" value={formatMonth(invoice.month)} />
+                    <DetailRow label="Due date" value={formatDate(invoice.dueDate)} />
+                    <DetailRow label="Created" value={formatDate(invoice.createdAt)} />
+                    <DetailRow label="Status" value={statusLabel} />
+                  </DetailList>
+                </DetailCard>
+              </>
+            }
+          >
+            {/* The state machine of the record. The states, their order and
+                the transitions come from the shared vocabulary, so this page
+                cannot drift from the portal. */}
+            <DetailCard title="Invoice progress" icon={<CheckCircle2 />}>
+              <StatusStepper domain="invoice" current={invoice.status} />
+              <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                Paid is set by the money, not by hand: an invoice turns paid when the settled
+                payments reach its total, and partial while some money is in and the rest is not.
+                Overdue is written by the daily sweep, and a cancel is the office&apos;s decision.
+              </p>
+            </DetailCard>
+
             {/* Document column */}
-            <div className={clsx(surfaceCardClass, 'overflow-hidden lg:col-span-3')}>
+            <div className={clsx(surfaceCardClass, 'overflow-hidden')}>
               {/* Branded Property Header */}
               {branding && (branding.pgName || formatAddress(branding.address)) ? (
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-(--border-color) bg-(--color-surface-sunken) px-6 py-4">
@@ -626,216 +1088,51 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
 
-            {/* Side column */}
-            <div className="space-y-6 lg:col-span-2">
-              <DetailCard title="Quick Actions" icon={<FileDown />}>
-                <div className="flex flex-col gap-3">
-                  {isCollectible && tenantId && (
-                    <Button variant="primary" onClick={openRecordModal}>
-                      <CreditCard className="h-4 w-4" />
-                      Record Payment (In-Place)
-                    </Button>
-                  )}
-                  {tenantId && (
-                    <Button variant="outline" onClick={() => router.push(`/tenants/${tenantId}`)}>
-                      <User className="h-4 w-4" />
-                      View Tenant Profile
-                    </Button>
-                  )}
-                  <Button variant={isCollectible ? 'outline' : 'primary'} onClick={downloadPdf}>
-                    <FileDown className="h-4 w-4" />
-                    Download PDF
-                  </Button>
-                  {invoice.electricityDetails?.billId && (
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        router.push(`/electricity/${invoice.electricityDetails?.billId}`)
-                      }
-                    >
-                      <Zap className="h-4 w-4" />
-                      View Electricity Bill
-                    </Button>
-                  )}
-                  {tenantPhone && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const text = [
-                          `Invoice ${invoice.invoiceNumber}`,
-                          `Amount: ${formatCurrency(invoice.totalAmount)}`,
-                          `Balance: ${formatMoneyOrNotReported(reportedBalance)}`,
-                          'Please check the resident portal or contact the admin for the PDF copy.',
-                        ].join('\n');
-                        window.open(
-                          generateWhatsAppUrl(tenantPhone, text),
-                          '_blank',
-                          'noopener,noreferrer',
-                        );
-                      }}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Share via WhatsApp
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    onClick={() => router.push(`/invoices/${invoice._id}/edit`)}
-                  >
-                    Edit Line Items
-                  </Button>
-                </div>
+            {/* The payments that settle this bill. Every row is a record of
+                its own, so the office can open it. */}
+            {invoice.payments && invoice.payments.length > 0 && (
+              <DetailCard title="Payment history" icon={<CreditCard />}>
+                <DataTable
+                  columns={paymentColumns}
+                  data={invoice.payments}
+                  keyExtractor={(p) => p._id}
+                  onRowClick={(p) => router.push(`/payments/${p._id}`)}
+                />
+                <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                  Every row is a payment record of its own: the link opens it.
+                </p>
               </DetailCard>
+            )}
 
-              {invoice.payments && invoice.payments.length > 0 && (
-                <DetailCard title="Payment History" icon={<CreditCard />}>
-                  <DataTable
-                    columns={paymentColumns}
-                    data={invoice.payments}
-                    keyExtractor={(p) => p._id}
-                    onRowClick={(p) => router.push(`/payments/${p._id}`)}
-                  />
-                </DetailCard>
+            {/* The trail of the record. The audit route cannot filter by
+                record, so the card says what it holds. */}
+            <DetailCard title="Activity" icon={<History />}>
+              {events.length > 0 ? (
+                <Timeline
+                  events={events.map((event, index) => ({
+                    id: event.id ?? event._id ?? `audit-${index}`,
+                    date: event.timestamp ?? '',
+                    title: auditTitle(event),
+                    description: auditDescription(event),
+                    status:
+                      event.action === 'create'
+                        ? ('success' as const)
+                        : event.action === 'delete'
+                          ? ('danger' as const)
+                          : ('info' as const),
+                  }))}
+                />
+              ) : (
+                <p className="text-xs font-medium text-(--color-text-muted)">
+                  No audit entry for this invoice in the newest invoice entries the server keeps.
+                </p>
               )}
-
-              {invoice.payments && invoice.payments.length > 0 && (
-                <DetailCard title="Payment Timeline" icon={<Receipt />}>
-                  <Timeline
-                    events={invoice.payments.map((p) => ({
-                      id: p._id,
-                      date: p.paidAt ?? invoice.createdAt,
-                      title: `${formatCurrency(p.amount)} via ${p.method.replace(/_/g, ' ')}`,
-                      description: p.utrNumber ? `UTR: ${p.utrNumber}` : undefined,
-                      status: (p.status === 'paid' ? 'success' : 'warning') as
-                        'success' | 'warning',
-                    }))}
-                  />
-                </DetailCard>
-              )}
-
-              {invoice.electricityDetails ? (
-                <DetailCard
-                  title="Electricity Meter Breakdown"
-                  icon={<Zap />}
-                  action={
-                    <Link
-                      href={`/electricity/${invoice.electricityDetails.billId}`}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-(--color-brand-600) hover:underline"
-                    >
-                      View Master Bill
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  }
-                >
-                  <DetailList>
-                    <DetailRow
-                      label="Bill Status"
-                      value={
-                        <StatusBadge
-                          variant={statusToVariant(invoice.electricityDetails.billStatus)}
-                          label={invoice.electricityDetails.billStatus}
-                        />
-                      }
-                    />
-                    <DetailRow
-                      label="Meter Readings"
-                      value={`${invoice.electricityDetails.previousReading} -> ${invoice.electricityDetails.currentReading}`}
-                    />
-                    <DetailRow
-                      label="Units Consumed"
-                      value={`${invoice.electricityDetails.unitsConsumed} units`}
-                    />
-                    <DetailRow
-                      label="Rate per Unit"
-                      value={`₹${invoice.electricityDetails.ratePerUnit}`}
-                    />
-                    <DetailRow
-                      label="Room Total"
-                      value={formatCurrency(invoice.electricityDetails.roomTotalAmount)}
-                    />
-                    <DetailRow
-                      label="Tenant Share"
-                      value={
-                        <span className="font-bold text-(--color-brand-600)">
-                          {formatCurrency(invoice.electricityDetails.tenantShare)}
-                        </span>
-                      }
-                    />
-                  </DetailList>
-                </DetailCard>
-              ) : invoice.electricityAmount > 0 ? (
-                <DetailCard title="Electricity Charge" icon={<Zap />}>
-                  <DetailList>
-                    <DetailRow
-                      label="Billed Electricity"
-                      value={
-                        <span className="font-bold text-(--color-brand-600)">
-                          {formatCurrency(invoice.electricityAmount)}
-                        </span>
-                      }
-                    />
-                    <DetailRow
-                      label="Status"
-                      value="Electricity charge applied to invoice line items"
-                    />
-                  </DetailList>
-                </DetailCard>
-              ) : null}
-
-              <DetailCard title="Invoice Meta" icon={<Hash />}>
-                <DetailList>
-                  <DetailRow label="Invoice #" value={invoice.invoiceNumber} />
-                  <DetailRow
-                    label="Tenant"
-                    value={
-                      tenantId ? (
-                        <Link
-                          href={`/tenants/${tenantId}`}
-                          className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
-                        >
-                          {tenantName}
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ) : (
-                        tenantName
-                      )
-                    }
-                  />
-                  <DetailRow
-                    label="Room"
-                    value={
-                      roomId ? (
-                        <Link
-                          href={`/rooms/${roomId}`}
-                          className="font-semibold text-(--color-brand-600) hover:underline"
-                        >
-                          Room {roomNumber}
-                        </Link>
-                      ) : (
-                        roomNumber
-                      )
-                    }
-                  />
-                  <DetailRow
-                    label="Floor"
-                    value={
-                      floorId ? (
-                        <Link
-                          href={`/floors/${floorId}`}
-                          className="font-semibold text-(--color-brand-600) hover:underline"
-                        >
-                          {floorName}
-                        </Link>
-                      ) : (
-                        floorName
-                      )
-                    }
-                  />
-                  <DetailRow label="Created" value={formatDate(invoice.createdAt)} />
-                </DetailList>
-              </DetailCard>
-            </div>
-          </div>
+              <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                The audit route cannot filter by record, so this is the trail of this invoice inside
+                the newest 100 invoice entries.
+              </p>
+            </DetailCard>
+          </ContentFrame>
 
           {invoice.updatedAt && (
             <p className="text-right text-xs font-semibold text-(--color-text-muted)">
@@ -873,6 +1170,19 @@ export default function InvoiceDetailPage() {
               />
             )}
           </Modal>
+
+          {/* The cancel is the office's decision, so it is asked for. The
+              server refuses it while the invoice still carries a balance. */}
+          <ConfirmModal
+            open={cancelOpen}
+            title="Cancel this invoice?"
+            message="The bill is voided and the resident is notified. The server refuses the cancel while the invoice still carries a balance, and a paid invoice cannot be cancelled at all."
+            confirmLabel="Cancel invoice"
+            variant="danger"
+            loading={cancelling}
+            onConfirm={handleCancel}
+            onCancel={() => setCancelOpen(false)}
+          />
         </div>
       )}
     </FormPage>

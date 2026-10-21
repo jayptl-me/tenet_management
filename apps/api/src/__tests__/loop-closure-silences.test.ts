@@ -230,18 +230,22 @@ describe('Loop closures: the state changes that used to happen in silence', () =
     expect(await notificationsFor(adminId)).toHaveLength(0);
   });
 
-  it('a payment edit that is not a decision stays silent', async () => {
+  it('an edited payment tells the resident, because what they owe changed', async () => {
     const { adminToken } = await seedAdmin();
-    const { residentId, tenantId } = await seedResident('silent-edit');
+    const { residentId, tenantId } = await seedResident('edited-payment');
     const invoiceId = await seedInvoice(tenantId, '2026-03', 9000);
     const paymentId = await seedPayment(tenantId, invoiceId, 9000, '2026-03', 'pending');
 
-    // Housekeeping edit: notes only, no status change and nobody is waiting.
+    // An edit moves what the resident owes. This used to be silent: the office
+    // could change the amount and the resident only found out on their next
+    // visit. A state change a human is waiting on has to reach them.
     const res = await req('PUT', `/api/v1/payments/${paymentId}`, adminToken, {
-      notes: 'checked against the desk register',
+      amount: 8000,
     });
     expect(res.status).toBe(200);
 
-    expect(await notificationsFor(residentId)).toHaveLength(0);
+    const mine = await notificationsFor(residentId);
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.some((n) => n.type === 'payment_reminder')).toBe(true);
   });
 });
