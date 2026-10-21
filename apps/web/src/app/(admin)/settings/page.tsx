@@ -418,20 +418,23 @@ export default function SettingsPage() {
 
     setIsUpdatingPassword(true);
     try {
-      await api
+      const res = await api
         .put('auth/password', {
           json: {
             currentPassword,
             newPassword,
           },
         })
-        .json();
+        .json<{ success: boolean; data?: { message?: string } }>();
 
-      setPasswordSuccess('Password updated successfully. Redirecting to sign in...');
+      // The server's own message: it revoked every token, so the operator has
+      // to sign in again.
+      setPasswordSuccess(
+        res.data?.message ?? 'Password changed successfully. Please log in again.',
+      );
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      toast.success('Password updated successfully. Please log in again.');
       setTimeout(() => {
         useAuthStore.getState().logout();
         router.push('/login');

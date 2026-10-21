@@ -110,6 +110,8 @@ function NotificationsContent() {
   const [form, setForm] = useState<NotificationForm>(emptyForm);
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [targetError, setTargetError] = useState('');
   const [pickerValue, setPickerValue] = useState('');
 
@@ -126,19 +128,26 @@ function NotificationsContent() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const deleted = deleteTarget;
     setDeleting(true);
     try {
-      await api.delete(`notifications/${deleteTarget.id}`).json();
-      toast.success('Notification deleted successfully');
+      await api.delete(`notifications/${deleted.id}`).json();
       setDeleteTarget(null);
-      fetchHistory();
+      // Re-read the server: the history table below is the server's list, so a
+      // deleted notification disappears from it only if the server dropped it.
+      const remaining = await fetchHistory();
+      setWriteResult(
+        remaining.some((n) => n.id === deleted.id)
+          ? `Deleted. The server still lists "${deleted.title}" in the notification history.`
+          : `Deleted. The server no longer lists "${deleted.title}" in the notification history.`,
+      );
     } catch {
       toast.error('Failed to delete notification');
     } finally {
       setDeleting(false);
     }
   };
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (): Promise<INotification[]> => {
     setLoadingHistory(true);
     try {
       const params: Record<string, string | number> = { page, limit: perPage };
@@ -151,8 +160,10 @@ function NotificationsContent() {
       }>();
       setNotifications(res.data);
       setTotal(res.meta.total);
+      return res.data;
     } catch {
       setNotifications([]);
+      return [];
     } finally {
       setLoadingHistory(false);
     }
@@ -244,15 +255,21 @@ function NotificationsContent() {
     setSending(true);
     setSendSuccess(false);
     try {
-      await api
+      const res = await api
         .post('notifications', {
           json: form,
         })
-        .json<{ success: boolean }>();
+        .json<{ success: boolean; data?: INotification }>();
       setSendSuccess(true);
       setForm(emptyForm);
       setPickerValue('');
-      toast.success('Notification sent');
+      // The server's own answer: how many recipients it matched and how many
+      // are still unread. The history tab re-reads the server's list.
+      const recipientCount = res.data?.recipientUserIds?.length ?? 0;
+      const unreadCount = res.data?.unreadBy?.length ?? 0;
+      setWriteResult(
+        `Sent. The server delivered this broadcast to ${recipientCount} recipient(s); ${unreadCount} have not read it yet. The history tab shows the server's list.`,
+      );
       setTimeout(() => setSendSuccess(false), 3000);
     } catch (err) {
       const parsed = await parseApiError(err);
@@ -347,6 +364,12 @@ function NotificationsContent() {
         title="Notifications"
         description="Broadcast announcements and manage notification history"
       />
+
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
 
       {/* Tabs */}
       <div

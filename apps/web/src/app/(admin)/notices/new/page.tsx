@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,8 +64,13 @@ const TARGET_OPTIONS = [
   { value: 'individual', label: 'Specific Tenant' },
 ];
 
+// The notices list and a single notice record live under the same `['notices']`
+// prefix, so one invalidation re-reads every notice view.
+const NOTICES_PREFIX = ['notices'] as const;
+
 export default function NewNoticePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState('');
   const [pickerValue, setPickerValue] = useState('');
 
@@ -107,6 +113,9 @@ export default function NewNoticePage() {
     };
     try {
       await api.post('notices', { json: payload }).json<{ success: boolean }>();
+      // Invalidate before the navigation: the destination list must show the
+      // server's state, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: NOTICES_PREFIX });
       router.push('/notices');
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);

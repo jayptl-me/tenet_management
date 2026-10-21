@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,6 +49,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// The assets list, the stat cards and the asset record live under the same
+// `['assets']` prefix, so one invalidation re-reads every asset view.
+const ASSETS_PREFIX = ['assets'] as const;
+
 const CATEGORY_OPTIONS = [
   { value: 'furniture', label: 'Furniture' },
   { value: 'appliance', label: 'Appliance' },
@@ -87,6 +92,7 @@ function toDateInput(value?: string): string {
 export default function EditAssetPage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
@@ -180,6 +186,9 @@ export default function EditAssetPage() {
       };
 
       await api.put(`assets/${id}`, { json: payload }).json();
+      // Invalidate before the navigation: the destination page must show the
+      // server's state, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: ASSETS_PREFIX });
       router.push(`/assets/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
@@ -190,7 +199,9 @@ export default function EditAssetPage() {
     setRetiring(true);
     try {
       await api.delete(`assets/${id}`).json();
-      toast.success('Asset retired');
+      // Invalidate before the navigation: the destination list must show the
+      // server's state, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: ASSETS_PREFIX });
       router.push('/assets');
     } catch (err) {
       toast.error((await parseApiError(err)).message);

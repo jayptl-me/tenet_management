@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Save,
   UserPlus,
@@ -20,6 +21,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { StatCard } from '@/components/ui/StatCard';
 import { Select } from '@/components/ui/Select';
@@ -78,6 +81,11 @@ const STATUS_OPTIONS = [
   { value: 'lost', label: 'Lost' },
 ];
 
+// Detail key for this record; the enquiries list and stats live under the same
+// `['enquiries']` prefix, so one invalidation re-reads every enquiry view.
+const ENQUIRY_KEY = (id: string) => ['enquiries', id] as const;
+const ENQUIRIES_PREFIX = ['enquiries'] as const;
+
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   try {
@@ -103,10 +111,17 @@ function formatDateTime(dateStr: string | null | undefined): string {
 export default function EnquiryDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [enquiry, setEnquiry] = useState<EnquiryDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const id = params.id;
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
+
+  const {
+    data: enquiry = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<EnquiryDetail>(ENQUIRY_KEY(id), `enquiries/${id}`, { enabled: !!id });
 
   const {
     register,
@@ -118,37 +133,44 @@ export default function EnquiryDetailPage() {
     defaultValues: { status: 'new', notes: '' },
   });
 
+  // Seed the form from the server's record, once per record.
+  const seededId = useRef<string | null>(null);
   useEffect(() => {
-    async function fetchEnquiry() {
-      setIsLoading(true);
-      setError('');
-      try {
-        const res = await api
-          .get(`enquiries/${params.id}`)
-          .json<{ success: boolean; data: EnquiryDetail }>();
-        setEnquiry(res.data);
-        reset({
-          status: (res.data.status as EnquiryUpdateForm['status']) ?? 'new',
-          notes: res.data.notes ?? '',
-        });
-      } catch (err) {
-        setError((await parseApiError(err)).message);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchEnquiry();
-  }, [params.id, reset]);
+    if (!enquiry) return;
+    if (seededId.current === enquiry._id) return;
+    seededId.current = enquiry._id;
+    reset({
+      status: (enquiry.status as EnquiryUpdateForm['status']) ?? 'new',
+      notes: enquiry.notes ?? '',
+    });
+  }, [enquiry, reset]);
+
+  /**
+   * Re-read the enquiry from the server. The screen then renders the server
+   * state (status badge, notes, timestamps) instead of a locally asserted
+   * outcome. The prefix covers this record's detail key (`['enquiries', id]`)
+   * and the list and stats keys, so every enquiry view re-reads the server.
+   */
+  const refreshAfterMutation = async () => {
+    await queryClient.invalidateQueries({ queryKey: ENQUIRIES_PREFIX });
+  };
 
   const onSubmit = async (data: EnquiryUpdateForm) => {
     setIsSaving(true);
     try {
       const res = await api
-        .put(`enquiries/${params.id}/status`, { json: data })
-        .json<{ success: boolean }>();
+        .put(`enquiries/${id}/status`, { json: data })
+        .json<{ success: boolean; data?: { status?: string; notes?: string } }>();
       if (res.success) {
-        toast.success('Enquiry updated successfully');
-        setEnquiry((prev) => (prev ? { ...prev, status: data.status, notes: data.notes } : prev));
+        await refreshAfterMutation();
+        const serverStatus = res.data?.status ?? data.status;
+        setWriteResult(
+          `Update saved. The server now reports this enquiry as "${serverStatus.replace(/_/g, ' ')}".`,
+        );
+        reset({
+          status: serverStatus as EnquiryUpdateForm['status'],
+          notes: res.data?.notes ?? data.notes ?? '',
+        });
       } else {
         toast.error('Failed to update enquiry');
       }
@@ -159,13 +181,13 @@ export default function EnquiryDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !enquiry)) {
+  if (!isLoading && (errorMessage(queryError) || !enquiry)) {
     return (
       <FormPage
         title="Enquiry Details"
         description="View enquiry information"
         backHref="/enquiries"
-        error={error || 'Enquiry not found'}
+        error={errorMessage(queryError) || 'Enquiry not found'}
         maxWidth="4xl"
       />
     );
@@ -203,6 +225,11 @@ export default function EnquiryDetailPage() {
     >
       {enquiry && (
         <div className="space-y-6">
+          {writeResult && (
+            <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+              {writeResult}
+            </div>
+          )}
           {/* ── Stat Cards ────────────────────────────────────────── */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard

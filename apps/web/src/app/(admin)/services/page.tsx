@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import {
   Plus,
   Wrench,
@@ -24,8 +24,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Select } from '@/components/ui/Select';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -78,8 +77,55 @@ interface ServiceSummary {
   down: number;
 }
 
+/** One row of the server's answer to a bulk provisioning run. */
+interface ProvisionedRow {
+  floor: string;
+  outcome: string;
+}
+
+/**
+ * Read the per-floor answer the provisioning page handed over. A malformed or
+ * missing payload renders nothing rather than a guess.
+ */
+function parseProvisionedRows(raw: string | null): ProvisionedRow[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const rows: ProvisionedRow[] = [];
+  for (const item of parsed) {
+    if (typeof item !== 'object' || item === null) continue;
+    const row = item as { floor?: unknown; outcome?: unknown };
+    if (typeof row.floor !== 'string' || typeof row.outcome !== 'string') continue;
+    rows.push({ floor: row.floor, outcome: row.outcome });
+  }
+  return rows;
+}
+
 export default function ServicesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <ServicesContent />
+    </Suspense>
+  );
+}
+
+function ServicesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // The server's per-floor answer to a bulk provisioning run, if this visit
+  // came from one.
+  const provisionedRows = parseProvisionedRows(searchParams.get('provisioned'));
   const [services, setServices] = useState<ServiceStatusRow[]>([]);
   const [definitions, setDefinitions] = useState<AmenityDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +135,8 @@ export default function ServicesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [floorFilter, setFloorFilter] = useState('');
   const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [summary, setSummary] = useState<ServiceSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ServiceStatusRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -103,11 +151,12 @@ export default function ServicesPage() {
         data: { floorsTouched: number; rowsCreated: number };
       }>();
       if (res.success) {
-        toast.success(
-          `Floor services synced: ${res.data.rowsCreated} service(s) provisioned across ${res.data.floorsTouched} floor(s).`,
+        // Re-read the server: the table and the tiles below show the state the
+        // server holds, not a locally asserted outcome.
+        await Promise.all([fetchServices(), fetchSummary()]);
+        setWriteResult(
+          `Sync done. The server provisioned ${res.data.rowsCreated} service row(s) across ${res.data.floorsTouched} floor(s). The table and the tiles below show the server's counts.`,
         );
-        fetchServices();
-        fetchSummary();
       }
     } catch (err) {
       setError((await parseApiError(err)).message);
@@ -330,6 +379,27 @@ export default function ServicesPage() {
       />
 
       <ErrorBanner message={error} />
+
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
+
+      {provisionedRows.length > 0 && (
+        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          <p className="mb-2">Provisioning result, per floor, as the server answered it:</p>
+          <ul className="space-y-1">
+            {provisionedRows.map((row) => (
+              <li key={`${row.floor}-${row.outcome}`} className="font-mono text-xs">
+                <span className="font-semibold text-(--color-text-primary)">{row.floor}</span>
+                <span className="mx-1 text-(--color-text-muted)">-</span>
+                <span>{row.outcome}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {summary && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

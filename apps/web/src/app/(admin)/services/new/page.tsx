@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { WashingMachine } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
-import { toast } from 'sonner';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -30,6 +30,16 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+// The services list, the summary tiles and a single service record live under
+// the same `['services']` prefix, so one invalidation re-reads every service view.
+const SERVICES_PREFIX = ['services'] as const;
+
+/** One row of the server's answer to a bulk provisioning run. */
+interface ProvisionedRow {
+  floor: string;
+  outcome: string;
+}
+
 const STATUS_OPTIONS = [
   { value: 'operational', label: 'Operational' },
   { value: 'degraded', label: 'Degraded' },
@@ -46,6 +56,7 @@ const DEFAULT_SERVICE_TYPES = [
 
 export default function NewServicePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState('');
   const [applyToAllFloors, setApplyToAllFloors] = useState(false);
   const [typeOptions, setTypeOptions] =
@@ -103,8 +114,11 @@ export default function NewServicePage() {
         if (allFloors.length === 0) {
           throw new Error('No floors found in this property.');
         }
-        let createdCount = 0;
+        // Per-item outcome: every floor gets its own row, built from what the
+        // server answered for that floor.
+        const rows: ProvisionedRow[] = [];
         for (const floor of allFloors) {
+          const floorLabel = floor.label ?? floor._id;
           try {
             await api
               .post('services', {
@@ -116,25 +130,29 @@ export default function NewServicePage() {
                 },
               })
               .json();
-            createdCount++;
+            rows.push({ floor: floorLabel, outcome: 'created by the server' });
           } catch (err) {
-            // If already exists on this floor, continue without failing batch
             const parsed = await parseApiError(err);
-            if (
-              !parsed.message.toLowerCase().includes('already exists') &&
-              !parsed.code?.includes('DUPLICATE')
-            ) {
-              // Ignore duplicate
-            }
+            const alreadyExists =
+              parsed.message.toLowerCase().includes('already exists') ||
+              Boolean(parsed.code?.includes('DUPLICATE'));
+            rows.push({
+              floor: floorLabel,
+              outcome: alreadyExists
+                ? 'already existed on the server'
+                : `rejected by the server: ${parsed.message}`,
+            });
           }
         }
-        toast.success(
-          `Service provisioned on ${createdCount} floor(s) (any existing floors kept current).`,
-        );
-        router.push('/services');
+        // Invalidate before the navigation, and carry the server's per-floor
+        // answer to the list so it can show it.
+        await queryClient.invalidateQueries({ queryKey: SERVICES_PREFIX });
+        router.push(`/services?provisioned=${encodeURIComponent(JSON.stringify(rows))}`);
       } else {
         await api.post('services', { json: data }).json<{ success: boolean }>();
-        toast.success('Service status created successfully.');
+        // Invalidate before the navigation: the destination list must show the
+        // server's state, and a navigation unmounts this page.
+        await queryClient.invalidateQueries({ queryKey: SERVICES_PREFIX });
         router.push('/services');
       }
     } catch (err) {

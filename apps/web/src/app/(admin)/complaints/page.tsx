@@ -298,6 +298,8 @@ function ComplaintsContent() {
   const [isExporting, setIsExporting] = useState(false);
   // Mutation (delete/export/quick-resolve) failures; list failures come from the queries.
   const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<ComplaintRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -370,15 +372,20 @@ function ComplaintsContent() {
     adminNotes: string,
   ) => {
     try {
-      await api
+      const res = await api
         .put(`complaints/${id}/status`, {
           json: { status, adminNotes },
         })
-        .json();
-      toast.success(`Complaint marked as ${status.replace(/_/g, ' ')}`);
+        .json<{ success: boolean; data?: { status?: string } }>();
       setQuickResolveTarget(null);
       setError('');
-      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
+      // Re-read the server: the list, the stat cards and the status badges
+      // below then show the server's own state.
+      await queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
+      const serverStatus = res.data?.status ?? status;
+      setWriteResult(
+        `Status saved. The server now reports this complaint as "${serverStatus.replace(/_/g, ' ')}".`,
+      );
     } catch (err) {
       toast.error((await parseApiError(err)).message);
     }
@@ -567,7 +574,9 @@ function ComplaintsContent() {
           json: { status: newStatus },
         })
         .json();
-      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_STATS_KEY });
+      // The optimistic move is provisional: re-read the server so the board
+      // shows the status the server actually stored.
+      void queryClient.invalidateQueries({ queryKey: COMPLAINTS_KEY });
     } catch {
       queryClient.setQueryData<ComplaintsListBody>(kanbanKey, (old) =>
         old
@@ -735,6 +744,12 @@ function ComplaintsContent() {
       />
 
       <ErrorBanner message={fetchErrorMessage || error} />
+
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
 
       {/* ── Top KPI StatCards Row ────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -80,6 +80,8 @@ export default function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AssetRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   // Alert modes show the dedicated server endpoints (full sets) instead of
@@ -166,13 +168,30 @@ export default function AssetsPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const retired = deleteTarget;
     setDeleting(true);
     try {
-      await api.delete(`assets/${deleteTarget._id}`).json();
+      await api.delete(`assets/${retired._id}`).json();
       setDeleteTarget(null);
-      toast.success('Asset retired');
       setError('');
+      // Re-read the server: the list, the stat cards and the status column
+      // below show the state the server actually holds.
       await queryClient.invalidateQueries({ queryKey: ASSETS_KEY });
+      // Read the record back so the banner quotes the server's own status.
+      let serverStatus = '';
+      try {
+        const refreshed = await api
+          .get(`assets/${retired._id}`)
+          .json<{ success: boolean; data?: { status?: string } }>();
+        serverStatus = refreshed.data?.status ?? '';
+      } catch {
+        // The list below still shows the server's state.
+      }
+      setWriteResult(
+        serverStatus
+          ? `Retired. The server now reports "${retired.name}" with status "${serverStatus.replace(/_/g, ' ')}".`
+          : `Retired. The server no longer lists "${retired.name}" as an active asset.`,
+      );
     } catch (err) {
       const message = (await parseApiError(err)).message;
       setError(message);
@@ -271,6 +290,12 @@ export default function AssetsPage() {
         }
       />
       <ErrorBanner message={fetchErrorMessage || error} />
+
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total assets"

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Save,
   AlertCircle,
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -61,6 +64,11 @@ const STATUS_OPTIONS = [
   { value: 'dismissed', label: 'Dismissed' },
 ];
 
+// Detail key for this record; the complaints list and stats live under the same
+// `['complaints']` prefix, so one invalidation re-reads every complaint view.
+const COMPLAINT_KEY = (id: string) => ['complaints', id] as const;
+const COMPLAINTS_PREFIX = ['complaints'] as const;
+
 function formatDate(d: string | null | undefined): string {
   if (!d) return '—';
   try {
@@ -86,43 +94,18 @@ function formatDateTime(d: string | null | undefined): string {
 export default function ComplaintDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [complaint, setComplaint] = useState<ComplaintDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const id = params.id;
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
   const [quickResolveOpen, setQuickResolveOpen] = useState(false);
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
 
-  const handleQuickResolve = async (
-    id: string,
-    status: 'resolved' | 'dismissed',
-    adminNotes: string,
-  ) => {
-    try {
-      await api
-        .put(`complaints/${id}/status`, {
-          json: { status, adminNotes },
-        })
-        .json();
-      toast.success(`Complaint marked as ${status.replace(/_/g, ' ')}`);
-      setComplaint((prev) =>
-        prev
-          ? {
-              ...prev,
-              status,
-              adminNotes,
-              resolvedAt: status === 'resolved' ? new Date().toISOString() : prev.resolvedAt,
-            }
-          : prev,
-      );
-      reset({
-        status,
-        adminNotes,
-      });
-      setQuickResolveOpen(false);
-    } catch (err) {
-      toast.error((await parseApiError(err)).message);
-    }
-  };
+  const {
+    data: complaint = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<ComplaintDetail>(COMPLAINT_KEY(id), `complaints/${id}`, { enabled: !!id });
 
   const {
     register,
@@ -134,39 +117,70 @@ export default function ComplaintDetailPage() {
     defaultValues: { status: 'open', adminNotes: '' },
   });
 
-  useEffect(() => {
-    async function fetchComplaint() {
-      setIsLoading(true);
-      setError('');
-      try {
-        const res = await api
-          .get(`complaints/${params.id}`)
-          .json<{ success: boolean; data: ComplaintDetail }>();
-        setComplaint(res.data);
-        reset({
-          status: (res.data.status as ComplaintUpdateForm['status']) ?? 'open',
-          adminNotes: res.data.adminNotes ?? '',
-        });
-      } catch (err) {
-        setError((await parseApiError(err)).message);
-      } finally {
-        setIsLoading(false);
-      }
+  /**
+   * Re-read the complaint from the server. The screen then renders the server
+   * state (status badge, notes, timestamps) instead of a locally asserted
+   * outcome. The prefix covers this record's detail key (`['complaints', id]`)
+   * and the list and stats keys, so every complaint view re-reads the server.
+   */
+  const refreshAfterMutation = async () => {
+    await queryClient.invalidateQueries({ queryKey: COMPLAINTS_PREFIX });
+  };
+
+  const handleQuickResolve = async (
+    id: string,
+    status: 'resolved' | 'dismissed',
+    adminNotes: string,
+  ) => {
+    try {
+      const res = await api
+        .put(`complaints/${id}/status`, {
+          json: { status, adminNotes },
+        })
+        .json<{ success: boolean; data?: { status?: string; adminNotes?: string } }>();
+      setQuickResolveOpen(false);
+      await refreshAfterMutation();
+      const serverStatus = res.data?.status ?? status;
+      setWriteResult(
+        `Status saved. The server now reports this complaint as "${serverStatus.replace(/_/g, ' ')}".`,
+      );
+      reset({
+        status: serverStatus as ComplaintUpdateForm['status'],
+        adminNotes: res.data?.adminNotes ?? adminNotes,
+      });
+    } catch (err) {
+      toast.error((await parseApiError(err)).message);
     }
-    fetchComplaint();
-  }, [params.id, reset]);
+  };
+
+  // Seed the form from the server's record, once per record.
+  const seededId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!complaint) return;
+    if (seededId.current === complaint._id) return;
+    seededId.current = complaint._id;
+    reset({
+      status: (complaint.status as ComplaintUpdateForm['status']) ?? 'open',
+      adminNotes: complaint.adminNotes ?? '',
+    });
+  }, [complaint, reset]);
 
   const onSubmit = async (data: ComplaintUpdateForm) => {
     setIsSaving(true);
     try {
       const res = await api
-        .put(`complaints/${params.id}`, { json: data })
-        .json<{ success: boolean }>();
+        .put(`complaints/${id}`, { json: data })
+        .json<{ success: boolean; data?: { status?: string; adminNotes?: string } }>();
       if (res.success) {
-        toast.success('Complaint updated successfully');
-        setComplaint((prev) =>
-          prev ? { ...prev, status: data.status, adminNotes: data.adminNotes ?? '' } : prev,
+        await refreshAfterMutation();
+        const serverStatus = res.data?.status ?? data.status;
+        setWriteResult(
+          `Update saved. The server now reports this complaint as "${serverStatus.replace(/_/g, ' ')}".`,
         );
+        reset({
+          status: serverStatus as ComplaintUpdateForm['status'],
+          adminNotes: res.data?.adminNotes ?? data.adminNotes ?? '',
+        });
       } else {
         toast.error('Failed to update complaint');
       }
@@ -177,13 +191,13 @@ export default function ComplaintDetailPage() {
     }
   };
 
-  if (!isLoading && (error || !complaint)) {
+  if (!isLoading && (errorMessage(queryError) || !complaint)) {
     return (
       <FormPage
         title="Complaint Details"
         description="View complaint information"
         backHref="/complaints"
-        error={error || 'Complaint not found'}
+        error={errorMessage(queryError) || 'Complaint not found'}
         maxWidth="4xl"
       />
     );
@@ -232,6 +246,11 @@ export default function ComplaintDetailPage() {
       >
         {complaint && (
           <div className="space-y-6">
+            {writeResult && (
+              <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+                {writeResult}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <DetailCard
                 title="Complaint Details"

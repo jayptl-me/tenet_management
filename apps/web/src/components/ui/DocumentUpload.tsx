@@ -101,7 +101,10 @@ export function DocumentUpload({
         data: { url: string; docType: string; idNumberMasked?: string; message: string };
       }>();
 
-      toast.success(res.data?.message || 'Document uploaded securely');
+      // No success toast: the server's own message is shown by the caller's
+      // onUploaded handler, which re-reads the record and renders the state the
+      // server holds. A local "uploaded successfully" would claim an outcome
+      // this component cannot see.
       onUploaded({
         url: res.data.url,
         docType: res.data.docType,

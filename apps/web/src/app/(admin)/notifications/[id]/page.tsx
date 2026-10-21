@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
   Calendar,
@@ -47,10 +48,14 @@ function formatDateTime(dateStr: string | null | undefined): string {
 }
 
 const NOTIFICATION_KEY = ['notifications', 'detail'] as const;
+// The notification history list and this record live under the same
+// `['notifications']` prefix, so one invalidation re-reads every notification view.
+const NOTIFICATIONS_PREFIX = ['notifications'] as const;
 
 export default function NotificationDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -70,7 +75,9 @@ export default function NotificationDetailPage() {
     setIsDeleting(true);
     try {
       await api.delete(`notifications/${id}`).json();
-      toast.success('Notification deleted successfully');
+      // Invalidate before the navigation: the destination history must show
+      // the server's list, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_PREFIX });
       router.push('/notifications?tab=history');
     } catch (err) {
       toast.error((await parseApiError(err)).message);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Package,
   Boxes,
@@ -80,10 +81,14 @@ function serviceHealth(
 }
 
 const ASSET_KEY = (id: string | undefined) => ['assets', id] as const;
+// The assets list, the stat cards and this record all live under the same
+// `['assets']` prefix, so one invalidation re-reads every asset view.
+const ASSETS_PREFIX = ['assets'] as const;
 
 export default function AssetDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
   const id = params?.id;
   const [retireModalOpen, setRetireModalOpen] = useState(false);
   const [isRetiring, setIsRetiring] = useState(false);
@@ -100,7 +105,9 @@ export default function AssetDetailPage() {
     setIsRetiring(true);
     try {
       await api.delete(`assets/${asset._id}`).json();
-      toast.success('Asset retired');
+      // Invalidate before the navigation: the destination list must show the
+      // server's state, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: ASSETS_PREFIX });
       router.push('/assets');
     } catch (err) {
       toast.error((await parseApiError(err)).message);
