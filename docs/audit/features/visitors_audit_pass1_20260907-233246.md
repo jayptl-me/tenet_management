@@ -255,24 +255,24 @@ Verification: bun run lint clean (oxlint 0 warnings/errors); no tests executed; 
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| VIS-P2-1 | P2 | API accepts backdated expectedArrival; past-date hard block deferred to front-end warning only | apps/api/src/routes/visitors.ts |
-| VIS-P3-1 | P3 | Admin visitor list has no bulk actions (deferred) | apps/web/src/app/(admin)/visitors/page.tsx |
-| VIS-P3-2 | P3 | Visitor photo capture absent; no API fields back it (deferred) | apps/api/src/routes/visitors.ts |
-| VIS-P3-3 | P3 | Gate QR codes absent; no API fields back them (deferred) | apps/api/src/routes/visitors.ts |
+| ID       | Severity | Gap                                                                                            | Paths                                      |
+| -------- | -------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| VIS-P2-1 | P2       | API accepts backdated expectedArrival; past-date hard block deferred to front-end warning only | apps/api/src/routes/visitors.ts            |
+| VIS-P3-1 | P3       | Admin visitor list has no bulk actions (deferred)                                              | apps/web/src/app/(admin)/visitors/page.tsx |
+| VIS-P3-2 | P3       | Visitor photo capture absent; no API fields back it (deferred)                                 | apps/api/src/routes/visitors.ts            |
+| VIS-P3-3 | P3       | Gate QR codes absent; no API fields back them (deferred)                                       | apps/api/src/routes/visitors.ts            |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| List/detail/create populate tenant.user + tenant.room(roomNumber floor) + nested floor(label floorNumber) | FIXED - WORKING - apps/api/src/routes/visitors.ts (visitorTenantPopulate) |
-| List search (visitorName/phone regex) + tenantId filters | FIXED - WORKING - apps/api/src/routes/visitors.ts GET /visitors |
-| Admin create rejects checked-out tenant (TENANT_INACTIVE 409, mirrors tenants PUT) | FIXED - WORKING - apps/api/src/routes/visitors.ts POST /visitors |
-| VisitorLifecycleStepper component (linear stepper + cancelled branch, aria-current) | FIXED - WORKING - apps/web/src/components/ui/VisitorLifecycleStepper.tsx |
-| VisitorGatePassCard component (passcode parity, host/purpose/timeline, copy + print CSS) | FIXED - WORKING - apps/web/src/components/ui/VisitorGatePassCard.tsx |
-| Rebuilt register form: host section (active-tenants picker + room/bed/floor preview), details section (purpose chips), schedule section (arrival summary + past-date block), parseApiError | FIXED - WORKING - apps/web/src/app/(admin)/visitors/new/page.tsx |
-| Rebuilt edit form: read-only host context card (tenant link + room/bed/floor/phone), details + purpose chips, schedule with old-vs-new summary, status readout section | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx |
-| Enriched detail: StatCards (window/duration/host stay/pass code), stepper + lifecycle actions, gate pass card, host card (tenant link + contact + room/bed/floor), WhatsApp visitor, timeline duration, record meta (created/updated/approvedBy/ID copy) | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/page.tsx |
-| Enriched list: search input, tenant filter, Room column (populated), Expected column, mobile cards room + expected date, CSV Bed + Floor columns (now resolve) | FIXED - WORKING - apps/web/src/app/(admin)/visitors/page.tsx |
-| Trimmed legacy visitors.md to structured listings + working status only | FIXED - WORKING - docs/audit/features/visitors.md |
+| Claim                                                                                                                                                                                                                                                    | Live status                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| List/detail/create populate tenant.user + tenant.room(roomNumber floor) + nested floor(label floorNumber)                                                                                                                                                | FIXED - WORKING - apps/api/src/routes/visitors.ts (visitorTenantPopulate) |
+| List search (visitorName/phone regex) + tenantId filters                                                                                                                                                                                                 | FIXED - WORKING - apps/api/src/routes/visitors.ts GET /visitors           |
+| Admin create rejects checked-out tenant (TENANT_INACTIVE 409, mirrors tenants PUT)                                                                                                                                                                       | FIXED - WORKING - apps/api/src/routes/visitors.ts POST /visitors          |
+| VisitorLifecycleStepper component (linear stepper + cancelled branch, aria-current)                                                                                                                                                                      | FIXED - WORKING - apps/web/src/components/ui/VisitorLifecycleStepper.tsx  |
+| VisitorGatePassCard component (passcode parity, host/purpose/timeline, copy + print CSS)                                                                                                                                                                 | FIXED - WORKING - apps/web/src/components/ui/VisitorGatePassCard.tsx      |
+| Rebuilt register form: host section (active-tenants picker + room/bed/floor preview), details section (purpose chips), schedule section (arrival summary + past-date block), parseApiError                                                               | FIXED - WORKING - apps/web/src/app/(admin)/visitors/new/page.tsx          |
+| Rebuilt edit form: read-only host context card (tenant link + room/bed/floor/phone), details + purpose chips, schedule with old-vs-new summary, status readout section                                                                                   | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx    |
+| Enriched detail: StatCards (window/duration/host stay/pass code), stepper + lifecycle actions, gate pass card, host card (tenant link + contact + room/bed/floor), WhatsApp visitor, timeline duration, record meta (created/updated/approvedBy/ID copy) | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/page.tsx         |
+| Enriched list: search input, tenant filter, Room column (populated), Expected column, mobile cards room + expected date, CSV Bed + Floor columns (now resolve)                                                                                           | FIXED - WORKING - apps/web/src/app/(admin)/visitors/page.tsx              |
+| Trimmed legacy visitors.md to structured listings + working status only                                                                                                                                                                                  | FIXED - WORKING - docs/audit/features/visitors.md                         |

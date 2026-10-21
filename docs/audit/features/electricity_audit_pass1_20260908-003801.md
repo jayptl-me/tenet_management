@@ -158,10 +158,10 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| List StatCards + Units + CSV + parsers | FIXED - WORKING - apps/web/src/app/(admin)/electricity/page.tsx |
-| Detail floor column + parsers | FIXED - WORKING - apps/web/src/app/(admin)/electricity/[id]/page.tsx |
-| Floor populate on list/create/PUT responses | FIXED - WORKING - apps/api/src/routes/electricity.ts |
-| Guardian /my ward mode; :id room-scoped read | FIXED - WORKING - apps/api/src/routes/electricity.ts |
-| Flutter bill proof image + external open | FIXED - WORKING - electricity_screen.dart |
+| Claim                                        | Live status                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------- |
+| List StatCards + Units + CSV + parsers       | FIXED - WORKING - apps/web/src/app/(admin)/electricity/page.tsx      |
+| Detail floor column + parsers                | FIXED - WORKING - apps/web/src/app/(admin)/electricity/[id]/page.tsx |
+| Floor populate on list/create/PUT responses  | FIXED - WORKING - apps/api/src/routes/electricity.ts                 |
+| Guardian /my ward mode; :id room-scoped read | FIXED - WORKING - apps/api/src/routes/electricity.ts                 |
+| Flutter bill proof image + external open     | FIXED - WORKING - electricity_screen.dart                            |

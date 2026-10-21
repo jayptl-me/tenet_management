@@ -159,16 +159,16 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Guardian.isActive checkout/reinstate flips | FIXED - WORKING - apps/api/src/routes/tenants.ts |
-| Tenant create/delete/reinstate audits | FIXED - WORKING - apps/api/src/routes/tenants.ts |
-| Checkout pending-payments block | FIXED - WORKING - apps/api/src/routes/tenants.ts |
-| Floor mapping (5 populates + mapper) | FIXED - WORKING - apps/api/src/routes/guardians.ts |
-| List room/email columns + parsers | FIXED - WORKING - apps/web/src/app/(admin)/guardians/page.tsx |
-| New rebuilt with preview + dialog | FIXED - WORKING - apps/web/src/app/(admin)/guardians/new/page.tsx |
-| Detail stay + dead notes removed + parser | FIXED - WORKING - apps/web/src/app/(admin)/guardians/[id]/page.tsx |
-| Edit emergency hint | FIXED - WORKING - apps/web/src/app/(admin)/guardians/[id]/edit/page.tsx |
-| toPublicJSON secret strip | FIXED - WORKING - apps/api/src/models/user.ts |
-| auth/me ward enrichment | FIXED - WORKING - apps/api/src/routes/auth.ts |
-| Flutter notices unwrap + ward dates | FIXED - WORKING - guardian_repository.dart, ward_attendance_screen.dart, guardian_notices_screen.dart |
+| Claim                                      | Live status                                                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Guardian.isActive checkout/reinstate flips | FIXED - WORKING - apps/api/src/routes/tenants.ts                                                      |
+| Tenant create/delete/reinstate audits      | FIXED - WORKING - apps/api/src/routes/tenants.ts                                                      |
+| Checkout pending-payments block            | FIXED - WORKING - apps/api/src/routes/tenants.ts                                                      |
+| Floor mapping (5 populates + mapper)       | FIXED - WORKING - apps/api/src/routes/guardians.ts                                                    |
+| List room/email columns + parsers          | FIXED - WORKING - apps/web/src/app/(admin)/guardians/page.tsx                                         |
+| New rebuilt with preview + dialog          | FIXED - WORKING - apps/web/src/app/(admin)/guardians/new/page.tsx                                     |
+| Detail stay + dead notes removed + parser  | FIXED - WORKING - apps/web/src/app/(admin)/guardians/[id]/page.tsx                                    |
+| Edit emergency hint                        | FIXED - WORKING - apps/web/src/app/(admin)/guardians/[id]/edit/page.tsx                               |
+| toPublicJSON secret strip                  | FIXED - WORKING - apps/api/src/models/user.ts                                                         |
+| auth/me ward enrichment                    | FIXED - WORKING - apps/api/src/routes/auth.ts                                                         |
+| Flutter notices unwrap + ward dates        | FIXED - WORKING - guardian_repository.dart, ward_attendance_screen.dart, guardian_notices_screen.dart |

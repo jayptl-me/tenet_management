@@ -156,12 +156,12 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Tenant own-floor PUT scope + note audits + parseId + batched enricher | FIXED - WORKING - apps/api/src/routes/services.ts |
-| POST /floors/reseed-services | FIXED - WORKING - apps/api/src/routes/floors.ts |
-| List floor filter + variant + full CSV + parsers | FIXED - WORKING - apps/web/src/app/(admin)/services/page.tsx |
-| New strict isPerFloor + parser | FIXED - WORKING - apps/web/src/app/(admin)/services/new/page.tsx |
-| Edit strict filter + read-only floor + parsers | FIXED - WORKING - apps/web/src/app/(admin)/services/[id]/edit/page.tsx |
-| Detail duplicate CTA removed | FIXED - removed - apps/web/src/app/(admin)/services/[id]/page.tsx |
-| Flutter services unwrap + complaint category map | FIXED - WORKING - services_screen.dart, tenant_repository.dart |
+| Claim                                                                 | Live status                                                            |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Tenant own-floor PUT scope + note audits + parseId + batched enricher | FIXED - WORKING - apps/api/src/routes/services.ts                      |
+| POST /floors/reseed-services                                          | FIXED - WORKING - apps/api/src/routes/floors.ts                        |
+| List floor filter + variant + full CSV + parsers                      | FIXED - WORKING - apps/web/src/app/(admin)/services/page.tsx           |
+| New strict isPerFloor + parser                                        | FIXED - WORKING - apps/web/src/app/(admin)/services/new/page.tsx       |
+| Edit strict filter + read-only floor + parsers                        | FIXED - WORKING - apps/web/src/app/(admin)/services/[id]/edit/page.tsx |
+| Detail duplicate CTA removed                                          | FIXED - removed - apps/web/src/app/(admin)/services/[id]/page.tsx      |
+| Flutter services unwrap + complaint category map                      | FIXED - WORKING - services_screen.dart, tenant_repository.dart         |

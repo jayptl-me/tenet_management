@@ -13,15 +13,15 @@ Superseded by: attendance_audit_pass1_20260907-232349.md (source-verified pass 1
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| ATT-LIST | P2 | Admin list surface works with gaps: bulk mark panel and print roster missing (see pass 1 record) | apps/web/src/app/(admin)/attendance/page.tsx |
-| ATT-DETAIL | P3 | Record detail surface works with gaps: day prev/next navigation missing (see pass 1 record) | apps/web/src/app/(admin)/attendance/[id]/page.tsx |
-| ATT-TENANT | P2 | Tenant self surface works with gaps: no month calendar or history date filters in Flutter (see pass 1 record) | mobile/lib/features/tenant/presentation/attendance_screen.dart |
+| ID         | Severity | Gap                                                                                                           | Paths                                                          |
+| ---------- | -------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| ATT-LIST   | P2       | Admin list surface works with gaps: bulk mark panel and print roster missing (see pass 1 record)              | apps/web/src/app/(admin)/attendance/page.tsx                   |
+| ATT-DETAIL | P3       | Record detail surface works with gaps: day prev/next navigation missing (see pass 1 record)                   | apps/web/src/app/(admin)/attendance/[id]/page.tsx              |
+| ATT-TENANT | P2       | Tenant self surface works with gaps: no month calendar or history date filters in Flutter (see pass 1 record) | mobile/lib/features/tenant/presentation/attendance_screen.dart |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
+| Claim                                                                      | Live status                                                                                                               |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Manual marking surface documented as WORKING WITH GAPS in the base listing | CLOSED - 2026-09-08 addendum verified rich form (3 FormSections, icons, duration preview, clash check); no rebuild needed |
-| Record edit surface documented as WORKING WITH GAPS in the base listing | CLOSED - 2026-09-08 addendum: parseApiError plus date validation applied; out/in duration guard present |
+| Record edit surface documented as WORKING WITH GAPS in the base listing    | CLOSED - 2026-09-08 addendum: parseApiError plus date validation applied; out/in duration guard present                   |

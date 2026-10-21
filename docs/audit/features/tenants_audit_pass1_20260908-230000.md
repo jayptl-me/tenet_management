@@ -86,12 +86,12 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| No tenant self-service profile update (P1) | CLOSED - PATCH /tenants/me/profile implemented with audit log (fixed this pass) |
-| Guardian dues used gross totals (P1) | CLOSED - guardian dues use net totals (fixed this pass) |
-| Tenant KYC section showed a non-existent document (P2) | CLOSED - fixed this pass |
-| Tenant profile lacked floor and move-out info (P2) | CLOSED - fixed this pass |
-| Guardian ward lacked floor, move-in date, and call action (P2) | CLOSED - fixed this pass |
-| No tenant-side document upload (P3) | CLOSED - API endpoint plus image_picker integration (fixed this pass) |
-| No PDF Aadhaar upload from the portal (P4) | CLOSED - file_picker integration (fixed this pass) |
+| Claim                                                          | Live status                                                                     |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| No tenant self-service profile update (P1)                     | CLOSED - PATCH /tenants/me/profile implemented with audit log (fixed this pass) |
+| Guardian dues used gross totals (P1)                           | CLOSED - guardian dues use net totals (fixed this pass)                         |
+| Tenant KYC section showed a non-existent document (P2)         | CLOSED - fixed this pass                                                        |
+| Tenant profile lacked floor and move-out info (P2)             | CLOSED - fixed this pass                                                        |
+| Guardian ward lacked floor, move-in date, and call action (P2) | CLOSED - fixed this pass                                                        |
+| No tenant-side document upload (P3)                            | CLOSED - API endpoint plus image_picker integration (fixed this pass)           |
+| No PDF Aadhaar upload from the portal (P4)                     | CLOSED - file_picker integration (fixed this pass)                              |

@@ -137,9 +137,9 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| History status filter + recipient CSV counts | FIXED - WORKING - apps/web/src/app/(admin)/notifications/page.tsx |
-| Edit redirects to history tab | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/edit/page.tsx |
-| Emergency compose flag gate | FIXED - WORKING - apps/api/src/routes/notifications.ts |
-| Delete toast parser | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/page.tsx |
+| Claim                                        | Live status                                                                 |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| History status filter + recipient CSV counts | FIXED - WORKING - apps/web/src/app/(admin)/notifications/page.tsx           |
+| Edit redirects to history tab                | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/edit/page.tsx |
+| Emergency compose flag gate                  | FIXED - WORKING - apps/api/src/routes/notifications.ts                      |
+| Delete toast parser                          | FIXED - WORKING - apps/web/src/app/(admin)/notifications/[id]/page.tsx      |

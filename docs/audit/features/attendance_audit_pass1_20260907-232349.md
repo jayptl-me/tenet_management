@@ -268,21 +268,21 @@ Verification: bun run lint clean; bun run typecheck clean; no tests executed; no
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| ATT-P2-1 | P2 | Bulk-mark batch API and bulk mark panel absent; single manual marking only (deferred in pass 1) | apps/api/src/routes/attendance.ts, apps/web/src/app/(admin)/attendance/new/page.tsx |
-| ATT-P2-2 | P2 | Flutter tenant attendance screen has no month calendar or from/to history filters despite API range support | mobile/lib/features/tenant/presentation/attendance_screen.dart |
-| ATT-P3-1 | P3 | Print roster layout absent (deferred, not blocking) | apps/web/src/app/(admin)/attendance/page.tsx |
-| ATT-P3-2 | P3 | AttendanceMonthCalendar not reused on meals/laundry/menus lists (calendar reuse wiring deferred) | apps/web/src/components/ui/AttendanceMonthCalendar.tsx |
-| ATT-P3-3 | P3 | Record detail lacks day prev/next navigation | apps/web/src/app/(admin)/attendance/[id]/page.tsx |
+| ID       | Severity | Gap                                                                                                         | Paths                                                                               |
+| -------- | -------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ATT-P2-1 | P2       | Bulk-mark batch API and bulk mark panel absent; single manual marking only (deferred in pass 1)             | apps/api/src/routes/attendance.ts, apps/web/src/app/(admin)/attendance/new/page.tsx |
+| ATT-P2-2 | P2       | Flutter tenant attendance screen has no month calendar or from/to history filters despite API range support | mobile/lib/features/tenant/presentation/attendance_screen.dart                      |
+| ATT-P3-1 | P3       | Print roster layout absent (deferred, not blocking)                                                         | apps/web/src/app/(admin)/attendance/page.tsx                                        |
+| ATT-P3-2 | P3       | AttendanceMonthCalendar not reused on meals/laundry/menus lists (calendar reuse wiring deferred)            | apps/web/src/components/ui/AttendanceMonthCalendar.tsx                              |
+| ATT-P3-3 | P3       | Record detail lacks day prev/next navigation                                                                | apps/web/src/app/(admin)/attendance/[id]/page.tsx                                   |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| check-in/check-out let guardian mark any tenant | FIXED - WORKING - apps/api/src/routes/attendance.ts |
-| manual checkIn/checkOut free strings stored null/Invalid Date | FIXED - WORKING - apps/api/src/routes/attendance.ts |
-| GET list status/method/date unvalidated | FIXED - WORKING - apps/api/src/routes/attendance.ts |
-| new date regex + hand-rolled errors/labels | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new/page.tsx |
-| edit generic errors | FIXED - WORKING - apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx |
-| Prior pass1 called new/edit shallow | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new + [id]/edit |
+| Claim                                                         | Live status                                                              |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| check-in/check-out let guardian mark any tenant               | FIXED - WORKING - apps/api/src/routes/attendance.ts                      |
+| manual checkIn/checkOut free strings stored null/Invalid Date | FIXED - WORKING - apps/api/src/routes/attendance.ts                      |
+| GET list status/method/date unvalidated                       | FIXED - WORKING - apps/api/src/routes/attendance.ts                      |
+| new date regex + hand-rolled errors/labels                    | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new/page.tsx       |
+| edit generic errors                                           | FIXED - WORKING - apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx |
+| Prior pass1 called new/edit shallow                           | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new + [id]/edit    |

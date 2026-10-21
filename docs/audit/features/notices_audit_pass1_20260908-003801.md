@@ -154,12 +154,12 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Detail target names (floor/room/tenant) + parser | FIXED - WORKING - apps/web/src/app/(admin)/notices/[id]/page.tsx |
-| List count + targets CSV + parsers | FIXED - WORKING - apps/web/src/app/(admin)/notices/page.tsx |
-| published mapping | FIXED - WORKING - packages/types/src/tokens.ts |
-| Portal feed pagination | FIXED - WORKING - apps/api/src/routes/notices.ts |
-| Model title/content minlength 5/10 | FIXED - WORKING - apps/api/src/models/noticePost.ts |
-| New/edit parsers | FIXED - WORKING - notices/new, notices/[id]/edit |
-| Flutter pin chips (tenant + guardian) | FIXED - WORKING - notices_screen.dart, guardian_notices_screen.dart |
+| Claim                                            | Live status                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------- |
+| Detail target names (floor/room/tenant) + parser | FIXED - WORKING - apps/web/src/app/(admin)/notices/[id]/page.tsx    |
+| List count + targets CSV + parsers               | FIXED - WORKING - apps/web/src/app/(admin)/notices/page.tsx         |
+| published mapping                                | FIXED - WORKING - packages/types/src/tokens.ts                      |
+| Portal feed pagination                           | FIXED - WORKING - apps/api/src/routes/notices.ts                    |
+| Model title/content minlength 5/10               | FIXED - WORKING - apps/api/src/models/noticePost.ts                 |
+| New/edit parsers                                 | FIXED - WORKING - notices/new, notices/[id]/edit                    |
+| Flutter pin chips (tenant + guardian)            | FIXED - WORKING - notices_screen.dart, guardian_notices_screen.dart |

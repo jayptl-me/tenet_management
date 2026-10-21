@@ -164,19 +164,19 @@ Verification: bun run lint clean; bun run typecheck clean across types/web/api; 
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| CMP-P3-1 | P3 | Complaint status-history timeline absent; only resolvedAt tracked (no history collection) | apps/api/src/models/complaint.ts |
+| ID       | Severity | Gap                                                                                       | Paths                            |
+| -------- | -------- | ----------------------------------------------------------------------------------------- | -------------------------------- |
+| CMP-P3-1 | P3       | Complaint status-history timeline absent; only resolvedAt tracked (no history collection) | apps/api/src/models/complaint.ts |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Stay populate + bedId/floor mapping (list/:id/my) | FIXED - WORKING - apps/api/src/routes/complaints.ts |
-| POST role guard + tenant room forcing | FIXED - WORKING - apps/api/src/routes/complaints.ts |
-| Terminal transition guard both PUTs + filter enums + photos audit | FIXED - WORKING - apps/api/src/routes/complaints.ts |
-| List room col + chips + date filter + parsers + pills | FIXED - WORKING - apps/web/src/app/(admin)/complaints/page.tsx |
-| New rebuilt with ResourceSelect + sections + push detail | FIXED - WORKING - apps/web/src/app/(admin)/complaints/new/page.tsx |
-| Detail bed/floor + pill + parsers | FIXED - WORKING - apps/web/src/app/(admin)/complaints/[id]/page.tsx |
-| Edit legend + remap + parsers | FIXED - WORKING - apps/web/src/app/(admin)/complaints/[id]/edit/page.tsx |
-| Flutter 5 photo URLs + validation | FIXED - WORKING - complaints_screen.dart |
+| Claim                                                             | Live status                                                              |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Stay populate + bedId/floor mapping (list/:id/my)                 | FIXED - WORKING - apps/api/src/routes/complaints.ts                      |
+| POST role guard + tenant room forcing                             | FIXED - WORKING - apps/api/src/routes/complaints.ts                      |
+| Terminal transition guard both PUTs + filter enums + photos audit | FIXED - WORKING - apps/api/src/routes/complaints.ts                      |
+| List room col + chips + date filter + parsers + pills             | FIXED - WORKING - apps/web/src/app/(admin)/complaints/page.tsx           |
+| New rebuilt with ResourceSelect + sections + push detail          | FIXED - WORKING - apps/web/src/app/(admin)/complaints/new/page.tsx       |
+| Detail bed/floor + pill + parsers                                 | FIXED - WORKING - apps/web/src/app/(admin)/complaints/[id]/page.tsx      |
+| Edit legend + remap + parsers                                     | FIXED - WORKING - apps/web/src/app/(admin)/complaints/[id]/edit/page.tsx |
+| Flutter 5 photo URLs + validation                                 | FIXED - WORKING - complaints_screen.dart                                 |

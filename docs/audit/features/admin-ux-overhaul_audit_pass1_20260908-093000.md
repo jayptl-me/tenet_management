@@ -90,16 +90,16 @@ Verification: bun run lint clean; bun run typecheck clean across types/web/api; 
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| AUX-P2-1 | P2 | Range/calendar base merges deferred as risky | apps/web/src/components/ui/DateRangePicker.tsx |
+| ID       | Severity | Gap                                          | Paths                                          |
+| -------- | -------- | -------------------------------------------- | ---------------------------------------------- |
+| AUX-P2-1 | P2       | Range/calendar base merges deferred as risky | apps/web/src/components/ui/DateRangePicker.tsx |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Dashboard math + KPI cards + StatCard | FIXED - WORKING - routes/dashboard.ts, dashboard/page.tsx, StatCard.tsx |
-| Settings depth (12 items) + Appearance picker | FIXED - WORKING - settings/page.tsx, AppearanceTab.tsx |
-| Font weights, fallbacks, utilities | FIXED - WORKING - globals.css, useTheme.ts, ThemeProvider.tsx, field-styles, 19 files |
-| Component sweep (23 files) + TableActions + print CSS | FIXED - WORKING - ui/_, admin/_, shared/*, globals.css |
-| Shared enquiry type | FIXED - WORKING - packages/types/dashboard.ts |
+| Claim                                                 | Live status                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Dashboard math + KPI cards + StatCard                 | FIXED - WORKING - routes/dashboard.ts, dashboard/page.tsx, StatCard.tsx               |
+| Settings depth (12 items) + Appearance picker         | FIXED - WORKING - settings/page.tsx, AppearanceTab.tsx                                |
+| Font weights, fallbacks, utilities                    | FIXED - WORKING - globals.css, useTheme.ts, ThemeProvider.tsx, field-styles, 19 files |
+| Component sweep (23 files) + TableActions + print CSS | FIXED - WORKING - ui/_, admin/_, shared/*, globals.css                                |
+| Shared enquiry type                                   | FIXED - WORKING - packages/types/dashboard.ts                                         |

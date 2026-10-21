@@ -159,14 +159,14 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Tenant branch meta/pagination/status; admin slotDate/tenantId filters | FIXED - WORKING - apps/api/src/routes/laundry.ts |
-| PUT terminal transitions + past-date guard | FIXED - WORKING - apps/api/src/routes/laundry.ts |
-| generateLaundrySlots stub + barrel export deleted | FIXED - removed - apps/api/src/models/laundrySlot.ts, index.ts |
-| Bed/floor tenant mapping (6 populates) | FIXED - WORKING - apps/api/src/routes/laundry.ts |
-| List filters + stay cell + CSV + parsers | FIXED - WORKING - apps/web/src/app/(admin)/laundry/page.tsx |
-| New sections + active picker | FIXED - WORKING - apps/web/src/app/(admin)/laundry/new/page.tsx |
-| Detail link + bed/floor + parser | FIXED - WORKING - apps/web/src/app/(admin)/laundry/[id]/page.tsx |
-| Edit parsers | FIXED - WORKING - apps/web/src/app/(admin)/laundry/[id]/edit/page.tsx |
-| Flutter items/notes + 300 chars + tenantId omit | FIXED - WORKING - laundry_screen.dart, tenant_repository.dart |
+| Claim                                                                 | Live status                                                           |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Tenant branch meta/pagination/status; admin slotDate/tenantId filters | FIXED - WORKING - apps/api/src/routes/laundry.ts                      |
+| PUT terminal transitions + past-date guard                            | FIXED - WORKING - apps/api/src/routes/laundry.ts                      |
+| generateLaundrySlots stub + barrel export deleted                     | FIXED - removed - apps/api/src/models/laundrySlot.ts, index.ts        |
+| Bed/floor tenant mapping (6 populates)                                | FIXED - WORKING - apps/api/src/routes/laundry.ts                      |
+| List filters + stay cell + CSV + parsers                              | FIXED - WORKING - apps/web/src/app/(admin)/laundry/page.tsx           |
+| New sections + active picker                                          | FIXED - WORKING - apps/web/src/app/(admin)/laundry/new/page.tsx       |
+| Detail link + bed/floor + parser                                      | FIXED - WORKING - apps/web/src/app/(admin)/laundry/[id]/page.tsx      |
+| Edit parsers                                                          | FIXED - WORKING - apps/web/src/app/(admin)/laundry/[id]/edit/page.tsx |
+| Flutter items/notes + 300 chars + tenantId omit                       | FIXED - WORKING - laundry_screen.dart, tenant_repository.dart         |

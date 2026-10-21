@@ -284,7 +284,7 @@ Current jobs: `typecheck`, `lint`, `test-api` (mongo:7), `build-web`, `build-api
 
 **Verified 2026-09-29 on run `36581880412` (the Phase 1 push):**
 
-- `bun install --frozen-lockfile` **passes** with no lockfile present. The lockfile gap is a *reproducibility* risk, not a CI failure -- the original text here overstated it. Committing `bun.lock` still stands, on build determinism alone.
+- `bun install --frozen-lockfile` **passes** with no lockfile present. The lockfile gap is a _reproducibility_ risk, not a CI failure -- the original text here overstated it. Committing `bun.lock` still stands, on build determinism alone.
 - Jobs: `lint` 12s, `test-api` 48s, `build-web` 26s, `build-api` 10s, `typecheck` 17s -- **all green**.
 - `e2e` **failed** at `Run bun run test:e2e`, exactly as predicted: the job runs no `next build`, yet `playwright.config.ts` starts `next start`, which needs `.next`. This is the only red job.
 - Annotation: `actions/checkout@v4` targets Node.js 20 and is forced onto Node 24 -- bump the action during this phase.

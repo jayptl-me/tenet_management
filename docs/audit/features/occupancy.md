@@ -135,10 +135,10 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| DASH-OCC-P1-1 Dashboard occupancy ratio compared beds to rooms | CLOSED - totalBeds exposed in types and GET /dashboard/stats; ratio uses beds |
-| DASH-OCC-P1-2 Dashboard trend description used wrong denominator | CLOSED - snapshot description uses occupiedBeds/totalBeds |
-| Room deletion could race into dual bed bookings | CLOSED - partial unique index on roomId+bedId |
-| Room deletion allowed while active tenants occupy beds | CLOSED - 409 ACTIVE_TENANTS guard |
-| Bed allocation lacked live occupancy state | CLOSED - OccupancyBedPicker disables occupied slots |
+| Claim                                                            | Live status                                                                   |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| DASH-OCC-P1-1 Dashboard occupancy ratio compared beds to rooms   | CLOSED - totalBeds exposed in types and GET /dashboard/stats; ratio uses beds |
+| DASH-OCC-P1-2 Dashboard trend description used wrong denominator | CLOSED - snapshot description uses occupiedBeds/totalBeds                     |
+| Room deletion could race into dual bed bookings                  | CLOSED - partial unique index on roomId+bedId                                 |
+| Room deletion allowed while active tenants occupy beds           | CLOSED - 409 ACTIVE_TENANTS guard                                             |
+| Bed allocation lacked live occupancy state                       | CLOSED - OccupancyBedPicker disables occupied slots                           |

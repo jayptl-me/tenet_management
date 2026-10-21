@@ -222,8 +222,8 @@ least truthful one.
 
 The portal `StatusChip` is the highest-leverage shared defect in the Flutter app: one function, one
 hardcoded map, and every unlisted domain state renders the same grey - `expected`, `arrived`,
-`departed`, `open`, `new`, `draft`, `in_progress` are all missing from it. Blast radius is every
-portal screen that shows a status.
+`departed`, `open`, `new` and `draft` are all missing from it (`in_progress` and `pending` are
+mapped, to warning). Blast radius is every portal screen that shows a status.
 
 ### F7 - The enquiry to tenant hop never reaches the FSM's terminal state
 
@@ -296,7 +296,7 @@ wave that creates it (see section 5); until then they are listed as pending, not
    `mobile/.../invoices_screen.dart:48-53`). The rule must key on the identifiers and the
    arithmetic, not on a literal string, or it will pass a violating codebase.
 2. **[M]** Every mutating response carries a server-issued receipt: `receiptId, actor,
-serverTimestamp, resource, resourceId, before, after`, where `before`/`after` are read from the
+   serverTimestamp, resource, resourceId, before, after`, where `before`/`after` are read from the
    database inside the handler, never echoed from the request body. A write whose receipt does not
    arrive renders FAILED. The artifact renderer already exists
    (`apps/web/src/components/admin/ReceiptDocument.tsx:32-46`); extend it, do not rebuild it.
@@ -337,8 +337,8 @@ serverTimestamp, resource, resourceId, before, after`, where `before`/`after` ar
     forced into a ladder. Because Dart cannot import TypeScript, the shared vocabulary has to be
     generated (one source of truth in `packages/types`, emitted for both sides) - otherwise "one
     stepper" silently becomes two, which is the failure this audit exists to kill. The portal also
-    needs its shared status map fixed (F6): `expected`, `arrived`, `departed`, `open`, `new`,
-    `draft`, `in_progress` are currently unlisted and render grey.
+    needs its shared status map fixed (F6): `expected`, `arrived`, `departed`, `open`, `new` and
+    `draft` are currently unlisted and render grey.
 12. **[M]** URL is state: filter, sort, tab, open record and step live in the address bar, so a
     view can be linked, shared, cited and reviewed. Every internal link with a query parameter must
     be read by its target (F5). The baseline to clear is 3 pages with zero `useSearchParams`.

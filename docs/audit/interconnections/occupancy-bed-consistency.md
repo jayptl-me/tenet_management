@@ -38,19 +38,19 @@ Mutation paths:
 
 ## Code paths (source files)
 
-| Concern                                                        | Path                                                                                                                                            |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Room model, beds subdoc, pre-save occupancyCount, generateBeds | `apps/api/src/models/room.ts`                                                                                                                   |
-| rebuildBedsForSharingType + PUT sharingType + DELETE soft      | `apps/api/src/routes/rooms.ts`                                                                                                                  |
-| Reconcile dry-run/apply (beds rebuilt from active tenants)     | `apps/api/src/services/occupancy-reconcile.service.ts` + `GET/POST /rooms/reconcile-occupancy` in `apps/api/src/routes/rooms.ts`                |
-| Reconcile trigger + conflict/orphan report UI                  | Reconcile button + result panel in `apps/web/src/app/(admin)/rooms/page.tsx`                                                                    |
-| Tenant lifecycle bed mutations                                 | `apps/api/src/routes/tenants.ts`                                                                                                                |
-| Tenant indexes                                                 | `apps/api/src/models/tenant.ts` (`unique_active_room_bed` partial unique on { roomId, bedId } where isActive)                                   |
-| Audit reconcile action                                         | `reconcile` in `apps/api/src/lib/write-audit-log.ts` + `apps/api/src/models/auditLog.ts` enum                                                   |
-| Sample seed bed linkage + re-run guard                         | `apps/api/src/scripts/seed.ts` (links beds on seed; skips when collections populated)                                                           |
-| Floor.totalRooms sync                                          | room model post-save / post-delete; soft-delete path in rooms.ts                                                                                |
-| Unit / integration tests                                       | `apps/api/src/__tests__/beds.test.ts`, `tenant-transfer.test.ts`, `rooms.test.ts`, `module-http-e2e.test.ts`                                    |
-| Admin create/edit bed UI                                       | tenants new OccupancyBedPicker; edit filtered Select; rooms detail                                                                              |
+| Concern                                                        | Path                                                                                                                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Room model, beds subdoc, pre-save occupancyCount, generateBeds | `apps/api/src/models/room.ts`                                                                                                                         |
+| rebuildBedsForSharingType + PUT sharingType + DELETE soft      | `apps/api/src/routes/rooms.ts`                                                                                                                        |
+| Reconcile dry-run/apply (beds rebuilt from active tenants)     | `apps/api/src/services/occupancy-reconcile.service.ts` + `GET/POST /rooms/reconcile-occupancy` in `apps/api/src/routes/rooms.ts`                      |
+| Reconcile trigger + conflict/orphan report UI                  | Reconcile button + result panel in `apps/web/src/app/(admin)/rooms/page.tsx`                                                                          |
+| Tenant lifecycle bed mutations                                 | `apps/api/src/routes/tenants.ts`                                                                                                                      |
+| Tenant indexes                                                 | `apps/api/src/models/tenant.ts` (`unique_active_room_bed` partial unique on { roomId, bedId } where isActive)                                         |
+| Audit reconcile action                                         | `reconcile` in `apps/api/src/lib/write-audit-log.ts` + `apps/api/src/models/auditLog.ts` enum                                                         |
+| Sample seed bed linkage + re-run guard                         | `apps/api/src/scripts/seed.ts` (links beds on seed; skips when collections populated)                                                                 |
+| Floor.totalRooms sync                                          | room model post-save / post-delete; soft-delete path in rooms.ts                                                                                      |
+| Unit / integration tests                                       | `apps/api/src/__tests__/beds.test.ts`, `tenant-transfer.test.ts`, `rooms.test.ts`, `module-http-e2e.test.ts`                                          |
+| Admin create/edit bed UI                                       | tenants new OccupancyBedPicker; edit filtered Select; rooms detail                                                                                    |
 | Related                                                        | `docs/audit/interconnections/tenant-lifecycle.md`, `docs/audit/features/rooms.md`, `docs/audit/features/tenants-rooms_audit_pass1_20260908-192930.md` |
 
 ### rebuildBedsForSharingType (rooms.ts)

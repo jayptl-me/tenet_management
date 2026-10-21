@@ -172,15 +172,15 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| paid removed from PUT schema (verify-only) | FIXED - WORKING - apps/api/src/routes/payments.ts |
-| POST /:id/void endpoint | FIXED - WORKING - apps/api/src/routes/payments.ts |
-| /my tenant populate; floor populate on list/:id/pending-verification/receipt; mapPayment bed/floor | FIXED - WORKING - apps/api/src/routes/payments.ts |
-| List parsers + full-set CSV + Bed column | FIXED - WORKING - apps/web/src/app/(admin)/payments/page.tsx |
-| New sections + tenantLabel + balance labels + push detail | FIXED - WORKING - apps/web/src/app/(admin)/payments/new/page.tsx |
-| Detail bed/floor + parsers + void button | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/page.tsx |
-| Edit paid removal + linked header | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/edit/page.tsx |
-| api-shapes bed/floor helpers | FIXED - WORKING - apps/web/src/lib/api-shapes.ts |
-| Flutter UTR screenshot field + balance labels | FIXED - WORKING - payments_screen.dart, tenant_repository.dart |
-| Unused summary/qr API surfaces (P2) | CLOSED - payments/summary consumed by payments and invoices lists; payments/qr-code consumed by Flutter tenant invoice flow |
+| Claim                                                                                              | Live status                                                                                                                 |
+| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| paid removed from PUT schema (verify-only)                                                         | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| POST /:id/void endpoint                                                                            | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| /my tenant populate; floor populate on list/:id/pending-verification/receipt; mapPayment bed/floor | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| List parsers + full-set CSV + Bed column                                                           | FIXED - WORKING - apps/web/src/app/(admin)/payments/page.tsx                                                                |
+| New sections + tenantLabel + balance labels + push detail                                          | FIXED - WORKING - apps/web/src/app/(admin)/payments/new/page.tsx                                                            |
+| Detail bed/floor + parsers + void button                                                           | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/page.tsx                                                           |
+| Edit paid removal + linked header                                                                  | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/edit/page.tsx                                                      |
+| api-shapes bed/floor helpers                                                                       | FIXED - WORKING - apps/web/src/lib/api-shapes.ts                                                                            |
+| Flutter UTR screenshot field + balance labels                                                      | FIXED - WORKING - payments_screen.dart, tenant_repository.dart                                                              |
+| Unused summary/qr API surfaces (P2)                                                                | CLOSED - payments/summary consumed by payments and invoices lists; payments/qr-code consumed by Flutter tenant invoice flow |

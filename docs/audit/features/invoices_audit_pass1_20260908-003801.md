@@ -168,13 +168,13 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| payment-status canAccessInvoice guard | FIXED - WORKING - apps/api/src/routes/invoices.ts |
-| Cancel with balance 409 INVOICE_HAS_BALANCE | FIXED - WORKING - apps/api/src/routes/invoices.ts |
-| List status enum + floor nested populate | FIXED - WORKING - apps/api/src/routes/invoices.ts |
-| List tenant filter + parsers | FIXED - WORKING - apps/web/src/app/(admin)/invoices/page.tsx |
-| Create rebuilt with preview + duplicate warning + push detail | FIXED - WORKING - apps/web/src/app/(admin)/invoices/new/page.tsx |
-| Detail bed row + parser | FIXED - WORKING - apps/web/src/app/(admin)/invoices/[id]/page.tsx |
-| Edit floor row + parsers | FIXED - WORKING - apps/web/src/app/(admin)/invoices/[id]/edit/page.tsx |
-| Flutter list balance + status chips; detail stay card | FIXED - WORKING - invoices_screen.dart, invoice_detail_screen.dart |
+| Claim                                                         | Live status                                                            |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| payment-status canAccessInvoice guard                         | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
+| Cancel with balance 409 INVOICE_HAS_BALANCE                   | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
+| List status enum + floor nested populate                      | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
+| List tenant filter + parsers                                  | FIXED - WORKING - apps/web/src/app/(admin)/invoices/page.tsx           |
+| Create rebuilt with preview + duplicate warning + push detail | FIXED - WORKING - apps/web/src/app/(admin)/invoices/new/page.tsx       |
+| Detail bed row + parser                                       | FIXED - WORKING - apps/web/src/app/(admin)/invoices/[id]/page.tsx      |
+| Edit floor row + parsers                                      | FIXED - WORKING - apps/web/src/app/(admin)/invoices/[id]/edit/page.tsx |
+| Flutter list balance + status chips; detail stay card         | FIXED - WORKING - invoices_screen.dart, invoice_detail_screen.dart     |

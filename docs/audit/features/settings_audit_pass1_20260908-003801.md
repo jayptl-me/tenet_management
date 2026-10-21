@@ -36,9 +36,9 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| primaryColorLight in API/model/types but no FE control | FIXED - WORKING - settings/page.tsx, sanitize-settings-payload.ts |
-| Save generic error | FIXED - WORKING - settings/page.tsx |
-| Partial address silently dropped | FIXED - WORKING - settings/page.tsx |
-| New amenity defs default isPerFloor:false (API/model default true; invisible to floor forms) | FIXED - WORKING - AmenityTypesTab.tsx |
+| Claim                                                                                        | Live status                                                       |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| primaryColorLight in API/model/types but no FE control                                       | FIXED - WORKING - settings/page.tsx, sanitize-settings-payload.ts |
+| Save generic error                                                                           | FIXED - WORKING - settings/page.tsx                               |
+| Partial address silently dropped                                                             | FIXED - WORKING - settings/page.tsx                               |
+| New amenity defs default isPerFloor:false (API/model default true; invisible to floor forms) | FIXED - WORKING - AmenityTypesTab.tsx                             |

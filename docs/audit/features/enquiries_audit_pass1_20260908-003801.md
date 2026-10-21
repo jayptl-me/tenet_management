@@ -149,12 +149,12 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| Transition guards both PUTs + filter enums + converted populate | FIXED - WORKING - apps/api/src/routes/enquiries.ts |
-| Invalid enquiryId 400 in tenants POST | FIXED - WORKING - apps/api/src/routes/tenants.ts |
-| Redundant markEnquiryConverted removed (+ unused toast import) | FIXED - removed - apps/web/src/app/(admin)/tenants/new/page.tsx |
-| List converted link + parsers | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/page.tsx |
-| Detail link + fallback + dedup + guards + parsers | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/[id]/page.tsx |
-| Edit convert guard + parsers | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx |
-| New sections + parsers | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/new/page.tsx |
+| Claim                                                           | Live status                                                             |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Transition guards both PUTs + filter enums + converted populate | FIXED - WORKING - apps/api/src/routes/enquiries.ts                      |
+| Invalid enquiryId 400 in tenants POST                           | FIXED - WORKING - apps/api/src/routes/tenants.ts                        |
+| Redundant markEnquiryConverted removed (+ unused toast import)  | FIXED - removed - apps/web/src/app/(admin)/tenants/new/page.tsx         |
+| List converted link + parsers                                   | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/page.tsx           |
+| Detail link + fallback + dedup + guards + parsers               | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/[id]/page.tsx      |
+| Edit convert guard + parsers                                    | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/[id]/edit/page.tsx |
+| New sections + parsers                                          | FIXED - WORKING - apps/web/src/app/(admin)/enquiries/new/page.tsx       |

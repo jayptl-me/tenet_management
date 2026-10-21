@@ -149,17 +149,17 @@ Verification: bun run lint clean; bun run typecheck clean across types/web/api; 
 
 ## Open gaps
 
-| ID | Severity | Gap | Paths |
-|----|----------|-----|--------|
-| WM-P3-1 | P3 | Claim timer push notifications absent; no scheduler surface for it | apps/api/src/routes/washingMachines.ts |
+| ID      | Severity | Gap                                                                | Paths                                  |
+| ------- | -------- | ------------------------------------------------------------------ | -------------------------------------- |
+| WM-P3-1 | P3       | Claim timer push notifications absent; no scheduler surface for it | apps/api/src/routes/washingMachines.ts |
 
 ## Closed
 
-| Claim | Live status |
-|-------|-------------|
-| DELETE in_use 409 MACHINE_IN_USE | FIXED - WORKING - apps/api/src/routes/washingMachines.ts |
+| Claim                                              | Live status                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| DELETE in_use 409 MACHINE_IN_USE                   | FIXED - WORKING - apps/api/src/routes/washingMachines.ts                       |
 | Edit in_use preservation + payload strip + parsers | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/[id]/edit/page.tsx |
-| List Button + parsers + full CSV | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/page.tsx |
-| Detail variant + parser | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/[id]/page.tsx |
-| New sections + parser | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/new/page.tsx |
-| Flutter single-hop myWashingMachines + fallback | FIXED - WORKING - washing_machines_screen.dart, tenant_repository.dart |
+| List Button + parsers + full CSV                   | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/page.tsx           |
+| Detail variant + parser                            | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/[id]/page.tsx      |
+| New sections + parser                              | FIXED - WORKING - apps/web/src/app/(admin)/washing-machines/new/page.tsx       |
+| Flutter single-hop myWashingMachines + fallback    | FIXED - WORKING - washing_machines_screen.dart, tenant_repository.dart         |
