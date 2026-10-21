@@ -56,7 +56,7 @@ Hard DELETE /tenants/:id
 | Temp password UI          | `apps/web/src/components/ui/TempCredentialsDialog.tsx`       |
 | Bed picker (create)       | OccupancyBedPicker (new page)                                |
 | Flutter portal            | `mobile/lib/features/tenant/**`, auth rejects admin          |
-| Related feature audit     | `docs/audit/features/tenants_audit_pass1_20260907-230647.md` |
+| Related feature audit     | `docs/audit/features/tenants-rooms_audit_pass1_20260908-192930.md`  |
 | Occupancy interconnection | `docs/audit/interconnections/occupancy-bed-consistency.md`   |
 
 ### API surface (verified)
