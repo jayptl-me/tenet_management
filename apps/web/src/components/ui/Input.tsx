@@ -102,6 +102,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined
             }
             aria-label={props['aria-label'] || (label ? undefined : props.placeholder)}
+            value={value}
+            onChange={onChange}
             {...props}
           />
 
