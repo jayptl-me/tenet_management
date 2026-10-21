@@ -163,6 +163,11 @@ spot, not about execution effort; A and C both leave the product hollow, D ignor
 B is also the only option that makes the existing audits falsifiable -- the contract fields resolve to live routes,
 so a module that cannot fill them is reported hollow automatically.
 
+**PICKED BY JAY (2026-10-21):** B. Jay's instruction: "you research, plan and fix everything ... keep pushing and
+working on production grade fixes and creation or deletions". DR-10, DR-11 and DR-12 are therefore live as options B.
+Execution runs on the branch `agent/tenet-depth`; the agent never pushes (DR-9), Jay merges.
+Plan of record: `docs/plans/2026-10-21-depth-program.md`.
+
 **Sources:** `docs/audit/FLOW_AND_LAYOUT_AUDIT_20261021.md` sections 1-4; `apps/web/src/components/ui/FormCard.tsx:61,70`;
 `apps/web/src/app/(admin)/layout.tsx:153`; `apps/web/src/components/ui/FormPage.tsx:27-33,71,109`;
 `apps/web/src/components/ui/ResponsiveContainer.tsx` and `KpiHeader.tsx` (0 importers, measured);
@@ -197,6 +202,9 @@ KYC verify, leave decisions and invoice creation write no notification
 number on screen, which is the thing that costs money and the thing the resident sees; D defers the only defect in
 the product that is visible from outside. C is the same mechanism surfaced in the portal and is worth doing once B
 exists.
+
+**PICKED BY JAY (2026-10-21):** B now, C in the wave after B lands (the portal receipt card needs the server receipt
+to exist first).
 
 **Corrected by review (2026-10-21):** B does NOT need new API surface for the admin form. The record-payment page
 already fetches `GET /tenants/:id/dues` (`payments/new/page.tsx:154`), already types
@@ -243,10 +251,13 @@ needs exist with zero importers.
 already in the repo (`ResponsiveContainer.tsx`); D ignores the named surface. B is the smallest change that makes the
 modules distinguishable and the states legible, and it makes the tablet/phone width behave.
 
+**PICKED BY JAY (2026-10-21):** B, with the codegen requirement from the review kept in scope - one vocabulary,
+generated for both clients, or the portal gets a second stepper and the fix fails.
+
 **Corrected by review (2026-10-21):** the shared vocabulary must be generated, not hand-written twice, and the portal
 needs its shared status map fixed first: `mobile/lib/features/shared/widgets/portal_widgets.dart:144-175` omits
-`expected`, `arrived`, `departed`, `open`, `new`, `draft` and `in_progress`, so every one of those domain states
-renders neutral grey on every portal screen that shows a status. One function, whole-portal blast radius.
+`expected`, `arrived`, `departed`, `open`, `new` and `draft`, so every one of those domain states renders neutral grey
+on every portal screen that shows a status. One function, whole-portal blast radius.
 
 **Sources:** `docs/audit/FLOW_AND_LAYOUT_AUDIT_20261021.md` sections 2 and 3 (L1, L2, L5, F4, F5) and Gate B/C;
 `apps/web/src/app/(admin)/{payments,enquiries,tenants,complaints}/page.tsx` (0 `useSearchParams` in the first three,
