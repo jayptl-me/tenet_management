@@ -91,14 +91,14 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       action: 'Verify a payment',
       operatorBelieves: 'the payment is verified and the invoice is settled',
       serverCommits:
-        'POST /payments/:id/verify sets status=paid, stamps paidAt with the server clock and verifiedBy with the admin id, calls updateInvoicePaymentStatus so the invoice follows the payment, and writes an audit log entry with the action payment_verify. It writes no notification, so the resident is told nothing.',
+        'POST /payments/:id/verify sets status=paid, stamps paidAt with the server clock and verifiedBy with the admin id, calls updateInvoicePaymentStatus so the invoice follows the payment, writes an audit log entry with the action payment_verify, and notifies the resident with a payment_verified notification. A failed notification is logged and never undoes the write.',
       notification: {
         to: 'tenant',
         type: 'payment_verified',
         required: true,
       },
       mismatchSurfacedAt:
-        'nowhere for the resident: the admin audit timeline on /payments/[id] shows the payment_verify entry, but the resident only learns of it on the next portal load',
+        'both sides now see it: the admin audit timeline on /payments/[id] shows the payment_verify entry, and the resident gets the notification in the portal',
       provenance: {
         auditAction: 'payment_verify',
         screen: '/payments/[id]',
@@ -107,15 +107,15 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       stuckStateMeans:
         'the payment stays pending_verification and the invoice stays unpaid until an admin opens the record and approves it',
       runbook3am:
-        'GET /payments/pending-verification, open the payment, approve it, then confirm on /invoices/[id] that the invoice reads paid',
+        'open /payments and filter by status=pending_verification, approve the record, then confirm on /invoices/[id] that the invoice reads paid',
     },
     {
       action: 'Void a paid payment',
       operatorBelieves: 'the payment is voided and the resident owes the money again',
       serverCommits:
-        'POST /payments/:id/void sets status=cancelled, appends the void note, calls updateInvoicePaymentStatus so the invoice reopens, and writes an audit log entry. It writes no notification.',
+        'POST /payments/:id/void sets status=cancelled, appends the void note, calls updateInvoicePaymentStatus so the invoice reopens, writes an audit log entry, and notifies the resident.',
       mismatchSurfacedAt:
-        'the admin audit timeline on /payments/[id]; the resident sees the invoice open again only on the next portal load',
+        'the admin audit timeline on /payments/[id], and the resident gets the notification in the portal',
       provenance: {
         auditAction: 'update',
         screen: '/payments/[id]',

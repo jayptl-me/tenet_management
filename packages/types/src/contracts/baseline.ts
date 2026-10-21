@@ -22,12 +22,9 @@ export interface KnownBaselineEntry {
  * The contract checker is not allowed to be red from day one, but it is also not allowed to be
  * green while a known gap is still open. Every entry below turns one failure into a BASELINE
  * line in the report; nothing else is suppressed.
+ *
+ * The list is empty on 2026-10-21: the last entry (payment verification sent no notification to
+ * the resident) was closed in wave 2, and the checker proved it - the NOTIFICATION_NOT_IMPLEMENTED
+ * rule went green on its own, so the entry was deleted instead of being left to rot.
  */
-export const KNOWN_BASELINE: KnownBaselineEntry[] = [
-  {
-    contract: 'payments',
-    rule: 'NOTIFICATION_NOT_IMPLEMENTED',
-    reason:
-      'payment verify writes an audit log only (apps/api/src/routes/payments.ts:1054-1119), so the resident is never told; the notification lands in wave 2 of the rebuild program',
-  },
-];
+export const KNOWN_BASELINE: KnownBaselineEntry[] = [];
