@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,7 +61,8 @@ interface InvoiceData {
   otherCharges: number;
   totalAmount: number;
   paidAmount?: number;
-  balance?: number;
+  /** Server-computed amount still due. null when the server did not report one. */
+  balance?: number | null;
   dueDate?: string | null;
   status: string;
   tenantId?: {
@@ -79,9 +81,14 @@ function fmtMoney(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+
 export default function EditInvoicePage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
@@ -182,6 +189,12 @@ export default function EditInvoicePage() {
         payload.status = data.status;
       }
       await api.put(`invoices/${id}`, { json: payload }).json();
+      // The server wrote the change: re-read the invoice so the detail page
+      // shows the server balance and status, not a local guess.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX }),
+      ]);
       router.push(`/invoices/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
@@ -202,7 +215,7 @@ export default function EditInvoicePage() {
       backHref={`/invoices/${id}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="5xl"
+      maxWidth="form"
     >
       <div className="space-y-5">
         {isPaidLocked && (
@@ -330,9 +343,9 @@ export default function EditInvoicePage() {
                         ? `Increases total by ${fmtMoney(totalDelta)}`
                         : `Decreases total by ${fmtMoney(Math.abs(totalDelta))}`}
                       {balanceAfter != null && balanceAfter > 0
-                        ? ` — outstanding balance becomes ${fmtMoney(balanceAfter)}`
+                        ? ` — the balance reported now would become ${fmtMoney(balanceAfter)} if saved`
                         : balanceAfter != null
-                          ? ' — this would fully settle the balance'
+                          ? ' — this would leave nothing outstanding if saved'
                           : ''}
                     </p>
                   )}
@@ -382,16 +395,20 @@ export default function EditInvoicePage() {
                       {invoiceData.month}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-(--color-text-muted)">Paid</span>
-                    <span className="font-semibold text-(--color-success-600) tabular-nums">
-                      {fmtMoney(invoiceData.paidAmount ?? 0)}
-                    </span>
-                  </div>
+                  {typeof invoiceData.paidAmount === 'number' ? (
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-(--color-text-muted)">Paid</span>
+                      <span className="font-semibold text-(--color-success-600) tabular-nums">
+                        {fmtMoney(invoiceData.paidAmount)}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Balance</span>
                     <span className="font-display text-base font-bold text-(--color-danger-600) tabular-nums">
-                      {fmtMoney(invoiceData.balance ?? 0)}
+                      {typeof invoiceData.balance === 'number'
+                        ? fmtMoney(invoiceData.balance)
+                        : 'Not reported'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-(--border-color) pt-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -59,9 +60,18 @@ const STATUS_HELP: Record<string, string> = {
   cancelled: 'Cancelled — excluded from balances and summaries.',
 };
 
+const PAYMENT_KEY = (id: string) => ['payments', id] as const;
+
+const PAYMENT_EVENTS_KEY = (id: string) => ['payments', id, 'audit-logs'] as const;
+
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_PREFIX = ['payments'] as const;
+
 export default function EditPaymentPage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
@@ -128,6 +138,14 @@ export default function EditPaymentPage() {
     setSubmitError('');
     try {
       await api.put(`payments/${id}`, { json: data }).json();
+      // The server wrote the change: re-read the payment (and the invoice it
+      // moves) so the detail page shows the server state, not a local guess.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: PAYMENT_KEY(id) }),
+        queryClient.invalidateQueries({ queryKey: PAYMENT_EVENTS_KEY(id) }),
+        queryClient.invalidateQueries({ queryKey: PAYMENTS_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+      ]);
       router.push(`/payments/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
@@ -158,7 +176,7 @@ export default function EditPaymentPage() {
       backHref={`/payments/${id}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="5xl"
+      maxWidth="form"
     >
       {isPaidLocked && (
         <div className="mb-6 flex items-start gap-3 rounded-(--radius-lg) border border-(--color-warning-300) bg-(--color-warning-50) p-4">

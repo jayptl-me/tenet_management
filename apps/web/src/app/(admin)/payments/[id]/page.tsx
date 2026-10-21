@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CreditCard,
   User,
@@ -30,9 +31,14 @@ import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { Timeline } from '@/components/ui/Timeline';
 import { FormPage } from '@/components/ui/FormPage';
+import { ContentFrame } from '@/components/ui/ContentFrame';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { Modal } from '@/components/ui/Modal';
-import { ReceiptDocument } from '@/components/admin/ReceiptDocument';
+import {
+  buildPaymentReceipt,
+  ReceiptDocument,
+  type PaymentReceiptSource,
+} from '@/components/admin/ReceiptDocument';
 import {
   VerifyPaymentModal,
   type VerifyPaymentTarget,
@@ -100,41 +106,6 @@ interface PaymentDetail {
   verifiedBy?: { name?: string } | string;
 }
 
-interface ReceiptData {
-  _id: string;
-  amount: number;
-  method?: string;
-  type?: string;
-  status?: string;
-  notes?: string;
-  paidAt?: string;
-  createdAt?: string;
-  utrNumber?: string;
-  invoiceId?:
-    | string
-    | {
-        _id?: string;
-        invoiceNumber?: string;
-        month?: string;
-        totalAmount?: number;
-      };
-  tenantId?: {
-    _id?: string;
-    userId?: { name?: string; phone?: string; email?: string };
-    roomId?: { roomNumber?: string };
-  };
-  pgBranding?: {
-    pgName?: string;
-    tagline?: string;
-    address?: { line1?: string; line2?: string; city?: string; state?: string; pincode?: string };
-    phone?: string;
-    email?: string;
-    gstNumber?: string;
-    upiId?: string;
-    upiPayeeName?: string;
-  };
-}
-
 interface AuditEvent {
   id: string;
   action: string;
@@ -192,12 +163,6 @@ function formatStatusLabel(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function receiptInvoiceNumber(receipt: ReceiptData): string {
-  if (!receipt.invoiceId) return 'N/A';
-  if (typeof receipt.invoiceId === 'string') return receipt.invoiceId;
-  return receipt.invoiceId.invoiceNumber ?? receipt.invoiceId._id ?? 'N/A';
-}
-
 function auditTitle(event: AuditEvent): string {
   switch (event.action) {
     case 'payment_verify':
@@ -234,6 +199,8 @@ const PAYMENT_KEY = (id: string) => ['payments', id] as const;
 
 const PAYMENT_EVENTS_KEY = (id: string) => ['payments', id, 'audit-logs'] as const;
 
+const INVOICES_PREFIX = ['invoices'] as const;
+
 export default function PaymentDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -241,11 +208,14 @@ export default function PaymentDetailPage() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
-  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [receipt, setReceipt] = useState<PaymentReceiptSource | null>(null);
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [copiedUtr, setCopiedUtr] = useState(false);
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
+  const queryClient = useQueryClient();
 
   const {
     data: payment = null,
@@ -268,7 +238,7 @@ export default function PaymentDetailPage() {
     try {
       const res = await api.get(`payments/${payment._id}/receipt`).json<{
         success: boolean;
-        data: ReceiptData;
+        data: PaymentReceiptSource;
       }>();
       setReceipt(res.data);
       setReceiptOpen(true);
@@ -277,6 +247,18 @@ export default function PaymentDetailPage() {
     } finally {
       setReceiptLoading(false);
     }
+  };
+
+  /**
+   * Re-read the payment, its audit trail and the invoice it belongs to. The
+   * page then renders the server state instead of a locally asserted outcome.
+   */
+  const refreshAfterMutation = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: PAYMENT_KEY(id) }),
+      queryClient.invalidateQueries({ queryKey: PAYMENT_EVENTS_KEY(id) }),
+      queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+    ]);
   };
 
   const printReceipt = () => {
@@ -298,14 +280,22 @@ export default function PaymentDetailPage() {
     if (!payment) return;
     setVerifying(true);
     try {
-      await api
+      const res = await api
         .post(`payments/${payment._id}/verify`, { json: { approved, notes: notes || undefined } })
-        .json();
-      toast.success(approved ? 'Payment approved' : 'Payment rejected');
+        .json<{ success: boolean; data?: { status?: string } }>();
       setVerifyOpen(false);
-      window.location.reload();
+      await refreshAfterMutation();
+      const serverStatus = res.data?.status?.replace(/_/g, ' ') ?? 'unknown';
+      setWriteResult(
+        approved
+          ? `Verification saved. Server status of the payment: ${serverStatus}.`
+          : `Rejection saved. Server status of the payment: ${serverStatus}.`,
+      );
+      // An approved payment earns its receipt: the server artifact, not a toast.
+      if (approved) await loadReceipt();
     } catch (err) {
       toast.error((await parseApiError(err)).message);
+    } finally {
       setVerifying(false);
     }
   };
@@ -317,7 +307,7 @@ export default function PaymentDetailPage() {
         description="View payment information"
         backHref="/payments"
         error={queryErrorMessage || 'Payment not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -379,13 +369,27 @@ export default function PaymentDetailPage() {
       description={payment ? `Transaction ID: ${payment._id}` : undefined}
       backHref="/payments"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       actions={
         payment ? (
-          <Button variant="outline" onClick={() => router.push(`/payments/${payment._id}/edit`)}>
-            <Pencil className="h-4 w-4" />
-            Edit Payment
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The primary action of the record, pinned in the header so it is
+                reachable without scrolling. The full action card stays below. */}
+            {payment.status === 'pending_verification' && (
+              <Button variant="primary" size="sm" onClick={() => setVerifyOpen(true)}>
+                <CheckCircle2 className="h-4 w-4" />
+                Verify payment
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/payments/${payment._id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit Payment
+            </Button>
+          </div>
         ) : undefined
       }
       badge={
@@ -396,6 +400,11 @@ export default function PaymentDetailPage() {
     >
       {payment && (
         <div className="space-y-6">
+          {writeResult && (
+            <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+              {writeResult}
+            </div>
+          )}
           {/* Executive KPI Metric Row */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
@@ -477,7 +486,55 @@ export default function PaymentDetailPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* The context rail is a slot of the shell frame, not a grid this
+              page builds for itself: the tenant stays in view while the
+              payment detail scrolls. */}
+          <ContentFrame
+            rail={
+              <DetailCard title="Tenant Information" icon={<User />}>
+                <DetailList>
+                  <DetailRow
+                    label="Name"
+                    value={
+                      tenantId ? (
+                        <Link
+                          href={`/tenants/${tenantId}`}
+                          className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
+                        >
+                          {tenantName}
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : (
+                        tenantName
+                      )
+                    }
+                  />
+                  <DetailRow
+                    label="Room"
+                    value={
+                      roomId ? (
+                        <Link
+                          href={`/rooms/${roomId}`}
+                          className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
+                        >
+                          <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                          Room {roomNumber}
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                          {roomNumber}
+                        </span>
+                      )
+                    }
+                  />
+                  {bedId && <DetailRow label="Bed" value={bedId} />}
+                  {floorLabel && <DetailRow label="Floor" value={floorLabel} />}
+                  {tenantPhone && <DetailRow label="Phone" value={tenantPhone} />}
+                </DetailList>
+              </DetailCard>
+            }
+          >
             <DetailCard title="Payment Information" icon={<CreditCard />}>
               <DetailList>
                 <DetailRow
@@ -506,50 +563,7 @@ export default function PaymentDetailPage() {
                 <DetailRow label="Recorded" value={formatDateTime(payment.createdAt)} />
               </DetailList>
             </DetailCard>
-
-            <DetailCard title="Tenant Information" icon={<User />}>
-              <DetailList>
-                <DetailRow
-                  label="Name"
-                  value={
-                    tenantId ? (
-                      <Link
-                        href={`/tenants/${tenantId}`}
-                        className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
-                      >
-                        {tenantName}
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    ) : (
-                      tenantName
-                    )
-                  }
-                />
-                <DetailRow
-                  label="Room"
-                  value={
-                    roomId ? (
-                      <Link
-                        href={`/rooms/${roomId}`}
-                        className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
-                      >
-                        <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                        Room {roomNumber}
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1">
-                        <Home className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                        {roomNumber}
-                      </span>
-                    )
-                  }
-                />
-                {bedId && <DetailRow label="Bed" value={bedId} />}
-                {floorLabel && <DetailRow label="Floor" value={floorLabel} />}
-                {tenantPhone && <DetailRow label="Phone" value={tenantPhone} />}
-              </DetailList>
-            </DetailCard>
-          </div>
+          </ContentFrame>
 
           {payment.notes && (
             <DetailCard title="Notes" icon={<FileText />}>
@@ -614,9 +628,14 @@ export default function PaymentDetailPage() {
                     }
                     setActionLoading('void');
                     try {
-                      await api.post(`payments/${payment._id}/void`, { json: {} }).json();
-                      toast.success('Payment voided');
-                      window.location.reload();
+                      const res = await api
+                        .post(`payments/${payment._id}/void`, { json: {} })
+                        .json<{ success: boolean; data?: { status?: string } }>();
+                      await refreshAfterMutation();
+                      const serverStatus = res.data?.status?.replace(/_/g, ' ') ?? 'unknown';
+                      setWriteResult(
+                        `Void saved. Server status of the payment: ${serverStatus}. The invoice balance was re-read from the server.`,
+                      );
                     } catch (err) {
                       toast.error((await parseApiError(err)).message);
                     } finally {
@@ -703,26 +722,7 @@ export default function PaymentDetailPage() {
       >
         {receipt && (
           <ReceiptDocument
-            title="Payment Receipt"
-            reference={`Ref ${receipt._id}`}
-            statusLabel={formatStatusLabel(receipt.status ?? 'N/A')}
-            amount={formatCurrency(receipt.amount)}
-            lines={[
-              { label: 'Tenant', value: receipt.tenantId?.userId?.name ?? 'N/A' },
-              { label: 'Room', value: receipt.tenantId?.roomId?.roomNumber ?? 'N/A' },
-              { label: 'Invoice', value: receiptInvoiceNumber(receipt) },
-              { label: 'Method', value: receipt.method ? formatMethod(receipt.method) : 'N/A' },
-              { label: 'Type', value: receipt.type ? formatType(receipt.type) : 'N/A' },
-              ...(receipt.utrNumber
-                ? [{ label: 'UTR', value: receipt.utrNumber, mono: true }]
-                : []),
-              {
-                label: 'Paid at',
-                value: formatDateTime(receipt.paidAt ?? receipt.createdAt),
-              },
-            ]}
-            notes={receipt.notes || undefined}
-            footerNote="This receipt was generated by the PG management system."
+            {...buildPaymentReceipt(receipt)}
             showActions
             onPrint={printReceipt}
             onClose={() => setReceiptOpen(false)}

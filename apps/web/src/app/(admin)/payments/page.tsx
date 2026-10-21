@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Receipt, CheckCircle2, ShieldCheck, Download, IndianRupee } from 'lucide-react';
+import {
+  Plus,
+  Receipt,
+  CheckCircle2,
+  ShieldCheck,
+  Download,
+  ArrowDownRight,
+  ArrowUpRight,
+  Search,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
@@ -10,6 +19,7 @@ import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
@@ -20,7 +30,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { StatusTabs } from '@/components/ui/StatusTabs';
-import { StatCard } from '@/components/ui/StatCard';
+import { PageBand } from '@/components/ui/PageBand';
 import {
   VerifyPaymentModal,
   type VerifyPaymentTarget,
@@ -107,6 +117,7 @@ interface PaymentsListBody {
 }
 
 const PAYMENTS_PREFIX = ['payments'] as const;
+const INVOICES_PREFIX = ['invoices'] as const;
 const PAYMENT_STATUS_COUNTS_KEY = ['payments', 'status-counts'] as const;
 // Stable empty fallback: `?? []` would allocate a fresh array on every render
 // while the query is pending, breaking referential stability for useMemo deps.
@@ -121,18 +132,7 @@ const PAYMENTS_LIST_KEY = (
   fromDate: string,
   toDate: string,
   search: string,
-) => [
-  ...PAYMENTS_PREFIX,
-  'list',
-  page,
-  perPage,
-  method,
-  type,
-  status,
-  fromDate,
-  toDate,
-  search,
-];
+) => [...PAYMENTS_PREFIX, 'list', page, perPage, method, type, status, fromDate, toDate, search];
 
 const PAYMENTS_SUMMARY_KEY = (month: string) => [...PAYMENTS_PREFIX, 'summary', month];
 
@@ -157,6 +157,8 @@ export default function PaymentsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   // Mutation (delete/export) failures; list failures come from the query.
   const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<PaymentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<VerifyPaymentTarget | null>(null);
@@ -169,24 +171,34 @@ export default function PaymentsPage() {
     return () => window.clearTimeout(t);
   }, [search]);
 
-  const refreshAfterMutation = useCallback(() => {
-    // Mirrors the old fetch runs: clear the stale banner, then refetch.
+  const refreshAfterMutation = useCallback(async () => {
+    // Mirrors the old fetch runs: clear the stale banner, then re-read the
+    // server. A verification also moves the invoice status and balance, so
+    // the invoice queries are re-read too.
     setError('');
-    queryClient.invalidateQueries({ queryKey: PAYMENTS_PREFIX });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: PAYMENTS_PREFIX }),
+      queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+    ]);
   }, [queryClient]);
 
   const handleVerify = async (approved: boolean, notes: string) => {
     if (!verifyTarget) return;
     setVerifying(true);
     try {
-      await api
+      const res = await api
         .post(`payments/${verifyTarget._id}/verify`, {
           json: { approved, notes: notes || undefined },
         })
-        .json();
-      toast.success(approved ? 'Payment approved' : 'Payment rejected');
+        .json<{ success: boolean; data?: { status?: string } }>();
       setVerifyTarget(null);
-      refreshAfterMutation();
+      await refreshAfterMutation();
+      const serverStatus = res.data?.status?.replace(/_/g, ' ') ?? 'unknown';
+      setWriteResult(
+        approved
+          ? `Verification saved. Server status of the payment: ${serverStatus}.`
+          : `Rejection saved. Server status of the payment: ${serverStatus}.`,
+      );
     } catch (err) {
       toast.error((await parseApiError(err)).message);
     } finally {
@@ -265,8 +277,8 @@ export default function PaymentsPage() {
     try {
       await api.delete(`payments/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      toast.success('Payment deleted');
-      refreshAfterMutation();
+      await refreshAfterMutation();
+      setWriteResult('Deletion saved. The server no longer lists this payment.');
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
@@ -345,6 +357,14 @@ export default function PaymentsPage() {
     const pct = ((cur - prev) / prev) * 100;
     return { percent: pct, label: `vs ${fmtCompact(prev)} last month` };
   };
+
+  /** Direction cue for a comparison, same rule the metric tiles used. */
+  const deltaIcon = (cur: number, prev: number | undefined) =>
+    (cur ?? 0) >= (prev ?? 0) ? (
+      <ArrowUpRight className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowDownRight className="h-3.5 w-3.5" />
+    );
 
   const chips = [
     ...(methodFilter
@@ -549,7 +569,7 @@ export default function PaymentsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Payments"
         description="Track, verify, and reconcile tenant payments"
@@ -563,143 +583,136 @@ export default function PaymentsPage() {
 
       <ErrorBanner message={errorMessage(queryError) || error} />
 
-      {/* Executive Metric Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title={`Collected · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.collected ?? 0)}
-          delta={
-            summary
-              ? {
-                  value: delta(summary.collected, prevSummary?.collected).label,
-                  direction:
-                    (summary.collected ?? 0) >= (prevSummary?.collected ?? 0) ? 'up' : 'down',
-                  label: '',
-                }
-              : undefined
-          }
-          tone="success"
-          icon={<CheckCircle2 />}
-        />
-        <StatCard
-          title={`Expected · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.expected ?? 0)}
-          delta={
-            summary
-              ? {
-                  value: delta(summary.expected, prevSummary?.expected).label,
-                  direction:
-                    (summary.expected ?? 0) >= (prevSummary?.expected ?? 0) ? 'up' : 'down',
-                  label: '',
-                }
-              : undefined
-          }
-          tone="brand"
-          icon={<IndianRupee />}
-        />
-        <StatCard
-          title={`Pending · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.pending ?? 0)}
-          subtitle={
-            summary && summary.expected > 0
-              ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
-              : undefined
-          }
-          tone={(summary?.pending ?? 0) > 0 ? 'warning' : 'success'}
-          icon={<IndianRupee />}
-        />
-        <StatCard
-          title="Awaiting Verification"
-          value={statusCounts.pending_verification ?? 0}
-          subtitle="Click to filter to verify queue"
-          tone={(statusCounts.pending_verification ?? 0) > 0 ? 'danger' : 'default'}
-          icon={<ShieldCheck />}
-          onClick={() => {
-            setStatusFilter('pending_verification');
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
+
+      {/* The compact band: numbers, status tabs and filters in one surface, so
+          the first data row is reachable without scrolling past half a screen
+          of chrome. Every number and every filter is the one it was. */}
+      <PageBand
+        metrics={[
+          {
+            label: `Collected · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.collected ?? 0),
+            hint: summary ? delta(summary.collected, prevSummary?.collected).label : undefined,
+            icon: summary ? deltaIcon(summary.collected, prevSummary?.collected) : undefined,
+            tone: 'success',
+          },
+          {
+            label: `Expected · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.expected ?? 0),
+            hint: summary ? delta(summary.expected, prevSummary?.expected).label : undefined,
+            icon: summary ? deltaIcon(summary.expected, prevSummary?.expected) : undefined,
+            tone: 'brand',
+          },
+          {
+            label: `Pending · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.pending ?? 0),
+            hint:
+              summary && summary.expected > 0
+                ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
+                : undefined,
+            tone: (summary?.pending ?? 0) > 0 ? 'warning' : 'success',
+          },
+          {
+            label: 'Awaiting Verification',
+            value: String(statusCounts.pending_verification ?? 0),
+            hint: 'Click to filter to verify queue',
+            tone: (statusCounts.pending_verification ?? 0) > 0 ? 'danger' : 'default',
+            onClick: () => {
+              setStatusFilter('pending_verification');
+              setPage(1);
+            },
+          },
+        ]}
+      >
+        {/* Status tab strip */}
+        <StatusTabs
+          tabs={STATUS_TABS.map((s) => ({
+            key: s.key,
+            label: s.label,
+            count: statusCounts[s.key || 'all'] ?? null,
+            tone:
+              s.key === 'pending_verification'
+                ? 'danger'
+                : s.key === 'paid'
+                  ? 'success'
+                  : s.key === 'overdue'
+                    ? 'danger'
+                    : 'default',
+          }))}
+          active={statusFilter}
+          onChange={(key) => {
+            setStatusFilter(key);
             setPage(1);
           }}
         />
-      </div>
 
-      {/* Status tab strip */}
-      <StatusTabs
-        tabs={STATUS_TABS.map((s) => ({
-          key: s.key,
-          label: s.label,
-          count: statusCounts[s.key || 'all'] ?? null,
-          tone:
-            s.key === 'pending_verification'
-              ? 'danger'
-              : s.key === 'paid'
-                ? 'success'
-                : s.key === 'overdue'
-                  ? 'danger'
-                  : 'default',
-        }))}
-        active={statusFilter}
-        onChange={(key) => {
-          setStatusFilter(key);
-          setPage(1);
-        }}
-      />
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <div className="max-w-sm sm:w-72">
+            <Input
+              placeholder="Search tenant, UTR, invoice, amount..."
+              aria-label="Search tenant, UTR, invoice, amount..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (searchInit.current) setPage(1);
+                searchInit.current = true;
+              }}
+              leftIcon={<Search className="h-4 w-4" />}
+            />
+          </div>
+          <div className="w-40">
+            <Select
+              aria-label="Filter by method"
+              options={METHOD_FILTERS}
+              value={methodFilter}
+              onChange={(e) => {
+                setMethodFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="w-40">
+            <Select
+              aria-label="Filter by type"
+              options={TYPE_FILTERS}
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <DateRangePicker
+            fromDate={fromDate}
+            toDate={toDate}
+            onFromChange={(val: string) => {
+              setFromDate(val);
+              setPage(1);
+            }}
+            onToChange={(val: string) => {
+              setToDate(val);
+              setPage(1);
+            }}
+            compact
+          />
+          <Button variant="outline" onClick={handleExportCsv} disabled={payments.length === 0}>
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          <FilterChips chips={chips} onClearAll={clearAllFilters} />
+        </div>
+      </PageBand>
 
       <DataTable
         columns={columns}
         data={visiblePayments}
         keyExtractor={(row) => row._id}
         isLoading={isLoading}
-        searchable
-        searchPlaceholder="Search tenant, UTR, invoice, amount..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v);
-          if (searchInit.current) setPage(1);
-          searchInit.current = true;
-        }}
-        toolbar={
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-40">
-              <Select
-                aria-label="Filter by method"
-                options={METHOD_FILTERS}
-                value={methodFilter}
-                onChange={(e) => {
-                  setMethodFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="w-40">
-              <Select
-                aria-label="Filter by type"
-                options={TYPE_FILTERS}
-                value={typeFilter}
-                onChange={(e) => {
-                  setTypeFilter(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <DateRangePicker
-              fromDate={fromDate}
-              toDate={toDate}
-              onFromChange={(val: string) => {
-                setFromDate(val);
-                setPage(1);
-              }}
-              onToChange={(val: string) => {
-                setToDate(val);
-                setPage(1);
-              }}
-              compact
-            />
-            <Button variant="outline" onClick={handleExportCsv} disabled={payments.length === 0}>
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
-            <FilterChips chips={chips} onClearAll={clearAllFilters} />
-          </div>
-        }
         onRowClick={(row) => router.push(`/payments/${row._id}`)}
         pagination={{
           page,

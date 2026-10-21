@@ -37,7 +37,13 @@ import { StatCard } from '@/components/ui/StatCard';
 import { generateWhatsAppUrl } from '@/lib/whatsapp';
 import { FormPage } from '@/components/ui/FormPage';
 import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
+import { Modal } from '@/components/ui/Modal';
 import { RecordPaymentModal } from '@/components/admin/RecordPaymentModal';
+import {
+  buildPaymentReceipt,
+  ReceiptDocument,
+  type PaymentReceiptSource,
+} from '@/components/admin/ReceiptDocument';
 import { surfaceCardClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
@@ -114,8 +120,10 @@ interface InvoiceDetail {
   electricityAmount: number;
   otherCharges: number;
   totalAmount: number;
-  paidAmount: number;
-  balance: number;
+  /** Server-computed settled sum. Absent when the server did not report one. */
+  paidAmount?: number;
+  /** Server-computed amount still due. Absent when the server did not report one. */
+  balance?: number | null;
   status: string;
   dueDate?: string;
   createdAt: string;
@@ -133,6 +141,17 @@ function formatCurrency(amount: number | null | undefined): string {
   } catch {
     return `₹${amount}`;
   }
+}
+
+/**
+ * A money number the server may not have reported.
+ *
+ * An absent number is "not reported", never 0: a zero balance means nothing
+ * is due, and reading a missing number as 0 would claim the invoice is
+ * settled when nobody said so.
+ */
+function formatMoneyOrNotReported(amount: number | null | undefined): string {
+  return typeof amount === 'number' ? formatCurrency(amount) : 'Not reported';
 }
 
 function formatDate(dateStr: string | undefined): string {
@@ -199,6 +218,10 @@ const paymentColumns: DataTableColumn<PaymentRecord>[] = [
 
 const INVOICE_KEY = (id: string) => ['invoices', id] as const;
 
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -206,6 +229,8 @@ export default function InvoiceDetailPage() {
   const [recordTarget, setRecordTarget] = useState<
     import('@/components/admin/RecordPaymentModal').RecordPaymentTarget | null
   >(null);
+  // Server-issued receipt of the payment that was just recorded.
+  const [receipt, setReceipt] = useState<PaymentReceiptSource | null>(null);
 
   const {
     data: invoice = null,
@@ -221,7 +246,7 @@ export default function InvoiceDetailPage() {
         description="View invoice information"
         backHref="/invoices"
         error={queryErrorMessage || 'Invoice not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -247,12 +272,23 @@ export default function InvoiceDetailPage() {
     : '';
   const statusVariant = invoice ? statusToVariant(invoice.status) : 'neutral';
   const overdueDays = daysPastDue(invoice?.dueDate);
-  const isOverdue = overdueDays != null && overdueDays > 0 && (invoice?.balance ?? 0) > 0;
+  // A missing balance is not a zero balance: only a REPORTED balance can make
+  // the invoice overdue, and only a reported one can make it collectible.
+  const reportedBalance = typeof invoice?.balance === 'number' ? invoice.balance : null;
+  const isOverdue = overdueDays != null && overdueDays > 0 && (reportedBalance ?? 0) > 0;
 
+  // A cancelled invoice cannot be collected: the server refuses a payment on
+  // it, so the page must not offer a collectible-looking balance.
+  const isCancelled = invoice?.status === 'cancelled';
+  const isCollectible =
+    invoice != null && invoice.status !== 'paid' && invoice.status !== 'cancelled';
+
+  // The payment progress needs both server numbers. Without them the page
+  // says so instead of claiming 0%.
   const payProgress =
-    invoice && invoice.totalAmount > 0
+    invoice && typeof invoice.paidAmount === 'number' && invoice.totalAmount > 0
       ? Math.min(100, Math.round((invoice.paidAmount / invoice.totalAmount) * 100))
-      : 0;
+      : null;
 
   const openRecordModal = () => {
     if (!tenantId) return;
@@ -264,7 +300,9 @@ export default function InvoiceDetailPage() {
       invoiceNumber: invoice?.invoiceNumber ?? '',
       month: invoice?.month ?? '',
       totalAmount: invoice?.totalAmount ?? 0,
-      balance: invoice?.balance ?? 0,
+      // Undefined when the server did not report a balance: the modal must be
+      // able to say "not reported" instead of blocking every amount.
+      balance: reportedBalance ?? undefined,
     });
   };
 
@@ -297,20 +335,17 @@ export default function InvoiceDetailPage() {
       }
       backHref="/invoices"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={invoice ? <StatusBadge variant={statusVariant} label={statusLabel} /> : undefined}
       actions={
         invoice ? (
           <div className="flex flex-wrap items-center gap-2">
-            {invoice.balance > 0 &&
-              invoice.status !== 'paid' &&
-              invoice.status !== 'cancelled' &&
-              tenantId && (
-                <Button variant="primary" size="sm" onClick={openRecordModal}>
-                  <CreditCard className="h-4 w-4" />
-                  Record Payment
-                </Button>
-              )}
+            {isCollectible && tenantId && (
+              <Button variant="primary" size="sm" onClick={openRecordModal}>
+                <CreditCard className="h-4 w-4" />
+                Record Payment
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <FileDown className="h-4 w-4" />
               Print
@@ -340,16 +375,30 @@ export default function InvoiceDetailPage() {
             />
             <StatCard
               title="Settled / Paid"
-              value={formatCurrency(invoice.paidAmount)}
-              subtitle={`${payProgress}% settled`}
+              value={formatMoneyOrNotReported(invoice.paidAmount)}
+              subtitle={payProgress != null ? `${payProgress}% settled` : 'not reported'}
               tone="success"
               icon={<CheckCircle2 />}
             />
             <StatCard
-              title="Balance Due"
-              value={formatCurrency(invoice.balance)}
-              subtitle={invoice.balance > 0 ? 'outstanding' : 'fully cleared'}
-              tone={invoice.balance > 0 ? 'danger' : 'success'}
+              title={isCancelled ? 'Balance' : 'Balance Due'}
+              value={isCancelled ? 'Not collectible' : formatMoneyOrNotReported(reportedBalance)}
+              subtitle={
+                isCancelled
+                  ? 'this invoice was cancelled'
+                  : reportedBalance == null
+                    ? 'not reported'
+                    : reportedBalance > 0
+                      ? 'outstanding'
+                      : 'fully cleared'
+              }
+              tone={
+                isCancelled
+                  ? 'default'
+                  : reportedBalance != null && reportedBalance > 0
+                    ? 'danger'
+                    : 'success'
+              }
               icon={<TriangleAlert />}
             />
             <StatCard
@@ -367,7 +416,7 @@ export default function InvoiceDetailPage() {
             <div className="flex items-start gap-2.5 rounded-(--radius-lg) border border-(--color-danger-200) bg-(--color-danger-50) px-4 py-3 text-sm font-semibold text-(--color-danger-800)">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-(--color-danger-600)" />
               This invoice is {overdueDays} day(s) past its due date with{' '}
-              {formatCurrency(invoice.balance)} outstanding.
+              {formatMoneyOrNotReported(reportedBalance)} outstanding.
             </div>
           )}
 
@@ -537,7 +586,9 @@ export default function InvoiceDetailPage() {
                   <div className="font-display text-15 flex items-center justify-between border-t border-(--border-color) bg-(--color-field-bg) px-6 py-3 font-bold text-(--color-text-primary)">
                     <span>Amount due</span>
                     <span className="text-right tabular-nums">
-                      {formatCurrency(invoice.balance)}
+                      {isCancelled
+                        ? 'Cancelled - not collectible'
+                        : formatMoneyOrNotReported(reportedBalance)}
                     </span>
                   </div>
                 </div>
@@ -550,22 +601,28 @@ export default function InvoiceDetailPage() {
                     Payment progress
                   </p>
                   <p className="text-xs font-bold text-(--color-text-primary) tabular-nums">
-                    {payProgress}%
+                    {payProgress != null ? `${payProgress}%` : 'Not reported'}
                   </p>
                 </div>
-                <div
-                  className="mt-2 h-2 overflow-hidden rounded-(--radius-full) bg-(--chart-track)"
-                  role="progressbar"
-                  aria-valuenow={payProgress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Payment progress"
-                >
+                {payProgress != null ? (
                   <div
-                    className="h-full w-(--pay-progress) rounded-(--radius-full) bg-(--color-success-500) transition-all duration-500"
-                    style={{ '--pay-progress': `${payProgress}%` } as CSSProperties}
-                  />
-                </div>
+                    className="mt-2 h-2 overflow-hidden rounded-(--radius-full) bg-(--chart-track)"
+                    role="progressbar"
+                    aria-valuenow={payProgress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="Payment progress"
+                  >
+                    <div
+                      className="h-full w-(--pay-progress) rounded-(--radius-full) bg-(--color-success-500) transition-all duration-500"
+                      style={{ '--pay-progress': `${payProgress}%` } as CSSProperties}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                    The server did not report the settled amount for this invoice.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -573,31 +630,19 @@ export default function InvoiceDetailPage() {
             <div className="space-y-6 lg:col-span-2">
               <DetailCard title="Quick Actions" icon={<FileDown />}>
                 <div className="flex flex-col gap-3">
-                  {invoice.balance > 0 &&
-                    invoice.status !== 'paid' &&
-                    invoice.status !== 'cancelled' &&
-                    tenantId && (
-                      <Button variant="primary" onClick={openRecordModal}>
-                        <CreditCard className="h-4 w-4" />
-                        Record Payment (In-Place)
-                      </Button>
-                    )}
+                  {isCollectible && tenantId && (
+                    <Button variant="primary" onClick={openRecordModal}>
+                      <CreditCard className="h-4 w-4" />
+                      Record Payment (In-Place)
+                    </Button>
+                  )}
                   {tenantId && (
                     <Button variant="outline" onClick={() => router.push(`/tenants/${tenantId}`)}>
                       <User className="h-4 w-4" />
                       View Tenant Profile
                     </Button>
                   )}
-                  <Button
-                    variant={
-                      invoice.balance > 0 &&
-                      invoice.status !== 'paid' &&
-                      invoice.status !== 'cancelled'
-                        ? 'outline'
-                        : 'primary'
-                    }
-                    onClick={downloadPdf}
-                  >
+                  <Button variant={isCollectible ? 'outline' : 'primary'} onClick={downloadPdf}>
                     <FileDown className="h-4 w-4" />
                     Download PDF
                   </Button>
@@ -619,7 +664,7 @@ export default function InvoiceDetailPage() {
                         const text = [
                           `Invoice ${invoice.invoiceNumber}`,
                           `Amount: ${formatCurrency(invoice.totalAmount)}`,
-                          `Balance: ${formatCurrency(invoice.balance)}`,
+                          `Balance: ${formatMoneyOrNotReported(reportedBalance)}`,
                           'Please check the resident portal or contact the admin for the PDF copy.',
                         ].join('\n');
                         window.open(
@@ -803,11 +848,31 @@ export default function InvoiceDetailPage() {
             target={recordTarget}
             isOpen={!!recordTarget}
             onClose={() => setRecordTarget(null)}
-            onSuccess={() => {
-              setRecordTarget(null);
-              queryClient.invalidateQueries({ queryKey: INVOICE_KEY(params.id) });
+            onSuccess={(paymentReceipt) => {
+              // The invoice balance and status come from the server now.
+              queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX });
+              queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX });
+              setReceipt(paymentReceipt);
             }}
           />
+
+          {/* Server-issued receipt of the recorded payment */}
+          <Modal
+            open={!!receipt}
+            onClose={() => setReceipt(null)}
+            title="Payment receipt"
+            size="sm"
+            loading={false}
+          >
+            {receipt && (
+              <ReceiptDocument
+                {...buildPaymentReceipt(receipt)}
+                showActions
+                onPrint={() => window.print()}
+                onClose={() => setReceipt(null)}
+              />
+            )}
+          </Modal>
         </div>
       )}
     </FormPage>

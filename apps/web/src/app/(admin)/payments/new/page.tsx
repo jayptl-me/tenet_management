@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -58,11 +59,23 @@ interface InvoiceOption {
   month: string;
   totalAmount: number;
   status: string;
-  balance?: number;
+  /** Server-computed amount still due (GET /invoices). null when not reported. */
+  balance?: number | null;
+  /** Server-computed settled sum (GET /invoices). */
   paidAmount?: number;
   rentAmount?: number;
   electricityAmount?: number;
   otherCharges?: number;
+}
+
+/** Money fields of a single invoice, as the server computes them. */
+interface InvoiceMoneyData {
+  _id: string;
+  totalAmount: number;
+  paidAmount?: number;
+  /** Server-computed amount still due. null when the server did not report one. */
+  balance?: number | null;
+  status?: string;
 }
 
 interface TenantProfile {
@@ -87,10 +100,46 @@ interface TenantDuesData {
   }>;
 }
 
+/**
+ * The balance of an invoice, read from the server and nowhere else.
+ *
+ * Order of truth: the invoice detail (`GET /invoices/:id`, read when the
+ * invoice is picked), the invoice list row (`GET /invoices`), then the tenant
+ * dues summary (`GET /tenants/:id/dues`). The client never subtracts a paid
+ * amount from a total, because that subtraction is exactly what used to lie:
+ * the API computes the balance from the payment rows, not from the invoice
+ * total.
+ */
+function resolveServerBalance(
+  invoice: { _id: string; balance?: number | null } | null | undefined,
+  detail: { balance?: number | null } | null | undefined,
+  duesRemaining: Map<string, number>,
+): number | null {
+  if (!invoice) return null;
+  if (detail && typeof detail.balance === 'number') return detail.balance;
+  if (typeof invoice.balance === 'number') return invoice.balance;
+  const fromDues = duesRemaining.get(invoice._id);
+  return typeof fromDues === 'number' ? fromDues : null;
+}
+
 function toIsoFromLocal(datetimeLocal: string): string {
   const d = new Date(datetimeLocal);
   if (Number.isNaN(d.getTime())) return new Date().toISOString();
   return d.toISOString();
+}
+
+/**
+ * Whether the amount field holds a number the operator entered.
+ *
+ * `applied` is the amount the form last filled from the server balance. A
+ * field that holds something else carries the operator's own number, and no
+ * server read may replace it.
+ */
+function operatorEnteredAmount(field: HTMLInputElement | null, applied: number | null): boolean {
+  if (!field) return false;
+  const typed = Number(field.value);
+  if (!Number.isFinite(typed) || typed === 0) return false;
+  return applied == null || typed !== applied;
 }
 
 function nowLocalDatetime(): string {
@@ -110,17 +159,48 @@ const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as c
 
 const PAYABLE_INVOICES_KEY = (tenantId: string) => ['invoices', 'payable', tenantId] as const;
 
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_PREFIX = ['payments'] as const;
+
 function NewPaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const prefillTenantId = searchParams.get('tenantId') ?? '';
   const prefillInvoiceId = searchParams.get('invoiceId') ?? '';
 
   const [submitError, setSubmitError] = useState('');
+  // Bumped when the operator re-picks an invoice, so the amount is read from
+  // the server again instead of keeping a stale balance.
+  const [prefillNonce, setPrefillNonce] = useState(0);
 
   // Skip clearing invoiceId on the first tenant-driven load when deep-linking with prefs.
   const skipInvoiceClearOnce = useRef(Boolean(prefillTenantId));
   const invoicePrefillApplied = useRef(false);
+  // The amount the operator entered, per invoice. A balance belongs to one
+  // invoice, so the amount follows the invoice the operator picked, and a
+  // server read can never overwrite a value the operator typed.
+  const typedAmounts = useRef<Map<string, number>>(new Map());
+  // The invoice whose amount was filled from the server balance. Cleared when
+  // the selection changes, so a re-pick re-reads the server balance.
+  const prefilledFor = useRef<string | null>(null);
+  // The amount the form last applied from the server balance.
+  const appliedAmount = useRef<number | null>(null);
+  // The amount field itself. The shared Input component does not forward
+  // onChange, so the field is the only place the number the operator typed
+  // is visible before the field is left.
+  const amountFieldRef = useRef<HTMLInputElement | null>(null);
+  // The invoice the form points at, so the operator's number can be carried
+  // over to the invoice it belongs to.
+  const selectedInvoiceId = useRef<string | null>(null);
+  // The write in flight. A ref, so the guard holds before the next render:
+  // the same payment must never be sent twice.
+  // The write in flight. The ref holds the guard so it takes effect before the next
+  // render (the same payment must never be sent twice); the state flag is what
+  // the button reads, because a ref must not be read during render.
+  const submitInFlight = useRef(false);
+  const [submitLocked, setSubmitLocked] = useState(false);
 
   const {
     register,
@@ -144,6 +224,10 @@ function NewPaymentForm() {
   const invoiceId = useWatch({ control, name: 'invoiceId' });
   const amount = useWatch({ control, name: 'amount' });
   const method = useWatch({ control, name: 'method' });
+
+  // The amount field, kept as an object so the operator's own onChange can be
+  // tracked next to the form's.
+  const amountField = register('amount');
 
   // Tenant profile & dues for the smart overview.
   const { data: tenantProfile = null, isFetching: tenantLoading } = useApiQuery<TenantProfile>(
@@ -174,6 +258,25 @@ function NewPaymentForm() {
   // Invoice chosen in the form, resolved from the payable list.
   const selectedInvoice = invoices.find((inv) => inv._id === invoiceId) ?? null;
 
+  // Server-computed remaining amount per invoice (GET /tenants/:id/dues).
+  const duesRemaining = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const inv of tenantDues?.unpaidInvoices ?? []) {
+      if (typeof inv.remaining === 'number') map.set(inv._id, inv.remaining);
+    }
+    return map;
+  }, [tenantDues]);
+
+  // Server-computed money fields of the chosen invoice (GET /invoices/:id).
+  const { data: selectedInvoiceMoney = null, isPending: invoiceMoneyPending } =
+    useApiQuery<InvoiceMoneyData>(['invoices', invoiceId, 'money'], `invoices/${invoiceId}`, {
+      enabled: Boolean(invoiceId),
+    });
+
+  // The balance of the chosen invoice, straight from the server.
+  const balance = resolveServerBalance(selectedInvoice, selectedInvoiceMoney, duesRemaining);
+  const paidAmount = selectedInvoiceMoney?.paidAmount ?? selectedInvoice?.paidAmount;
+
   // Clear the invoice choice whenever the tenant changes.
   useEffect(() => {
     if (skipInvoiceClearOnce.current) {
@@ -196,22 +299,56 @@ function NewPaymentForm() {
     }
   }, [invoices, invoicesLoading, prefillInvoiceId, prefillTenantId, tenantId, setValue]);
 
-  // Set the collected amount to the invoice balance when an invoice is chosen.
+  // A balance belongs to one invoice. When the selection changes, the previous
+  // invoice's amount is dropped and the server balance is read again.
+  useEffect(() => {
+    // Carry the operator's own number over to the invoice it belongs to. A
+    // number the form filled from the server is not the operator's number.
+    const el = amountFieldRef.current;
+    const previous = selectedInvoiceId.current;
+    if (el && previous && previous !== invoiceId) {
+      const typed = Number(el.value);
+      const applied = appliedAmount.current;
+      if (Number.isFinite(typed) && typed !== 0 && (applied == null || typed !== applied)) {
+        typedAmounts.current.set(previous, typed);
+      }
+    }
+    selectedInvoiceId.current = invoiceId;
+    // A re-pick re-reads the server balance.
+    prefilledFor.current = null;
+    appliedAmount.current = null;
+    setValue('amount', invoiceId ? (typedAmounts.current.get(invoiceId) ?? 0) : 0);
+  }, [invoiceId, setValue]);
+
+  // Set the collected amount to the server balance once the server reported
+  // one. The amount is never derived from the invoice total on the client.
+  //
+  // Two rules keep the operator in control: the amount is filled once per
+  // selection, and a value the operator typed is never overwritten - not by a
+  // late server response, not by a refetch.
   useEffect(() => {
     if (!invoiceId) return;
-    const found = invoices.find((inv) => inv._id === invoiceId);
-    if (found) {
-      const bal = found.balance ?? Math.max(0, found.totalAmount - (found.paidAmount ?? 0));
-      setValue('amount', bal > 0 ? bal : 0);
-    }
-  }, [invoiceId, invoices, setValue]);
+    // Wait for the server read of the picked invoice before filling anything.
+    if (invoiceMoneyPending) return;
+    if (balance == null) return;
+    // The operator owns this amount: a late response must not touch it.
+    if (typedAmounts.current.has(invoiceId)) return;
+    if (operatorEnteredAmount(amountFieldRef.current, appliedAmount.current)) return;
+    if (prefilledFor.current === invoiceId) return;
+    prefilledFor.current = invoiceId;
+    const next = balance > 0 ? balance : 0;
+    appliedAmount.current = next;
+    setValue('amount', next);
+  }, [invoiceId, balance, invoiceMoneyPending, prefillNonce, setValue]);
 
-  const balance = selectedInvoice
-    ? (selectedInvoice.balance ??
-      Math.max(0, selectedInvoice.totalAmount - (selectedInvoice.paidAmount ?? 0)))
-    : null;
+  // The amount the operator is entering, tracked per invoice.
+  const applyOperatorAmount = (value: number) => {
+    if (invoiceId) typedAmounts.current.set(invoiceId, value);
+    setValue('amount', value, { shouldValidate: true });
+  };
+
   const overpay = balance != null && (Number(amount) || 0) > balance + 0.001;
-  const remainingAfter = balance != null ? Math.max(0, balance - (Number(amount) || 0)) : 0;
+  const remainingAfter = balance != null ? Math.max(0, balance - (Number(amount) || 0)) : null;
 
   const quickAmounts =
     balance != null && balance > 0
@@ -224,6 +361,10 @@ function NewPaymentForm() {
       : [];
 
   const onSubmit = async (data: FormData) => {
+    // The same write must never be sent twice.
+    if (submitInFlight.current) return;
+    submitInFlight.current = true;
+    setSubmitLocked(true);
     setSubmitError('');
     try {
       const res = await api
@@ -237,11 +378,23 @@ function NewPaymentForm() {
             notes: data.notes || undefined,
           },
         })
-        .json<{ success: boolean; data?: { _id?: string } }>();
-      const createdId = res.data?._id;
+        .json<{ success: boolean; data?: { id?: string; _id?: string } }>();
+      // The write changed the invoice balance and the dues summary: let the
+      // server state be re-read instead of trusting a local recalculation.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: PAYMENTS_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: TENANT_DUES_KEY(data.tenantId) }),
+      ]);
+      // The payment model replaces _id with id in its JSON transform
+      // (apps/api/src/models/payment.ts:101-104), so read id first.
+      const createdId = res.data?.id ?? res.data?._id;
       router.push(createdId ? `/payments/${createdId}` : '/payments');
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
+    } finally {
+      submitInFlight.current = false;
+      setSubmitLocked(false);
     }
   };
 
@@ -253,15 +406,20 @@ function NewPaymentForm() {
       description="Cash, bank transfer, or offline UPI collection linked to an invoice"
       backHref="/payments"
       error={submitError}
-      maxWidth="5xl"
+      maxWidth="form"
     >
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <FormCard
-            onSubmit={handleSubmit(onSubmit)}
+            // The submit handler is invoked at event time, not while rendering:
+            // the ref inside it must never be read during a render.
+            onSubmit={(event) => {
+              void handleSubmit(onSubmit)(event);
+            }}
             footer={
               <FormActions
                 loading={isSubmitting}
+                disabled={submitLocked}
                 cancelHref="/payments"
                 submitLabel="Record Payment"
                 divided={false}
@@ -406,14 +564,19 @@ function NewPaymentForm() {
                 ) : (
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {invoices.map((inv) => {
-                      const bal =
-                        inv.balance ?? Math.max(0, inv.totalAmount - (inv.paidAmount ?? 0));
+                      const bal = resolveServerBalance(inv, null, duesRemaining);
                       const active = invoiceId === inv._id;
                       return (
                         <button
                           key={inv._id}
                           type="button"
-                          onClick={() => setValue('invoiceId', inv._id, { shouldValidate: true })}
+                          onClick={() => {
+                            // A re-pick re-reads the server balance: the latch of
+                            // the previous selection is dropped.
+                            prefilledFor.current = null;
+                            setPrefillNonce((n) => n + 1);
+                            setValue('invoiceId', inv._id, { shouldValidate: true });
+                          }}
                           className={clsx(
                             'relative overflow-hidden rounded-(--radius-lg) border p-3.5 text-left transition-all',
                             active
@@ -435,12 +598,24 @@ function NewPaymentForm() {
                               {inv.month}
                             </span>
                             <span className="text-sm font-bold text-(--color-danger-700) tabular-nums">
-                              {fmtMoney(bal)} due
+                              {bal != null ? (
+                                `${fmtMoney(bal)} due`
+                              ) : (
+                                <span className="text-(--color-text-muted)">
+                                  {fmtMoney(inv.totalAmount)} invoiced
+                                </span>
+                              )}
                             </span>
                           </div>
                           <div className="text-2xs mt-1 flex items-center justify-between text-(--color-text-muted)">
-                            <span>Total: {fmtMoney(inv.totalAmount)}</span>
-                            {inv.paidAmount ? <span>Paid: {fmtMoney(inv.paidAmount)}</span> : null}
+                            {bal != null ? (
+                              <span>Total: {fmtMoney(inv.totalAmount)}</span>
+                            ) : (
+                              <span>Balance not reported</span>
+                            )}
+                            {typeof inv.paidAmount === 'number' ? (
+                              <span>Paid: {fmtMoney(inv.paidAmount)}</span>
+                            ) : null}
                           </div>
                         </button>
                       );
@@ -469,12 +644,26 @@ function NewPaymentForm() {
                     type="number"
                     step="0.01"
                     error={
-                      overpay
-                        ? `Amount exceeds remaining balance of ${fmtMoney(balance)}`
+                      overpay && balance != null
+                        ? `The server reports a balance of ${fmtMoney(balance)} for this invoice, so this amount would be rejected. Record ${fmtMoney(balance)} or less.`
                         : err.amount?.message
                     }
                     leftIcon={<Banknote className="h-4 w-4" />}
-                    {...register('amount')}
+                    {...amountField}
+                    ref={(el: HTMLInputElement | null) => {
+                      // The form and the page both need the field: the form
+                      // reads the value on submit, the page checks it before
+                      // it fills the amount from the server.
+                      amountFieldRef.current = el;
+                      amountField.ref(el);
+                    }}
+                    onChange={(e) => {
+                      // The operator typed: no server read may replace it.
+                      if (invoiceId) {
+                        typedAmounts.current.set(invoiceId, Number(e.target.value) || 0);
+                      }
+                      amountField.onChange(e);
+                    }}
                   />
                   {quickAmounts.length > 0 && !overpay && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -482,7 +671,7 @@ function NewPaymentForm() {
                         <button
                           key={q.label}
                           type="button"
-                          onClick={() => setValue('amount', q.value, { shouldValidate: true })}
+                          onClick={() => applyOperatorAmount(q.value)}
                           className={clsx(
                             'text-2xs rounded-full border px-2.5 py-0.5 font-bold transition-colors',
                             Number(amount) === q.value
@@ -606,17 +795,19 @@ function NewPaymentForm() {
                       <span className="text-(--color-text-muted)">Invoice Total</span>
                       <span className="tabular-nums">{fmtMoney(selectedInvoice.totalAmount)}</span>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-(--color-text-muted)">Already Paid</span>
-                      <span className="tabular-nums">
-                        {fmtMoney(selectedInvoice.paidAmount ?? 0)}
-                      </span>
-                    </div>
+                    {typeof paidAmount === 'number' ? (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-(--color-text-muted)">Already Paid</span>
+                        <span className="tabular-nums">{fmtMoney(paidAmount)}</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
-                    <span className="font-semibold text-(--color-text-muted)">Balance Before</span>
+                    <span className="font-semibold text-(--color-text-muted)">
+                      Balance reported now
+                    </span>
                     <span className="font-display text-base font-bold text-(--color-danger-700) tabular-nums">
-                      {fmtMoney(balance)}
+                      {balance != null ? fmtMoney(balance) : 'Not reported'}
                     </span>
                   </div>
                 </div>
@@ -631,17 +822,31 @@ function NewPaymentForm() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between border-t border-(--color-success-200) pt-1 text-xs">
-                    <span className="text-(--color-success-700)">Balance After</span>
+                    <span className="text-(--color-success-700)">
+                      Projected balance after, from the balance reported now
+                    </span>
                     <span className="font-bold text-(--color-success-900) tabular-nums">
-                      {remainingAfter === 0 ? 'Zero Balance (Settled)' : fmtMoney(remainingAfter)}
+                      {remainingAfter == null ? 'Needs server balance' : fmtMoney(remainingAfter)}
                     </span>
                   </div>
                 </div>
 
                 <p className="text-2xs flex items-start gap-1.5 leading-relaxed font-medium text-(--color-text-muted)">
                   <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
-                  Saving will record the payment and update the invoice status to{' '}
-                  {remainingAfter === 0 ? '"paid"' : '"partial"'}.
+                  {balance == null ? (
+                    <>
+                      The server has not reported a balance for this invoice yet. Enter the amount
+                      collected; the server decides which amounts it accepts.
+                    </>
+                  ) : (
+                    <>
+                      Projection from the balance reported now:{' '}
+                      {remainingAfter === 0
+                        ? 'this amount would settle the invoice'
+                        : `${fmtMoney(remainingAfter)} would still be due`}
+                      . The server decides the invoice status when the payment is saved.
+                    </>
+                  )}
                 </p>
               </div>
             ) : (

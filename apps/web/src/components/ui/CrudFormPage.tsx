@@ -58,7 +58,7 @@ export interface CrudFormPageProps<TValues extends FieldValues = FieldValues> {
   description?: string;
   /** Back button + Cancel target. List route on create, detail or list on edit. */
   backHref: string;
-  maxWidth?: FormPageProps['maxWidth']; // default '2xl', matching FormPage
+  maxWidth?: FormPageProps['maxWidth']; // default 'full', matching FormPage
   headerActions?: ReactNode;
   headerBadge?: ReactNode;
 

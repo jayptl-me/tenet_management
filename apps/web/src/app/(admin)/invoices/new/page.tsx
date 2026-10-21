@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import {
   UserRound,
@@ -101,6 +102,12 @@ interface ElectricityShareInfo {
 
 const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
 
+const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
+
+const INVOICES_PREFIX = ['invoices'] as const;
+
+const PAYMENTS_SUMMARY_PREFIX = ['payments', 'summary'] as const;
+
 const DUPLICATE_INVOICE_KEY = (tenantId: string, month: string) =>
   ['invoices', 'duplicate-check', tenantId, month] as const;
 
@@ -110,6 +117,7 @@ const ELECTRICITY_SHARE_KEY = (tenantId: string, month: string) =>
 function NewInvoiceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const prefilledTenantId = searchParams.get('tenantId') ?? '';
 
   const [tenantId, setTenantId] = useState(prefilledTenantId);
@@ -129,7 +137,9 @@ function NewInvoiceForm() {
   );
 
   // Duplicate-invoice check for the selected tenant and billing month.
-  const { data: duplicateMatches } = useApiQuery<Array<{ invoiceNumber?: string; status?: string }>>(
+  const { data: duplicateMatches } = useApiQuery<
+    Array<{ invoiceNumber?: string; status?: string }>
+  >(
     DUPLICATE_INVOICE_KEY(tenantId, month),
     `invoices?tenantId=${tenantId}&month=${month}&limit=1`,
     { enabled: Boolean(tenantId) && /^\d{4}-\d{2}$/.test(month) },
@@ -177,9 +187,7 @@ function NewInvoiceForm() {
     setLineItemOwner({ tenantId, month });
     setLineItems((prev) =>
       prev.map((item) =>
-        item.id === 'item-rent-initial'
-          ? { ...item, description: `Room Rent (${month})` }
-          : item,
+        item.id === 'item-rent-initial' ? { ...item, description: `Room Rent (${month})` } : item,
       ),
     );
   }
@@ -202,7 +210,7 @@ function NewInvoiceForm() {
         amount: elecShare.tenantShare,
       },
     ]);
-    toast.success(`Added electricity share of ₹${elecShare.tenantShare.toLocaleString('en-IN')}`);
+    toast.info(`Added electricity share of ₹${elecShare.tenantShare.toLocaleString('en-IN')}`);
   };
 
   const monthChips = [
@@ -268,13 +276,18 @@ function NewInvoiceForm() {
         })),
       };
 
-      const res = await api
-        .post('invoices/generate-single', { json: payload })
-        .json<{ success: boolean; data?: { _id?: string; invoiceNumber?: string } }>();
+      const res = await api.post('invoices/generate-single', { json: payload }).json<{
+        success: boolean;
+        data?: { _id?: string; invoiceNumber?: string; status?: string };
+      }>();
 
-      toast.success(
-        `Invoice ${res.data?.invoiceNumber ? `#${res.data.invoiceNumber} ` : ''}generated successfully.`,
-      );
+      // The invoice exists because the server wrote it. Re-read the invoice
+      // lists and the dues summary, then open the record the server created.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: TENANT_DUES_KEY(tenantId) }),
+      ]);
       const createdId = res.data?._id;
       router.push(createdId ? `/invoices/${createdId}` : '/invoices');
     } catch (err) {
@@ -707,7 +720,8 @@ function NewInvoiceForm() {
                   </div>
                   <p className="text-2xs mt-1 flex items-center gap-1 text-(--color-text-muted)">
                     <Clock className="h-3 w-3" />
-                    Invoice will be issued in Draft status.
+                    The server issues this invoice as Sent and opens a pending UPI payment for the
+                    full amount.
                   </p>
                 </div>
               </div>

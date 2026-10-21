@@ -11,10 +11,9 @@ import {
   Send,
   Trash2,
   TrendingUp,
-  IndianRupee,
-  CheckCircle2,
-  Clock,
-  TriangleAlert,
+  ArrowDownRight,
+  ArrowUpRight,
+  Search,
   Users,
   AlertCircle,
 } from 'lucide-react';
@@ -25,14 +24,15 @@ import { errorMessage } from '@/lib/query';
 import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Modal } from '@/components/ui/Modal';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { FilterChips } from '@/components/ui/FilterChips';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusTabs } from '@/components/ui/StatusTabs';
+import { PageBand } from '@/components/ui/PageBand';
 import { AgingBars, type AgingBucket } from '@/components/ui/AgingBars';
 import { TableActions } from '@/components/ui/TableActions';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -55,6 +55,10 @@ interface InvoiceRow {
   status: string;
   dueDate?: string;
   createdAt: string;
+  /** Server-computed settled sum (GET /invoices). */
+  paidAmount?: number;
+  /** Server-computed amount still due (GET /invoices). null when not reported. */
+  balance?: number | null;
 }
 
 interface SummaryMonth {
@@ -105,6 +109,36 @@ function fmtMoney(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+/**
+ * The balance cell of the invoice ledger.
+ *
+ * The amount is only shown for the statuses that can actually be paid. A
+ * cancelled invoice is refused by the server, so it must not look like money
+ * that can still be collected, and a settled invoice says so instead of
+ * showing a zero that reads as a number the server never reported.
+ */
+function InvoiceBalanceCell({ row }: { row: InvoiceRow }) {
+  if (row.status === 'cancelled') {
+    return <span className="text-(--color-text-muted)">Not collectible</span>;
+  }
+  if (row.status === 'paid') {
+    return <span className="text-(--color-success-700)">Settled</span>;
+  }
+  if (typeof row.balance !== 'number') {
+    return <span className="text-(--color-text-muted)">Not reported</span>;
+  }
+  return (
+    <span
+      className={clsx(
+        'font-semibold tabular-nums',
+        row.balance > 0 ? 'text-(--color-danger-700)' : 'text-(--color-success-700)',
+      )}
+    >
+      {fmtMoney(row.balance)}
+    </span>
+  );
+}
+
 function fmtCompact(n: number): string {
   if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`;
   if (n >= 1_000) return `₹${Math.round(n / 1_000)}K`;
@@ -141,8 +175,12 @@ const INVOICES_LIST_KEY = (
   search: string,
 ) => [...INVOICES_PREFIX, 'list', page, perPage, status, month, tenantId, search];
 
-const INVOICE_BULK_PREVIEW_KEY = (modalOpen: boolean, month: string) =>
-  [...INVOICES_PREFIX, 'preview-bulk', modalOpen, month];
+const INVOICE_BULK_PREVIEW_KEY = (modalOpen: boolean, month: string) => [
+  ...INVOICES_PREFIX,
+  'preview-bulk',
+  modalOpen,
+  month,
+];
 
 const PAYMENTS_SUMMARY_KEY = (month: string) => [...PAYMENTS_SUMMARY_PREFIX, month];
 
@@ -167,6 +205,8 @@ function InvoicesContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   // Mutation (delete/export) failures; list failures come from the query.
   const [error, setError] = useState('');
+  // Outcome of the last write, as reported by the server.
+  const [writeResult, setWriteResult] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -232,21 +272,20 @@ function InvoicesContent() {
   );
 
   // Pre-flight preview for the bulk generate modal.
-  const {
-    data: bulkPreview = null,
-    isPending: previewLoading,
-  } = useApiQuery<BulkPreviewData>(
+  const { data: bulkPreview = null, isPending: previewLoading } = useApiQuery<BulkPreviewData>(
     INVOICE_BULK_PREVIEW_KEY(bulkGenerateOpen, bulkMonth),
     `invoices/preview-bulk?month=${bulkMonth}`,
     { enabled: bulkGenerateOpen && Boolean(bulkMonth) },
   );
 
-  const refreshAfterMutation = useCallback(() => {
+  const refreshAfterMutation = useCallback(async () => {
     // A fresh list run used to clear the banner along with refetching data.
     setError('');
-    queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX });
-    queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX });
-    queryClient.invalidateQueries({ queryKey: PAYMENTS_TREND_KEY });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+      queryClient.invalidateQueries({ queryKey: PAYMENTS_SUMMARY_PREFIX }),
+      queryClient.invalidateQueries({ queryKey: PAYMENTS_TREND_KEY }),
+    ]);
   }, [queryClient]);
 
   const handleDelete = async () => {
@@ -255,8 +294,8 @@ function InvoicesContent() {
     try {
       await api.delete(`invoices/${deleteTarget._id}`).json();
       setDeleteTarget(null);
-      toast.success('Invoice deleted');
-      refreshAfterMutation();
+      await refreshAfterMutation();
+      setWriteResult('Deletion saved. The server no longer lists this invoice.');
     } catch (err) {
       const parsed = await parseApiError(err);
       setError(parsed.message || 'Failed to delete invoice');
@@ -280,9 +319,11 @@ function InvoicesContent() {
         failed += 1;
       }
     }
-    toast.success(`Marked ${ok} invoice(s) sent${failed ? `, ${failed} failed` : ''}.`);
     setSelectedKeys(new Set());
-    refreshAfterMutation();
+    await refreshAfterMutation();
+    setWriteResult(
+      `Mark sent: ${ok} invoice(s) confirmed by the server, ${failed} rejected. The list below shows the server status.`,
+    );
   };
 
   const handleBulkDelete = async () => {
@@ -300,11 +341,11 @@ function InvoicesContent() {
     }
     setBulkDeleteLoading(false);
     setBulkDeleteOpen(false);
-    toast.success(
-      `Deleted ${ok} invoice(s)${failed ? `, ${failed} skipped (paid or has payments)` : ''}.`,
-    );
     setSelectedKeys(new Set());
-    refreshAfterMutation();
+    await refreshAfterMutation();
+    setWriteResult(
+      `Delete: ${ok} invoice(s) removed by the server, ${failed} kept (paid or has payments).`,
+    );
   };
 
   const handleBulkGenerate = async () => {
@@ -315,12 +356,12 @@ function InvoicesContent() {
         .post('invoices/generate-bulk', { json: { month: bulkMonth } })
         .json<{ success: boolean; data: { generated: number; skipped: number; errors: number } }>();
       if (res.success) {
-        toast.success(
-          `Generated ${res.data.generated} invoices for ${bulkMonth}. Skipped: ${res.data.skipped}. Errors: ${res.data.errors}.`,
-        );
         setBulkMonth('');
         setBulkGenerateOpen(false);
-        refreshAfterMutation();
+        await refreshAfterMutation();
+        setWriteResult(
+          `Server generated ${res.data.generated} invoice(s) for ${bulkMonth}. Skipped: ${res.data.skipped}. Errors: ${res.data.errors}.`,
+        );
       }
     } catch (err) {
       toast.error((await parseApiError(err)).message);
@@ -396,6 +437,14 @@ function InvoicesContent() {
     const pct = ((cur - prev) / prev) * 100;
     return { percent: pct, label: `vs ${fmtCompact(prev)} last month` };
   };
+
+  /** Direction cue for a comparison, same rule the metric tiles used. */
+  const deltaIcon = (cur: number, prev: number | undefined) =>
+    (cur ?? 0) >= (prev ?? 0) ? (
+      <ArrowUpRight className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowDownRight className="h-3.5 w-3.5" />
+    );
 
   const agingBuckets: AgingBucket[] = aging
     ? Object.entries(AGING_LABELS).map(([key, label]) => ({
@@ -536,6 +585,10 @@ function InvoicesContent() {
       ),
     },
     {
+      header: 'Balance',
+      accessor: (row) => <InvoiceBalanceCell row={row} />,
+    },
+    {
       header: 'Status',
       accessor: (row) => (
         <StatusBadge
@@ -561,7 +614,7 @@ function InvoicesContent() {
   const openInvoicesCount = agingBuckets.reduce((s, b) => s + b.count, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="Invoices"
         description="Generate, track, and reconcile tenant invoices"
@@ -581,61 +634,192 @@ function InvoicesContent() {
 
       <ErrorBanner message={errorMessage(queryError) || error} />
 
-      {/* Executive Metric Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title={`Collected · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.collected ?? 0)}
-          delta={
-            summary
-              ? {
-                  value: delta(summary.collected, prevSummary?.collected).label,
-                  direction:
-                    (summary.collected ?? 0) >= (prevSummary?.collected ?? 0) ? 'up' : 'down',
-                  label: '',
-                }
-              : undefined
-          }
-          tone="success"
-          icon={<CheckCircle2 />}
-        />
-        <StatCard
-          title={`Expected · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.expected ?? 0)}
-          delta={
-            summary
-              ? {
-                  value: delta(summary.expected, prevSummary?.expected).label,
-                  direction:
-                    (summary.expected ?? 0) >= (prevSummary?.expected ?? 0) ? 'up' : 'down',
-                  label: '',
-                }
-              : undefined
-          }
-          tone="brand"
-          icon={<IndianRupee />}
-        />
-        <StatCard
-          title="Outstanding Balance"
-          value={agingLoading ? '—' : fmtMoney(aging?.totalOutstanding ?? 0)}
-          subtitle={agingLoading ? undefined : `${openInvoicesCount} open invoice(s)`}
-          tone="warning"
-          icon={<TriangleAlert />}
-        />
-        <StatCard
-          title={`Pending · ${summary?.month ?? 'This Month'}`}
-          value={fmtMoney(summary?.pending ?? 0)}
-          subtitle={
-            summary && summary.expected > 0
-              ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
-              : undefined
-          }
-          tone={(summary?.pending ?? 0) > 0 ? 'danger' : 'success'}
-          icon={<Clock />}
-        />
-      </div>
+      {writeResult && (
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+          {writeResult}
+        </div>
+      )}
 
-      {/* Aging + collection trend row */}
+      {/* The compact band: numbers, status tabs and filters in one surface, so
+          the first data row is reachable without scrolling past half a screen
+          of chrome. Every number and every filter is the one it was. */}
+      <PageBand
+        metrics={[
+          {
+            label: `Collected · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.collected ?? 0),
+            hint: summary ? delta(summary.collected, prevSummary?.collected).label : undefined,
+            icon: summary ? deltaIcon(summary.collected, prevSummary?.collected) : undefined,
+            tone: 'success',
+          },
+          {
+            label: `Expected · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.expected ?? 0),
+            hint: summary ? delta(summary.expected, prevSummary?.expected).label : undefined,
+            icon: summary ? deltaIcon(summary.expected, prevSummary?.expected) : undefined,
+            tone: 'brand',
+          },
+          {
+            label: 'Outstanding Balance',
+            value: agingLoading ? '—' : fmtMoney(aging?.totalOutstanding ?? 0),
+            hint: agingLoading ? undefined : `${openInvoicesCount} open invoice(s)`,
+            tone: 'warning',
+          },
+          {
+            label: `Pending · ${summary?.month ?? 'This Month'}`,
+            value: fmtMoney(summary?.pending ?? 0),
+            hint:
+              summary && summary.expected > 0
+                ? `${Math.max(0, Math.round((1 - summary.collected / summary.expected) * 100))}% uncollected`
+                : undefined,
+            tone: (summary?.pending ?? 0) > 0 ? 'danger' : 'success',
+          },
+        ]}
+      >
+        {/* Status Tabs with live counts */}
+        <StatusTabs
+          tabs={STATUS_TABS.map((t) => ({
+            key: t.key,
+            label: t.label,
+            count: statusCounts[t.key || 'all'] ?? (t.key === '' ? total : undefined),
+          }))}
+          active={statusFilter}
+          onChange={(key) => {
+            setStatusFilter(key);
+            setPage(1);
+          }}
+        />
+
+        <div className="flex flex-wrap items-center gap-3 pt-2">
+          <div className="max-w-sm sm:w-72">
+            <Input
+              placeholder="Search invoice, tenant, room, month..."
+              aria-label="Search invoice, tenant, room, month..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              leftIcon={<Search className="h-4 w-4" />}
+            />
+          </div>
+          <DatePicker
+            type="month"
+            aria-label="Filter by month"
+            value={monthFilter}
+            onChange={(val: string) => {
+              setMonthFilter(val);
+              setPage(1);
+            }}
+            className="w-[170px]"
+          />
+          <ResourceSelect
+            endpoint="tenants"
+            value={tenantFilter}
+            onChange={(val) => {
+              setTenantFilter(val);
+              setTenantFilterLabel('');
+              setPage(1);
+            }}
+            placeholder="All Tenants"
+            valueKey="_id"
+            labelKey={tenantLabel}
+            dataPath="data"
+            className="w-[220px]"
+          />
+          <FilterChips chips={chips} onClearAll={clearAllFilters} />
+        </div>
+      </PageBand>
+
+      {/* Aging + collection trend row lives under the table: it is analysis of
+          the list, and above the table it pushed the first data row off the
+          screen. */}
+      <DataTable
+        columns={columns}
+        data={invoices}
+        keyExtractor={(row: InvoiceRow) => row._id}
+        isLoading={isLoading}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        bulkActions={
+          <>
+            <Button size="sm" variant="outline" onClick={handleBulkMarkSent}>
+              <Send className="h-3.5 w-3.5" />
+              Mark sent
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleExportCsv}>
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+          </>
+        }
+        onRowClick={(row) => router.push(`/invoices/${row._id}`)}
+        pagination={{
+          page,
+          perPage,
+          total,
+          onPageChange: (p) => setPage(p),
+          onPerPageChange: (pp) => {
+            setPerPage(pp);
+            setPage(1);
+          },
+        }}
+        emptyState={
+          <EmptyState
+            icon={<FileText className="h-12 w-12" />}
+            title="No invoices yet"
+            description="Generate your first invoice to get started"
+            action={{ label: 'Generate Invoice', onClick: () => router.push('/invoices/new') }}
+          />
+        }
+        mobileCardRenderer={(row) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm font-semibold text-(--color-text-primary)">
+                {row.invoiceNumber}
+              </span>
+              <StatusBadge
+                variant={statusToVariant(row.status)}
+                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
+              <span>{row.tenantId?.userId?.name ?? 'N/A'}</span>
+              <span>{row.month}</span>
+              <span>{fmtMoney(row.totalAmount)}</span>
+              {row.status === 'cancelled' ? (
+                <span className="font-semibold text-(--color-text-muted)">Not collectible</span>
+              ) : row.status === 'paid' ? (
+                <span className="font-semibold text-(--color-success-700)">Settled</span>
+              ) : typeof row.balance === 'number' ? (
+                <span className="font-semibold text-(--color-text-primary)">
+                  {fmtMoney(row.balance)} due
+                </span>
+              ) : (
+                <span className="font-semibold text-(--color-text-muted)">
+                  Balance not reported
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              <TableActions
+                onView={() => router.push(`/invoices/${row._id}`)}
+                onEdit={() => router.push(`/invoices/${row._id}/edit`)}
+                showDelete={row.status !== 'paid'}
+                onDelete={row.status !== 'paid' ? () => setDeleteTarget(row) : undefined}
+              />
+            </div>
+          </div>
+        )}
+      />
+
+      {/* Aging + collection trend row: analysis of the list, so it sits under
+          the table instead of pushing the first data row off the screen. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <AgingBars
@@ -678,127 +862,6 @@ function InvoicesContent() {
           </div>
         </div>
       </div>
-
-      {/* Status Tabs with live counts */}
-      <StatusTabs
-        tabs={STATUS_TABS.map((t) => ({
-          key: t.key,
-          label: t.label,
-          count: statusCounts[t.key || 'all'] ?? (t.key === '' ? total : undefined),
-        }))}
-        active={statusFilter}
-        onChange={(key) => {
-          setStatusFilter(key);
-          setPage(1);
-        }}
-      />
-
-      <DataTable
-        columns={columns}
-        data={invoices}
-        keyExtractor={(row: InvoiceRow) => row._id}
-        isLoading={isLoading}
-        searchable
-        searchPlaceholder="Search invoice, tenant, room, month..."
-        searchValue={search}
-        onSearchChange={(v) => {
-          setSearch(v);
-          setPage(1);
-        }}
-        selectable
-        selectedKeys={selectedKeys}
-        onSelectionChange={setSelectedKeys}
-        bulkActions={
-          <>
-            <Button size="sm" variant="outline" onClick={handleBulkMarkSent}>
-              <Send className="h-3.5 w-3.5" />
-              Mark sent
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleExportCsv}>
-              <Download className="h-3.5 w-3.5" />
-              Export
-            </Button>
-            <Button size="sm" variant="danger" onClick={() => setBulkDeleteOpen(true)}>
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </Button>
-          </>
-        }
-        onRowClick={(row) => router.push(`/invoices/${row._id}`)}
-        pagination={{
-          page,
-          perPage,
-          total,
-          onPageChange: (p) => setPage(p),
-          onPerPageChange: (pp) => {
-            setPerPage(pp);
-            setPage(1);
-          },
-        }}
-        toolbar={
-          <div className="flex flex-wrap items-center gap-3">
-            <DatePicker
-              type="month"
-              aria-label="Filter by month"
-              value={monthFilter}
-              onChange={(val: string) => {
-                setMonthFilter(val);
-                setPage(1);
-              }}
-              className="w-[170px]"
-            />
-            <ResourceSelect
-              endpoint="tenants"
-              value={tenantFilter}
-              onChange={(val) => {
-                setTenantFilter(val);
-                setTenantFilterLabel('');
-                setPage(1);
-              }}
-              placeholder="All Tenants"
-              valueKey="_id"
-              labelKey={tenantLabel}
-              dataPath="data"
-              className="w-[220px]"
-            />
-            <FilterChips chips={chips} onClearAll={clearAllFilters} />
-          </div>
-        }
-        emptyState={
-          <EmptyState
-            icon={<FileText className="h-12 w-12" />}
-            title="No invoices yet"
-            description="Generate your first invoice to get started"
-            action={{ label: 'Generate Invoice', onClick: () => router.push('/invoices/new') }}
-          />
-        }
-        mobileCardRenderer={(row) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-semibold text-(--color-text-primary)">
-                {row.invoiceNumber}
-              </span>
-              <StatusBadge
-                variant={statusToVariant(row.status)}
-                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
-              />
-            </div>
-            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
-              <span>{row.tenantId?.userId?.name ?? 'N/A'}</span>
-              <span>{row.month}</span>
-              <span>{fmtMoney(row.totalAmount)}</span>
-            </div>
-            <div className="flex items-center gap-1 pt-1">
-              <TableActions
-                onView={() => router.push(`/invoices/${row._id}`)}
-                onEdit={() => router.push(`/invoices/${row._id}/edit`)}
-                showDelete={row.status !== 'paid'}
-                onDelete={row.status !== 'paid' ? () => setDeleteTarget(row) : undefined}
-              />
-            </div>
-          </div>
-        )}
-      />
 
       {/* Bulk generate modal with pre-flight intelligence */}
       <Modal

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Wallet, Smartphone, Landmark, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { surfaceNestedClass } from '@/lib/field-styles';
+import type { PaymentReceiptSource } from '@/components/admin/ReceiptDocument';
 import { clsx } from 'clsx';
 
 export interface RecordPaymentTarget {
@@ -20,6 +21,11 @@ export interface RecordPaymentTarget {
   invoiceNumber?: string;
   month?: string;
   totalAmount?: number;
+  /**
+   * Server-computed amount still due. Left undefined when the server did not
+   * report one: an absent balance is NOT a zero balance and must never be
+   * read as one.
+   */
   balance?: number;
 }
 
@@ -27,7 +33,12 @@ export interface RecordPaymentModalProps {
   target: RecordPaymentTarget | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  /**
+   * Called after the server accepted the payment. The receipt is the server
+   * artifact (`GET /payments/:id/receipt`); `null` means the write succeeded
+   * but the receipt could not be loaded.
+   */
+  onSuccess?: (receipt: PaymentReceiptSource | null) => void;
 }
 
 const METHODS = [
@@ -48,28 +59,50 @@ function nowLocalDatetime(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * The amount the form starts with: the server balance, and nothing else.
+ * A missing balance starts at 0 (nothing entered yet), never at a number
+ * the client made up.
+ */
+function initialAmount(target: RecordPaymentTarget | null): number {
+  if (!target) return 0;
+  return typeof target.balance === 'number' && target.balance > 0 ? target.balance : 0;
+}
+
 export function RecordPaymentModal({
   target,
   isOpen,
   onClose,
   onSuccess,
 }: RecordPaymentModalProps) {
-  const [amount, setAmount] = useState<number>(() => target?.balance ?? 0);
+  const [amount, setAmount] = useState<number>(() => initialAmount(target));
   const [method, setMethod] = useState<'cash' | 'upi' | 'bank_transfer' | 'other'>('cash');
   const [paidAt, setPaidAt] = useState(nowLocalDatetime());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [prevTarget, setPrevTarget] = useState(target);
+  // The write in flight. The ref holds the guard so it takes effect before the
+  // next render (the same payment must never be sent twice); the state flag is
+  // what the button reads, because a ref must not be read during render.
+  const inFlight = useRef(false);
+  const [submitLocked, setSubmitLocked] = useState(false);
+  // The amount field itself. The shared Input component does not forward
+  // onChange, so the field is the only place the number the operator typed
+  // is visible before the field is left. The write uses the field's value,
+  // never a stale copy of it.
+  const amountFieldRef = useRef<HTMLInputElement | null>(null);
 
-  const balance = target?.balance ?? 0;
+  // The balance the server reported for this invoice. `null` means the server
+  // did not send one, so the client never derives it.
+  const balance = typeof target?.balance === 'number' ? target.balance : null;
 
   // Reset the form when a new invoice is targeted (render-time adjustment
   // instead of an effect).
   if (prevTarget !== target) {
     setPrevTarget(target);
     if (target) {
-      setAmount(target.balance ?? 0);
+      setAmount(initialAmount(target));
       setMethod('cash');
       setPaidAt(nowLocalDatetime());
       setNotes('');
@@ -77,11 +110,11 @@ export function RecordPaymentModal({
     }
   }
 
-  const remainingAfter = Math.max(0, balance - amount);
-  const isOverpay = amount > balance + 0.001;
+  const remainingAfter = balance != null ? Math.max(0, balance - amount) : null;
+  const isOverpay = balance != null && amount > balance + 0.001;
 
   const quickAmounts =
-    balance > 0
+    balance != null && balance > 0
       ? [
           { label: 'Full balance', value: balance },
           { label: '50%', value: Math.round((balance / 2) * 100) / 100 },
@@ -93,11 +126,28 @@ export function RecordPaymentModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!target) return;
-    if (amount <= 0) {
-      setError('Amount must be greater than 0');
+    // The same write must never be sent twice.
+    if (inFlight.current) return;
+    // The number the operator entered, read from the field itself.
+    const entered = amountFieldRef.current ? Number(amountFieldRef.current.value) : amount;
+    const collected = Number.isFinite(entered) ? entered : 0;
+    if (collected <= 0) {
+      setError('Enter the amount that was collected.');
+      return;
+    }
+    // The server rejects overpayment (AMOUNT_EXCEEDS_BALANCE), so do not offer
+    // a write that is guaranteed to fail. Only a REPORTED balance can make an
+    // amount too large: a missing balance is never read as 0 and never
+    // blocks the write.
+    if (balance != null && collected > balance + 0.001) {
+      setError(
+        `The server reports a balance of ${fmtMoney(balance)} for this invoice, so ${fmtMoney(collected)} would be rejected. Record ${fmtMoney(balance)} or less.`,
+      );
       return;
     }
 
+    inFlight.current = true;
+    setSubmitLocked(true);
     setIsSubmitting(true);
     setError('');
 
@@ -105,25 +155,48 @@ export function RecordPaymentModal({
       const d = new Date(paidAt);
       const paidAtIso = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 
-      await api
+      const res = await api
         .post('payments/offline', {
           json: {
             tenantId: target.tenantId,
             invoiceId: target.invoiceId,
-            amount,
+            amount: collected,
             method,
             paidAt: paidAtIso,
             notes: notes.trim() || undefined,
           },
         })
-        .json();
+        .json<{ success: boolean; data?: { id?: string; _id?: string } }>();
 
-      toast.success(`Payment of ${fmtMoney(amount)} recorded successfully`);
-      onSuccess?.();
+      // The payment exists because the server wrote it. The caller re-reads
+      // the invoice; the client does not assert a local success.
+      // The payment model replaces _id with id in its JSON transform
+      // (apps/api/src/models/payment.ts:101-104), so read id first.
+      const createdId = res.data?.id ?? res.data?._id;
+      if (!createdId) {
+        onSuccess?.(null);
+        onClose();
+        return;
+      }
+
+      // The receipt is the server's artifact, fetched from the server.
+      try {
+        const receiptRes = await api
+          .get(`payments/${createdId}/receipt`)
+          .json<{ success: boolean; data: PaymentReceiptSource }>();
+        onSuccess?.(receiptRes.data);
+      } catch (err) {
+        toast.error(
+          `Payment recorded. The receipt could not be loaded: ${(await parseApiError(err)).message}`,
+        );
+        onSuccess?.(null);
+      }
       onClose();
     } catch (err) {
       setError((await parseApiError(err)).message);
     } finally {
+      inFlight.current = false;
+      setSubmitLocked(false);
       setIsSubmitting(false);
     }
   };
@@ -161,9 +234,26 @@ export function RecordPaymentModal({
               <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                 Balance Due
               </p>
-              <p className="font-display text-base font-bold text-[color:var(--color-danger-700)] tabular-nums">
-                {fmtMoney(balance)}
+              <p
+                className={clsx(
+                  'font-display text-base font-bold tabular-nums',
+                  balance == null || balance === 0
+                    ? 'text-[color:var(--color-text-primary)]'
+                    : 'text-[color:var(--color-danger-700)]',
+                )}
+              >
+                {balance != null ? fmtMoney(balance) : 'Not reported'}
               </p>
+              {balance == null ? (
+                <p className="text-[11px] leading-snug font-medium text-[color:var(--color-text-muted)]">
+                  The server did not report a balance for this invoice. The amount that is accepted
+                  is decided by the server when the payment is saved.
+                </p>
+              ) : balance === 0 ? (
+                <p className="text-[11px] leading-snug font-medium text-[color:var(--color-text-muted)]">
+                  The server reports nothing due on this invoice.
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -214,6 +304,7 @@ export function RecordPaymentModal({
           </label>
           <Input
             id="modal-payment-amount"
+            ref={amountFieldRef}
             type="number"
             step="0.01"
             min="0.01"
@@ -243,10 +334,10 @@ export function RecordPaymentModal({
             </div>
           )}
 
-          {isOverpay && (
-            <p className="mt-1 text-[11px] text-[color:var(--color-warning-700)]">
-              Note: Payment amount exceeds current balance ({fmtMoney(balance)}). Excess will be
-              credited.
+          {isOverpay && balance != null && (
+            <p className="mt-1 text-[11px] font-semibold text-[color:var(--color-danger-700)]">
+              The server reports a balance of {fmtMoney(balance)} for this invoice, so an amount
+              above that would be rejected. Record {fmtMoney(balance)} or less.
             </p>
           )}
         </div>
@@ -285,29 +376,35 @@ export function RecordPaymentModal({
           />
         </div>
 
-        {/* Live balance reconciliation summary */}
-        <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-3 text-xs">
-          <span className="font-medium text-[color:var(--color-text-muted)]">
-            Remaining balance after:
-          </span>
-          <span
-            className={clsx(
-              'font-bold tabular-nums',
-              remainingAfter === 0
-                ? 'text-[color:var(--color-success-600)]'
-                : 'text-[color:var(--color-text-primary)]',
-            )}
-          >
-            {remainingAfter === 0 ? 'Fully settled (₹0)' : fmtMoney(remainingAfter)}
-          </span>
-        </div>
+        {/* Projection of the current snapshot, not a promise about the server */}
+        {remainingAfter != null && (
+          <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-3 text-xs">
+            <span className="font-medium text-[color:var(--color-text-muted)]">
+              Projected balance after this payment, from the balance reported now:
+            </span>
+            <span
+              className={clsx(
+                'font-bold tabular-nums',
+                remainingAfter === 0
+                  ? 'text-[color:var(--color-success-600)]'
+                  : 'text-[color:var(--color-text-primary)]',
+              )}
+            >
+              {fmtMoney(remainingAfter)}
+            </span>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-2 border-t border-[color:var(--border-color)] pt-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={isSubmitting || amount <= 0}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting || submitLocked || isOverpay}
+          >
             {isSubmitting ? 'Recording...' : `Record ${fmtMoney(amount)}`}
           </Button>
         </div>
