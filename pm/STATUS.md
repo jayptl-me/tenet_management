@@ -49,14 +49,20 @@ deleted, and every module has a contract that the checker validates against the 
 | audit pipeline             | **TOTAL FAIL: 0**, reconcile **16/16**, field matrix **16/16**               |
 | `flutter analyze`          | **no issues**                                                                |
 
-**Still to do:** the per-module depth rebuilds in money order (the invoices module is in flight, then
-tenants, electricity, rooms, attendance, dashboard), the type-scale sweep for the admin pages (the
-shared components are done and guarded; the pages still carry the allowlisted exceptions), the
-resident-facing receipt card (DR-11 option C), the leftover audit gaps the contracts name (a visitor
-arriving or leaving is still silent, a room retirement and a bed move are still silent, the
-cron-secret route that marks invoices overdue still tells nobody, and tenant checkout cannot reach
-the resident because it deactivates the login), and Phase 4 leftovers (the Render env checklist for
-Jay, and the e2e suite running against a real API rather than stubs).
+**What wave 2 shipped (the depth program, wave by wave):** every admin module rebuilt against the
+standard - payments, invoices, tenants, electricity, rooms, assets, services, visitors, leaves,
+attendance, dashboard, floors, meals, laundry, washing machines, guardians, menus - each with a depth
+audit written first and its contract filled against the code it left behind. The resident portal shows
+the real balance, the rejection reason, the office's receipt and a pending card, and its empty states
+are no longer dead ends. The API owns the money through one helper, refuses to finalise a bill whose
+readings disagree, and every state change a human waits on now reaches them. The date picker, the
+Input control, the type scale and the colour tokens are fixed and guarded.
+
+**Still to do:** the modules that have not had their pass yet (notices, notifications, enquiries,
+complaints, audit logs, export), the end-to-end suite against a real API rather than stubs, and the
+Phase 4 leftovers (the Render env checklist for Jay). The gaps the contracts name stay open on
+purpose: the cron-secret route that marks invoices overdue still tells nobody, tenant checkout cannot
+reach the resident because it deactivates the login, and the audit trail expires after 90 days.
 
 **Watch-outs:**
 
