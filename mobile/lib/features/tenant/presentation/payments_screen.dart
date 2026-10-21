@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/payment_receipt.dart';
 import '../../../core/network/open_bytes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../shared/widgets/payment_receipt_card.dart';
 import '../../shared/widgets/portal_widgets.dart';
 import 'home_screen.dart';
 
@@ -22,7 +24,6 @@ class TenantPaymentsScreen extends ConsumerStatefulWidget {
 class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   bool _loading = true;
   String? _error;
-  String? _success;
   List<Map<String, dynamic>> _payments = [];
   List<Map<String, dynamic>> _invoices = [];
   String? _invoiceId;
@@ -30,6 +31,18 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   final _screenshot = TextEditingController();
   bool _submitting = false;
   final _scrollController = ScrollController();
+
+  /// The server's receipt for the payment the resident just submitted.
+  ///
+  /// The receipt is the artifact that replaces a local "submitted" claim.
+  PaymentReceipt? _receipt;
+
+  /// Why the receipt could not be shown, with a retry.
+  String? _receiptError;
+
+  /// The payment the server wrote for the last submission. Kept so the
+  /// receipt can be fetched again without asking the resident to resubmit.
+  Map<String, dynamic>? _submittedPayment;
 
   Map<String, dynamic>? _qr;
   bool _qrLoading = false;
@@ -207,6 +220,20 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     _scrollToTop();
   }
 
+  /// Whether the office's receipt for this payment can be shown.
+  ///
+  /// A settled payment always has one. A payment that carries a UTR has one
+  /// too: the resident sent that money. A plain pending row the office opened
+  /// for an invoice is not a payment the resident made, so it gets no receipt.
+  bool _canViewReceipt(Map<String, dynamic> payment) {
+    final status = (payment['status']?.toString() ?? '').toLowerCase();
+    if (status == 'paid' || status == 'approved' || status == 'completed') {
+      return true;
+    }
+    final utr = (payment['utrNumber']?.toString() ?? '').trim();
+    return utr.isNotEmpty;
+  }
+
   Future<void> _submitUtr() async {
     if (_invoiceId == null || _utr.text.trim().length < 6) {
       setState(() => _error = 'Select invoice and enter a valid UTR (min 6 chars).');
@@ -215,26 +242,66 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     setState(() {
       _submitting = true;
       _error = null;
-      _success = null;
+      _receipt = null;
+      _receiptError = null;
     });
     try {
-      await ref.read(tenantRepositoryProvider).submitUtr(
+      final payment = await ref.read(tenantRepositoryProvider).submitUtr(
             invoiceId: _invoiceId!,
             utrNumber: _utr.text,
             screenshotUrl:
                 _screenshot.text.trim().isEmpty ? null : _screenshot.text.trim(),
           );
+      if (!mounted) return;
       _utr.clear();
       _screenshot.clear();
-      setState(() =>
-          _success =
-              'UTR submitted. The admin will confirm this payment and you '
-              'will get a notification.');
+      setState(() => _submittedPayment = payment);
+      await _loadReceipt(payment);
       await _load();
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// The server's receipt for the payment the resident just submitted.
+  ///
+  /// The receipt is the artifact: the id, the amount, the method, the date and
+  /// the invoice it settles, all read from the server. When the server cannot
+  /// produce one, the screen says so instead of claiming a success locally.
+  Future<void> _loadReceipt(Map<String, dynamic>? payment) async {
+    final id = payment?['_id']?.toString() ?? payment?['id']?.toString() ?? '';
+    if (id.isEmpty) {
+      if (!mounted) return;
+      setState(
+        () => _receiptError =
+            'The office did not return a receipt for this payment. '
+            'Pull to refresh to see it in the payment list.',
+      );
+      return;
+    }
+    try {
+      final raw = await ref.read(tenantRepositoryProvider).paymentReceipt(id);
+      if (!mounted) return;
+      if (raw == null) {
+        setState(
+          () => _receiptError =
+              'The receipt for this payment is not available yet. '
+              'Pull to refresh to try again.',
+        );
+        return;
+      }
+      setState(() {
+        _receipt = PaymentReceipt.fromServer(raw);
+        _receiptError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(
+        () => _receiptError = e.toString().replaceFirst('Exception: ', ''),
+      );
     }
   }
 
@@ -296,31 +363,43 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
                     ErrorBanner(message: _error!, onRetry: _load),
                     const SizedBox(height: 12),
                   ],
-            if (_success != null) ...[
-              Material(
-                color: AppTheme.successSoft,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    _success!,
-                    style: const TextStyle(
-                      color: AppTheme.success,
-                      fontWeight: FontWeight.w700,
+                  if (_receiptError != null) ...[
+                    ErrorBanner(
+                      message: _receiptError!,
+                      onRetry: _submittedPayment == null
+                          ? null
+                          : () => _loadReceipt(_submittedPayment),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_pendingPayments.isNotEmpty) ...[
-              ..._pendingPayments.map(
-                (p) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _PendingPaymentCard(payment: p),
-                ),
-              ),
-            ],
+                    const SizedBox(height: 12),
+                  ],
+                  if (_receipt != null) ...[
+                    Text(
+                      'Latest receipt',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    PaymentReceiptCard(receipt: _receipt!),
+                    const SizedBox(height: 16),
+                  ],
+                  if (_pendingPayments.isNotEmpty) ...[
+                    ..._pendingPayments.map(
+                      (p) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _PendingPaymentCard(
+                          payment: p,
+                          onViewReceipt: _canViewReceipt(p)
+                              ? () => _showReceipt(
+                                    p['_id']?.toString() ??
+                                        p['id']?.toString() ??
+                                        '',
+                                  )
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -519,8 +598,7 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
             (p['invoiceId'] as Map)['_id']?.toString()
         : p['invoiceNumber']?.toString() ?? p['invoiceId']?.toString();
 
-    final canViewReceipt =
-        status == 'paid' || status == 'approved' || status == 'completed';
+    final canViewReceipt = _canViewReceipt(p) && paymentId.isNotEmpty;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -632,17 +710,20 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     );
   }
 
+  /// The office's receipt for one payment, shown as the server sent it.
+  ///
+  /// Every value on the card comes from `GET /payments/:id/receipt`: the
+  /// reference, the amount, the method, the date and the invoice it settles.
   Future<void> _showReceipt(String paymentId) async {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const Center(child: CircularProgressIndicator()),
     );
-    Map<String, dynamic>? receipt;
+    Map<String, dynamic>? raw;
     String? receiptError;
     try {
-      receipt =
-          await ref.read(tenantRepositoryProvider).paymentReceipt(paymentId);
+      raw = await ref.read(tenantRepositoryProvider).paymentReceipt(paymentId);
     } catch (e) {
       receiptError = e.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -650,25 +731,19 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
     }
 
     if (!mounted) return;
-    if (receiptError != null || receipt == null) {
+    if (receiptError != null || raw == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(receiptError ?? 'Failed to load receipt')),
+        SnackBar(
+          content: Text(
+            receiptError ??
+                'The receipt could not be loaded. Try again in a moment.',
+          ),
+        ),
       );
       return;
     }
 
-    final amount = receipt['amount'] as num?;
-    final method =
-        (receipt['method']?.toString() ?? '--').replaceAll('_', ' ');
-    final date = formatDate(receipt['paidAt'] ?? receipt['createdAt']);
-    final utr = receipt['utrNumber']?.toString();
-    final tenant =
-        receipt['tenantId'] is Map ? receipt['tenantId'] as Map : null;
-    final tenantUser =
-        tenant?['userId'] is Map ? tenant!['userId'] as Map : null;
-    final tenantName = tenantUser?['name']?.toString() ?? 'Tenant';
-    final room = tenant?['roomId'] is Map ? tenant!['roomId'] as Map : null;
-    final roomNumber = room?['roomNumber']?.toString();
+    final receipt = PaymentReceipt.fromServer(raw);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -676,65 +751,9 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
       showDragHandle: true,
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(ctx)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      size: 40,
-                      color: Theme.of(ctx).colorScheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Payment Receipt',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                Text(
-                  'Receipt ID: $paymentId',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                _sheetKv(ctx, 'Tenant', tenantName),
-                if (roomNumber != null) _sheetKv(ctx, 'Room', roomNumber),
-                _sheetKv(ctx, 'Amount Paid', formatMoney(amount)),
-                _sheetKv(ctx, 'Payment Method', method),
-                _sheetKv(ctx, 'Date', date),
-                if (utr != null && utr.isNotEmpty)
-                  _sheetKv(ctx, 'UTR / Ref', utr),
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: PaymentReceiptCard(receipt: receipt),
           ),
         );
       },
@@ -792,14 +811,19 @@ class _TenantPaymentsScreenState extends ConsumerState<TenantPaymentsScreen> {
   }
 }
 
-/// A payment the admin has not confirmed yet.
+/// A payment the office has not checked yet.
 ///
 /// The resident must be able to see that the money is not lost: the amount
-/// they sent, the day they sent it, and what happens next.
+/// they sent, the day they sent it, and what happens next. The card says
+/// what the office does and what the resident is told, and it promises only
+/// the notifications the server actually sends.
 class _PendingPaymentCard extends StatelessWidget {
-  const _PendingPaymentCard({required this.payment});
+  const _PendingPaymentCard({required this.payment, this.onViewReceipt});
 
   final Map<String, dynamic> payment;
+
+  /// Opens the office's receipt for this payment, when there is one.
+  final VoidCallback? onViewReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -829,7 +853,7 @@ class _PendingPaymentCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Awaiting confirmation',
+                    'Awaiting verification',
                     style: const TextStyle(
                       color: AppTheme.warningText,
                       fontWeight: FontWeight.w800,
@@ -861,14 +885,30 @@ class _PendingPaymentCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'The admin will confirm this payment. You will get a '
-              'notification when it is verified, rejected or voided.',
+              'The office will check this UTR against its records and verify '
+              'or reject it. You will get a notification when it is verified, '
+              'rejected or voided.',
               style: TextStyle(
                 color: AppTheme.warningText.withValues(alpha: 0.9),
                 fontSize: 12,
                 height: 1.4,
               ),
             ),
+            if (onViewReceipt != null) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onViewReceipt,
+                  icon: const Icon(Icons.receipt_long, size: 16),
+                  label: const Text('View receipt'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.warningText,
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

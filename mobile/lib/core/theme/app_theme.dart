@@ -16,6 +16,10 @@ class AppTheme {
   static const Color warningText = Color(0xFF92400E);
   static const Color success = Color(0xFF065F46);
   static const Color successSoft = Color(0xFFECFDF5);
+  /// Informational: a state that is closed and needs no action, such as a
+  /// visitor who has already left.
+  static const Color info = Color(0xFF1D4ED8);
+  static const Color infoSoft = Color(0xFFEFF6FF);
   static const Color muted = Color(0xFF64748B);
   static const Color mutedSoft = Color(0xFF94A3B8);
 

@@ -122,20 +122,34 @@ void main() {
   });
 
   group('TenantRepository Payments and Invoices', () {
-    test('submitUtr posts UTR reference for invoice settlement', () async {
+    test('submitUtr posts UTR reference and returns the payment row the server wrote', () async {
       dioAdapter.onPost(
         '/payments/submit-utr',
-        (server) => server.reply(200, {'success': true, 'data': {'status': 'pending_verification'}}),
+        (server) => server.reply(200, {
+          'success': true,
+          'data': {
+            '_id': 'pay-101',
+            'amount': 8500,
+            'status': 'pending_verification',
+            'utrNumber': 'SBI123456789',
+          },
+        }),
         data: {
           'invoiceId': 'inv-100',
           'utrNumber': 'SBI123456789',
         },
       );
 
-      await expectLater(
-        repository.submitUtr(invoiceId: 'inv-100', utrNumber: 'sbi123456789'),
-        completes,
+      final payment = await repository.submitUtr(
+        invoiceId: 'inv-100',
+        utrNumber: 'sbi123456789',
       );
+
+      // The payment id is the anchor of the office receipt the portal shows.
+      expect(payment, isNotNull);
+      expect(payment!['_id'], 'pay-101');
+      expect(payment['amount'], 8500);
+      expect(payment['status'], 'pending_verification');
     });
 
     test('paymentReceipt queries payment receipt by id', () async {

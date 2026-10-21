@@ -78,12 +78,18 @@ class TenantRepository {
     );
   }
 
-  Future<void> submitUtr({
+  /// Submit a UTR for an invoice (`POST payments/submit-utr`).
+  ///
+  /// Returns the payment row the server wrote for the submission. That row
+  /// carries the payment id, which is the anchor of the server's receipt
+  /// (`GET payments/:id/receipt`): the portal shows the receipt the office
+  /// issued instead of claiming the payment locally.
+  Future<Map<String, dynamic>?> submitUtr({
     required String invoiceId,
     required String utrNumber,
     String? screenshotUrl,
   }) async {
-    await _api.postJson(
+    return _api.postJson<Map<String, dynamic>?>(
       'payments/submit-utr',
       body: {
         'invoiceId': invoiceId,
@@ -91,7 +97,7 @@ class TenantRepository {
         if (screenshotUrl != null && screenshotUrl.trim().isNotEmpty)
           'screenshotUrl': screenshotUrl.trim(),
       },
-      parse: (_) => null,
+      parse: (d) => d is Map ? Map<String, dynamic>.from(d) : null,
     );
   }
 

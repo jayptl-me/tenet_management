@@ -286,3 +286,100 @@ Verification: bun run lint clean; bun run typecheck clean; no tests executed; no
 | new date regex + hand-rolled errors/labels                    | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new/page.tsx       |
 | edit generic errors                                           | FIXED - WORKING - apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx |
 | Prior pass1 called new/edit shallow                           | FIXED - WORKING - apps/web/src/app/(admin)/attendance/new + [id]/edit    |
+
+## Depth pass (2026-10-21): the four admin screens rebuilt to the depth standard
+
+Pass: depth (wave 6 of the depth program).
+Method: the three gates and the per-module contract of
+`docs/audit/FLOW_AND_LAYOUT_AUDIT_20261021.md` (gate A truth, gate B flow, gate C layout), applied to
+the admin screens of this module. Every claim below was read out of source on 2026-10-21 and is
+cited as `file:line`.
+Precedent: `docs/audit/features/tenants_audit_pass1_20260908-230000.md`,
+`docs/audit/features/rooms.md`.
+Nothing above this section was changed: the findings of pass 1 stand as they were written. Two of
+them are answered by this pass and they stay in the list above as they were written: ATT-P2-1 (the
+mark of a whole day) and ATT-P3-3 (the day to day navigation of a record).
+
+### 1. Inventory
+
+| Artifact          | Path                                                   | Lines | Notes                                                          |
+| ----------------- | ------------------------------------------------------ | ----- | -------------------------------------------------------------- |
+| Day board (list)  | apps/web/src/app/(admin)/attendance/page.tsx           | 1367  | Day in the URL, band, day board, mark of the day, export       |
+| Record (detail)   | apps/web/src/app/(admin)/attendance/[id]/page.tsx      | 985   | The record, the pattern of the resident, the write trail       |
+| Mark (create)     | apps/web/src/app/(admin)/attendance/new/page.tsx       | 406   | What the write commits, the refusal of a day in the way        |
+| Correction (edit) | apps/web/src/app/(admin)/attendance/[id]/edit/page.tsx | 422   | Seeded from the record, the consequences of the save           |
+| API route         | apps/api/src/routes/attendance.ts                      | 732   | 9 endpoints, no bulk endpoint, no notification                 |
+| Model             | apps/api/src/models/attendanceRecord.ts                | 80    | One record per resident per day, four states                   |
+| Leave side effect | apps/api/src/routes/leaves.ts                          | 79    | Writes the leave days, keeps the days the resident was on site |
+| Shared types      | packages/types/src/attendance.ts                       | 141   | The DTOs of the domain                                         |
+| Contract          | packages/types/src/contracts/attendance.ts             | -     | The grid, one truth entry per action, layout, next action      |
+
+### 2. What the operator is doing here
+
+The office closes the day: it finds the residents nobody wrote down, the records that disagree with
+their own times, and the days nobody rostered, and it closes them from where it stands. The money
+belongs to the invoice module and the payments module: an attendance mark moves no charge, because
+the server raises every bill from the rent on the resident record
+(apps/api/src/services/invoice.service.ts:97). What this module owns is the day of one resident.
+Done looks like: every active resident holds a record for the day that says present, absent, on_leave
+or not_returned, no record of the day contradicts its own times, and every day of the last fortnight
+holds at least one record.
+
+### 3. The findings of this pass
+
+| ID        | Severity | Finding                                                                                                                                                                                                                                                                                      | How it ended                                                                                                                                                                                 |
+| --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ATT-D2-1  | P2       | The day in view did not live in the address bar. The calendar day was local state (the old page kept `selectedDay` in `useState`), the range filter wrote `fromDate` and `toDate`, and the page never said which day it was showing, so a day's roster could not be linked, shared or cited. | Closed by the rebuild: the day lives in `?date=`, the month in `?month=`, and the band names the day in view.                                                                                |
+| ATT-D2-2  | P2       | The module never answered its own question. The only summary on the screen was a board of five tiles for today (the old page rendered `TodayAttendanceBoard`), which counted but never named the residents who had no record, and nothing answered for any other day.                        | Closed by the rebuild: the day board names the residents nobody marked for the day in view, against the roster of the active residents, and links each of them to the form.                  |
+| ATT-D2-3  | P2       | The number of the board of the server is not the number of residents nobody wrote down. GET /attendance/today computes active residents minus the records of the day (apps/api/src/routes/attendance.ts:414-424), so a record of a resident who has since checked out makes it smaller.      | Closed by the rebuild: the page counts the residents of the roster that the day holds no record of, and the legend says how the number differs from the one the server computes.             |
+| ATT-D2-4  | P2       | There was no way to mark a day. Pass 1 listed the bulk mark panel as missing (ATT-P2-1 above) and the office could only write one resident at a time through the form, which is not how a guard change, a weekend or a festival is closed.                                                   | Closed by the rebuild: the page marks the day in one action, states the number of records it writes and the residents it will not touch, and reports the number written, refused and failed. |
+| ATT-D2-5  | P2       | A mark of a day had to be safe. The server refuses a second record per resident and day (apps/api/src/models/attendanceRecord.ts:74), but a bulk write without a per resident answer would have left the operator guessing which residents were left out.                                    | Closed by the rebuild: the report names the residents the server refused and the reason of every failure, and nothing is ever written over an existing record.                               |
+| ATT-D2-6  | P3       | The CSV export asked for 500 records and the server clamps a page to 100 (apps/api/src/lib/routeUtils.ts:16), so the file was short of the set without saying so (the old page wrote the file and named nothing).                                                                            | Closed by the rebuild: the export walks the pages of the filtered set and reports both numbers.                                                                                              |
+| ATT-D2-7  | P3       | The record page opened with five statistic tiles (Date, Status, Check-in, Check-out, Duration) and no protagonist, and it showed no history of the resident: the office could not see the absences, the leave days or the days nobody wrote down.                                            | Closed by the rebuild: the record is the protagonist and the pattern of the resident sits beside it over the ninety day window.                                                              |
+| ATT-D2-8  | P3       | The record page had no write trail, although the audit route filters by the record (apps/api/src/routes/audit.ts:19-24).                                                                                                                                                                     | Closed by the rebuild: the record page shows the write trail of that record.                                                                                                                 |
+| ATT-D2-9  | P3       | The correction page was the only screen of the module outside the shared query stack: a hand written fetch and a copy of the record into state through an effect (the old page read the record with `api.get` in a `useEffect`).                                                             | Closed by the rebuild: the record is read with the shared query stack and the form is seeded from the record it holds.                                                                       |
+| ATT-D2-10 | P3       | The correction page did not say what the save moves, and nothing on it said that a mark moves no money and reaches no one.                                                                                                                                                                   | Closed by the rebuild: the panel names the three consequences of the save.                                                                                                                   |
+| ATT-D2-11 | P3       | The new form did not say what it writes, what the resident will see, and it could only find out that a record was in the way after the write (the old form posted and read the refusal).                                                                                                     | Closed by the rebuild: the form states what the write commits, and it refuses a day that already holds a record of the same resident, with the link to that record.                          |
+| ATT-D2-12 | P3       | The office could not act on a resident without a detour: the list had no way to mark one resident, and the day board had no action at all.                                                                                                                                                   | Closed by the rebuild: every resident without a record links to the form, seeded with that resident and that day, and the mark of the day reaches the residents the server has no record of. |
+| ATT-D2-13 | P3       | The status filter was a select and the size of the set was never on the screen, so an empty filter and an empty module looked the same.                                                                                                                                                      | Closed by the rebuild: the status is a tab strip with the server counts of the same filtered set, and the band names the scope of every number.                                              |
+| ATT-D2-14 | P3       | The delete confirmation said only that the action cannot be undone and named neither the audit entry nor the silence.                                                                                                                                                                        | Closed by the rebuild: the confirmation names what the server removes, what it writes and what nobody hears.                                                                                 |
+| ATT-D2-15 | P3       | The mobile cards of the list hid the delete action, so the office could not delete a record from a phone (the old page passed `showDelete={false}`).                                                                                                                                         | Closed by the rebuild: the cards carry the same three actions as the rows.                                                                                                                   |
+| ATT-D3-1  | P2       | Nothing in this module tells the resident: a manual mark, a correction, a deletion and a leave approval all write an audit entry and stop there (apps/api/src/routes/attendance.ts:232-291, :650-704, :708-730; apps/api/src/routes/leaves.ts:28-79).                                        | Still open: it needs a notification on the attendance route. Every screen of the module says that the resident is not told.                                                                  |
+| ATT-D3-2  | P2       | The server holds no endpoint for the residents who have no record for a day, and the one summary it holds answers for today alone.                                                                                                                                                           | Still open: it needs an endpoint that answers for any day. The day board reads the roster and the records and subtracts them, and the legend says so.                                        |
+| ATT-D3-3  | P2       | The server holds no bulk endpoint, so the mark of a day is one request per resident from the browser.                                                                                                                                                                                        | Still open: it needs a bulk route on the attendance route. The page says that this is what it does.                                                                                          |
+| ATT-D3-4  | P2       | The resident half of the module is a flat list: the portal screen has no month calendar and no date range filter, although the API reads both (ATT-P2-2 above).                                                                                                                              | Still open: it is the portal side of the module and the portal was not touched in this pass.                                                                                                 |
+| ATT-D3-5  | P3       | The model keeps the status and the two times apart, so a record can disagree with itself, and no write path reports it.                                                                                                                                                                      | Still open: it needs a rule or a flag on the write. The day board and the pattern of the resident name every record that disagrees with itself.                                              |
+| ATT-D3-6  | P3       | The record carries no link to the leave that wrote it, so the page can only look the leave up by its date range.                                                                                                                                                                             | Still open: it needs a field on the model and a write in the leave approval.                                                                                                                 |
+| ATT-D3-7  | P3       | A check-out forces the status to present even over a leave day (apps/api/src/routes/attendance.ts:218-219), so a leave day can be lost.                                                                                                                                                      | Still open: it needs a change in the check-out route.                                                                                                                                        |
+| ATT-D3-8  | P3       | The write trail of a record expires with the audit entries after 90 days.                                                                                                                                                                                                                    | Still open: it needs a longer life for the entries.                                                                                                                                          |
+| ATT-D3-9  | P3       | The tile board of today and the day detail panel of the shared components are now unused by the module.                                                                                                                                                                                      | Still open: they are shared components and this pass did not touch them.                                                                                                                     |
+
+The rows that are still open are carried in `docs/audit/features/attendance.md` with their severity
+and their paths; the rows that the rebuild closed are carried in the Closed section of that file.
+
+### 4. The contract
+
+`packages/types/src/contracts/attendance.ts` now holds the grid of the domain (the shared lifecycle
+vocabulary has no attendance domain, so the grid is the four states a day can hold for one
+resident: present, absent, on_leave and not_returned), one truth entry per action the office can
+take (mark one resident, mark the day, correct a record, delete a record, read the day, read the
+history of a resident) plus the check-in the resident makes at the gate, the layout archetype with
+the grammar tokens and the module own number, and the next best action per state and per empty
+state.
+
+The contract names what the code really has, including the places where a person is still not told:
+a manual mark, a correction, a deletion and a leave approval all reach nobody, and a mark moves no
+money because nothing in the server reads an attendance mark when it raises a bill.
+
+### 5. What was NOT done
+
+- No API route, model or shared type was changed. Every gap that needs one is listed above as still
+  open.
+- The mobile portal was not touched. The resident half of this module (the attendance history on
+  the phone) was not re-audited in this pass; pass 1 above still stands.
+- The shared components were not changed. The tile board of today and the day detail panel are now
+  unused by the module and are still in the repository.
+- No screenshot and no browser run: every layout claim is read out of the component geometry and the
+  width rule, not measured.
+- The gates were not run here: no lint, no typecheck, no build and no test ran on the maintainer's
+  machine. The main thread runs them on a build box.

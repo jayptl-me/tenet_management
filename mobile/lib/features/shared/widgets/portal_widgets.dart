@@ -214,11 +214,16 @@ class StatusChip extends StatelessWidget {
         lower == 'active' ||
         lower == 'available' ||
         lower == 'arrived' ||
-        lower == 'departed' ||
         lower == 'converted' ||
         lower == 'completed' ||
         lower == 'present') {
       return (bg: AppTheme.successSoft, text: AppTheme.success);
+    }
+
+    // Closed and nothing pending: the visitor has already left. The three
+    // visitor states are a progression, so they must not share one tone.
+    if (lower == 'departed') {
+      return (bg: AppTheme.infoSoft, text: AppTheme.info);
     }
 
     // Refused, failed or lost work.
