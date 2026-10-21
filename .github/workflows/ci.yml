@@ -6,29 +6,57 @@ on:
   pull_request:
     branches: [main]
 
+# Every job pins bun to the version in .bun-version, so a CI run and a local
+# run use the same runtime. The file is the single source of truth: change it
+# there, never in a job.
 jobs:
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bun run lint || bun run format:check
+      # Two separate steps, each of which has to pass on its own. The old single step ran
+      # `bun run lint || bun run format:check`, so a green lint hid a red format gate.
+      # CI must not hide a failing gate.
+      - run: bun run lint
+      - run: bun run format:check
+
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      # Every module contract must resolve against the live code: the routes it
+      # names, the statuses a route can set, the notifications the server owes.
+      # A contract that drifts from the code fails here.
+      - run: bun run check:contracts
+      # The portal's status vocabulary is generated from the same JSON the admin
+      # panel reads. If the generated Dart drifts, the two clients tell the
+      # resident and the operator different stories.
+      - run: bun run check:lifecycle
 
   test-api:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       mongodb:
         image: mongo:7
@@ -38,7 +66,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run test
         env:
@@ -54,32 +82,84 @@ jobs:
 
   build-web:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run --filter '@pg/web' build
 
   build-api:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run --filter '@pg/api' build
 
   e2e:
+    # The suite drives the admin app, so it only runs when the admin app and
+    # the API compile. It does not consume the build-web artifact: it builds
+    # its own copy of the admin app, because the Playwright web server runs
+    # `next start` and needs the .next output on the same runner.
     needs: [build-web, build-api]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The admin bundle inlines the API origin at build time. The suite stubs
+      # every API call, so this only has to be a stable URL.
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      # CI installs chromium only. The Playwright config reads this variable
+      # and will not ask for a browser that is not on the machine.
+      PLAYWRIGHT_BROWSERS: chromium
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
-      - run: bunx playwright install --with-deps chromium
-      - run: bun run test:e2e
+      - name: Install the browser the suite runs on
+        run: bunx playwright install --with-deps chromium
+      - name: Build the admin app the suite drives
+        run: bun run --filter '@pg/web' build
+      - name: Check the admin build before starting the suite
+        run: |
+          if [ ! -f apps/web/.next/BUILD_ID ]; then
+            echo "::error::apps/web/.next/BUILD_ID is missing: the admin app was not built. The e2e job must run 'bun run --filter @pg/web build' before the suite starts, because the Playwright web server runs 'next start'."
+            exit 1
+          fi
+          echo "Admin build present (BUILD_ID $(cat apps/web/.next/BUILD_ID))."
+      - name: Run the admin end-to-end suite
+        run: bun run test:e2e
+
+  flutter-analyze:
+    # The resident portal is a first-class surface. Nothing else in this
+    # pipeline looks at mobile/, so the Flutter code would ship unchecked.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      # Pinned to a stable release, never "latest". The version has to satisfy
+      # the constraints in mobile/pubspec.lock (flutter >= 3.44.0).
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - name: Show the pinned Flutter SDK
+        run: flutter --version
+      - name: Resolve the portal dependencies
+        run: bun run mobile:setup
+      # Same command the developer runs locally. It exits non-zero when the
+      # analysis finds an error or a warning, so the job goes red on a dirty
+      # portal.
+      - name: Analyze the resident portal
+        run: cd mobile && flutter analyze

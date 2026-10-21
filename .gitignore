@@ -34,7 +34,10 @@ mobile/android/app/build/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
-bun.lock
+# bun.lock IS committed: bun >= 1.2 writes this text lockfile and every CI job
+# installs with --frozen-lockfile, so the lockfile of record has to be in the
+# repo. bun.lockb is the pre-1.2 binary lockfile: bun 1.4 never writes it, so
+# it stays ignored to keep a stale binary lockfile out of the tree.
 bun.lockb
 playwright-report/
 test-results/
