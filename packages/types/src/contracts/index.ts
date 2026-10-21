@@ -19,8 +19,8 @@
  *    routes from the API route file, the screens from apps/web/src/app/(admin).
  * 3. Keep every anchor resolvable. A route path that does not exist, a status that no route
  *    can write, a next best action that points nowhere, a component that is not in
- *    apps/web/src/components/ui or a state change that owes a notification the server never
- *    sends are all failures.
+ *    apps/web/src/components/ui or a state change that owes a notification the domain never
+ *    sends (neither its route file nor the modules that route file imports) are all failures.
  * 4. Register the contract in scripts/audit/check-contracts.ts.
  * 5. If a known gap cannot be closed yet, add one line to KNOWN_BASELINE with the reason. The
  *    checker then reports it as BASELINE instead of hiding it.
@@ -50,6 +50,28 @@ export type {
 } from './module';
 
 export { PAYMENTS_CONTRACT } from './payments';
+export { INVOICES_CONTRACT } from './invoices';
+export { TENANTS_CONTRACT } from './tenants';
+export { COMPLAINTS_CONTRACT } from './complaints';
+export { LEAVES_CONTRACT } from './leaves';
+export { VISITORS_CONTRACT } from './visitors';
+export { ENQUIRIES_CONTRACT } from './enquiries';
+export { ELECTRICITY_CONTRACT } from './electricity';
+export { ROOMS_CONTRACT } from './rooms';
+export { ATTENDANCE_CONTRACT } from './attendance';
+export { ASSETS_CONTRACT } from './assets';
+export { SERVICES_CONTRACT } from './services';
+export { NOTIFICATIONS_CONTRACT } from './notifications';
+export { NOTICES_CONTRACT } from './notices';
+export { MEALS_CONTRACT } from './meals';
+export { MENUS_CONTRACT } from './menus';
+export { LAUNDRY_CONTRACT } from './laundry';
+export { WASHING_MACHINES_CONTRACT } from './washing-machines';
+export { GUARDIANS_CONTRACT } from './guardians';
+export { FLOORS_CONTRACT } from './floors';
+export { AUDIT_LOGS_CONTRACT } from './audit-logs';
+export { EXPORT_CONTRACT } from './export';
+export { DASHBOARD_CONTRACT } from './dashboard';
 
 export { KNOWN_BASELINE } from './baseline';
 export type { KnownBaselineEntry } from './baseline';

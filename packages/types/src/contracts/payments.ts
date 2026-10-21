@@ -7,13 +7,16 @@ import type { ModuleContract } from './module';
  * the server commits, so it is the first module to carry a contract. Every anchor below was
  * read out of source on 2026-10-21:
  *
- * - statuses: apps/api/src/models/payment.ts:51
+ * - statuses: apps/api/src/models/payment.ts:57
  * - routes: apps/api/src/routes/payments.ts
- * - the scheduler that writes overdue: apps/api/src/jobs/scheduler.ts:93-114
+ * - the scheduler that writes overdue and tells the tenants:
+ *   apps/api/src/jobs/scheduler.ts:21-56, :96-124
  * - the admin screens: apps/web/src/app/(admin)/payments
  *
  * The known gap of this contract (the verify action owes the resident a notification and the
- * handler never sends one) is tracked in packages/types/src/contracts/baseline.ts.
+ * handler never sends one) was closed in wave 2: the verify handler now pushes to the resident
+ * itself, and the checker proved it, so the baseline entry was deleted instead of being left to
+ * rot (packages/types/src/contracts/baseline.ts).
  */
 export const PAYMENTS_CONTRACT: ModuleContract = {
   canonicalLoop: {
@@ -31,8 +34,8 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
     statuses: [
       {
         // The open obligation. A monthly invoice opens one of these
-        // (apps/api/src/services/invoice.service.ts:164-170), and an offline payment leaves the
-        // remainder open (apps/api/src/routes/payments.ts:457-497).
+        // (apps/api/src/services/invoice.service.ts:165-174), and an offline payment leaves the
+        // remainder open (apps/api/src/routes/payments.ts:629-640).
         status: 'pending',
         enteredBy: {
           method: 'POST',
@@ -70,7 +73,7 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
           method: 'PUT',
           path: '/payments/:id',
           condition:
-            'the admin sets the status to overdue by hand; the daily scheduler at 08:00 writes the same status for any pending row past its due date',
+            'the admin sets the status to overdue by hand; the daily scheduler at 08:00 writes the same status for any pending row past its due date (apps/api/src/jobs/scheduler.ts:96-124)',
         },
       },
       {
@@ -91,7 +94,7 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       action: 'Verify a payment',
       operatorBelieves: 'the payment is verified and the invoice is settled',
       serverCommits:
-        'POST /payments/:id/verify sets status=paid, stamps paidAt with the server clock and verifiedBy with the admin id, calls updateInvoicePaymentStatus so the invoice follows the payment, writes an audit log entry with the action payment_verify, and notifies the resident with a payment_verified notification. A failed notification is logged and never undoes the write.',
+        'POST /payments/:id/verify sets status=paid, stamps paidAt with the server clock and verifiedBy with the admin id, calls updateInvoicePaymentStatus so the invoice follows the payment, writes an audit log entry with the action payment_verify, and notifies the resident: a payment_verified when the admin approved it, a payment_reminder saying it was not verified when the admin rejected it (apps/api/src/routes/payments.ts:1242-1330, :1305-1326). A failed notification is logged and never undoes the write.',
       notification: {
         to: 'tenant',
         type: 'payment_verified',
@@ -113,7 +116,7 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       action: 'Void a paid payment',
       operatorBelieves: 'the payment is voided and the resident owes the money again',
       serverCommits:
-        'POST /payments/:id/void sets status=cancelled, appends the void note, calls updateInvoicePaymentStatus so the invoice reopens, writes an audit log entry, and notifies the resident.',
+        'POST /payments/:id/void sets status=cancelled, appends the void note, calls updateInvoicePaymentStatus so the invoice reopens, writes an audit log entry, and notifies the resident with a payment_reminder saying the amount is due again, with the void note in the body (apps/api/src/routes/payments.ts:1334-1395, :1380-1390).',
       mismatchSurfacedAt:
         'the admin audit timeline on /payments/[id], and the resident gets the notification in the portal',
       provenance: {

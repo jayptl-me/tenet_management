@@ -26,8 +26,8 @@ actually commits, what the screen shows and where the work goes next.
    - a declared status is not in the model enum, or no route in the domain can write it;
    - a status has no `enteredBy` trigger;
    - a next best action target does not resolve to an admin page;
-   - a state change owes a notification (`notification.required`) and the domain route file
-     never calls `createNotification`;
+   - a state change owes a notification (`notification.required`) and neither the domain route
+     file nor the modules that route file imports calls `createNotification`;
    - the layout archetype is not one of the allowed archetypes, or a grammar token does not
      exist in `apps/web/src/components/ui`.
 4. Register the contract in `scripts/audit/check-contracts.ts`.

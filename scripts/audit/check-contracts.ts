@@ -12,7 +12,8 @@
  *                                 domain can write it
  *   STATUS_MISSING_ENTERED_BY     a status has no inbound trigger
  *   NEXT_ACTION_TARGET_NOT_FOUND  a next best action does not resolve to an admin page
- *   NOTIFICATION_NOT_IMPLEMENTED  a state change owes a notification the server never sends
+ *   NOTIFICATION_NOT_IMPLEMENTED  a state change owes a notification the domain never sends
+ *                                 (the route file and the modules it imports are searched)
  *   LAYOUT_ARCHETYPE_INVALID      the archetype is not one of the allowed archetypes
  *   LAYOUT_GRAMMAR_TOKEN_MISSING  a grammar token is not a component of apps/web/src/components/ui
  *
@@ -22,18 +23,41 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   KNOWN_BASELINE,
   LAYOUT_ARCHETYPES,
+  ASSETS_CONTRACT,
+  ATTENDANCE_CONTRACT,
+  AUDIT_LOGS_CONTRACT,
+  COMPLAINTS_CONTRACT,
+  DASHBOARD_CONTRACT,
+  ELECTRICITY_CONTRACT,
+  ENQUIRIES_CONTRACT,
+  EXPORT_CONTRACT,
+  FLOORS_CONTRACT,
+  GUARDIANS_CONTRACT,
+  INVOICES_CONTRACT,
+  LAUNDRY_CONTRACT,
+  LEAVES_CONTRACT,
+  MEALS_CONTRACT,
+  MENUS_CONTRACT,
+  NOTICES_CONTRACT,
+  NOTIFICATIONS_CONTRACT,
   PAYMENTS_CONTRACT,
+  ROOMS_CONTRACT,
+  SERVICES_CONTRACT,
+  TENANTS_CONTRACT,
+  VISITORS_CONTRACT,
+  WASHING_MACHINES_CONTRACT,
   type ContractRuleId,
   type KnownBaselineEntry,
   type ModuleContract,
 } from '../../packages/types/src/contracts/index.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const API_SRC_DIR = join(REPO_ROOT, 'apps/api/src');
 const API_ROUTES_DIR = join(REPO_ROOT, 'apps/api/src/routes');
 const API_MODELS_DIR = join(REPO_ROOT, 'apps/api/src/models');
 const ADMIN_APP_DIR = join(REPO_ROOT, 'apps/web/src/app/(admin)');
@@ -46,7 +70,31 @@ interface RegisteredContract {
 }
 
 /** Every contract under check. A rebuilt module is added here. */
-const CONTRACTS: RegisteredContract[] = [{ id: 'payments', contract: PAYMENTS_CONTRACT }];
+const CONTRACTS: RegisteredContract[] = [
+  { id: 'payments', contract: PAYMENTS_CONTRACT },
+  { id: 'invoices', contract: INVOICES_CONTRACT },
+  { id: 'tenants', contract: TENANTS_CONTRACT },
+  { id: 'complaints', contract: COMPLAINTS_CONTRACT },
+  { id: 'leaves', contract: LEAVES_CONTRACT },
+  { id: 'visitors', contract: VISITORS_CONTRACT },
+  { id: 'enquiries', contract: ENQUIRIES_CONTRACT },
+  { id: 'electricity', contract: ELECTRICITY_CONTRACT },
+  { id: 'rooms', contract: ROOMS_CONTRACT },
+  { id: 'attendance', contract: ATTENDANCE_CONTRACT },
+  { id: 'assets', contract: ASSETS_CONTRACT },
+  { id: 'services', contract: SERVICES_CONTRACT },
+  { id: 'notifications', contract: NOTIFICATIONS_CONTRACT },
+  { id: 'notices', contract: NOTICES_CONTRACT },
+  { id: 'meals', contract: MEALS_CONTRACT },
+  { id: 'menus', contract: MENUS_CONTRACT },
+  { id: 'laundry', contract: LAUNDRY_CONTRACT },
+  { id: 'washing-machines', contract: WASHING_MACHINES_CONTRACT },
+  { id: 'guardians', contract: GUARDIANS_CONTRACT },
+  { id: 'floors', contract: FLOORS_CONTRACT },
+  { id: 'audit-logs', contract: AUDIT_LOGS_CONTRACT },
+  { id: 'export', contract: EXPORT_CONTRACT },
+  { id: 'dashboard', contract: DASHBOARD_CONTRACT },
+];
 
 /** One broken rule. */
 interface Finding {
@@ -261,6 +309,55 @@ function findBaseline(contract: string, rule: ContractRuleId): KnownBaselineEntr
   return null;
 }
 
+/**
+ * Removes the definition of createNotification from a source.
+ *
+ * The mechanism itself lives in apps/api/src/services/notification.service.ts.
+ * Counting that definition as a call would let every domain pass the rule
+ * without sending anything, so only a call counts as an implementation.
+ */
+function stripNotificationDefinition(source: string): string {
+  return source.replace(/function\s+createNotification\s*\(/g, 'function __createNotification(');
+}
+
+/** Resolves a relative import specifier to a TypeScript file of the API. */
+function resolveRelativeImport(file: string, specifier: string): string | null {
+  const base = resolve(dirname(file), specifier);
+  const candidates = [base.replace(/\.js$/, '.ts'), `${base}.ts`];
+  for (const candidate of candidates) {
+    if (!candidate.startsWith(API_SRC_DIR)) continue;
+    if (!existsSync(candidate)) continue;
+    return candidate;
+  }
+  return null;
+}
+
+/**
+ * Collects the source of a file and of the modules it imports, two levels deep.
+ *
+ * A domain may send its notification from a service instead of from its route
+ * file: the invoice domain does, from apps/api/src/services/invoice.service.ts,
+ * and its route file only calls the service. The rule has to see that call,
+ * otherwise a module that really notifies is reported as one that does not.
+ */
+function collectModuleSources(file: string, depth = 2, seen = new Set<string>()): string[] {
+  if (seen.has(file)) return [];
+  seen.add(file);
+  const source = readText(file);
+  if (source === null) return [];
+  const sources = [source];
+  if (depth <= 0) return sources;
+  const importPattern = /from\s+'(\.[^']+)'|import\('(\.[^']+)'\)/g;
+  for (const match of source.matchAll(importPattern)) {
+    const specifier = match[1] ?? match[2] ?? '';
+    if (specifier === '') continue;
+    const resolved = resolveRelativeImport(file, specifier);
+    if (resolved === null) continue;
+    sources.push(...collectModuleSources(resolved, depth - 1, seen));
+  }
+  return sources;
+}
+
 /** Runs every rule against one contract. */
 function checkContract(
   registered: RegisteredContract,
@@ -420,10 +517,16 @@ function checkContract(
     findings: actionFindings,
   });
 
-  // Rule: a state change that owes a notification is actually sent by the domain route file.
+  // Rule: a state change that owes a notification is actually sent by the domain.
   const notificationFindings: Finding[] = [];
   const truthEntries = contract.truthContract ?? [];
   let notificationChecked = 0;
+  // The domain sends a notification from its route file or from one of the
+  // modules that route file imports.
+  const domainSources = routeFile === null ? [] : collectModuleSources(routeFile);
+  const domainSendsNotification = domainSources.some((source) =>
+    /\bcreateNotification\s*\(/.test(stripNotificationDefinition(source)),
+  );
   for (const entry of truthEntries) {
     if (entry?.notification?.required !== true) continue;
     notificationChecked++;
@@ -437,13 +540,14 @@ function checkContract(
       });
       continue;
     }
-    if (!/\bcreateNotification\s*\(/.test(routeSource)) {
+    if (!domainSendsNotification) {
       notificationFindings.push({
         contract: id,
         rule: 'NOTIFICATION_NOT_IMPLEMENTED',
         message:
           `the action "${entry.action}" owes a ${entry.notification.to} notification ` +
-          `of type "${entry.notification.type}", but ${routePath} never calls createNotification`,
+          `of type "${entry.notification.type}", but neither ${routePath} nor the modules it ` +
+          `imports calls createNotification`,
       });
     }
   }
