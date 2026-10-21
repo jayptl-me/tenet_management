@@ -94,7 +94,7 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5 text-[color:var(--color-surface-700)]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono text-[10px] font-bold text-[color:var(--color-on-danger)]">
+          <span className="text-10 absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-[var(--radius-full)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-1 font-mono font-bold text-[color:var(--color-on-danger)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -117,7 +117,7 @@ export function NotificationBell() {
           </div>
 
           {/* List */}
-          <div className="max-h-[360px] overflow-y-auto">
+          <div className="max-h-90 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center p-6">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-[color:var(--color-surface-200)] border-t-[color:var(--color-brand-500)]" />
@@ -169,14 +169,14 @@ export function NotificationBell() {
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         <span
-                          className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${
+                          className={`text-10 inline-block rounded-full px-2 py-0.5 font-mono font-medium ${
                             typeColors[notif.type] ??
                             'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]'
                           }`}
                         >
                           {notif.type.replace(/_/g, ' ')}
                         </span>
-                        <span className="font-mono text-[10px] text-[color:var(--color-text-muted)]">
+                        <span className="text-10 font-mono text-[color:var(--color-text-muted)]">
                           {new Date(notif.sentAt).toLocaleDateString('en-IN', {
                             day: '2-digit',
                             month: 'short',

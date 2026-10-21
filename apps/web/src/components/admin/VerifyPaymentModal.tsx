@@ -125,7 +125,7 @@ export function VerifyPaymentModal({
                 <div>
                   <h3
                     id="verify-modal-title"
-                    className="font-display text-[15px] font-bold tracking-tight text-[color:var(--color-text-primary)]"
+                    className="text-15 font-display font-bold tracking-tight text-[color:var(--color-text-primary)]"
                   >
                     Verify UPI payment
                   </h3>
@@ -148,7 +148,7 @@ export function VerifyPaymentModal({
             </div>
 
             {/* Evidence block */}
-            <dl className="mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3.5 text-[13px]">
+            <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3.5">
               <div className="flex items-center justify-between gap-3">
                 <dt className="font-medium text-[color:var(--color-text-muted)]">Amount</dt>
                 <dd className="font-display text-base font-bold text-[color:var(--color-text-primary)] tabular-nums">
@@ -197,7 +197,7 @@ export function VerifyPaymentModal({
             {/* Screenshot preview */}
             {target.screenshotUrl && !imgFailed && (
               <div className="mt-3">
-                <p className="mb-1.5 text-[11px] font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
+                <p className="text-11 mb-1.5 font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
                   Payment screenshot
                 </p>
                 <button
@@ -235,7 +235,7 @@ export function VerifyPaymentModal({
             <div className="mt-4">
               <label
                 htmlFor="verify-notes"
-                className="mb-1 block text-[13px] font-semibold text-[color:var(--color-text-primary)]"
+                className="text-13 mb-1 block font-semibold text-[color:var(--color-text-primary)]"
               >
                 Verification note{' '}
                 <span className="font-normal text-[color:var(--color-text-muted)]">(optional)</span>

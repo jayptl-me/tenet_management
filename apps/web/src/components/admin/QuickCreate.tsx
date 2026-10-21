@@ -180,7 +180,7 @@ export function QuickCreate() {
                   autoFocus
                   className="flex-1 bg-transparent text-sm font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none"
                 />
-                <kbd className="rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--color-text-muted)]">
+                <kbd className="text-10 rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 py-0.5 font-semibold text-[color:var(--color-text-muted)]">
                   Cmd+N
                 </kbd>
                 <button

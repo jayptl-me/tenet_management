@@ -52,15 +52,15 @@ export function AttentionRequiredBanner({
             <CheckCircle2 className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+            <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
               Operational Status: Normal
             </p>
-            <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="text-11 font-medium text-[color:var(--color-text-muted)]">
               No pending payment verifications, aging complaints, or service disruptions.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--badge-success-text)]">
+        <div className="text-11 flex items-center gap-1.5 rounded-full border border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] px-2.5 py-1 font-semibold text-[color:var(--badge-success-text)]">
           <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
           All Checks Passing
         </div>
@@ -84,14 +84,14 @@ export function AttentionRequiredBanner({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-bold text-[color:var(--color-text-primary)]">
+              <span className="text-13 font-bold text-[color:var(--color-text-primary)]">
                 Attention Required
               </span>
-              <span className="inline-flex items-center rounded-full border border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--badge-warning-text)]">
+              <span className="text-10 inline-flex items-center rounded-full border border-[color:var(--badge-warning-border)] bg-[color:var(--badge-warning-bg)] px-2 py-0.5 font-bold text-[color:var(--badge-warning-text)]">
                 {totalAlerts} {totalAlerts === 1 ? 'item' : 'items'}
               </span>
             </div>
-            <p className="text-[11px] font-medium text-[color:var(--color-text-secondary)]">
+            <p className="text-11 font-medium text-[color:var(--color-text-secondary)]">
               High-priority operational items awaiting management action.
             </p>
           </div>

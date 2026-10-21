@@ -650,10 +650,10 @@ export function CommandPalette({
                 }}
                 placeholder="Search pages and actions..."
                 aria-label="Search pages and actions"
-                className="flex-1 bg-transparent text-[15px] font-medium text-[color:var(--color-text-primary)] outline-none placeholder:text-[color:var(--color-text-muted)]"
+                className="text-15 flex-1 bg-transparent font-medium text-[color:var(--color-text-primary)] outline-none placeholder:text-[color:var(--color-text-muted)]"
               />
-              <kbd className="hidden h-5 items-center gap-0.5 rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 text-[10px] font-semibold text-[color:var(--color-text-muted)] sm:inline-flex">
-                <span className="text-[11px]">⌘</span>K
+              <kbd className="text-10 hidden h-5 items-center gap-0.5 rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 font-semibold text-[color:var(--color-text-muted)] sm:inline-flex">
+                <span className="text-11">⌘</span>K
               </kbd>
               <button
                 onClick={onClose}
@@ -668,7 +668,7 @@ export function CommandPalette({
             <div ref={listRef} className="max-h-64 overflow-y-auto p-2">
               {Object.entries(groupedResults).map(([category, items]) => (
                 <div key={category} className="mb-2 last:mb-0">
-                  <div className="px-3 py-1.5 text-[10px] font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
+                  <div className="text-10 px-3 py-1.5 font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
                     {category}
                   </div>
                   {items.map((item) => {
@@ -702,7 +702,7 @@ export function CommandPalette({
                               : 'text-[color:var(--color-text-muted)]',
                           )}
                         />
-                        <span className="text-[13px] font-medium">{item.label}</span>
+                        <span className="text-13 font-medium">{item.label}</span>
                       </button>
                     );
                   })}
@@ -711,7 +711,7 @@ export function CommandPalette({
 
               {results.length === 0 && (
                 <div className="px-3 py-8 text-center">
-                  <p className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+                  <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
                     No results found
                   </p>
                 </div>
@@ -719,7 +719,7 @@ export function CommandPalette({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center gap-4 border-t border-t-[color:var(--border-color)] px-4 py-2 text-[10px] font-medium text-[color:var(--color-text-muted)]">
+            <div className="text-10 flex items-center gap-4 border-t border-t-[color:var(--border-color)] px-4 py-2 font-medium text-[color:var(--color-text-muted)]">
               <span className="flex items-center gap-1">
                 <kbd className="rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1 py-0.5">
                   ↑↓

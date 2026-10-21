@@ -92,8 +92,8 @@ const PAGE_RULES = [
   { path: '/visitors/visitor-1', expect: 'full' },
   { path: '/leaves/leave-1', expect: 'full' },
   { path: '/floors/new', expect: 'full' },
-  { path: '/assets/new', expect: 'full' },
-  { path: '/assets/asset-1/edit', expect: 'full' },
+  { path: '/assets/new', expect: 'form' },
+  { path: '/assets/asset-1/edit', expect: 'form' },
   // The list pages sit on the band directly (they do not use FormPage).
   { path: '/payments', expect: 'full', firstRow: true },
   { path: '/invoices', expect: 'full', firstRow: true },

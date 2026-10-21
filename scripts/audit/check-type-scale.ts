@@ -79,10 +79,6 @@ interface Stylesheet {
 
 // The admin pages keep pinned table columns and fixed filter widths.
 const R_PAGE = 'fixed px width in an admin page; the page sweep is owned by another unit';
-// components/admin is owned by another unit; the arbitrary sizes there are not this unit's.
-const R_ADMIN = 'arbitrary size in components/admin, owned by another unit';
-// The shared field styles carry a module size into every form.
-const R_LIB = 'arbitrary size in the shared field styles; sweep pending';
 // Pixel decisions that a token cannot express.
 const R_CONNECTOR = 'pixel decision: the connector sits on the centre of the 32px icon box';
 const R_BED_MIN_W = 'pixel decision: 90px is not on the 4px grid and the bar must not squash';
@@ -92,103 +88,41 @@ const R_SWATCH_RADIUS = 'pixel decision: 2px radius on the legend swatch';
 const R_TOOLTIP_MIN_W = 'pixel decision: the 130px tooltip floor is not on the 4px spacing grid';
 const R_TIMELINE_RULE = 'pixel decision: the rule is centred on the 10px dot';
 const R_TIMELINE_DOT = 'pixel decision: the dot sits on the rule beside it';
+// The admin page sweep kept the widths that are not on the 4px grid, and the one that tracks
+// a chart height set in pixels by a prop.
+const R_ACTIONS_COL =
+  'pixel decision: the actions column is 130px, the width the row buttons need, and 130px is not on the 4px grid';
+const R_COL_90 = 'pixel decision: the details column is 90px, not on the 4px grid';
+const R_FILTER_190 = 'pixel decision: the filter control is 190px, not on the 4px grid';
+const R_FILTER_170 = 'pixel decision: the filter control is 170px, not on the 4px grid';
+const R_FILTER_150 = 'pixel decision: the filter control is 150px, not on the 4px grid';
+const R_TRUNCATE_250 = 'pixel decision: the notice body truncates at 250px, not on the 4px grid';
+const R_CHART_HEIGHT =
+  'pixel decision: the loading box of the trend chart, whose height is the LineChart height prop';
 
 const ALLOWLIST: readonly AllowlistEntry[] = [
-  ['components/admin/AmenityTypesTab.tsx', 'TEXT_SIZE', 'text-[10px]', 4, R_ADMIN],
-  ['components/admin/AttentionRequiredBanner.tsx', 'TEXT_SIZE', 'text-[10px]', 1, R_ADMIN],
-  ['components/admin/AttentionRequiredBanner.tsx', 'TEXT_SIZE', 'text-[11px]', 3, R_ADMIN],
-  ['components/admin/AttentionRequiredBanner.tsx', 'TEXT_SIZE', 'text-[13px]', 2, R_ADMIN],
-  ['components/admin/Breadcrumbs.tsx', 'TEXT_SIZE', 'text-[13px]', 2, R_ADMIN],
-  ['components/admin/CommandPalette.tsx', 'TEXT_SIZE', 'text-[10px]', 3, R_ADMIN],
-  ['components/admin/CommandPalette.tsx', 'TEXT_SIZE', 'text-[11px]', 1, R_ADMIN],
-  ['components/admin/CommandPalette.tsx', 'TEXT_SIZE', 'text-[13px]', 2, R_ADMIN],
-  ['components/admin/CommandPalette.tsx', 'TEXT_SIZE', 'text-[15px]', 1, R_ADMIN],
-  ['components/admin/NotificationBell.tsx', 'TEXT_SIZE', 'text-[10px]', 3, R_ADMIN],
-  ['components/admin/QuickCreate.tsx', 'TEXT_SIZE', 'text-[10px]', 1, R_ADMIN],
-  ['components/admin/QuickResolveModal.tsx', 'TEXT_SIZE', 'text-[10px]', 1, R_ADMIN],
-  ['components/admin/QuickResolveModal.tsx', 'TEXT_SIZE', 'text-[11px]', 3, R_ADMIN],
-  ['components/admin/ReceiptDocument.tsx', 'TEXT_SIZE', 'text-[10px]', 1, R_ADMIN],
-  ['components/admin/ReceiptDocument.tsx', 'TEXT_SIZE', 'text-[11px]', 4, R_ADMIN],
-  ['components/admin/ReceiptDocument.tsx', 'TEXT_SIZE', 'text-[13px]', 3, R_ADMIN],
-  ['components/admin/RecordPaymentModal.tsx', 'TEXT_SIZE', 'text-[11px]', 5, R_ADMIN],
-  ['components/admin/Sidebar.tsx', 'TEXT_SIZE', 'text-[10px]', 3, R_ADMIN],
-  ['components/admin/Sidebar.tsx', 'TEXT_SIZE', 'text-[11px]', 2, R_ADMIN],
-  ['components/admin/Sidebar.tsx', 'TEXT_SIZE', 'text-[12px]', 1, R_ADMIN],
-  ['components/admin/Sidebar.tsx', 'TEXT_SIZE', 'text-[13px]', 6, R_ADMIN],
-  ['components/admin/TenantLeasePassport.tsx', 'TEXT_SIZE', 'text-[10px]', 3, R_ADMIN],
-  ['components/admin/TenantLeasePassport.tsx', 'TEXT_SIZE', 'text-[11px]', 6, R_ADMIN],
-  ['components/admin/VerifyPaymentModal.tsx', 'TEXT_SIZE', 'text-[11px]', 1, R_ADMIN],
-  ['components/admin/VerifyPaymentModal.tsx', 'TEXT_SIZE', 'text-[13px]', 2, R_ADMIN],
-  ['components/admin/VerifyPaymentModal.tsx', 'TEXT_SIZE', 'text-[15px]', 1, R_ADMIN],
-  ['components/shared/ErrorBoundary.tsx', 'TEXT_SIZE', 'text-[11px]', 1, R_ADMIN],
-  ['lib/field-styles.ts', 'TEXT_SIZE', 'text-[11px]', 1, R_LIB],
-  ['lib/field-styles.ts', 'TEXT_SIZE', 'text-[12px]', 2, R_LIB],
-  ['lib/field-styles.ts', 'TEXT_SIZE', 'text-[13px]', 1, R_LIB],
-  ['app/(admin)/assets/page.tsx', 'PX_DIM', 'min-w-[140px]', 1, R_PAGE],
-  ['app/(admin)/assets/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/assets/page.tsx', 'PX_DIM', 'w-[190px]', 1, R_PAGE],
-  ['app/(admin)/assets/page.tsx', 'PX_DIM', 'w-[210px]', 1, R_PAGE],
   ['app/(admin)/attendance/page.tsx', 'PX_DIM', 'max-w-[200px]', 2, R_PAGE],
   ['app/(admin)/attendance/page.tsx', 'PX_DIM', 'max-w-[320px]', 1, R_PAGE],
   ['app/(admin)/attendance/page.tsx', 'PX_DIM', 'min-w-[240px]', 1, R_PAGE],
   ['app/(admin)/attendance/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[190px]', 2, R_PAGE],
-  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[200px]', 1, R_PAGE],
-  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[220px]', 1, R_PAGE],
-  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[90px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'max-h-[500px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'min-h-[200px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'min-w-[220px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'w-[150px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'w-[160px]', 2, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'w-[180px]', 1, R_PAGE],
-  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'w-[320px]', 1, R_PAGE],
+  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[190px]', 2, R_FILTER_190],
+  ['app/(admin)/audit-logs/page.tsx', 'PX_DIM', 'w-[90px]', 1, R_COL_90],
+  ['app/(admin)/complaints/page.tsx', 'PX_DIM', 'w-[150px]', 1, R_FILTER_150],
   ['app/(admin)/dashboard/page.tsx', 'PX_DIM', 'max-h-[160px]', 1, R_PAGE],
-  ['app/(admin)/electricity/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
-  ['app/(admin)/electricity/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/electricity/page.tsx', 'PX_DIM', 'w-[180px]', 2, R_PAGE],
-  ['app/(admin)/enquiries/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/enquiries/page.tsx', 'PX_DIM', 'w-[180px]', 2, R_PAGE],
-  ['app/(admin)/enquiries/page.tsx', 'PX_DIM', 'w-[300px]', 1, R_PAGE],
-  ['app/(admin)/floors/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/guardians/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'h-[160px]', 1, R_PAGE],
-  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_PAGE],
-  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[220px]', 1, R_PAGE],
-  ['app/(admin)/laundry/page.tsx', 'PX_DIM', 'w-[180px]', 2, R_PAGE],
-  ['app/(admin)/laundry/page.tsx', 'PX_DIM', 'w-[200px]', 1, R_PAGE],
-  ['app/(admin)/laundry/page.tsx', 'PX_DIM', 'w-[240px]', 1, R_PAGE],
-  ['app/(admin)/leaves/page.tsx', 'PX_DIM', 'max-w-[200px]', 2, R_PAGE],
-  ['app/(admin)/leaves/page.tsx', 'PX_DIM', 'max-w-[240px]', 1, R_PAGE],
-  ['app/(admin)/leaves/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[160px]', 2, R_PAGE],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_PAGE],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[180px]', 1, R_PAGE],
-  ['app/(admin)/menus/page.tsx', 'PX_DIM', 'max-w-[160px]', 1, R_PAGE],
-  ['app/(admin)/menus/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/notices/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
-  ['app/(admin)/notices/page.tsx', 'PX_DIM', 'max-w-[250px]', 1, R_PAGE],
-  ['app/(admin)/notices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/notifications/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/services/page.tsx', 'PX_DIM', 'max-w-[200px]', 3, R_PAGE],
-  ['app/(admin)/services/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/tenants/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/visitors/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
-  ['app/(admin)/visitors/page.tsx', 'PX_DIM', 'max-w-[240px]', 1, R_PAGE],
-  ['app/(admin)/visitors/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/washing-machines/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
-  ['app/(admin)/washing-machines/page.tsx', 'PX_DIM', 'w-[200px]', 1, R_PAGE],
-  ['components/admin/AmenityTypesTab.tsx', 'PX_DIM', 'max-h-[160px]', 1, R_ADMIN],
-  ['components/admin/AppearanceTab.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_ADMIN],
-  ['components/admin/AppearanceTab.tsx', 'PX_DIM', 'max-w-[220px]', 1, R_ADMIN],
-  ['components/admin/GlobalLoadingBar.tsx', 'PX_DIM', 'h-[2px]', 1, R_ADMIN],
-  ['components/admin/NotificationBell.tsx', 'PX_DIM', 'max-h-[360px]', 1, R_ADMIN],
-  ['components/admin/NotificationBell.tsx', 'PX_DIM', 'min-w-[20px]', 1, R_ADMIN],
-  ['components/admin/TenantLeasePassport.tsx', 'PX_DIM', 'max-w-[220px]', 1, R_ADMIN],
-  ['components/shared/ErrorBoundary.tsx', 'PX_DIM', 'min-h-[400px]', 1, R_ADMIN],
+  ['app/(admin)/electricity/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/enquiries/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/floors/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/guardians/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'h-[160px]', 1, R_CHART_HEIGHT],
+  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_FILTER_170],
+  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_FILTER_170],
+  ['app/(admin)/menus/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/notices/page.tsx', 'PX_DIM', 'max-w-[250px]', 1, R_TRUNCATE_250],
+  ['app/(admin)/notices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/notifications/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
+  ['app/(admin)/tenants/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
   ['components/ui/AssetVisuals.tsx', 'PX_DIM', 'left-[15px]', 1, R_CONNECTOR],
   ['components/ui/AssetVisuals.tsx', 'PX_DIM', 'top-[15px]', 1, R_CONNECTOR],
   ['components/ui/BedMiniGrid.tsx', 'PX_DIM', 'min-w-[90px]', 1, R_BED_MIN_W],

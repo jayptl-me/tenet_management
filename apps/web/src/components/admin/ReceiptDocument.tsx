@@ -195,11 +195,11 @@ export function ReceiptDocument({
                 {pgBranding.pgName}
               </p>
               {addressParts.length > 0 && (
-                <p className="text-[11px] text-[color:var(--color-text-muted)]">
+                <p className="text-11 text-[color:var(--color-text-muted)]">
                   {addressParts.join(', ')}
                 </p>
               )}
-              <div className="flex flex-wrap items-center justify-center gap-2 text-[10px] text-[color:var(--color-text-muted)]">
+              <div className="text-10 flex flex-wrap items-center justify-center gap-2 text-[color:var(--color-text-muted)]">
                 {pgBranding.phone && <span>Tel: {pgBranding.phone}</span>}
                 {pgBranding.email && <span>Email: {pgBranding.email}</span>}
                 {pgBranding.gstNumber && <span>GSTIN: {pgBranding.gstNumber}</span>}
@@ -209,7 +209,7 @@ export function ReceiptDocument({
           <p className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
             {title}
           </p>
-          <p className="mt-0.5 font-mono text-[11px] text-[color:var(--color-text-muted)]">
+          <p className="text-11 mt-0.5 font-mono text-[color:var(--color-text-muted)]">
             {reference}
           </p>
           <p className="font-display mt-4 text-3xl font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
@@ -224,12 +224,12 @@ export function ReceiptDocument({
         <dl className="divide-y divide-[color:var(--border-color)] px-6">
           {lines.map((line) => (
             <div key={line.label} className="flex items-baseline justify-between gap-4 py-2.5">
-              <dt className="text-[13px] font-medium text-[color:var(--color-text-muted)]">
+              <dt className="text-13 font-medium text-[color:var(--color-text-muted)]">
                 {line.label}
               </dt>
               <dd
                 className={clsx(
-                  'text-right text-[13px] font-semibold text-[color:var(--color-text-primary)]',
+                  'text-13 text-right font-semibold text-[color:var(--color-text-primary)]',
                   line.mono && 'font-mono text-xs',
                 )}
               >
@@ -241,17 +241,17 @@ export function ReceiptDocument({
 
         {notes && (
           <div className="border-t border-[color:var(--border-color)] px-6 py-3">
-            <p className="text-[11px] font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+            <p className="text-11 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
               Notes
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+            <p className="text-13 mt-1 leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
               {notes}
             </p>
           </div>
         )}
 
         {footerNote && (
-          <p className="border-t border-[color:var(--border-color)] px-6 py-3 text-center text-[11px] text-[color:var(--color-text-muted)]">
+          <p className="text-11 border-t border-[color:var(--border-color)] px-6 py-3 text-center text-[color:var(--color-text-muted)]">
             {footerNote}
           </p>
         )}

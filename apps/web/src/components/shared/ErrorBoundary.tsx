@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex min-h-[400px] items-center justify-center p-6">
+        <div className="flex min-h-100 items-center justify-center p-6">
           <div className="w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-8 text-center shadow-[var(--shadow-card)]">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-100)]">
               <AlertTriangle className="h-8 w-8 text-[color:var(--color-danger-600)]" />
@@ -66,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <summary className="cursor-pointer font-mono text-xs text-[color:var(--color-danger-500)]">
                   Error details (dev only)
                 </summary>
-                <pre className="mt-2 max-h-40 overflow-auto rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-3 font-mono text-[11px] leading-relaxed text-[color:var(--color-danger-700)]">
+                <pre className="text-11 mt-2 max-h-40 overflow-auto rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] p-3 font-mono leading-relaxed text-[color:var(--color-danger-700)]">
                   {this.state.error.message}
                   {'\n\n'}
                   {this.state.error.stack}

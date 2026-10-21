@@ -131,10 +131,10 @@ export function QuickResolveModal({
                 <StatusBadge
                   variant={statusToVariant(target.priority)}
                   label={target.priority}
-                  className="shrink-0 text-[10px]"
+                  className="text-10 shrink-0"
                 />
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[color:var(--color-text-muted)]">
+              <div className="text-11 mt-2 flex flex-wrap items-center gap-2 text-[color:var(--color-text-muted)]">
                 <span className="font-semibold text-[color:var(--color-text-primary)]">
                   {target.tenantName ?? 'Resident'}
                 </span>
@@ -175,7 +175,7 @@ export function QuickResolveModal({
                       />
                       Mark as Resolved
                     </div>
-                    <p className="mt-1 text-[11px] text-[color:var(--color-text-muted)]">
+                    <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
                       Issue fixed and inspected
                     </p>
                   </button>
@@ -199,7 +199,7 @@ export function QuickResolveModal({
                       />
                       Dismiss / Reject
                     </div>
-                    <p className="mt-1 text-[11px] text-[color:var(--color-text-muted)]">
+                    <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
                       Duplicate or invalid request
                     </p>
                   </button>

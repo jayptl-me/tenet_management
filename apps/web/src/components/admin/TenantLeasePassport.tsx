@@ -64,14 +64,14 @@ export function TenantLeasePassport({
             <h3 className="text-sm font-bold text-[color:var(--color-text-primary)]">
               Lease & Unit Passport
             </h3>
-            <p className="text-[11px] font-medium text-[color:var(--color-text-muted)]">
+            <p className="text-11 font-medium text-[color:var(--color-text-muted)]">
               Real-time lease & roommate preview
             </p>
           </div>
         </div>
 
         {room && (
-          <span className="rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2.5 py-0.5 text-[10px] font-bold text-[color:var(--color-success-700)]">
+          <span className="text-10 rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2.5 py-0.5 font-bold text-[color:var(--color-success-700)]">
             Unit Selected
           </span>
         )}
@@ -86,7 +86,7 @@ export function TenantLeasePassport({
           <p className="text-sm font-semibold text-[color:var(--color-text-primary)]">
             No Room Selected
           </p>
-          <p className="mt-1 max-w-[220px] text-xs font-medium text-[color:var(--color-text-muted)]">
+          <p className="mt-1 max-w-55 text-xs font-medium text-[color:var(--color-text-muted)]">
             Select a room from the form or bed matrix to view unit terms and roommate layout.
           </p>
         </div>
@@ -97,7 +97,7 @@ export function TenantLeasePassport({
           <div className={clsx(surfaceNestedClass, 'p-3.5')}>
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-[10px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                <span className="text-10 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                   Selected Room
                 </span>
                 <p className="font-mono text-xl font-bold text-[color:var(--color-text-primary)]">
@@ -107,7 +107,7 @@ export function TenantLeasePassport({
 
               {selectedBedId && (
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-bold tracking-wider text-[color:var(--color-brand-600)] uppercase">
+                  <span className="text-10 font-bold tracking-wider text-[color:var(--color-brand-600)] uppercase">
                     Assigned Bed
                   </span>
                   <span className="rounded-full bg-[color:var(--color-brand-500)] px-2.5 py-0.5 font-mono text-xs font-bold text-[color:var(--color-on-brand)] shadow-sm">
@@ -117,7 +117,7 @@ export function TenantLeasePassport({
               )}
             </div>
 
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[color:var(--border-color)]/60 pt-2 text-[11px]">
+            <div className="text-11 mt-2.5 flex flex-wrap items-center gap-2 border-t border-[color:var(--border-color)]/60 pt-2">
               <span className="inline-flex items-center gap-1 font-medium text-[color:var(--color-text-secondary)]">
                 <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
                 {floorLabel}
@@ -132,7 +132,7 @@ export function TenantLeasePassport({
 
           {/* Roommates & Bed Layout Matrix */}
           <div>
-            <p className="mb-2 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+            <p className="text-11 mb-2 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
               Room Bed Slots & Roommates
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -167,7 +167,7 @@ export function TenantLeasePassport({
                       />
                     </div>
 
-                    <div className="mt-1.5 truncate text-[11px]">
+                    <div className="text-11 mt-1.5 truncate">
                       {isThisSlot ? (
                         <span className="font-bold text-[color:var(--color-brand-700)]">
                           {tenantName?.trim() ? tenantName : 'New Tenant'}
@@ -190,7 +190,7 @@ export function TenantLeasePassport({
 
           {/* Live Financial Move-In Calculator */}
           <div className="border-t border-[color:var(--border-color)]/60 pt-3">
-            <p className="mb-2 text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+            <p className="text-11 mb-2 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
               Move-In Financial Summary
             </p>
 
@@ -231,7 +231,7 @@ export function TenantLeasePassport({
           <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/40 p-3">
             <div className="flex items-start gap-2">
               <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:var(--color-brand-600)]" />
-              <div className="text-[11px]">
+              <div className="text-11">
                 <p className="font-semibold text-[color:var(--color-brand-800)]">
                   Instant Portal Provisioning
                 </p>

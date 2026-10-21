@@ -241,7 +241,7 @@ export function RecordPaymentModal({
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+              <p className="text-11 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
                 Balance Due
               </p>
               <p
@@ -255,12 +255,12 @@ export function RecordPaymentModal({
                 {balance != null ? fmtMoney(balance) : 'Not reported'}
               </p>
               {balance == null ? (
-                <p className="text-[11px] leading-snug font-medium text-[color:var(--color-text-muted)]">
+                <p className="text-11 leading-snug font-medium text-[color:var(--color-text-muted)]">
                   The server did not report a balance for this invoice. The amount that is accepted
                   is decided by the server when the payment is saved.
                 </p>
               ) : balance === 0 ? (
-                <p className="text-[11px] leading-snug font-medium text-[color:var(--color-text-muted)]">
+                <p className="text-11 leading-snug font-medium text-[color:var(--color-text-muted)]">
                   The server reports nothing due on this invoice.
                 </p>
               ) : null}
@@ -332,7 +332,7 @@ export function RecordPaymentModal({
                   type="button"
                   onClick={() => setAmount(q.value)}
                   className={clsx(
-                    'rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors',
+                    'text-11 rounded-full border px-2.5 py-0.5 font-semibold transition-colors',
                     amount === q.value
                       ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-900)]'
                       : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]',
@@ -345,7 +345,7 @@ export function RecordPaymentModal({
           )}
 
           {isOverpay && balance != null && (
-            <p className="mt-1 text-[11px] font-semibold text-[color:var(--color-danger-700)]">
+            <p className="text-11 mt-1 font-semibold text-[color:var(--color-danger-700)]">
               The server reports a balance of {fmtMoney(balance)} for this invoice, so an amount
               above that would be rejected. Record {fmtMoney(balance)} or less.
             </p>

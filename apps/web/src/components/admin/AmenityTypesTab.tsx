@@ -300,7 +300,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                         />
                       </div>
                     </div>
-                    <div className="max-h-[160px] overflow-y-auto p-2">
+                    <div className="max-h-40 overflow-y-auto p-2">
                       <div className="grid grid-cols-6 gap-1">
                         {filteredIcons.map((opt) => (
                           <button
@@ -504,7 +504,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                         <span className="block text-sm font-semibold text-[color:var(--color-text-primary)]">
                           {def.label}
                         </span>
-                        <span className="block font-mono text-[10px] text-[color:var(--color-text-muted)]">
+                        <span className="text-10 block font-mono text-[color:var(--color-text-muted)]">
                           {def.key}
                         </span>
                       </div>
@@ -512,7 +512,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`font-display inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${getCategoryBadge(def.category)}`}
+                      className={`text-10 font-display inline-flex items-center rounded-full px-2 py-0.5 font-bold ${getCategoryBadge(def.category)}`}
                     >
                       {CATEGORY_OPTIONS.find((c) => c.value === def.category)?.label ??
                         def.category}
@@ -520,7 +520,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                      className={`text-10 inline-flex h-6 w-6 items-center justify-center rounded-full font-bold ${
                         def.showAsStatusLabel
                           ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-600)]'
                           : 'bg-[color:var(--color-card-bg)] text-[color:var(--color-surface-400)]'
@@ -531,7 +531,7 @@ export default function AmenityTypesTab({ definitions, onChange }: AmenityTypesT
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                      className={`text-10 inline-flex h-6 w-6 items-center justify-center rounded-full font-bold ${
                         def.isPerFloor
                           ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]'
                           : 'bg-[color:var(--color-card-bg)] text-[color:var(--color-surface-400)]'

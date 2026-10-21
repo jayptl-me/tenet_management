@@ -109,13 +109,13 @@ export function Breadcrumbs() {
         <div key={crumb.href} className="flex items-center gap-1.5">
           <ChevronRight className="h-3 w-3 text-[color:var(--color-text-muted)]" />
           {crumb.isLast ? (
-            <span className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+            <span className="text-13 font-semibold text-[color:var(--color-text-primary)]">
               {crumb.label}
             </span>
           ) : (
             <Link
               href={crumb.href}
-              className="rounded-md px-1.5 py-0.5 text-[13px] font-medium text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-secondary)]"
+              className="text-13 rounded-md px-1.5 py-0.5 font-medium text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-secondary)]"
             >
               {crumb.label}
             </Link>

@@ -238,7 +238,7 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
             value={customBrandColor}
             onChange={(e) => handleBrandColorChange(e.target.value)}
             placeholder="#f59e0b"
-            className="max-w-[200px]"
+            className="max-w-50"
             error={brandColorValid ? undefined : 'Use #RRGGBB format (e.g. #f59e0b)'}
             helperText={brandColorValid ? '6-digit hex, e.g. #f59e0b' : undefined}
           />
@@ -330,7 +330,7 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
             <StatusBadge variant="danger" label="Overdue" />
           </div>
 
-          <div className="max-w-[220px]">
+          <div className="max-w-55">
             <StatCard title="Total Tenants" value={42} variant="brand" />
           </div>
         </div>

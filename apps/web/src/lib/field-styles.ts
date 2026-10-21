@@ -39,13 +39,13 @@ export const fieldControlBorderError = clsx(
   'focus:ring-[color:var(--color-danger-400)] focus:border-[color:var(--border-color-error)]',
 );
 
-export const fieldLabelClass = 'text-[13px] font-semibold text-[color:var(--color-text-primary)]';
+export const fieldLabelClass = 'text-13 font-semibold text-[color:var(--color-text-primary)]';
 
-export const fieldHintClass = 'text-[11px] font-medium text-[color:var(--color-text-secondary)]';
+export const fieldHintClass = 'text-11 font-medium text-[color:var(--color-text-secondary)]';
 
-export const fieldErrorClass = 'text-[12px] font-medium text-[color:var(--color-danger-600)]';
+export const fieldErrorClass = 'text-12 font-medium text-[color:var(--color-danger-600)]';
 
-export const fieldHelperClass = 'text-[12px] font-medium text-[color:var(--color-text-secondary)]';
+export const fieldHelperClass = 'text-12 font-medium text-[color:var(--color-text-secondary)]';
 
 export const surfaceCardClass = clsx(
   'rounded-[var(--radius-xl)] border border-[color:var(--border-color)]',

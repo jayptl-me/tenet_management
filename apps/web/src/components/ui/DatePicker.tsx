@@ -30,7 +30,15 @@ export interface DatePickerProps extends Omit<
 > {
   value?: string;
   defaultValue?: string;
-  onChange?: ((value: string) => void) | ((e: React.ChangeEvent<HTMLInputElement>) => void);
+  /**
+   * Called with the picked value, always as a string.
+   *
+   * It used to deliver a change event on the hidden input when one existed, so a
+   * caller typed for a string silently received an object - a filter would write
+   * an event into the address bar and never apply. Every caller in the app wants
+   * the value, so that is the contract.
+   */
+  onChange?: (value: string) => void;
   label?: string;
   error?: string;
   helperText?: string;
@@ -200,23 +208,8 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           el.value = next;
         }
         if (!isControlled) setUncontrolled(next);
-        if (onChange && el) {
-          const event = {
-            ...new Event('change', { bubbles: true }),
-            target: el,
-            currentTarget: el,
-          } as unknown as React.ChangeEvent<HTMLInputElement>;
-          Object.defineProperty(event, 'target', {
-            writable: false,
-            value: el,
-          });
-          try {
-            (onChange as (e: React.ChangeEvent<HTMLInputElement>) => void)(event);
-          } catch {
-            (onChange as (val: string) => void)(next);
-          }
-        } else if (onChange) {
-          (onChange as (val: string) => void)(next);
+        if (onChange) {
+          onChange(next);
         }
       },
       [isControlled, onChange],
