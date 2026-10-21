@@ -139,13 +139,15 @@ Tier B exact list (10): `complaints/new`, `floors/new`, `guardians/new`, `menus/
    room/machine management panel.
 6. **"0 cross-module links" holds for `<Link>` in 30 of 40 pages** (10 pages import
    `<Link>`), but cross-module _navigation_ exists via `router.push` (`payments/new ->
-   /invoices/new?tenantId=`, `floors/[id]/edit -> /services`, `/washing-machines`,
+/invoices/new?tenantId=`, `floors/[id]/edit -> /services`, `/washing-machines`,
    `/rooms/new?floorId=`), and cross-module _data_ references are ubiquitous through
    `ResourceSelect`. Breadcrumbs are also not absent: `components/admin/Breadcrumbs.tsx`
    renders route-derived labels globally from `(admin)/layout.tsx`.
 7. **`PageShell` is dead code.** `apps/web/src/components/ui/PageShell.tsx` (69 lines,
    "shared page wrapper for list/detail admin pages") has **0 importers** in `apps/web/src`.
    CrudFormPage must not become a second orphan; decide fold-or-delete during Wave 0.
+   **Decided: deleted 2026-10-21** (it had 0 importers). The one admin content frame is now
+   `apps/web/src/components/ui/ContentFrame.tsx`, mounted by the admin shell.
 
 ---
 
@@ -168,7 +170,7 @@ The design extends this stack; it must not duplicate it.
 | `useUnsavedGuard`                                          | `apps/web/src/hooks/useUnsavedGuard.ts`               | `useUnsavedGuard(isDirty)` -> `beforeunload` listener; `useUnsavedGuardState(isDirty)` -> `{ isDirty, guardOpen, confirmLeave, requestLeave, cancelLeave }` for an in-app confirm modal                                                           | `payments/[id]/edit`, `invoices/[id]/edit` only (`settings` hand-rolls its own `window.confirm` on tab change; it does not import this hook)                                                      |
 | `parseApiError`                                            | `apps/web/src/lib/errorParser.ts`                     | ky error -> `{ message, code }`                                                                                                                                                                                                                   | every form page with a submit handler (39/40; the stub has none)                                                                                                                                  |
 | `ConfirmModal`, `EmptyState`, `ErrorState`, `DataTable`    | `components/ui/*`                                     | modal / list states / table                                                                                                                                                                                                                       | list + detail pages                                                                                                                                                                               |
-| `PageShell`                                                | `components/ui/PageShell.tsx` (69 lines)              | list/detail wrapper (title, actions, error, children)                                                                                                                                                                                             | **0 users (orphan)**                                                                                                                                                                              |
+| `PageShell`                                                | `components/ui/PageShell.tsx` (69 lines)              | list/detail wrapper (title, actions, error, children)                                                                                                                                                                                             | REMOVED 2026-10-21 - deleted for 0 importers; the shell frame is `components/ui/ContentFrame.tsx`                                                                                                 |
 
 Design consequence: `FormPage` already owns chrome, loading skeleton and error banner, and
 `FormCard`/`FormActions` already own the card and footer. `CrudFormPage` therefore adds only
@@ -465,7 +467,7 @@ Edit pages add `mode="edit"` and `load={{ queryKey: ['laundry-slots', id], path:
 
 | Wave                              | Pages                                                                                                                                                                                                                                                                  | Why                                                                                                                                                                          |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0                                 | `CrudFormPage.tsx` only (no page changes)                                                                                                                                                                                                                              | land the component + types behind gates; decide `PageShell` fold-or-delete; no behavior change                                                                               |
+| 0                                 | `CrudFormPage.tsx` only (no page changes)                                                                                                                                                                                                                              | land the component + types behind gates; `PageShell` was deleted 2026-10-21; no behavior change                                                                              |
 | 1 (4)                             | `laundry/new`, `laundry/[id]/edit`, `washing-machines/new`, `washing-machines/[id]/edit`                                                                                                                                                                               | smallest pages in the repo (154-234 lines); edit proves load+reset+guard, create proves the no-load path; `laundry/edit` proves the `preflight` slot (its "Booked by" panel) |
 | 2 (5)                             | create side of Tier A: `meals/new`, `notices/new`, `enquiries/new`, `attendance/new` (duration readout stays in children), `assets/new` (created-id redirect)                                                                                                          | exercises both redirect flavors                                                                                                                                              |
 | 3 (8)                             | edit side of Tier A: `meals/edit`, `notices/edit`, `enquiries/edit`, `guardians/edit` (payload whitelist stays in submit), `complaints/edit`, `notifications/edit`, `attendance/edit` (duplicate check stays in submit), `visitors/edit` (host link stays in children) | 17 of 19 Tier A pages done after Wave 3 (4 + 5 + 8)                                                                                                                          |
@@ -496,7 +498,7 @@ Rules for every wave:
 | Suspense regressions                                                                  | 7 pages use `useSearchParams`; Next requires a Suspense boundary during prerender     | shell never removes the page-level `<Suspense>`; `next build` is part of the gate (typecheck alone does not catch prerender errors) |
 | Behavior drift on money pages                                                         | `payments/edit`, `invoices/edit` guards are subtle (`!isPaidLocked && !isSubmitting`) | excluded in Wave 1-4; port only with a side-by-side checklist                                                                       |
 | Working tree still has in-flight depth work (68 modified + 2 untracked at last check) | `git status` after commits `74894f6`/`143bc33`                                        | start Wave 0 only after the remaining depth work lands; re-run `wc -l` then                                                         |
-| Orphan component repeats (`PageShell` has 0 users)                                    | grep across `apps/web/src`                                                            | Wave 0 decides: fold PageShell's list/detail role or delete it; add a "has consumer" note in the component header                   |
+| Orphan component repeats (`PageShell` had 0 users; deleted)                           | grep across `apps/web/src`                                                            | RESOLVED 2026-10-21: `PageShell` deleted for 0 importers; the shell frame is `ContentFrame`; add a "has consumer" note in each file |
 | Lint rules                                                                            | `.oxlintrc.json` shadcn rules, TS strict, no `any`                                    | gates below; `bun run lint` must be 0/0                                                                                             |
 
 ---
@@ -566,6 +568,7 @@ Next.js 16 (read from `apps/web/node_modules/next/dist/docs/`, resolved from
   guide's pattern is out of scope (documented here so implementation does not "fix" it).
 
 Repository sources: the 40 page files under `apps/web/src/app/(admin)/`, plus
-`components/ui/{FormPage,FormCard,FormActions,FormSection,PageHeader,ErrorBanner,DetailCard,
-PageShell}.tsx`, `hooks/{useApiQuery,useUnsavedGuard}.ts`, `lib/{query,errorParser}.ts`, and
-`docs/plans/2026-09-29-depth-implementation-plan.md` sections 4.3/4.4/8.
+`components/ui/{FormPage,FormCard,FormActions,FormSection,PageHeader,ErrorBanner,DetailCard}.tsx`,
+`hooks/{useApiQuery,useUnsavedGuard}.ts`, `lib/{query,errorParser}.ts`, and
+`docs/plans/2026-09-29-depth-implementation-plan.md` sections 4.3/4.4/8. (`PageShell.tsx` was
+deleted on 2026-10-21 for having 0 importers.)

@@ -29,7 +29,7 @@
 
 ### 2.1 Replaced & Upgraded Components
 
-- `KpiHeader` -> Replaced on `/payments`, `/payments/[id]`, `/invoices`, and `/invoices/[id]` with calibrated `StatCard` architecture with trend deltas and tonal accents (`brand`, `success`, `warning`, `danger`).
+- `KpiHeader` -> Replaced on `/payments`, `/payments/[id]`, `/invoices`, and `/invoices/[id]` with calibrated `StatCard` architecture with trend deltas and tonal accents (`brand`, `success`, `warning`, `danger`). The `KpiHeader.tsx` component file is unreferenced now; the admin shell frame is `ContentFrame` (one frame for the whole app).
 - `StatusTabs` -> Wired to live backend count endpoints (`GET /payments/status-counts` and `GET /invoices/status-counts`), replacing empty or null count badges with truthful data across all statuses.
 - `ReceiptDocument` -> Upgraded with `PgBranding` interface to render official property details (PG name, address, contact, GSTIN, UPI) in print-isolated receipts.
 - `RecordPaymentModal` -> Purpose-built modal enabling offline payment recording directly in-place from invoice detail view or payments lists.

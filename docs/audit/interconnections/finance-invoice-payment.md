@@ -27,7 +27,7 @@ Tenant UTR
     -> paid or reject back to pending
     -> updateInvoicePaymentStatus
 
-Admin GET invoice detail / payment-status
+Admin GET invoice detail
   -> paidAmount, balance from paid payments
 
 Electricity
@@ -67,12 +67,12 @@ Checkout coupling (tenant-lifecycle)
 - GET list (admin filters status), GET `/my` (tenant), GET `/:id` (paidAmount + balance + payments)
 - POST `/generate-bulk`, POST `/generate-single`
 - PUT `/:id` admin: amounts/status with locks on paid; resync pending residual after total change
-- GET `/:id/pdf`, DELETE (blocks paid), GET `/:id/payment-status`
+- GET `/:id/pdf`, DELETE (blocks paid), GET `/:id/payment-status` (removed 2026-10-21, no consumer)
 - Duplicate invoice handling via 11000 / service skip if month exists
 
 ### Payment routes (verified)
 
-- GET list, `/summary`, `/my`, `/qr-code`, `/pending-verification`
+- GET list, `/summary`, `/my`, `/qr-code` (`/pending-verification` removed 2026-10-21, no consumer)
 - POST `/offline` (admin partial-aware)
 - POST `/submit-utr`, POST `/verify-utr/:paymentId`, POST `/:id/verify`
 - PUT `/:id`, DELETE (blocks delete of paid), GET receipt / by id
@@ -95,7 +95,7 @@ Checkout coupling (tenant-lifecycle)
 ### Partial payments and balance
 
 - Offline: rejects amount > balance (`AMOUNT_EXCEEDS_BALANCE`); leaves new `pending` for remainder
-- Invoice GET and `/payment-status` expose paidAmount/remaining
+- Invoice GET exposes paidAmount/remaining
 - Invoice PUT recalculates residual pending when line totals change (if not paid/cancelled)
 
 ## What works

@@ -68,18 +68,18 @@ Pass 1 record: docs/audit/features/visitors_audit_pass1_20260907-233246.md
 
 ### 2.3 Detail - visitors/[id]/page.tsx
 
-| Feature                                                 | Element                                           | Status        |
-| ------------------------------------------------------- | ------------------------------------------------- | ------------- |
-| Header title + pass code + badge + Edit CTA             | FormPage + StatusBadge                            | WORKING       |
-| StatCards window/duration/host stay/pass code           | StatCard                                          | WORKING       |
-| Lifecycle stepper + contextual actions                  | VisitorLifecycleStepper + VisitorLifecycleActions | WORKING       |
-| Visitor info + WhatsApp                                 | DetailCard                                        | WORKING       |
-| Host tenant link + phone + room/bed/floor + View tenant | DetailCard                                        | WORKING       |
-| Gate pass card (passcode + copy + print)                | VisitorGatePassCard                               | WORKING       |
-| Timeline + duration                                     | DetailCard                                        | WORKING       |
-| Record meta created/updated/approvedBy/ID               | DetailCard                                        | WORKING       |
-| Custom SVG                                              | none, lucide only                                 | NO CUSTOM SVG |
-| Scripted layout                                         | printable gate pass (print CSS)                   | WORKING       |
+| Feature                                                 | Element                                 | Status        |
+| ------------------------------------------------------- | --------------------------------------- | ------------- |
+| Header title + pass code + badge + Edit CTA             | FormPage + StatusBadge                  | WORKING       |
+| StatCards window/duration/host stay/pass code           | StatCard                                | WORKING       |
+| Lifecycle stepper + contextual actions                  | StatusStepper + VisitorLifecycleActions | WORKING       |
+| Visitor info + WhatsApp                                 | DetailCard                              | WORKING       |
+| Host tenant link + phone + room/bed/floor + View tenant | DetailCard                              | WORKING       |
+| Gate pass card (passcode + copy + print)                | VisitorGatePassCard                     | WORKING       |
+| Timeline + duration                                     | DetailCard                              | WORKING       |
+| Record meta created/updated/approvedBy/ID               | DetailCard                              | WORKING       |
+| Custom SVG                                              | none, lucide only                       | NO CUSTOM SVG |
+| Scripted layout                                         | printable gate pass (print CSS)         | WORKING       |
 
 ### 2.4 Edit - visitors/[id]/edit/page.tsx
 
@@ -97,7 +97,7 @@ Pass 1 record: docs/audit/features/visitors_audit_pass1_20260907-233246.md
 | Component                                                                                                                                                       | Path                                                   | Status  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------- |
 | VisitorLifecycleActions                                                                                                                                         | apps/web/src/components/ui/VisitorLifecycleActions.tsx | WORKING |
-| VisitorLifecycleStepper                                                                                                                                         | apps/web/src/components/ui/VisitorLifecycleStepper.tsx | WORKING |
+| StatusStepper (shared lifecycle stepper; replaced VisitorLifecycleStepper, removed 2026-10-21)                                                                  | apps/web/src/components/ui/StatusStepper.tsx           | WORKING |
 | VisitorGatePassCard                                                                                                                                             | apps/web/src/components/ui/VisitorGatePassCard.tsx     | WORKING |
 | ResourceSelect/DataTable/TableActions/StatusBadge/StatusFilterSelect/PageHeader/ErrorBanner/EmptyState/FormPage/FormCard/FormSection/FormGrid/FormActions/Input | ui/*                                                   | WORKING |
 
@@ -141,4 +141,6 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-No closed remediation claims recorded in this file.
+| Claim                                                               | Live status                                               |
+| ------------------------------------------------------------------- | --------------------------------------------------------- |
+| VisitorLifecycleStepper component was the visitor lifecycle stepper | REMOVED 2026-10-21 - replaced by the shared StatusStepper |

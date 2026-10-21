@@ -70,7 +70,7 @@ Pass 1 record: docs/audit/features/leaves_audit_pass1_20260907-234410.md
 | --------------------------------------------------------- | ---------------------- | ------------- |
 | Header title + badge + Review CTA                         | FormPage + StatusBadge | WORKING       |
 | StatCards start/end/duration/status                       | StatCard               | WORKING       |
-| Lifecycle stepper                                         | LeaveLifecycleStepper  | WORKING       |
+| Lifecycle stepper                                         | StatusStepper          | WORKING       |
 | Tenant card (link, phone, room/bed/floor) + WhatsApp/copy | DetailCard             | WORKING       |
 | Leave Details + decided-by row                            | DetailCard             | WORKING       |
 | Attendance impact panel                                   | LeaveAttendanceImpact  | WORKING       |
@@ -96,7 +96,7 @@ Pass 1 record: docs/audit/features/leaves_audit_pass1_20260907-234410.md
 
 | Component                                                                                                                                                                          | Path                                                 | Status  |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------- |
-| LeaveLifecycleStepper                                                                                                                                                              | apps/web/src/components/ui/LeaveLifecycleStepper.tsx | WORKING |
+| StatusStepper (shared lifecycle stepper; replaced LeaveLifecycleStepper, removed 2026-10-21)                                                                                       | apps/web/src/components/ui/StatusStepper.tsx         | WORKING |
 | LeaveAttendanceImpact                                                                                                                                                              | apps/web/src/components/ui/LeaveAttendanceImpact.tsx | WORKING |
 | StatusBadge/statusToVariant                                                                                                                                                        | StatusBadge.tsx + tokens.ts                          | WORKING |
 | ResourceSelect/DataTable/TableActions/Select/PageHeader/ErrorBanner/EmptyState/FormPage/FormCard/FormSection/FormGrid/FormFullWidth/FormActions/Input/Textarea/DetailCard/StatCard | ui/*                                                 | WORKING |
@@ -141,4 +141,6 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-No closed remediation claims recorded in this file.
+| Claim                                                           | Live status                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| LeaveLifecycleStepper component was the leave lifecycle stepper | REMOVED 2026-10-21 - replaced by the shared StatusStepper |

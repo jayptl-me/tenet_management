@@ -91,10 +91,12 @@ function rebuildBedsForSharingType(existingBeds, newSharingType) {
 - Populates `floor`
 - Response: `{ success, data: Room[], meta }`
 
-### GET /rooms/available — Vacant Beds
+### GET /rooms/available — Vacant Beds (REMOVED 2026-10-21)
 
-- Returns rooms where `isActive: true` AND at least one bed has `isOccupied: false`
-- Populates `floor`
+- **Removed 2026-10-21.** The endpoint had zero consumers in `apps/web` and `mobile/`, so it was deleted.
+- **Use `GET /rooms` instead.** It returns the same rooms with `floor` populated, and its `meta.stats` aggregate
+  (`totalBeds`, `occupiedBeds`, `vacantBeds`, `occupancyPct`) is computed over the whole filtered set.
+- The admin rooms list keeps its vacant/occupied filter client-side, on the beds of the rows `GET /rooms` returns.
 
 ### GET /rooms/:id — Single Room with Tenant Names
 

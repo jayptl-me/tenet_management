@@ -106,7 +106,7 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 | List/detail/create populate tenant.user + tenant.room(roomNumber floor | FIXED - WORKING - apps/api/src/routes/visitors.ts (visitorTenantPopulate)                  |
 | List search (visitorName/phone regex) + tenantId filters               | FIXED - WORKING - apps/api/src/routes/visitors.ts GET /visitors                            |
 | Admin create rejects checked-out tenant (TENANT_INACTIVE 409, mirrors  | FIXED - WORKING - apps/api/src/routes/visitors.ts POST /visitors                           |
-| VisitorLifecycleStepper component (linear stepper + cancelled branch,  | FIXED - WORKING - apps/web/src/components/ui/VisitorLifecycleStepper.tsx                   |
+| VisitorLifecycleStepper component (linear stepper + cancelled branch,  | FIXED 2026-09-08; REMOVED 2026-10-21 - now StatusStepper.tsx                               |
 | VisitorGatePassCard component (passcode parity, host/purpose/timeline, | FIXED - WORKING - apps/web/src/components/ui/VisitorGatePassCard.tsx                       |
 | Rebuilt register form: host section (active-tenants picker + room/bed/ | FIXED - WORKING - apps/web/src/app/(admin)/visitors/new/page.tsx                           |
 | Rebuilt edit form: read-only host context card (tenant link + room/bed | FIXED - WORKING - apps/web/src/app/(admin)/visitors/[id]/edit/page.tsx                     |
@@ -142,7 +142,7 @@ Detail: [features/rooms.md](./features/rooms.md), [features/floors.md](./feature
 | ATT/Leaves page-local name search | **FIXED 2026-07-16** -- server `search` on both list APIs (User name regex -> Tenant IDs)                           |
 | ELEC-P1-2 API hard reconcile      | **FIXED 2026-09-08 Pass 2** -- server-side assertReconcile on POST/PUT; FE hard block no longer bypassable          |
 | Room photos                       | **FIXED** -- photoUrls input on new/edit forms, gallery on detail page                                              |
-| Unused APIs                       | `rooms/available`, `services/summary`, payments summary/qr/pending-verification dual-verify, invoice payment-status |
+| Unused APIs                       | `rooms/available`, `payments/pending-verification`, `invoices/:id/payment-status` removed 2026-10-21 (no consumers) |
 | Free-text Mongo IDs               | Notices **FIXED** ResourceSelect; notification compose uses pickers                                                 |
 | Types lag                         | laundry, meals, roomAmenities on IRoom, ITenantCreate temp password                                                 |
 | Soft-delete modal copy            | **Mostly FIXED** (rooms/guardians/assets Retire/Deactivate); residual polish elsewhere                              |
@@ -273,6 +273,9 @@ P1-AUTH-PW, flag prefetch, unread badge, leave cancel closed. Residual F5+ notif
 | Notices free-text targetIds                             | **FIXED** -- ResourceSelect                    |
 | Notification badges F4 readBy                           | **FIXED** with D1 unreadBy                     |
 | Flutter missing profile/leaves/attendance/notifications | **FALSE** -- screens exist                     |
+| GET /rooms/available was unused                         | REMOVED 2026-10-21 - deleted, no consumer      |
+| GET /payments/pending-verification was unused           | REMOVED 2026-10-21 - deleted, no consumer      |
+| GET /invoices/:id/payment-status was unused             | REMOVED 2026-10-21 - deleted, no consumer      |
 | Build tenant portal in Next.js                          | **FORBIDDEN** -- Flutter only                  |
 | Missing CRUD pages for core modules                     | **FALSE** -- full admin matrix present         |
 | P0 transfer / isActive / temp password / visitor filter | **FIXED**                                      |

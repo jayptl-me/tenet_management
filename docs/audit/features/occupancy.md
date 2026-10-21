@@ -28,7 +28,7 @@ The Occupancy & Operational Capacity Management module is the architectural back
 | Resident Mobile (Guardian)      | `guardian` only | Flutter (`mobile/`)     | `/guardian` (Ward Screen)                                                       | `app_router.dart` role guard; read-only display of ward's assigned room and bed slot                 |
 | Visitor Desk                    | None            | Flutter (`mobile/`)     | N/A                                                                             | Excluded by product design                                                                           |
 | Core API Dashboard Stats        | `admin` only    | Bun + Hono (`apps/api`) | `GET /api/v1/dashboard/stats`, `/occupancy-history`                             | `authGuard` + `adminOnly` middleware                                                                 |
-| Core API Room Availability      | Authenticated   | Bun + Hono (`apps/api`) | `GET /api/v1/rooms/available`, `GET /api/v1/rooms`                              | `authGuard`                                                                                          |
+| Core API Rooms                  | Authenticated   | Bun + Hono (`apps/api`) | `GET /api/v1/rooms`                                                             | `authGuard`                                                                                          |
 | Core API Room Mutations         | `admin` only    | Bun + Hono (`apps/api`) | `POST /api/v1/rooms`, `PUT /:id`, `DELETE /:id`                                 | `authGuard` + `adminOnly` middleware                                                                 |
 | Core API Tenant Bed Allocations | `admin` only    | Bun + Hono (`apps/api`) | `POST /api/v1/tenants`, `PUT /:id`, `POST /:id/checkout`, `POST /:id/reinstate` | `authGuard` + `adminOnly` middleware                                                                 |
 
@@ -41,7 +41,7 @@ The Occupancy & Operational Capacity Management module is the architectural back
 | Room Model                    | `apps/api/src/models/room.ts`                                 | Schema definition, `IBedSubdoc` (`bedId`, `isOccupied`, `tenantId`), `generateBeds()` static generator, `pre('save')` occupancyCount calculation, `post('save')` and `post('findOneAndDelete')` floor sync.              |
 | Floor Model                   | `apps/api/src/models/floor.ts`                                | Tracks `totalRooms` synced by room lifecycle hooks.                                                                                                                                                                      |
 | Tenant Model                  | `apps/api/src/models/tenant.ts`                               | Foreign keys `roomId` and `bedId`, `unique_active_room_bed` partial unique compound index on `{ roomId: 1, bedId: 1 }` where `isActive: true`.                                                                           |
-| Rooms API Route               | `apps/api/src/routes/rooms.ts`                                | Available rooms endpoint (`/available`), room list (`/`), room detail (`/:id`), create room (`POST /`), atomic sharing downsize/rebuild (`PUT /:id`), soft deletion with occupant guard (`DELETE /:id`).                 |
+| Rooms API Route               | `apps/api/src/routes/rooms.ts`                                | Room list (`/`), room detail (`/:id`), create room (`POST /`), atomic sharing downsize/rebuild (`PUT /:id`), soft deletion with occupant guard (`DELETE /:id`).                                                          |
 | Tenants API Route             | `apps/api/src/routes/tenants.ts`                              | Onboarding bed reservation (`POST /`), room transfer and bed swap (`PUT /:id`), checkout vacancy release (`POST /:id/checkout`), reinstatement reclamation (`POST /:id/reinstate`), hard delete cleanup (`DELETE /:id`). |
 | Dashboard API Route           | `apps/api/src/routes/dashboard.ts`                            | Aggregates `totalRooms`, `totalBeds`, `occupiedBeds`, `vacancyRate`, and 6-month historical occupancy trend (`/occupancy-history`).                                                                                      |
 | Shared Dashboard Types        | `packages/types/src/dashboard.ts`                             | Interface `IDashboardOccupancyStats` (`totalRooms`, `totalBeds`, `occupiedBeds`, `vacancyRate`) and `IOccupancyHistoryPoint`.                                                                                            |
@@ -78,7 +78,7 @@ Room Occupancy %     = (Room.occupancyCount / Room.sharingType) * 100
   - `{ floorId: 1 }`: Floor-level room lookups.
   - `{ sharingType: 1 }`: Capacity filtering.
   - `{ isActive: 1 }`: Operational rooms filter.
-  - `{ 'beds.isOccupied': 1 }`: Powers `/available` vacancy queries.
+  - `{ 'beds.isOccupied': 1 }`: Index kept on the model; it no longer backs a `/available` endpoint (removed 2026-10-21, no consumer).
 - `Tenant`:
   - `unique_active_room_bed`: `{ roomId: 1, bedId: 1 }` with `{ unique: true, partialFilterExpression: { isActive: true } }`. Guarantees no double occupancy at the database engine level.
 
@@ -89,7 +89,7 @@ Room Occupancy %     = (Room.occupancyCount / Room.sharingType) * 100
 | Method   | Endpoint                              | Allowed Roles | Description                                                                                  | Status  |
 | -------- | ------------------------------------- | ------------- | -------------------------------------------------------------------------------------------- | ------- |
 | `GET`    | `/api/v1/rooms`                       | All auth      | Paginated list of rooms with populated floor details                                         | WORKING |
-| `GET`    | `/api/v1/rooms/available`             | All auth      | Filtered query for rooms with vacant bed slots (`beds.isOccupied: false`)                    | WORKING |
+| `GET`    | `/api/v1/rooms/available`             | All auth      | Removed 2026-10-21 (no consumer). Vacant-bed query (`beds.isOccupied: false`)                | REMOVED |
 | `GET`    | `/api/v1/rooms/:id`                   | All auth      | Room detail with populated tenant occupant details per bed                                   | WORKING |
 | `POST`   | `/api/v1/rooms`                       | `admin`       | Create room with auto-generated bed array based on sharingType                               | WORKING |
 | `PUT`    | `/api/v1/rooms/:id`                   | `admin`       | Atomic update & downsize with occupant safety validations                                    | WORKING |
@@ -142,3 +142,4 @@ No open gap findings recorded in this file.
 | Room deletion could race into dual bed bookings                  | CLOSED - partial unique index on roomId+bedId                                 |
 | Room deletion allowed while active tenants occupy beds           | CLOSED - 409 ACTIVE_TENANTS guard                                             |
 | Bed allocation lacked live occupancy state                       | CLOSED - OccupancyBedPicker disables occupied slots                           |
+| GET /api/v1/rooms/available was live with no consumer            | REMOVED 2026-10-21 - endpoint deleted, zero consumers                         |

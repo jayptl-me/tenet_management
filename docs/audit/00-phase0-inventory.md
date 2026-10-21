@@ -63,7 +63,9 @@ web lint: 0
 
 **Form/controls:** Button, Input, Select (native), Textarea, Checkbox, Switch, SearchableSelect (custom), ResourceSelect (native after fetch), FormPage, FormCard, FormSection, FormActions, DocumentUpload, DateRangePicker
 
-**Data display:** DataTable, PageHeader, PageShell, TableActions, StatusBadge, DetailCard, EmptyState, ErrorBanner, ErrorState, Skeleton, Timeline, TenantActivityTimeline, StatCard, Surface, charts/*
+**Data display:** DataTable, PageHeader, TableActions, StatusBadge, DetailCard, EmptyState, ErrorBanner, ErrorState, Skeleton, Timeline, TenantActivityTimeline, StatCard, Surface, charts/*
+
+**Layout frame:** ContentFrame (the one admin content frame; it replaced the deleted PageShell)
 
 **Admin chrome:** Sidebar, Breadcrumbs, CommandPalette, NotificationBell, AppearanceTab, AmenityTypesTab, QuickCreate, DarkModeToggle, EmergencyAlertButton, GlobalLoadingBar
 

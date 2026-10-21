@@ -161,7 +161,7 @@ See [docs/PORTAL_CONNECTIVITY.md](../PORTAL_CONNECTIVITY.md) for CORS, auth role
 | Switch                 | Radix toggle switch themed                                                                                                      |
 | DataTable              | Full-featured: columns, sorting headers, pagination, loading skeleton, empty state, mobile card renderer, controlled pagination |
 | PageHeader             | Title + description + action button, standardized across all list pages                                                         |
-| PageShell              | Page-level wrapper with max-width                                                                                               |
+| ContentFrame           | The one admin content frame: main column, optional context rail, page gutters - mounted once by the shell (replaces PageShell)  |
 | FormPage               | Detail/edit page wrapper — title, description, backHref, badge, actions, error, isLoading, maxWidth                             |
 | FormCard               | Form wrapper with onSubmit, footer slot                                                                                         |
 | FormSection            | Section within a form — title, description, icon, divided border                                                                |

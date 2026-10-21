@@ -7,7 +7,7 @@ Access rule: admin web = admin only; resident portal = Flutter only; no Next ten
 
 ## 1. Selected Module
 
-invoices (generate single/bulk, edit locked states, PDF, payment-status, WhatsApp share).
+invoices (generate single/bulk, edit locked states, PDF, WhatsApp share).
 
 ## 2. Admin vs End-User Access Map
 
@@ -96,7 +96,7 @@ invoices (generate single/bulk, edit locked states, PDF, payment-status, WhatsAp
 | GET / (month/status/tenantId; status enum-checked; room floor nested populate) | adminOnly  | WORKING |
 | GET /my                                                                        | tenantOnly | WORKING |
 | GET /:id (canAccessInvoice; inline paid/balance math)                          | authGuard  | WORKING |
-| GET /:id/payment-status (canAccessInvoice added)                               | authGuard  | WORKING |
+| GET /:id/payment-status (removed 2026-10-21, no consumer)                      | authGuard  | REMOVED |
 | GET /:id/pdf, /:id/whatsapp                                                    | authGuard  | WORKING |
 | PUT /:id (paid/cancelled guards; INVOICE_HAS_BALANCE on cancel added)          | adminOnly  | WORKING |
 | DELETE /:id                                                                    | adminOnly  | WORKING |
@@ -139,7 +139,7 @@ invoices (generate single/bulk, edit locked states, PDF, payment-status, WhatsAp
 
 ## 10. Implementation Tasks (ready for execution, no ambiguity)
 
-1. List tenant filter + parsers. 2. Create rent preview + duplicate warning + push detail. 3. Detail bed row + parser. 4. Edit floor row + parsers. 5. API payment-status guard + cancel balance guard + status enum + list floor populate.
+1. List tenant filter + parsers. 2. Create rent preview + duplicate warning + push detail. 3. Detail bed row + parser. 4. Edit floor row + parsers. 5. API canAccessInvoice guard on GET /:id + cancel balance guard + status enum + list floor populate.
 
 ## 11. Out of Scope for This Pass
 
@@ -151,7 +151,7 @@ invoices (generate single/bulk, edit locked states, PDF, payment-status, WhatsAp
 
 | Fix                                                           | Files                                                | Status  |
 | ------------------------------------------------------------- | ---------------------------------------------------- | ------- |
-| payment-status canAccessInvoice guard                         | apps/api/src/routes/invoices.ts                      | WORKING |
+| payment-status canAccessInvoice guard (removed 2026-10-21)    | apps/api/src/routes/invoices.ts                      | REMOVED |
 | Cancel with balance 409 INVOICE_HAS_BALANCE                   | apps/api/src/routes/invoices.ts                      | WORKING |
 | List status enum + floor nested populate                      | apps/api/src/routes/invoices.ts                      | WORKING |
 | List tenant filter + parsers                                  | apps/web/src/app/(admin)/invoices/page.tsx           | WORKING |
@@ -170,7 +170,7 @@ No open gap findings recorded in this file.
 
 | Claim                                                         | Live status                                                            |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| payment-status canAccessInvoice guard                         | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
+| payment-status guard, endpoint removed 2026-10-21             | REMOVED 2026-10-21 - deleted, no consumer; guard now on GET /:id       |
 | Cancel with balance 409 INVOICE_HAS_BALANCE                   | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
 | List status enum + floor nested populate                      | FIXED - WORKING - apps/api/src/routes/invoices.ts                      |
 | List tenant filter + parsers                                  | FIXED - WORKING - apps/web/src/app/(admin)/invoices/page.tsx           |

@@ -94,7 +94,8 @@ payments (offline record, UTR submit/verify, receipt, void, month summary).
 | Endpoint                                                            | Auth            | Status          |
 | ------------------------------------------------------------------- | --------------- | --------------- |
 | GET / (filters + tenant/room + invoice populate)                    | adminOnly       | WORKING         |
-| GET /summary, /pending-verification                                 | adminOnly       | WORKING         |
+| GET /summary                                                        | adminOnly       | WORKING         |
+| GET /pending-verification (removed 2026-10-21, no consumer)         | adminOnly       | REMOVED         |
 | GET /my (tenant populate added)                                     | tenantOnly      | WORKING         |
 | POST /offline (paid + verifiedBy + residual pending)                | adminOnly       | WORKING         |
 | POST /submit-utr (screenshotUrl supported)                          | tenant + guards | WORKING         |
@@ -142,27 +143,27 @@ payments (offline record, UTR submit/verify, receipt, void, month summary).
 
 ## 10. Implementation Tasks (ready for execution, no ambiguity)
 
-1. PUT paid removal (schema + FE enum + context header). 2. Void endpoint + detail button. 3. List parsers + full CSV + bed. 4. New sections + balance labels + push detail. 5. Detail bed/floor + parsers. 6. /my tenant populate + receipt/pending-verification floor populate + mapPayment bed/floor.
+1. PUT paid removal (schema + FE enum + context header). 2. Void endpoint + detail button. 3. List parsers + full CSV + bed. 4. New sections + balance labels + push detail. 5. Detail bed/floor + parsers. 6. /my tenant populate + receipt floor populate + mapPayment bed/floor (the pending-verification endpoint was removed 2026-10-21).
 
 ## 11. Out of Scope for This Pass
 
 1. Receipt gating unification (web shows submitted proof; Flutter shows settled proof; both intentional).
 2. Unused summary/qr API surfaces (P2).
-3. Dual pending-verification populate shape (works; cosmetic).
+3. Dual pending-verification populate shape (works; cosmetic) - the endpoint was removed 2026-10-21, so this no longer applies.
 
 ## 12. Pass 1 Fixes Applied
 
-| Fix                                                                                                | Files                                                | Status  |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------- |
-| paid removed from PUT schema (verify-only)                                                         | apps/api/src/routes/payments.ts                      | WORKING |
-| POST /:id/void endpoint                                                                            | apps/api/src/routes/payments.ts                      | WORKING |
-| /my tenant populate; floor populate on list/:id/pending-verification/receipt; mapPayment bed/floor | apps/api/src/routes/payments.ts                      | WORKING |
-| List parsers + full-set CSV + Bed column                                                           | apps/web/src/app/(admin)/payments/page.tsx           | WORKING |
-| New sections + tenantLabel + balance labels + push detail                                          | apps/web/src/app/(admin)/payments/new/page.tsx       | WORKING |
-| Detail bed/floor + parsers + void button                                                           | apps/web/src/app/(admin)/payments/[id]/page.tsx      | WORKING |
-| Edit paid removal + linked header                                                                  | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx | WORKING |
-| api-shapes bed/floor helpers                                                                       | apps/web/src/lib/api-shapes.ts                       | WORKING |
-| Flutter UTR screenshot field + balance labels                                                      | payments_screen.dart, tenant_repository.dart         | WORKING |
+| Fix                                                                           | Files                                                | Status  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------- | ------- |
+| paid removed from PUT schema (verify-only)                                    | apps/api/src/routes/payments.ts                      | WORKING |
+| POST /:id/void endpoint                                                       | apps/api/src/routes/payments.ts                      | WORKING |
+| /my tenant populate; floor populate on list/:id/receipt; mapPayment bed/floor | apps/api/src/routes/payments.ts                      | WORKING |
+| List parsers + full-set CSV + Bed column                                      | apps/web/src/app/(admin)/payments/page.tsx           | WORKING |
+| New sections + tenantLabel + balance labels + push detail                     | apps/web/src/app/(admin)/payments/new/page.tsx       | WORKING |
+| Detail bed/floor + parsers + void button                                      | apps/web/src/app/(admin)/payments/[id]/page.tsx      | WORKING |
+| Edit paid removal + linked header                                             | apps/web/src/app/(admin)/payments/[id]/edit/page.tsx | WORKING |
+| api-shapes bed/floor helpers                                                  | apps/web/src/lib/api-shapes.ts                       | WORKING |
+| Flutter UTR screenshot field + balance labels                                 | payments_screen.dart, tenant_repository.dart         | WORKING |
 
 Verification: bun run lint clean; bun run typecheck clean across types/web/api; flutter analyze clean; no tests executed; no emojis; portal boundaries respected.
 
@@ -172,15 +173,16 @@ No open gap findings recorded in this file.
 
 ## Closed
 
-| Claim                                                                                              | Live status                                                                                                                 |
-| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| paid removed from PUT schema (verify-only)                                                         | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
-| POST /:id/void endpoint                                                                            | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
-| /my tenant populate; floor populate on list/:id/pending-verification/receipt; mapPayment bed/floor | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
-| List parsers + full-set CSV + Bed column                                                           | FIXED - WORKING - apps/web/src/app/(admin)/payments/page.tsx                                                                |
-| New sections + tenantLabel + balance labels + push detail                                          | FIXED - WORKING - apps/web/src/app/(admin)/payments/new/page.tsx                                                            |
-| Detail bed/floor + parsers + void button                                                           | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/page.tsx                                                           |
-| Edit paid removal + linked header                                                                  | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/edit/page.tsx                                                      |
-| api-shapes bed/floor helpers                                                                       | FIXED - WORKING - apps/web/src/lib/api-shapes.ts                                                                            |
-| Flutter UTR screenshot field + balance labels                                                      | FIXED - WORKING - payments_screen.dart, tenant_repository.dart                                                              |
-| Unused summary/qr API surfaces (P2)                                                                | CLOSED - payments/summary consumed by payments and invoices lists; payments/qr-code consumed by Flutter tenant invoice flow |
+| Claim                                                                         | Live status                                                                                                                 |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| paid removed from PUT schema (verify-only)                                    | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| POST /:id/void endpoint                                                       | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| /my tenant populate; floor populate on list/:id/receipt; mapPayment bed/floor | FIXED - WORKING - apps/api/src/routes/payments.ts                                                                           |
+| List parsers + full-set CSV + Bed column                                      | FIXED - WORKING - apps/web/src/app/(admin)/payments/page.tsx                                                                |
+| New sections + tenantLabel + balance labels + push detail                     | FIXED - WORKING - apps/web/src/app/(admin)/payments/new/page.tsx                                                            |
+| Detail bed/floor + parsers + void button                                      | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/page.tsx                                                           |
+| Edit paid removal + linked header                                             | FIXED - WORKING - apps/web/src/app/(admin)/payments/[id]/edit/page.tsx                                                      |
+| api-shapes bed/floor helpers                                                  | FIXED - WORKING - apps/web/src/lib/api-shapes.ts                                                                            |
+| Flutter UTR screenshot field + balance labels                                 | FIXED - WORKING - payments_screen.dart, tenant_repository.dart                                                              |
+| Unused summary/qr API surfaces (P2)                                           | CLOSED - payments/summary consumed by payments and invoices lists; payments/qr-code consumed by Flutter tenant invoice flow |
+| GET /payments/pending-verification was an unconsumed surface                  | REMOVED 2026-10-21 - endpoint deleted, zero consumers                                                                       |
