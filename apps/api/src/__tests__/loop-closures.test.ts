@@ -360,20 +360,23 @@ describe('Loop closures: every state change a human waits on notifies them', () 
     expect(dataOf(mine[0]!).tenantId).toBe(tenantId);
   });
 
-  it('a payment edit that is not a decision stays silent', async () => {
+  it('an edited payment tells the resident, because what they owe changed', async () => {
     const { adminToken } = await seedAdmin();
-    const { residentId, tenantId } = await seedResident('silent');
+    const { residentId, tenantId } = await seedResident('edited');
     const invoiceId = await seedInvoice(tenantId, '2026-05', 9000);
     const paymentId = await seedPayment(tenantId, invoiceId, 9000, '2026-05', 'pending');
 
-    // Housekeeping edit: notes only, no status change and nobody is waiting.
+    // An edit moves what the resident owes, so the resident is told. This used
+    // to be silent: the office could change the amount and the resident only
+    // found out on their next visit.
     const res = await req('PUT', `/api/v1/payments/${paymentId}`, adminToken, {
-      notes: 'checked against the desk register',
+      amount: 8000,
     });
     expect(res.status).toBe(200);
 
-    expect(await allNotifications()).toHaveLength(0);
-    expect(await notificationsFor(residentId)).toHaveLength(0);
+    const mine = await notificationsFor(residentId);
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.some((n) => n.type === 'payment_reminder')).toBe(true);
   });
 
   it('the redundant verification queue route is gone', async () => {

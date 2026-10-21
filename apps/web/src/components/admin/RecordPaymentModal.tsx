@@ -92,6 +92,10 @@ export function RecordPaymentModal({
   // is visible before the field is left. The write uses the field's value,
   // never a stale copy of it.
   const amountFieldRef = useRef<HTMLInputElement | null>(null);
+  // One idempotency key per intended write. A retry of the same payment replays
+  // the payment the server already has instead of recording the cash twice; a
+  // new payment gets a new key.
+  const idempotencyKey = useRef<string | null>(null);
 
   // The balance the server reported for this invoice. `null` means the server
   // did not send one, so the client never derives it.
@@ -155,6 +159,9 @@ export function RecordPaymentModal({
       const d = new Date(paidAt);
       const paidAtIso = Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 
+      if (idempotencyKey.current === null) {
+        idempotencyKey.current = crypto.randomUUID();
+      }
       const res = await api
         .post('payments/offline', {
           json: {
@@ -165,6 +172,7 @@ export function RecordPaymentModal({
             paidAt: paidAtIso,
             notes: notes.trim() || undefined,
           },
+          headers: { 'Idempotency-Key': idempotencyKey.current },
         })
         .json<{ success: boolean; data?: { id?: string; _id?: string } }>();
 
@@ -173,6 +181,8 @@ export function RecordPaymentModal({
       // The payment model replaces _id with id in its JSON transform
       // (apps/api/src/models/payment.ts:101-104), so read id first.
       const createdId = res.data?.id ?? res.data?._id;
+      // The payment exists now: a later payment gets its own key.
+      idempotencyKey.current = null;
       if (!createdId) {
         onSuccess?.(null);
         onClose();

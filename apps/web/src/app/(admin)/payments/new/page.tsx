@@ -204,6 +204,8 @@ function NewPaymentForm() {
   // render (the same payment must never be sent twice); the state flag is what
   // the button reads, because a ref must not be read during render.
   const submitInFlight = useRef(false);
+  // One key per intended write; released once the payment exists.
+  const idempotencyKey = useRef<string | null>(null);
   const [submitLocked, setSubmitLocked] = useState(false);
 
   const {
@@ -387,6 +389,12 @@ function NewPaymentForm() {
         return;
       }
 
+      // One idempotency key per intended write: a retry of the same payment
+      // replays the payment the server already has instead of recording the
+      // cash twice.
+      if (idempotencyKey.current === null) {
+        idempotencyKey.current = crypto.randomUUID();
+      }
       const res = await api
         .post('payments/offline', {
           json: {
@@ -397,6 +405,7 @@ function NewPaymentForm() {
             paidAt: toIsoFromLocal(data.paidAt),
             notes: data.notes || undefined,
           },
+          headers: { 'Idempotency-Key': idempotencyKey.current },
         })
         .json<{ success: boolean; data?: { id?: string; _id?: string } }>();
       // The write changed the invoice balance and the dues summary: let the
@@ -409,6 +418,8 @@ function NewPaymentForm() {
       // The payment model replaces _id with id in its JSON transform
       // (apps/api/src/models/payment.ts:101-104), so read id first.
       const createdId = res.data?.id ?? res.data?._id;
+      // The payment exists now: the next payment gets its own key.
+      idempotencyKey.current = null;
       router.push(createdId ? `/payments/${createdId}` : '/payments');
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);

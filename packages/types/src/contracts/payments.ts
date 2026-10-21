@@ -18,7 +18,7 @@ import type { ModuleContract } from './module';
  *
  * The contract describes the code as it is, including the places where a person is still not
  * told: a payment edit reaches the admin only, and the admin form does not carry an
- * idempotency key, so the guard against a double record is the in-flight lock of the form.
+ * idempotency key, so a double click or a retry cannot record the cash twice.
  *
  * The known gap of this contract (the verify action owes the resident a notification and the
  * handler never sent one) was closed in wave 2: the verify handler now pushes to the resident
@@ -176,7 +176,7 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       action: 'Record an offline payment',
       operatorBelieves: 'the cash is on the invoice and the resident has been told',
       serverCommits:
-        'POST /payments/offline refuses an amount above the balance the server computed (AMOUNT_EXCEEDS_BALANCE, apps/api/src/routes/payments.ts:518-524), stamps the office obligation row paid with the collecting admin as the verifier, or creates a paid row of its own when the only open row is the resident declared transfer (apps/api/src/routes/payments.ts:562-616), leaves a pending residual row when the invoice is not settled (apps/api/src/routes/payments.ts:627-638), re-syncs the invoice, writes an audit entry with source=offline and pushes a payment_verified to the resident (apps/api/src/routes/payments.ts:672-693). The write is idempotent when it carries an Idempotency-Key (header or body field): the key is looked up before anything is written, so a replay returns the payment the first request recorded (apps/api/src/routes/payments.ts:446-471). The admin form does not send a key, so its only guard against a double record is the in-flight lock of the form.',
+        'POST /payments/offline refuses an amount above the balance the server computed (AMOUNT_EXCEEDS_BALANCE, apps/api/src/routes/payments.ts:518-524), stamps the office obligation row paid with the collecting admin as the verifier, or creates a paid row of its own when the only open row is the resident declared transfer (apps/api/src/routes/payments.ts:562-616), leaves a pending residual row when the invoice is not settled (apps/api/src/routes/payments.ts:627-638), re-syncs the invoice, writes an audit entry with source=offline and pushes a payment_verified to the resident (apps/api/src/routes/payments.ts:672-693). The write is idempotent when it carries an Idempotency-Key (header or body field): the key is looked up before anything is written, so a replay returns the payment the first request recorded (apps/api/src/routes/payments.ts:446-471). The admin form now sends one (apps/web/src/components/admin/RecordPaymentModal.tsx and apps/web/src/app/(admin)/payments/new/page.tsx): a key per intended write, released once the payment exists, so a retry replays the payment instead of recording the cash twice.',
       notification: {
         to: 'tenant',
         type: 'payment_verified',
@@ -198,11 +198,11 @@ export const PAYMENTS_CONTRACT: ModuleContract = {
       action: 'Edit a payment',
       operatorBelieves: 'the corrected amount is what the resident owes now',
       serverCommits:
-        'PUT /payments/:id refuses a paid row with PAYMENT_LOCKED (apps/api/src/routes/payments.ts:1196-1208), writes the changed fields, re-syncs the invoice status, and writes an audit log entry with the fields that moved (apps/api/src/routes/payments.ts:1210-1236). It sends no notification: the resident is not told that the amount, the method, the category, the status or the notes of a recorded payment changed.',
+        'PUT /payments/:id refuses a paid row with PAYMENT_LOCKED (apps/api/src/routes/payments.ts:1196-1208), writes the changed fields, re-syncs the invoice status, writes an audit log entry with the fields that moved, and notifies the tenant (apps/api/src/routes/payments.ts:1238-1246). A failed push is logged and never undoes the edit.',
       notification: {
         to: 'tenant',
         type: 'payment_reminder',
-        required: false,
+        required: true,
       },
       mismatchSurfacedAt:
         'the admin audit timeline on /payments/[id] and the changed values on the record; the resident sees nothing',

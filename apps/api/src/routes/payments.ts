@@ -1233,6 +1233,18 @@ payments.put('/:id', authGuard, adminOnly, zValidator('json', updatePaymentSchem
 
   logger.info({ paymentId: id, fields: Object.keys(updateData) }, 'Payment updated');
 
+  // The resident is waiting on this record: an edited payment changes what they
+  // owe, so they are told. A failed push never undoes the edit.
+  await notifyTenantOfPayment(payment.tenantId, {
+    title: 'Payment updated',
+    body:
+      updateData.amount !== undefined
+        ? `The office changed your payment to ${Number(updateData.amount).toFixed(2)}.`
+        : 'The office updated your payment.',
+    type: 'payment_reminder',
+    data: { paymentId: id },
+  });
+
   return c.json({ success: true, data: payment });
 });
 
