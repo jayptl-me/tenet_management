@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -81,7 +82,7 @@ interface InvoiceMoneyData {
 interface TenantProfile {
   _id: string;
   user?: { name: string; email?: string; phone?: string };
-  room?: { roomNumber: string; floor?: { label?: string; floorNumber?: number } };
+  room?: { _id?: string; roomNumber: string; floor?: { label?: string; floorNumber?: number } };
   bedId: string;
   monthlyRent: number;
   depositPaid: number;
@@ -158,6 +159,9 @@ const TENANT_KEY = (tenantId: string) => ['tenants', tenantId] as const;
 const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
 
 const PAYABLE_INVOICES_KEY = (tenantId: string) => ['invoices', 'payable', tenantId] as const;
+
+/** The money of one invoice, read from the server (GET /invoices/:id). */
+const INVOICE_MONEY_KEY = (invoiceId: string) => ['invoices', invoiceId, 'money'] as const;
 
 const INVOICES_PREFIX = ['invoices'] as const;
 
@@ -269,7 +273,7 @@ function NewPaymentForm() {
 
   // Server-computed money fields of the chosen invoice (GET /invoices/:id).
   const { data: selectedInvoiceMoney = null, isPending: invoiceMoneyPending } =
-    useApiQuery<InvoiceMoneyData>(['invoices', invoiceId, 'money'], `invoices/${invoiceId}`, {
+    useApiQuery<InvoiceMoneyData>(INVOICE_MONEY_KEY(invoiceId), `invoices/${invoiceId}`, {
       enabled: Boolean(invoiceId),
     });
 
@@ -367,6 +371,22 @@ function NewPaymentForm() {
     setSubmitLocked(true);
     setSubmitError('');
     try {
+      // Re-read the invoice from the server before the write. The rail's
+      // balance can be stale when a transfer landed while this form was open,
+      // and the server refuses an amount above the real balance - so the
+      // operator is told the fresh number instead of a refused write.
+      await queryClient.invalidateQueries({ queryKey: INVOICE_MONEY_KEY(data.invoiceId) });
+      const freshMoney = queryClient.getQueryData<InvoiceMoneyData>(
+        INVOICE_MONEY_KEY(data.invoiceId),
+      );
+      const freshBalance = typeof freshMoney?.balance === 'number' ? freshMoney.balance : null;
+      if (freshBalance != null && data.amount > freshBalance + 0.001) {
+        setSubmitError(
+          `The server now reports ${fmtMoney(freshBalance)} due on this invoice, so ${fmtMoney(data.amount)} would be refused. Record ${fmtMoney(freshBalance)} or less.`,
+        );
+        return;
+      }
+
       const res = await api
         .post('payments/offline', {
           json: {
@@ -468,13 +488,34 @@ function NewPaymentForm() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--border-color) pb-2.5">
                     <div className="flex items-center gap-2">
                       <Home className="h-4 w-4 text-(--color-brand-600)" />
-                      <span className="text-xs font-bold text-(--color-text-primary)">
-                        Room {tenantProfile.room?.roomNumber ?? 'N/A'}
-                        {tenantProfile.room?.floor?.label
-                          ? ` (${tenantProfile.room.floor.label})`
-                          : ''}{' '}
-                        · Bed {tenantProfile.bedId}
-                      </span>
+                      {/* The resident and the room this payment settles are one
+                          hop away, not a dead end. */}
+                      {tenantProfile.room?._id ? (
+                        <Link
+                          href={`/rooms/${tenantProfile.room._id}`}
+                          className="text-xs font-bold text-(--color-brand-600) hover:underline"
+                        >
+                          Room {tenantProfile.room.roomNumber ?? 'N/A'}
+                          {tenantProfile.room.floor?.label
+                            ? ` (${tenantProfile.room.floor.label})`
+                            : ''}{' '}
+                          · Bed {tenantProfile.bedId}
+                        </Link>
+                      ) : (
+                        <span className="text-xs font-bold text-(--color-text-primary)">
+                          Room {tenantProfile.room?.roomNumber ?? 'N/A'}
+                          {tenantProfile.room?.floor?.label
+                            ? ` (${tenantProfile.room.floor.label})`
+                            : ''}{' '}
+                          · Bed {tenantProfile.bedId}
+                        </span>
+                      )}
+                      <Link
+                        href={`/tenants/${tenantProfile._id}`}
+                        className="text-2xs font-bold text-(--color-brand-600) hover:underline"
+                      >
+                        Resident profile
+                      </Link>
                     </div>
                     <span className="text-xs font-semibold text-(--color-text-muted)">
                       Rent:{' '}
@@ -780,9 +821,13 @@ function NewPaymentForm() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Target Invoice</span>
-                    <span className="font-mono text-xs font-bold text-(--color-brand-700)">
+                    {/* The invoice this collection settles is one hop away. */}
+                    <Link
+                      href={`/invoices/${selectedInvoice._id}`}
+                      className="font-mono text-xs font-bold text-(--color-brand-600) hover:underline"
+                    >
                       {selectedInvoice.invoiceNumber}
-                    </span>
+                    </Link>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-(--color-text-muted)">Billing Month</span>
@@ -865,9 +910,15 @@ export default function NewPaymentPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
-        </div>
+        <FormPage
+          title="Record Offline Payment"
+          description="Cash, bank transfer, or offline UPI collection linked to an invoice"
+          backHref="/payments"
+          isLoading
+          maxWidth="form"
+        >
+          {null}
+        </FormPage>
       }
     >
       <NewPaymentForm />

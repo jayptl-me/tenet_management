@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { AlertTriangle, User, Home, Hash, Receipt, Lock, History } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
@@ -36,10 +38,12 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface PaymentContext {
+  _id?: string;
   status: string;
   amount?: number;
   method?: string;
   type?: string;
+  notes?: string;
   utrNumber?: string;
   paidAt?: string;
   createdAt?: string;
@@ -48,9 +52,22 @@ interface PaymentContext {
     | {
         _id?: string;
         userId?: { name?: string };
-        roomId?: { roomNumber?: string };
+        roomId?: { _id?: string; roomNumber?: string };
       };
   invoiceId?: string | { _id?: string; invoiceNumber?: string; month?: string };
+}
+
+/** The money of the linked invoice, as the server computes it (GET /invoices/:id). */
+interface InvoiceMoney {
+  _id: string;
+  invoiceNumber?: string;
+  month?: string;
+  status?: string;
+  totalAmount?: number;
+  /** The settled sum of the paid rows. */
+  paidAmount?: number;
+  /** The amount still due; null when the server did not report one. */
+  balance?: number | null;
 }
 
 const STATUS_HELP: Record<string, string> = {
@@ -64,19 +81,25 @@ const PAYMENT_KEY = (id: string) => ['payments', id] as const;
 
 const PAYMENT_EVENTS_KEY = (id: string) => ['payments', id, 'audit-logs'] as const;
 
+/** The money of one invoice, read from the server. */
+const INVOICE_MONEY_KEY = (invoiceId: string) => ['invoices', invoiceId, 'money'] as const;
+
 const INVOICES_PREFIX = ['invoices'] as const;
 
 const PAYMENTS_PREFIX = ['payments'] as const;
+
+function fmtMoney(n: number | null | undefined): string {
+  if (n == null) return '₹0';
+  return `₹${n.toLocaleString('en-IN')}`;
+}
 
 export default function EditPaymentPage() {
   const router = useRouter();
   const params = useParams();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [isPaidLocked, setIsPaidLocked] = useState(false);
-  const [context, setContext] = useState<PaymentContext | null>(null);
   const [initial, setInitial] = useState<Partial<FormData>>({});
 
   const {
@@ -89,35 +112,35 @@ export default function EditPaymentPage() {
     resolver: zodResolver(schema),
   });
 
+  // The payment is read through the shared query stack, like every other
+  // record: the load participates in the cache and a write invalidates it.
+  const {
+    data: context = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<PaymentContext>(PAYMENT_KEY(id), `payments/${id}`, { enabled: Boolean(id) });
+
+  // The id whose values are already in the form. A refetch of the same record
+  // must never wipe what the operator is typing.
+  const loadedIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!id) return;
-    api
-      .get(`payments/${id}`)
-      .json<{ success: boolean; data: FormData & PaymentContext }>()
-      .then((res) => {
-        // API can still return legacy paid rows (now locked); coerce into a
-        // valid enum value for the form while preserving the locked banner.
-        const rawStatus = (res.data as { status?: string }).status ?? '';
-        const values: FormData = {
-          amount: res.data.amount,
-          method: res.data.method,
-          type: res.data.type,
-          status: (rawStatus === 'paid' ? 'pending' : rawStatus) as FormData['status'],
-          notes: res.data.notes,
-        };
-        reset(values);
-        setInitial(values);
-        setContext(res.data);
-        if (rawStatus === 'paid') {
-          setIsPaidLocked(true);
-        }
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message || 'Failed to load payment');
-        setIsLoading(false);
-      });
-  }, [id, reset]);
+    if (!context || loadedIdRef.current === id) return;
+    loadedIdRef.current = id;
+    // API can still return legacy paid rows (now locked); coerce into a
+    // valid enum value for the form while preserving the locked banner.
+    const rawStatus = context.status ?? '';
+    const values: FormData = {
+      amount: context.amount ?? 0,
+      method: (context.method ?? 'cash') as FormData['method'],
+      type: (context.type ?? 'rent') as FormData['type'],
+      status: (rawStatus === 'paid' ? 'pending' : rawStatus) as FormData['status'],
+      notes: context.notes ?? '',
+    };
+    reset(values);
+    setInitial(values);
+    setIsPaidLocked(rawStatus === 'paid');
+  }, [context, id, reset]);
 
   const watched = useWatch({ control });
   const isDirty = useMemo(() => {
@@ -132,6 +155,32 @@ export default function EditPaymentPage() {
   }, [watched, initial]);
 
   const guard = useUnsavedGuardState(isDirty && !isPaidLocked && !isSubmitting);
+
+  const tenant = context?.tenantId;
+  const tenantId = typeof tenant === 'string' ? tenant : (tenant?._id ?? '');
+  const tenantName = typeof tenant === 'object' ? (tenant?.userId?.name ?? 'Tenant') : 'Tenant';
+  const roomNumber = typeof tenant === 'object' ? (tenant?.roomId?.roomNumber ?? null) : null;
+  const roomId = typeof tenant === 'object' ? (tenant?.roomId?._id ?? '') : '';
+  const invoice = context?.invoiceId;
+  const invoiceHref = typeof invoice === 'string' ? invoice : (invoice?._id ?? '');
+  const invoiceLabel =
+    typeof invoice === 'object'
+      ? (invoice?.invoiceNumber ?? invoiceHref) + (invoice?.month ? ` · ${invoice.month}` : '')
+      : invoiceHref;
+
+  // The money of the invoice this payment settles, from the server. The rail
+  // shows the balance the server reports and what this amount would leave of
+  // it, so an amount change is judged against a number nobody typed.
+  const { data: invoiceMoney = null } = useApiQuery<InvoiceMoney>(
+    INVOICE_MONEY_KEY(invoiceHref),
+    `invoices/${invoiceHref}`,
+    { enabled: Boolean(invoiceHref) },
+  );
+  const invoiceBalance = typeof invoiceMoney?.balance === 'number' ? invoiceMoney.balance : null;
+  const editedAmount = Number(watched.amount) || 0;
+  const projectedBalance =
+    invoiceBalance == null ? null : Math.max(0, invoiceBalance - editedAmount);
+  const overBalance = invoiceBalance != null && editedAmount > invoiceBalance + 0.001;
 
   const onSubmit = async (data: FormData) => {
     if (isPaidLocked) return;
@@ -152,17 +201,6 @@ export default function EditPaymentPage() {
     }
   };
 
-  const tenant = context?.tenantId;
-  const tenantId = typeof tenant === 'string' ? tenant : (tenant?._id ?? '');
-  const tenantName = typeof tenant === 'object' ? (tenant?.userId?.name ?? 'Tenant') : 'Tenant';
-  const roomNumber = typeof tenant === 'object' ? (tenant?.roomId?.roomNumber ?? null) : null;
-  const invoice = context?.invoiceId;
-  const invoiceHref = typeof invoice === 'string' ? invoice : (invoice?._id ?? '');
-  const invoiceLabel =
-    typeof invoice === 'object'
-      ? (invoice?.invoiceNumber ?? invoiceHref) + (invoice?.month ? ` · ${invoice.month}` : '')
-      : invoiceHref;
-
   const descriptionParts: string[] = [];
   if (tenantName) descriptionParts.push(tenantName);
   if (roomNumber) descriptionParts.push(`Room ${roomNumber}`);
@@ -174,7 +212,7 @@ export default function EditPaymentPage() {
         descriptionParts.length > 0 ? descriptionParts.join(' · ') : 'Update payment details'
       }
       backHref={`/payments/${id}`}
-      error={submitError}
+      error={submitError || errorMessage(queryError)}
       isLoading={isLoading}
       maxWidth="form"
     >
@@ -329,12 +367,21 @@ export default function EditPaymentPage() {
                     {tenantName}
                   </span>
                 )}
-                {roomNumber && (
-                  <span className="flex items-center gap-2 text-xs font-semibold text-(--color-text-secondary)">
-                    <Home className="h-3.5 w-3.5 shrink-0" />
-                    Room {roomNumber}
-                  </span>
-                )}
+                {roomNumber &&
+                  (roomId ? (
+                    <Link
+                      href={`/rooms/${roomId}`}
+                      className="flex items-center gap-2 text-xs font-semibold text-(--color-brand-600) hover:underline"
+                    >
+                      <Home className="h-3.5 w-3.5 shrink-0" />
+                      Room {roomNumber}
+                    </Link>
+                  ) : (
+                    <span className="flex items-center gap-2 text-xs font-semibold text-(--color-text-secondary)">
+                      <Home className="h-3.5 w-3.5 shrink-0" />
+                      Room {roomNumber}
+                    </span>
+                  ))}
                 {invoiceHref && (
                   <Link
                     href={`/invoices/${invoiceHref}`}
@@ -366,6 +413,54 @@ export default function EditPaymentPage() {
                   variant={statusToVariant(context.status)}
                   label={context.status.replace(/_/g, ' ')}
                 />
+              </div>
+
+              {/* The impact of the amount on the bill this payment settles. The
+                  balance is the server's; the page never derives one. */}
+              <div className={clsx(surfaceNestedClass, 'space-y-2 p-3.5')}>
+                <p className="text-2xs tracking-label font-bold text-(--color-text-muted) uppercase">
+                  Impact on the invoice
+                </p>
+                {invoiceMoney?.status && (
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-medium text-(--color-text-muted)">Invoice status</span>
+                    <StatusBadge
+                      variant={statusToVariant(invoiceMoney.status)}
+                      label={invoiceMoney.status.replace(/_/g, ' ')}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-medium text-(--color-text-muted)">Invoice total</span>
+                  <span className="tabular-nums">
+                    {typeof invoiceMoney?.totalAmount === 'number'
+                      ? fmtMoney(invoiceMoney.totalAmount)
+                      : 'Not reported'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-medium text-(--color-text-muted)">
+                    Balance reported now
+                  </span>
+                  <span className="font-bold text-(--color-danger-700) tabular-nums">
+                    {invoiceBalance == null ? 'Not reported' : fmtMoney(invoiceBalance)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-t border-(--border-color) pt-2 text-xs">
+                  <span className="font-medium text-(--color-text-muted)">
+                    Projected balance after, from the balance reported now
+                  </span>
+                  <span className="font-bold text-(--color-text-primary) tabular-nums">
+                    {projectedBalance == null ? 'Needs server balance' : fmtMoney(projectedBalance)}
+                  </span>
+                </div>
+                {overBalance && (
+                  <p className="text-2xs flex items-start gap-1.5 font-semibold text-(--color-warning-700)">
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                    This amount is above the balance the server reports. The edit route accepts any
+                    amount above zero, so the invoice would read as settled.
+                  </p>
+                )}
               </div>
 
               {!isPaidLocked && isDirty && (

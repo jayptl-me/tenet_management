@@ -2,25 +2,50 @@
 
 Module: payments
 Scope: admin web + API + DB + Flutter tenant (read-only)
-Source verified: 2026-09-08 UTC
+Source verified: 2026-10-21 (depth rebuild of the four admin screens, wave 6)
 Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes
 Pass 1 record: docs/audit/features/payments_audit_pass1_20260908-003801.md
+Depth pass: docs/audit/features/payments_depth_pass1_20260930.md
+Contract: packages/types/src/contracts/payments.ts (state machine, truth contract, layout, next action)
 
 ## Feature Listing
 
-| Surface | Capability                                                     | Status  |
-| ------- | -------------------------------------------------------------- | ------- |
-| List    | summary cards + filters + verify modal + full CSV + bed column | WORKING |
-| Create  | sections + balance labels + push detail                        | WORKING |
-| Detail  | receipt modal + approve/reject + void + timeline + bed/floor   | WORKING |
-| Edit    | paid lock + linked header, no paid-via-PUT                     | WORKING |
-| API     | offline/verify/void/PUT-guarded/receipt/my-populate            | WORKING |
-| Flutter | UTR screenshot + balance labels                                | WORKING |
+| Surface | Capability                                                                                                                                                                                                                                                                                                               | Status  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| List    | URL state (status, method, type, search, date range), server counts per tab that match the rows in view, month money cards with their scope named, tenant/invoice/room cross-links, CSV export that walks the pages of the filtered set and reports the row count, verify modal, delete guard, status aware empty states | WORKING |
+| Create  | resident strip that links to the resident and the room, payable invoice cards, live reconciliation rail with a link to the target invoice, server balance before and after, overpay guard, re-read of the invoice before the write, idempotent server write, push to the created record                                  | WORKING |
+| Detail  | KPI row, state machine stepper from the shared lifecycle, refusal notice with date and reason, tenant/room rail, invoice link on every payment, balance context from the server (tenant dues, invoice balance, settled sum), UTR evidence, receipt modal, void, audit timeline, shared loading skeleton                  | WORKING |
+| Edit    | paid lock, dirty guard, shared query stack, invoice status and balance in the rail, projected balance after the amount change, room link, server re-read after the write                                                                                                                                                 | WORKING |
+| API     | offline (idempotent), verify (approve and refuse), void, PUT guarded against paid rows, delete guarded against verified rows, receipt, status counts, month summary, trend                                                                                                                                               | WORKING |
+| Flutter | UTR screenshot + balance labels                                                                                                                                                                                                                                                                                          | WORKING |
 
 ## Open gaps
 
-No open gap findings recorded in this file.
+The rows below are the depth-pass findings that are still open after the wave 6 rebuild, plus the
+two gaps the rebuild itself surfaced. The rows this rebuild closed are recorded in the Closed
+section below with their date; their ids are the ones of the depth pass
+(docs/audit/features/payments_depth_pass1_20260930.md).
+
+| ID        | Severity | Gap                                                                                                                                                                                                                                                                                                       | Paths                                                                           |
+| --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| PAY-D1-6  | P3       | The ledger carries no chart: no collection-rate trend and no method mix, although GET /payments/trend exists and is already consumed by the invoices list. The derived numbers stop at the four band metrics.                                                                                             | apps/web/src/app/(admin)/payments/page.tsx; apps/api/src/routes/payments.ts     |
+| PAY-D1-9  | P3       | POST /payments/verify-utr/:paymentId still has no consumer anywhere in apps/ or mobile/: the list and the detail both verify through POST /payments/:id/verify. The endpoint is dead weight on the money path.                                                                                            | apps/api/src/routes/payments.ts                                                 |
+| PAY-D1-10 | P3       | The shared payment DTOs of packages/types/src/payment.ts still have no importer: the four admin screens declare their own payment interfaces, so a page shape can drift from the API contract.                                                                                                            | packages/types/src/payment.ts; apps/web/src/app/(admin)/payments                |
+| PAY-D2-1  | P3       | The admin record-payment form does not send an Idempotency-Key, so the only guard against recording the same cash twice is the in-flight lock of the form. A write whose response was lost has to be checked in the ledger before it is repeated. The server replays the payment when the key is present. | apps/web/src/app/(admin)/payments/new/page.tsx; apps/api/src/routes/payments.ts |
+| PAY-D2-2  | P3       | PUT /payments/:id changes the amount, the method, the category, the status or the notes of a recorded payment and tells nobody: the resident keeps the old amount and no notification reaches the portal. The admin audit timeline is the only record.                                                    | apps/api/src/routes/payments.ts; packages/types/src/contracts/payments.ts       |
 
 ## Closed
 
-No closed remediation claims recorded in this file.
+| Claim                                                                                                | Live proof                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PAY-D1-1 - the CSV export silently truncated at 100 rows and never sent the active search            | CLOSED 2026-10-21 - the export sends every active filter including the search, walks the pages of the filtered set (the API clamps a page to 100) and reports how many rows the server holds against the rows the file carries |
+| PAY-D1-2 - the ledger had no cross-module link                                                       | CLOSED 2026-10-21 - the tenant name links to /tenants/[id], the room to /rooms/[id] and the invoice number to /invoices/[id], in the table and in the mobile card                                                              |
+| PAY-D1-3 - the invoice link only rendered when a UTR existed                                         | CLOSED 2026-10-21 - the invoice row of the payment information card links to the invoice of every payment, offline cash and bank rows included                                                                                 |
+| PAY-D1-4 - the edit page was the only payments screen outside the React Query stack                  | CLOSED 2026-10-21 - the edit page reads the payment with useApiQuery, keeps its paid lock and its dirty guard, and invalidates the payment, the payments list and the invoices after the write                                 |
+| PAY-D1-5 - the metric cards and the tab counts answered different questions                          | CLOSED 2026-10-21 - every count of the band is read from the server for the filtered set the table shows, and the money cards name the month they cover, including the case where the date filter spans several months         |
+| PAY-D1-7 - verify and void refreshed the page with a full reload                                     | CLOSED 2026-10-21 - both writes invalidate the payment, its audit trail, the invoice and the dues of the resident, and the page renders the server state                                                                       |
+| PAY-D1-8 - the edit rail showed an invoice number and no money, and the room was plain text          | CLOSED 2026-10-21 - the rail carries the invoice status, the invoice total, the balance the server reports and the projected balance after the amount change, and the room links to /rooms/[id]                                |
+| PAY-D1-11 - a refused verification was invisible                                                     | CLOSED 2026-10-21 - the detail page renders the shared state machine and names the refused verification with its date and its reason, because the server sends the row back to pending with the UTR cleared                    |
+| PAY-D1-12 - the resident strip and the reconciliation rail of the create page were plain text        | CLOSED 2026-10-21 - the strip links to the resident and the room, the rail links to the target invoice, and the rail balance is re-read from the server before the write                                                       |
+| PAY-D2-0 - the ledger ignored its own address bar, so the triage link landed on the whole ledger     | CLOSED 2026-10-21 - the status tab, the method, the type, the search and the date range live in the address bar, so /payments?status=pending_verification lands on the verification queue and the view can be shared or cited  |
+| PAY-D2-3 - the create page showed a bare spinner while it loaded, unlike every other payments screen | CLOSED 2026-10-21 - the Suspense fallback is the same FormPage skeleton the page itself renders, at the same width                                                                                                             |

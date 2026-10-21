@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useMemo, Suspense } from 'react';
+import { useQueries, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   Plus,
   Receipt,
@@ -14,8 +15,14 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
-import { errorMessage } from '@/lib/query';
+import { errorMessage, queryJson } from '@/lib/query';
 import { useApiBodyQuery, useApiQuery } from '@/hooks/useApiQuery';
+import {
+  useUrlSearch,
+  useUrlState,
+  useUrlStateWriter,
+  readUrlDateRange,
+} from '@/hooks/useUrlState';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
@@ -36,11 +43,13 @@ import {
   type VerifyPaymentTarget,
 } from '@/components/admin/VerifyPaymentModal';
 import type { DataTableColumn } from '@/components/ui/DataTable';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   tenantDisplayName,
   tenantRoomNumber,
   tenantBedId,
+  tenantIdOf,
+  invoiceIdOf,
   type PopulatedTenantRef,
 } from '@/lib/api-shapes';
 
@@ -93,6 +102,16 @@ const STATUS_TABS = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
+/** The statuses the API can hold, and the only values the status filter accepts. */
+const STATUS_FILTERS = STATUS_TABS.map((tab) => tab.key).filter((key) => key !== '');
+
+/** The values the method and type filters accept, for the address bar reader. */
+const METHOD_VALUES = METHOD_FILTERS.map((option) => option.value);
+const TYPE_VALUES = TYPE_FILTERS.map((option) => option.value);
+
+/** The status keys the count strip reads, the empty key first (the whole set). */
+const COUNT_KEYS = ['', ...STATUS_FILTERS] as const;
+
 function fmtMoney(n: number | null | undefined): string {
   if (n == null) return '₹0';
   return `₹${n.toLocaleString('en-IN')}`;
@@ -110,29 +129,47 @@ function invoiceNumberOf(row: PaymentRow): string {
   return row.invoiceNumber ?? (inv as string) ?? '';
 }
 
+/** The room of a populated tenant, as the id the room screen is addressed by. */
+function roomIdOf(tenant: PopulatedTenantRef | string | null | undefined): string {
+  if (!tenant || typeof tenant === 'string') return '';
+  const room = tenant.roomId ?? tenant.room;
+  if (!room) return '';
+  return String(room._id ?? room.id ?? '');
+}
+
 interface PaymentsListBody {
   success: boolean;
   data: PaymentRow[];
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
+/** The filters the ledger reads, in one place, so every read sends the same set. */
+interface LedgerFilters {
+  method: string;
+  type: string;
+  search: string;
+  fromDate: string;
+  toDate: string;
+}
+
 const PAYMENTS_PREFIX = ['payments'] as const;
 const INVOICES_PREFIX = ['invoices'] as const;
-const PAYMENT_STATUS_COUNTS_KEY = ['payments', 'status-counts'] as const;
-// Stable empty fallback: `?? []` would allocate a fresh array on every render
-// while the query is pending, breaking referential stability for useMemo deps.
+/** Stable empty fallback: `?? []` would allocate a fresh array on every render
+ * while the query is pending, breaking referential stability for useMemo deps. */
 const EMPTY_PAYMENTS: PaymentRow[] = [];
+
+/** The page size the API allows (parsePagination clamps the limit to 100). */
+const EXPORT_PAGE_SIZE = 100;
+
+/** The most rows one export carries. Past this the operator is told, not cut. */
+const MAX_EXPORT_ROWS = 10_000;
 
 const PAYMENTS_LIST_KEY = (
   page: number,
   perPage: number,
-  method: string,
-  type: string,
+  filters: LedgerFilters,
   status: string,
-  fromDate: string,
-  toDate: string,
-  search: string,
-) => [...PAYMENTS_PREFIX, 'list', page, perPage, method, type, status, fromDate, toDate, search];
+) => [...PAYMENTS_PREFIX, 'list', page, perPage, filters, status];
 
 const PAYMENTS_SUMMARY_KEY = (month: string) => [...PAYMENTS_PREFIX, 'summary', month];
 
@@ -143,33 +180,82 @@ function summaryMonths(): { thisMonth: string; prevMonth: string } {
   return { thisMonth: fmt(now), prevMonth: fmt(prevDate) };
 }
 
-export default function PaymentsPage() {
+/** The month a YYYY-MM-DD date belongs to, or an empty string when it is not a date. */
+function monthOf(date: string): string {
+  return /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : '';
+}
+
+/** The month before a YYYY-MM month. */
+function previousMonth(month: string): string {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const date = new Date(year ?? 0, (monthNumber ?? 1) - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * The query parameters of the filtered set.
+ *
+ * Every read of the ledger sends the same set: the table, the counts behind the
+ * status tabs and the CSV export. A number that answers a different question
+ * than the rows would be a number the operator cannot trust.
+ */
+function filterParams(filters: LedgerFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.method) params.set('method', filters.method);
+  if (filters.type) params.set('type', filters.type);
+  if (filters.search) params.set('search', filters.search);
+  if (filters.fromDate) params.set('fromDate', filters.fromDate);
+  if (filters.toDate) params.set('toDate', filters.toDate);
+  return params;
+}
+
+/** The identity of a filter set: it changes whenever the filtered set changes. */
+function filterScope(filters: LedgerFilters): string {
+  return [filters.method, filters.type, filters.search, filters.fromDate, filters.toDate].join('|');
+}
+
+function PaymentsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+
+  // The filters live in the address bar: the triage link of the dashboard
+  // ("Verify UTR") lands on the verification queue instead of the whole ledger,
+  // and the view can be shared, bookmarked and cited.
+  const statusState = useUrlState<string>('status', { defaultValue: '', allowed: STATUS_FILTERS });
+  const methodState = useUrlState<string>('method', { defaultValue: '', allowed: METHOD_VALUES });
+  const typeState = useUrlState<string>('type', { defaultValue: '', allowed: TYPE_VALUES });
+  const searchState = useUrlSearch('search');
+  const { write: writeUrl } = useUrlStateWriter();
+
+  const urlDates = readUrlDateRange(searchParams);
+
+  const filters = useMemo<LedgerFilters>(
+    () => ({
+      method: methodState.value,
+      type: typeState.value,
+      search: searchState.value.trim(),
+      fromDate: urlDates.fromDate,
+      toDate: urlDates.toDate,
+    }),
+    [methodState.value, typeState.value, searchState.value, urlDates.fromDate, urlDates.toDate],
+  );
+
+  const statusFilter = statusState.value;
+
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
-  const [methodFilter, setMethodFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   // Mutation (delete/export) failures; list failures come from the query.
   const [error, setError] = useState('');
   // Outcome of the last write, as reported by the server.
   const [writeResult, setWriteResult] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<PaymentRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [verifyTarget, setVerifyTarget] = useState<VerifyPaymentTarget | null>(null);
   const [verifying, setVerifying] = useState(false);
-  const searchInit = useRef(false);
 
-  // Debounce search input
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [search]);
+  const scope = filterScope(filters);
 
   const refreshAfterMutation = useCallback(async () => {
     // Mirrors the old fetch runs: clear the stale banner, then re-read the
@@ -206,70 +292,85 @@ export default function PaymentsPage() {
     }
   };
 
-  const listParams = new URLSearchParams();
+  const listParams = filterParams(filters);
   listParams.set('page', String(page));
   listParams.set('limit', String(perPage));
-  if (methodFilter) listParams.set('method', methodFilter);
-  if (typeFilter) listParams.set('type', typeFilter);
   if (statusFilter) listParams.set('status', statusFilter);
-  if (fromDate) listParams.set('fromDate', fromDate);
-  if (toDate) listParams.set('toDate', toDate);
-  if (debouncedSearch) listParams.set('search', debouncedSearch);
 
   const {
     data: listBody,
     isPending: isLoading,
     error: queryError,
   } = useApiBodyQuery<PaymentsListBody>(
-    PAYMENTS_LIST_KEY(
-      page,
-      perPage,
-      methodFilter,
-      typeFilter,
-      statusFilter,
-      fromDate,
-      toDate,
-      debouncedSearch,
-    ),
+    PAYMENTS_LIST_KEY(page, perPage, filters, statusFilter),
     `payments?${listParams.toString()}`,
   );
 
   const payments = listBody?.data ?? EMPTY_PAYMENTS;
   const total = listBody?.meta.total ?? 0;
 
-  // Month summaries and status counts for the metric strip (non-blocking).
+  /**
+   * The counts behind the status tabs.
+   *
+   * They are read from the server for the SAME filtered set the table shows,
+   * so a tab count is exactly the number of rows the operator gets after
+   * clicking it. The all-time count of the status endpoint could disagree with
+   * the rows under a date, method or type filter, and a number that
+   * disagrees with the rows is a number nobody trusts.
+   */
+  const countQueries = useQueries({
+    queries: COUNT_KEYS.map((key): UseQueryOptions<PaymentsListBody, Error> => {
+      const params = filterParams(filters);
+      params.set('page', '1');
+      params.set('limit', '1');
+      if (key) params.set('status', key);
+      return {
+        queryKey: [...PAYMENTS_PREFIX, 'count', scope, key],
+        queryFn: () => queryJson<PaymentsListBody>(`payments?${params.toString()}`),
+        staleTime: 15_000,
+      };
+    }),
+  });
+
+  const counts: Record<string, number | null> = {};
+  COUNT_KEYS.forEach((key, index) => {
+    counts[key] = countQueries[index]?.data?.meta.total ?? null;
+  });
+
+  // Month summaries for the money cards (non-blocking).
   const { thisMonth, prevMonth } = summaryMonths();
+  // The money cards cover one month. When the date filter names exactly one
+  // month, the cards follow it; otherwise they stay on the current month and
+  // say so, because a month is the only scope the server can report.
+  const rangeMonth =
+    urlDates.fromDate !== '' && urlDates.toDate !== ''
+      ? monthOf(urlDates.fromDate) === monthOf(urlDates.toDate)
+        ? monthOf(urlDates.fromDate)
+        : ''
+      : '';
+  const summaryMonth = rangeMonth || thisMonth;
+  const compareMonth = rangeMonth ? previousMonth(rangeMonth) : prevMonth;
+  const moneyScopeNote =
+    (urlDates.fromDate !== '' || urlDates.toDate !== '') && rangeMonth === ''
+      ? ' · the money cards cover one month'
+      : '';
+
   const { data: summary } = useApiQuery<PaymentMonthSummary>(
-    PAYMENTS_SUMMARY_KEY(thisMonth),
-    `payments/summary?month=${thisMonth}`,
+    PAYMENTS_SUMMARY_KEY(summaryMonth),
+    `payments/summary?month=${summaryMonth}`,
   );
   const { data: prevSummary } = useApiQuery<PaymentMonthSummary>(
-    PAYMENTS_SUMMARY_KEY(prevMonth),
-    `payments/summary?month=${prevMonth}`,
-  );
-  const { data: statusCounts = {} } = useApiQuery<Record<string, number>>(
-    PAYMENT_STATUS_COUNTS_KEY,
-    'payments/status-counts',
+    PAYMENTS_SUMMARY_KEY(compareMonth),
+    `payments/summary?month=${compareMonth}`,
   );
 
-  // Client-side search fallback (tenant, UTR, invoice number, amount)
-  const visiblePayments = useMemo(() => {
-    if (!debouncedSearch) return payments;
-    const q = debouncedSearch.toLowerCase();
-    return payments.filter((row) => {
-      const name = tenantDisplayName(row.tenantId).toLowerCase();
-      const room = tenantRoomNumber(row.tenantId).toLowerCase();
-      const utr = (row.utrNumber ?? '').toLowerCase();
-      const inv = invoiceNumberOf(row).toLowerCase();
-      return (
-        name.includes(q) ||
-        room.includes(q) ||
-        utr.includes(q) ||
-        inv.includes(q) ||
-        String(row.amount).includes(q)
-      );
-    });
-  }, [payments, debouncedSearch]);
+  const hasFilters =
+    filters.method !== '' ||
+    filters.type !== '' ||
+    filters.search !== '' ||
+    filters.fromDate !== '' ||
+    filters.toDate !== '';
+  const countScopeHint = hasFilters ? 'in the filtered set' : 'all payments';
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -286,23 +387,42 @@ export default function PaymentsPage() {
     }
   };
 
+  /**
+   * The CSV export of the filtered set.
+   *
+   * The API clamps a page to 100 rows, so the export walks the pages of the
+   * filtered set instead of asking for one big page that silently arrives
+   * truncated. The filters and the search of the view travel with it, and the
+   * operator is told how many rows the server reported and how many the file
+   * carries.
+   */
   const handleExportCsv = async () => {
+    setExporting(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-      params.set('limit', '1000');
-      if (methodFilter) params.set('method', methodFilter);
-      if (typeFilter) params.set('type', typeFilter);
-      if (statusFilter) params.set('status', statusFilter);
-      if (fromDate) params.set('fromDate', fromDate);
-      if (toDate) params.set('toDate', toDate);
+      const rows: PaymentRow[] = [];
+      let reportedTotal = 0;
+      let exportPage = 1;
+      for (;;) {
+        const params = filterParams(filters);
+        if (statusFilter) params.set('status', statusFilter);
+        params.set('page', String(exportPage));
+        params.set('limit', String(EXPORT_PAGE_SIZE));
+        const res = await api.get(`payments?${params.toString()}`).json<PaymentsListBody>();
+        const pageRows = res.data ?? [];
+        reportedTotal = res.meta?.total ?? reportedTotal;
+        rows.push(...pageRows);
+        const totalPages = res.meta?.totalPages ?? 1;
+        if (exportPage >= totalPages || pageRows.length === 0) break;
+        if (rows.length >= MAX_EXPORT_ROWS) break;
+        exportPage += 1;
+      }
 
-      const res = await api.get(`payments?${params.toString()}`).json<{
-        success: boolean;
-        data: PaymentRow[];
-      }>();
-      const exportRows = res.data ?? [];
-      if (exportRows.length === 0) return;
+      if (rows.length === 0) {
+        setWriteResult('Nothing to export: the server reports no payment for these filters.');
+        return;
+      }
+
       const headers = [
         'Tenant',
         'Room',
@@ -322,7 +442,7 @@ export default function PaymentsPage() {
         }
         return `"${str.replace(/"/g, '""')}"`;
       };
-      const rows = exportRows.map((p) => [
+      const exportRows = rows.map((p) => [
         escapeCsv(tenantDisplayName(p.tenantId)),
         escapeCsv(tenantRoomNumber(p.tenantId)),
         escapeCsv(tenantBedId(p.tenantId) || '—'),
@@ -334,7 +454,7 @@ export default function PaymentsPage() {
         escapeCsv(invoiceNumberOf(p) || '—'),
         escapeCsv(new Date(p.paidAt || p.createdAt).toISOString().slice(0, 10)),
       ]);
-      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      const csvContent = [headers.join(','), ...exportRows.map((r) => r.join(','))].join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -344,8 +464,16 @@ export default function PaymentsPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      setWriteResult(
+        rows.length < reportedTotal
+          ? `Export written with ${rows.length} of ${reportedTotal} payments: the export stops at ${MAX_EXPORT_ROWS} rows, so the file is short of the whole set.`
+          : `Export written with all ${rows.length} payments the server reports for these filters.`,
+      );
     } catch (err) {
       setError((await parseApiError(err)).message);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -366,28 +494,40 @@ export default function PaymentsPage() {
       <ArrowDownRight className="h-3.5 w-3.5" />
     );
 
+  const clearAllFilters = () => {
+    writeUrl({
+      method: null,
+      type: null,
+      search: null,
+      fromDate: null,
+      toDate: null,
+      date: null,
+    });
+    setPage(1);
+  };
+
   const chips = [
-    ...(methodFilter
+    ...(filters.method
       ? [
           {
             key: 'method',
             label: 'Method',
-            value: METHOD_FILTERS.find((m) => m.value === methodFilter)?.label ?? methodFilter,
+            value: METHOD_FILTERS.find((m) => m.value === filters.method)?.label ?? filters.method,
             onRemove: () => {
-              setMethodFilter('');
+              methodState.reset();
               setPage(1);
             },
           },
         ]
       : []),
-    ...(typeFilter
+    ...(filters.type
       ? [
           {
             key: 'type',
             label: 'Type',
-            value: TYPE_FILTERS.find((t) => t.value === typeFilter)?.label ?? typeFilter,
+            value: TYPE_FILTERS.find((t) => t.value === filters.type)?.label ?? filters.type,
             onRemove: () => {
-              setTypeFilter('');
+              typeState.reset();
               setPage(1);
             },
           },
@@ -400,79 +540,95 @@ export default function PaymentsPage() {
             label: 'Status',
             value: STATUS_TABS.find((s) => s.key === statusFilter)?.label ?? statusFilter,
             onRemove: () => {
-              setStatusFilter('');
+              statusState.reset();
               setPage(1);
             },
           },
         ]
       : []),
-    ...(fromDate
+    ...(filters.fromDate
       ? [
           {
             key: 'from',
             label: 'From',
-            value: fromDate,
+            value: filters.fromDate,
             onRemove: () => {
-              setFromDate('');
+              writeUrl({ fromDate: null, date: null });
               setPage(1);
             },
           },
         ]
       : []),
-    ...(toDate
+    ...(filters.toDate
       ? [
           {
             key: 'to',
             label: 'To',
-            value: toDate,
+            value: filters.toDate,
             onRemove: () => {
-              setToDate('');
+              writeUrl({ toDate: null, date: null });
               setPage(1);
             },
           },
         ]
       : []),
-    ...(debouncedSearch
+    ...(filters.search
       ? [
           {
             key: 'search',
             label: 'Search',
-            value: debouncedSearch,
+            value: filters.search,
             onRemove: () => {
-              setSearch('');
-              setDebouncedSearch('');
+              searchState.clear();
+              setPage(1);
             },
           },
         ]
       : []),
   ];
 
-  const clearAllFilters = () => {
-    setMethodFilter('');
-    setTypeFilter('');
-    setStatusFilter('');
-    setFromDate('');
-    setToDate('');
-    setSearch('');
-    setDebouncedSearch('');
-    setPage(1);
-  };
+  const statusLabel =
+    STATUS_TABS.find((tab) => tab.key === statusFilter)?.label.toLowerCase() ?? statusFilter;
 
   const columns: DataTableColumn<PaymentRow>[] = [
     {
       header: 'Tenant',
-      accessor: (row) => (
-        <div>
-          <span className="font-semibold text-(--color-text-primary)">
-            {tenantDisplayName(row.tenantId)}
-          </span>
-          <span className="block text-xs text-(--color-text-muted)">
-            {tenantRoomNumber(row.tenantId) !== 'N/A'
-              ? `Room ${tenantRoomNumber(row.tenantId)}${tenantBedId(row.tenantId) ? ` · Bed ${tenantBedId(row.tenantId)}` : ''}`
-              : '—'}
-          </span>
-        </div>
-      ),
+      accessor: (row) => {
+        const tenantId = tenantIdOf(row.tenantId);
+        const roomId = roomIdOf(row.tenantId);
+        const roomText =
+          tenantRoomNumber(row.tenantId) !== 'N/A'
+            ? `Room ${tenantRoomNumber(row.tenantId)}${tenantBedId(row.tenantId) ? ` · Bed ${tenantBedId(row.tenantId)}` : ''}`
+            : '—';
+        return (
+          <div>
+            {tenantId ? (
+              <Link
+                href={`/tenants/${tenantId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="font-semibold text-(--color-brand-600) hover:underline"
+              >
+                {tenantDisplayName(row.tenantId)}
+              </Link>
+            ) : (
+              <span className="font-semibold text-(--color-text-primary)">
+                {tenantDisplayName(row.tenantId)}
+              </span>
+            )}
+            {roomId ? (
+              <Link
+                href={`/rooms/${roomId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="block text-xs text-(--color-brand-600) hover:underline"
+              >
+                {roomText}
+              </Link>
+            ) : (
+              <span className="block text-xs text-(--color-text-muted)">{roomText}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       header: 'Amount',
@@ -493,6 +649,7 @@ export default function PaymentsPage() {
       accessor: (row) => {
         const utr = row.utrNumber;
         const inv = invoiceNumberOf(row);
+        const invoiceId = invoiceIdOf(row.invoiceId);
         return (
           <div className="space-y-0.5">
             {utr ? (
@@ -502,9 +659,17 @@ export default function PaymentsPage() {
             ) : (
               <span className="block text-xs text-(--color-text-muted)">No UTR</span>
             )}
-            {inv && (
+            {invoiceId ? (
+              <Link
+                href={`/invoices/${invoiceId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-2xs block font-mono text-(--color-brand-600) hover:underline"
+              >
+                {inv || invoiceId.slice(-6)}
+              </Link>
+            ) : inv ? (
               <span className="text-2xs block font-mono text-(--color-text-muted)">{inv}</span>
-            )}
+            ) : null}
           </div>
         );
       },
@@ -595,21 +760,23 @@ export default function PaymentsPage() {
       <PageBand
         metrics={[
           {
-            label: `Collected · ${summary?.month ?? 'This Month'}`,
+            label: `Collected · ${summary?.month ?? summaryMonth}`,
             value: fmtMoney(summary?.collected ?? 0),
-            hint: summary ? delta(summary.collected, prevSummary?.collected).label : undefined,
+            hint: summary
+              ? `${delta(summary.collected, prevSummary?.collected).label}${moneyScopeNote}`
+              : undefined,
             icon: summary ? deltaIcon(summary.collected, prevSummary?.collected) : undefined,
             tone: 'success',
           },
           {
-            label: `Expected · ${summary?.month ?? 'This Month'}`,
+            label: `Expected · ${summary?.month ?? summaryMonth}`,
             value: fmtMoney(summary?.expected ?? 0),
             hint: summary ? delta(summary.expected, prevSummary?.expected).label : undefined,
             icon: summary ? deltaIcon(summary.expected, prevSummary?.expected) : undefined,
             tone: 'brand',
           },
           {
-            label: `Pending · ${summary?.month ?? 'This Month'}`,
+            label: `Pending · ${summary?.month ?? summaryMonth}`,
             value: fmtMoney(summary?.pending ?? 0),
             hint:
               summary && summary.expected > 0
@@ -619,22 +786,22 @@ export default function PaymentsPage() {
           },
           {
             label: 'Awaiting Verification',
-            value: String(statusCounts.pending_verification ?? 0),
-            hint: 'Click to filter to verify queue',
-            tone: (statusCounts.pending_verification ?? 0) > 0 ? 'danger' : 'default',
+            value: String(counts.pending_verification ?? 0),
+            hint: countScopeHint,
+            tone: (counts.pending_verification ?? 0) > 0 ? 'danger' : 'default',
             onClick: () => {
-              setStatusFilter('pending_verification');
+              statusState.setValue('pending_verification');
               setPage(1);
             },
           },
         ]}
       >
-        {/* Status tab strip */}
+        {/* Status tab strip. The counts are the rows the tab would show. */}
         <StatusTabs
           tabs={STATUS_TABS.map((s) => ({
             key: s.key,
             label: s.label,
-            count: statusCounts[s.key || 'all'] ?? null,
+            count: counts[s.key] ?? null,
             tone:
               s.key === 'pending_verification'
                 ? 'danger'
@@ -646,7 +813,7 @@ export default function PaymentsPage() {
           }))}
           active={statusFilter}
           onChange={(key) => {
-            setStatusFilter(key);
+            statusState.setValue(key);
             setPage(1);
           }}
         />
@@ -654,13 +821,12 @@ export default function PaymentsPage() {
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <div className="max-w-sm sm:w-72">
             <Input
-              placeholder="Search tenant, UTR, invoice, amount..."
-              aria-label="Search tenant, UTR, invoice, amount..."
-              value={search}
+              placeholder="Search tenant, phone, room, invoice, UTR..."
+              aria-label="Search tenant, phone, room, invoice, UTR..."
+              value={searchState.text}
               onChange={(e) => {
-                setSearch(e.target.value);
-                if (searchInit.current) setPage(1);
-                searchInit.current = true;
+                searchState.onChange(e.target.value);
+                setPage(1);
               }}
               leftIcon={<Search className="h-4 w-4" />}
             />
@@ -669,9 +835,9 @@ export default function PaymentsPage() {
             <Select
               aria-label="Filter by method"
               options={METHOD_FILTERS}
-              value={methodFilter}
+              value={filters.method}
               onChange={(e) => {
-                setMethodFilter(e.target.value);
+                methodState.setValue(e.target.value);
                 setPage(1);
               }}
             />
@@ -680,27 +846,32 @@ export default function PaymentsPage() {
             <Select
               aria-label="Filter by type"
               options={TYPE_FILTERS}
-              value={typeFilter}
+              value={filters.type}
               onChange={(e) => {
-                setTypeFilter(e.target.value);
+                typeState.setValue(e.target.value);
                 setPage(1);
               }}
             />
           </div>
           <DateRangePicker
-            fromDate={fromDate}
-            toDate={toDate}
+            fromDate={filters.fromDate}
+            toDate={filters.toDate}
             onFromChange={(val: string) => {
-              setFromDate(val);
+              writeUrl({ fromDate: val || null, date: null });
               setPage(1);
             }}
             onToChange={(val: string) => {
-              setToDate(val);
+              writeUrl({ toDate: val || null, date: null });
               setPage(1);
             }}
             compact
           />
-          <Button variant="outline" onClick={handleExportCsv} disabled={payments.length === 0}>
+          <Button
+            variant="outline"
+            onClick={() => void handleExportCsv()}
+            disabled={exporting || payments.length === 0}
+            loading={exporting}
+          >
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
@@ -710,7 +881,7 @@ export default function PaymentsPage() {
 
       <DataTable
         columns={columns}
-        data={visiblePayments}
+        data={payments}
         keyExtractor={(row) => row._id}
         isLoading={isLoading}
         onRowClick={(row) => router.push(`/payments/${row._id}`)}
@@ -725,83 +896,138 @@ export default function PaymentsPage() {
           },
         }}
         emptyState={
-          <EmptyState
-            icon={<Receipt className="h-10 w-10" />}
-            title="No payments found"
-            description="Record an offline payment or wait for UPI submissions."
-            action={{
-              label: 'Record Payment',
-              onClick: () => router.push('/payments/new'),
-            }}
-          />
+          // The empty state answers the question the operator asked. An empty
+          // verification queue is good news and says so; an empty ledger says
+          // what to do next.
+          statusFilter === 'pending_verification' ? (
+            <EmptyState
+              icon={<CheckCircle2 className="h-10 w-10" />}
+              title="The verification queue is empty"
+              description="No payment in this view is waiting for a UTR check."
+              action={{
+                label: 'Back to the whole ledger',
+                onClick: () => {
+                  statusState.reset();
+                  setPage(1);
+                },
+              }}
+            />
+          ) : statusFilter ? (
+            <EmptyState
+              icon={<Receipt className="h-10 w-10" />}
+              title={`No ${statusLabel} payment in this view`}
+              description="The server reports no payment for the filters above."
+              action={{
+                label: 'Back to the whole ledger',
+                onClick: () => {
+                  statusState.reset();
+                  setPage(1);
+                },
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={<Receipt className="h-10 w-10" />}
+              title="No payments found"
+              description="Record an offline payment or wait for UPI submissions."
+              action={{
+                label: 'Record Payment',
+                onClick: () => router.push('/payments/new'),
+              }}
+            />
+          )
         }
-        mobileCardRenderer={(row) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-(--color-text-primary)">
-                {tenantDisplayName(row.tenantId)}
-              </span>
-              <StatusBadge
-                variant={statusToVariant(row.status)}
-                label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
-              />
-            </div>
-            <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
-              <span className="font-semibold text-(--color-text-primary)">
-                {fmtMoney(row.amount)}
-              </span>
-              <span className="capitalize">
-                {row.method ? row.method.replace(/_/g, ' ') : 'N/A'}
-              </span>
-              <span>
-                {new Date(row.paidAt || row.createdAt).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                })}
-              </span>
-            </div>
-            {row.utrNumber && (
-              <p className="text-2xs font-mono font-bold text-(--color-brand-700)">
-                {row.utrNumber}
-              </p>
-            )}
-            <div className="flex items-center gap-1 pt-1">
-              <TableActions
-                onView={() => router.push(`/payments/${row._id}`)}
-                onEdit={() => router.push(`/payments/${row._id}/edit`)}
-                showDelete={false}
-                extra={
-                  row.status === 'pending_verification'
-                    ? [
-                        {
-                          label: 'Verify',
-                          icon: <ShieldCheck className="h-3.5 w-3.5" />,
-                          onClick: () => {
-                            const inv = row.invoiceId;
-                            setVerifyTarget({
-                              _id: row._id,
-                              tenantName: tenantDisplayName(row.tenantId),
-                              roomNumber: tenantRoomNumber(row.tenantId),
-                              amount: row.amount,
-                              utrNumber: row.utrNumber,
-                              screenshotUrl: row.screenshotUrl,
-                              paidAt: row.paidAt,
-                              createdAt: row.createdAt,
-                              status: row.status,
-                              invoiceNumber:
-                                inv && typeof inv === 'object'
-                                  ? (inv.invoiceNumber ?? undefined)
-                                  : undefined,
-                            });
+        mobileCardRenderer={(row) => {
+          const tenantId = tenantIdOf(row.tenantId);
+          const invoiceId = invoiceIdOf(row.invoiceId);
+          const invoiceText = invoiceNumberOf(row);
+          return (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                {tenantId ? (
+                  <Link
+                    href={`/tenants/${tenantId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-sm font-semibold text-(--color-brand-600) hover:underline"
+                  >
+                    {tenantDisplayName(row.tenantId)}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-semibold text-(--color-text-primary)">
+                    {tenantDisplayName(row.tenantId)}
+                  </span>
+                )}
+                <StatusBadge
+                  variant={statusToVariant(row.status)}
+                  label={row.status ? row.status.replace(/_/g, ' ') : 'Unknown'}
+                />
+              </div>
+              <div className="flex items-center gap-4 text-xs text-(--color-text-muted)">
+                <span className="font-semibold text-(--color-text-primary)">
+                  {fmtMoney(row.amount)}
+                </span>
+                <span className="capitalize">
+                  {row.method ? row.method.replace(/_/g, ' ') : 'N/A'}
+                </span>
+                <span>
+                  {new Date(row.paidAt || row.createdAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              </div>
+              {row.utrNumber && (
+                <p className="text-2xs font-mono font-bold text-(--color-brand-700)">
+                  {row.utrNumber}
+                </p>
+              )}
+              {invoiceId && (
+                <Link
+                  href={`/invoices/${invoiceId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-2xs block font-mono text-(--color-brand-600) hover:underline"
+                >
+                  {invoiceText || invoiceId.slice(-6)}
+                </Link>
+              )}
+              <div className="flex items-center gap-1 pt-1">
+                <TableActions
+                  onView={() => router.push(`/payments/${row._id}`)}
+                  onEdit={() => router.push(`/payments/${row._id}/edit`)}
+                  showDelete={false}
+                  extra={
+                    row.status === 'pending_verification'
+                      ? [
+                          {
+                            label: 'Verify',
+                            icon: <ShieldCheck className="h-3.5 w-3.5" />,
+                            onClick: () => {
+                              const inv = row.invoiceId;
+                              setVerifyTarget({
+                                _id: row._id,
+                                tenantName: tenantDisplayName(row.tenantId),
+                                roomNumber: tenantRoomNumber(row.tenantId),
+                                amount: row.amount,
+                                utrNumber: row.utrNumber,
+                                screenshotUrl: row.screenshotUrl,
+                                paidAt: row.paidAt,
+                                createdAt: row.createdAt,
+                                status: row.status,
+                                invoiceNumber:
+                                  inv && typeof inv === 'object'
+                                    ? (inv.invoiceNumber ?? undefined)
+                                    : undefined,
+                              });
+                            },
                           },
-                        },
-                      ]
-                    : undefined
-                }
-              />
+                        ]
+                      : undefined
+                  }
+                />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        }}
       />
 
       <ConfirmModal
@@ -821,5 +1047,19 @@ export default function PaymentsPage() {
         onClose={() => setVerifyTarget(null)}
       />
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-[length:var(--bw-strong)] border-(--border-color) border-t-(--color-brand-500)" />
+        </div>
+      }
+    >
+      <PaymentsContent />
+    </Suspense>
   );
 }

@@ -21,6 +21,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Scale,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -29,6 +30,8 @@ import { useApiQuery } from '@/hooks/useApiQuery';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
+import { StatusStepper } from '@/components/ui/StatusStepper';
+import { TextSkeleton } from '@/components/ui/Skeleton';
 import { Timeline } from '@/components/ui/Timeline';
 import { FormPage } from '@/components/ui/FormPage';
 import { ContentFrame } from '@/components/ui/ContentFrame';
@@ -112,6 +115,26 @@ interface AuditEvent {
   userId?: { name?: string } | string;
   timestamp: string;
   details?: Record<string, unknown>;
+}
+
+/** The money of the tenant, as the server computes it (GET /tenants/:id/dues). */
+interface TenantDues {
+  totalDue: number;
+  depositHeld?: number;
+  unpaidInvoices?: Array<{ _id: string; invoiceNumber: string; remaining?: number | null }>;
+}
+
+/** The money of the linked invoice, as the server computes it (GET /invoices/:id). */
+interface InvoiceMoney {
+  _id: string;
+  invoiceNumber?: string;
+  month?: string;
+  status?: string;
+  totalAmount?: number;
+  /** The settled sum of the paid rows. */
+  paidAmount?: number;
+  /** The amount still due; null when the server did not report one. */
+  balance?: number | null;
 }
 
 function formatCurrency(amount: number | null | undefined): string {
@@ -201,6 +224,10 @@ const PAYMENT_EVENTS_KEY = (id: string) => ['payments', id, 'audit-logs'] as con
 
 const INVOICES_PREFIX = ['invoices'] as const;
 
+const TENANT_DUES_KEY = (tenantId: string) => ['tenants', tenantId, 'dues'] as const;
+
+const INVOICE_MONEY_KEY = (invoiceId: string) => ['invoices', invoiceId, 'money'] as const;
+
 export default function PaymentDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -232,6 +259,37 @@ export default function PaymentDetailPage() {
   );
   const events = Array.isArray(eventsData) ? eventsData : [];
 
+  // The resident and the invoice this payment belongs to, read out of the
+  // record the server sent.
+  const tenantRaw = payment?.tenantId ?? payment?.tenant;
+  const tenantObj = typeof tenantRaw === 'object' && tenantRaw !== null ? tenantRaw : undefined;
+  const tenantId = tenantObj?._id ?? (typeof tenantRaw === 'string' ? tenantRaw : undefined);
+  const invoiceObj =
+    typeof payment?.invoiceId === 'object' && payment?.invoiceId !== null
+      ? payment.invoiceId
+      : undefined;
+  const invoiceId =
+    invoiceObj?._id ?? (typeof payment?.invoiceId === 'string' ? payment.invoiceId : undefined);
+
+  /**
+   * The money around this payment, read from the server.
+   *
+   * The tenant's dues answer "how much does this resident owe in total" and the
+   * invoice answers "how much is left on the bill this payment settles". Both
+   * numbers are the server's; the page never subtracts a paid amount from a
+   * total to make them.
+   */
+  const { data: tenantDues = null, isPending: duesPending } = useApiQuery<TenantDues>(
+    TENANT_DUES_KEY(tenantId ?? ''),
+    `tenants/${tenantId}/dues`,
+    { enabled: Boolean(tenantId) },
+  );
+  const { data: invoiceMoney = null, isPending: invoicePending } = useApiQuery<InvoiceMoney>(
+    INVOICE_MONEY_KEY(invoiceId ?? ''),
+    `invoices/${invoiceId}`,
+    { enabled: Boolean(invoiceId) },
+  );
+
   const loadReceipt = async () => {
     if (!payment) return;
     setReceiptLoading(true);
@@ -250,14 +308,16 @@ export default function PaymentDetailPage() {
   };
 
   /**
-   * Re-read the payment, its audit trail and the invoice it belongs to. The
-   * page then renders the server state instead of a locally asserted outcome.
+   * Re-read the payment, its audit trail, the invoice it belongs to and the
+   * dues of the resident. The page then renders the server state instead of a
+   * locally asserted outcome.
    */
   const refreshAfterMutation = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: PAYMENT_KEY(id) }),
       queryClient.invalidateQueries({ queryKey: PAYMENT_EVENTS_KEY(id) }),
       queryClient.invalidateQueries({ queryKey: INVOICES_PREFIX }),
+      ...(tenantId ? [queryClient.invalidateQueries({ queryKey: TENANT_DUES_KEY(tenantId) })] : []),
     ]);
   };
 
@@ -324,9 +384,6 @@ export default function PaymentDetailPage() {
       payment.status === 'completed' ||
       payment.status === 'pending_verification');
 
-  const tenantRaw = payment?.tenantId ?? payment?.tenant;
-  const tenantObj = typeof tenantRaw === 'object' && tenantRaw !== null ? tenantRaw : undefined;
-  const tenantId = tenantObj?._id ?? (typeof tenantRaw === 'string' ? tenantRaw : undefined);
   const tenantName = tenantObj?.userId?.name ?? tenantObj?.user?.name ?? 'N/A';
   const tenantPhone = tenantObj?.userId?.phone ?? tenantObj?.user?.phone;
   const roomData = tenantObj?.roomId ?? tenantObj?.room;
@@ -337,16 +394,20 @@ export default function PaymentDetailPage() {
     (roomData?.floor?.floorNumber != null ? `Floor ${roomData.floor.floorNumber}` : undefined);
   const bedId = tenantObj?.bedId;
 
-  const invoiceObj =
-    typeof payment?.invoiceId === 'object' && payment?.invoiceId !== null
-      ? payment.invoiceId
-      : undefined;
-  const invoiceId =
-    invoiceObj?._id ?? (typeof payment?.invoiceId === 'string' ? payment.invoiceId : undefined);
   const invoiceNumber =
     invoiceObj?.invoiceNumber ??
     payment?.invoiceNumber ??
     (invoiceId ? invoiceId.slice(-6) : undefined);
+
+  // The last verification the server refused. A rejected payment goes back to
+  // pending with its UTR cleared, so without this the record looks exactly
+  // like one that was never submitted.
+  const rejection = events.find(
+    (event) => event.action === 'payment_verify' && event.details?.approved === false,
+  );
+  const rejectionNotes = rejection?.details?.notes;
+  const rejectionNote =
+    typeof rejectionNotes === 'string' && rejectionNotes.length > 0 ? rejectionNotes : undefined;
 
   const verifyTarget: VerifyPaymentTarget | null = payment
     ? {
@@ -447,6 +508,32 @@ export default function PaymentDetailPage() {
             />
           </div>
 
+          {/* The state machine of the record. The states, their order and the
+              transitions come from the shared vocabulary, so this page cannot
+              drift from the portal. */}
+          <DetailCard title="Payment progress" icon={<CheckCircle2 />}>
+            {rejection && (
+              <div className="mb-4 flex items-start gap-2 rounded-(--radius-md) border border-(--color-danger-200) bg-(--color-danger-50) px-3 py-2">
+                <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-danger-600)" />
+                <div>
+                  <p className="text-xs font-bold text-(--color-danger-700)">
+                    The last verification was rejected on {formatDate(rejection.timestamp)}.
+                  </p>
+                  <p className="text-2xs mt-0.5 font-medium text-(--color-danger-700)">
+                    The server sent the payment back to {formatStatusLabel(payment.status)} and
+                    cleared the UTR, so the resident has to send it again.
+                    {rejectionNote ? ` Reason: ${rejectionNote}` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
+            <StatusStepper domain="payment" current={payment.status} />
+            <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+              Paid is set only through Verify: a payment becomes paid when an admin approves it, and
+              only then.
+            </p>
+          </DetailCard>
+
           {/* UTR evidence */}
           {payment.utrNumber && (
             <div
@@ -473,15 +560,6 @@ export default function PaymentDetailPage() {
                   {copiedUtr ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   {copiedUtr ? 'Copied' : 'Copy UTR'}
                 </Button>
-                {invoiceId && (
-                  <Link
-                    href={`/invoices/${invoiceId}`}
-                    className="text-13 inline-flex items-center gap-1.5 rounded-(--radius-md) border border-(--border-color) bg-(--color-card-bg) px-3 py-1.5 font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-field-bg)"
-                  >
-                    Invoice {invoiceNumber ?? invoiceId.slice(-6)}
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                )}
               </div>
             </div>
           )}
@@ -551,6 +629,24 @@ export default function PaymentDetailPage() {
                     />
                   }
                 />
+                {/* The invoice of every payment, not only of the ones that
+                    carry a UTR: an offline cash payment settles a bill too. */}
+                <DetailRow
+                  label="Invoice"
+                  value={
+                    invoiceId ? (
+                      <Link
+                        href={`/invoices/${invoiceId}`}
+                        className="inline-flex items-center gap-1 font-mono text-xs font-bold text-(--color-brand-600) hover:underline"
+                      >
+                        {invoiceNumber ?? invoiceId.slice(-6)}
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
                 <DetailRow
                   label="Transaction Date"
                   value={
@@ -562,6 +658,73 @@ export default function PaymentDetailPage() {
                 />
                 <DetailRow label="Recorded" value={formatDateTime(payment.createdAt)} />
               </DetailList>
+            </DetailCard>
+
+            {/* The money around this payment, from the server. */}
+            <DetailCard title="Balance context" icon={<Scale />}>
+              <DetailList>
+                <DetailRow
+                  label="Tenant owes in total"
+                  value={
+                    tenantDues ? (
+                      <span
+                        className={clsx(
+                          'tabular-nums',
+                          tenantDues.totalDue > 0
+                            ? 'text-(--color-danger-600)'
+                            : 'text-(--color-success-600)',
+                        )}
+                      >
+                        {formatCurrency(tenantDues.totalDue)}
+                      </span>
+                    ) : duesPending ? (
+                      'loading'
+                    ) : (
+                      'not reported'
+                    )
+                  }
+                />
+                <DetailRow
+                  label="Open invoices"
+                  value={
+                    tenantDues?.unpaidInvoices
+                      ? String(tenantDues.unpaidInvoices.length)
+                      : duesPending
+                        ? 'loading'
+                        : 'not reported'
+                  }
+                />
+                <DetailRow
+                  label="Invoice balance"
+                  value={
+                    invoiceMoney
+                      ? typeof invoiceMoney.balance === 'number'
+                        ? formatCurrency(invoiceMoney.balance)
+                        : 'not reported'
+                      : invoicePending
+                        ? 'loading'
+                        : 'not reported'
+                  }
+                />
+                <DetailRow
+                  label="Settled on this invoice"
+                  value={
+                    invoiceMoney && typeof invoiceMoney.paidAmount === 'number'
+                      ? formatCurrency(invoiceMoney.paidAmount)
+                      : invoicePending
+                        ? 'loading'
+                        : 'not reported'
+                  }
+                />
+                <DetailRow
+                  label="This payment"
+                  value={<span className="tabular-nums">{formatCurrency(payment.amount)}</span>}
+                />
+              </DetailList>
+              <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                The dues and the invoice balance are the server's numbers. A balance the server did
+                not report is never read as zero.
+              </p>
             </DetailCard>
           </ContentFrame>
 
@@ -676,7 +839,7 @@ export default function PaymentDetailPage() {
 
           <DetailCard title="Activity" icon={<History />}>
             {eventsLoading ? (
-              <p className="text-sm font-medium text-(--color-text-muted)">Loading activity...</p>
+              <TextSkeleton lines={3} />
             ) : events.length > 0 ? (
               <Timeline
                 events={events.map((e) => ({
