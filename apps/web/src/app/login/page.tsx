@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   ArrowRight,
   Building2,
-  Zap,
   X,
   CheckCircle2,
 } from 'lucide-react';
@@ -98,7 +97,6 @@ export default function AdminLoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -289,26 +287,8 @@ export default function AdminLoginPage() {
             custom={4}
             initial="hidden"
             animate={mounted ? 'visible' : 'hidden'}
-            className="mt-6 space-y-3 border-t border-(--border-color) pt-4"
+            className="mt-6 border-t border-(--border-color) pt-4"
           >
-            {/* Demo admin login */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                // Fill via react-hook-form state (not DOM hacks) so validation
-                // sees the values on first click, then submit programmatically.
-                setValue('email', 'admin@pgmanagement.local', { shouldValidate: true });
-                setValue('password', 'Admin@123456', { shouldValidate: true });
-                handleSubmit(onSubmit)();
-              }}
-              className="w-full"
-              size="sm"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              Auto-fill Demo Admin
-            </Button>
-
             <div className="flex items-center justify-center gap-1.5 text-center">
               <KeyRound className="h-3 w-3 text-(--color-text-muted)" />
               <p className="text-3xs font-semibold tracking-wider text-(--color-text-muted) uppercase">

@@ -44,7 +44,10 @@ test.describe('Admin session survives a full page load', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: { pendingVerification: 0, openComplaints: 0 } }),
+        body: JSON.stringify({
+          success: true,
+          data: { pendingVerification: 0, openComplaints: 0 },
+        }),
       });
     });
   });

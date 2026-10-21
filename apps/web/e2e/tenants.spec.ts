@@ -87,9 +87,12 @@ test.describe('Admin Tenant Management & Onboarding Flow', () => {
     // The browser blocks a submit with empty required fields before the app
     // sees it, so the native validation is switched off to let the form run
     // its own schema.
-    await page.locator('form').first().evaluate((form) => {
-      (form as HTMLFormElement).noValidate = true;
-    });
+    await page
+      .locator('form')
+      .first()
+      .evaluate((form) => {
+        (form as HTMLFormElement).noValidate = true;
+      });
 
     await page.click('button[type="submit"]');
 
