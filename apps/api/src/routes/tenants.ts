@@ -28,7 +28,7 @@ import { AttendanceRecord } from '../models/attendanceRecord.js';
 import { Enquiry } from '../models/enquiry.js';
 import { broadcastBadgesUpdate } from '../lib/broadcast-badges.js';
 import { authGuard } from '../middleware/auth.js';
-import { adminOnly } from '../middleware/roles.js';
+import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import {
   parsePagination,
   parseId,
@@ -41,7 +41,12 @@ import { isServiceAvailable } from '../lib/serviceAvailability.js';
 import { getPgUpiConfig } from '../lib/upi.js';
 import { logger } from '../lib/logger.js';
 import { ServiceUnavailableError, ValidationError } from '../lib/errors.js';
-import { getInvoiceBalance } from '../services/payment-status.service.js';
+import {
+  getInvoiceSettlement,
+  getInvoiceSettlements,
+  roundMoney,
+  type InvoiceSettlement,
+} from '../services/payment-status.service.js';
 
 // ── Cast helpers for Mongoose 9 ─────────────────────────
 type CreateArrFn = (
@@ -51,6 +56,36 @@ type CreateArrFn = (
 
 const userCreate = User.create.bind(User) as unknown as CreateArrFn;
 const tenantCreate = Tenant.create.bind(Tenant) as unknown as CreateArrFn;
+
+// ── Money helpers ───────────────────────────────────────
+/**
+ * Adds the server-computed money fields to a batch of invoice rows in one
+ * query.
+ *
+ * `balance` and `paidAmount` come from the shared money helper, the single
+ * source of truth shared with the invoice routes, the payment routes and the
+ * checkout guard, so the dues summary and the invoice list can never
+ * disagree.
+ *
+ * `paidAmount` is the REAL settled sum of the paid payment rows, never a
+ * number capped at the invoice total, so an over-collected invoice reports
+ * the overpayment instead of hiding it. `balance` is null when the invoice
+ * total is unknown: an unknown balance is OUTSTANDING, never settled.
+ */
+function withInvoiceMoneyFields(
+  rows: Array<Record<string, unknown>>,
+  settlements: Map<string, InvoiceSettlement>,
+): Array<Record<string, unknown>> {
+  return rows.map((invoice) => {
+    const id = invoice._id ? String(invoice._id) : '';
+    const settlement = settlements.get(id);
+    return {
+      ...invoice,
+      paidAmount: settlement?.paidAmount ?? 0,
+      balance: settlement?.balance ?? null,
+    };
+  });
+}
 
 // ── Zod Schemas ──────────────────────────────────────────
 
@@ -709,10 +744,22 @@ router.post('/:id/checkout', authGuard, adminOnly, async (c) => {
     .select('_id totalAmount')
     .lean();
 
+  // One query for every open invoice, not one per invoice.
+  const openRows = openInvoices as unknown as Array<Record<string, unknown>>;
+  const openIds = openRows.map((inv) => String(inv._id));
+  const openTotals: Record<string, number | undefined> = {};
+  for (const inv of openRows) {
+    const rawTotal = inv.totalAmount;
+    openTotals[String(inv._id)] =
+      typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+  }
+  const openSettlements = await getInvoiceSettlements(openIds, openTotals);
   let unpaidWithBalance = 0;
-  for (const inv of openInvoices) {
-    const remaining = await getInvoiceBalance(String(inv._id), inv.totalAmount || 0);
-    if (remaining > 0.001) unpaidWithBalance += 1;
+  for (const invoiceId of openIds) {
+    const balance = openSettlements.get(invoiceId)?.balance;
+    // An unknown balance means the amount is still outstanding, never zero:
+    // the tenant still owes it, so the checkout stays blocked.
+    if (balance == null || balance > 0.001) unpaidWithBalance += 1;
   }
   if (unpaidWithBalance > 0) {
     return c.json(
@@ -1209,6 +1256,23 @@ router.post('/:id/verify-kyc', authGuard, adminOnly, async (c) => {
     });
   } catch (auditErr) {
     logger.warn({ auditErr }, 'Failed to write audit log for KYC verification');
+  }
+
+  // The resident uploaded documents and is waiting for the verdict. The
+  // recipient is the tenant's own user, not the admin who verified it.
+  try {
+    const { createNotification } = await import('../services/notification.service.js');
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(tenant.userId)],
+      title: 'KYC documents verified',
+      body: 'Your identity documents have been verified by the PG office.',
+      type: 'kyc_uploaded',
+      data: { tenantId: String(tenant._id) },
+      sendPush: true,
+    });
+  } catch (notifyErr) {
+    logger.warn({ notifyErr }, 'Failed to notify tenant of KYC verification');
   }
 
   return c.json({
@@ -1716,7 +1780,140 @@ router.get('/:id/invoices', authGuard, async (c) => {
   if (denied) return denied;
 
   const invoices = await Invoice.find(safeFilter({ tenantId: id })).lean();
-  return c.json({ success: true, data: invoices });
+  const invoiceRows = invoices as unknown as Array<Record<string, unknown>>;
+  const ids = invoiceRows
+    .map((inv) => (inv._id ? String(inv._id) : ''))
+    .filter((value) => value.length > 0);
+  const totals: Record<string, number | undefined> = {};
+  for (const inv of invoiceRows) {
+    const key = inv._id ? String(inv._id) : '';
+    if (!key) continue;
+    const rawTotal = inv.totalAmount;
+    totals[key] = typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+  }
+  const settlements = await getInvoiceSettlements(ids, totals);
+  return c.json({ success: true, data: withInvoiceMoneyFields(invoiceRows, settlements) });
+});
+
+// ── Dues summary ─────────────────────────────────────────
+/**
+ * Builds the dues summary of one tenant.
+ *
+ * The admin view (GET /tenants/:id/dues) and the resident view
+ * (GET /tenants/me/dues) call this one function, so the resident and the
+ * office can never disagree about what is owed. The remaining balance and
+ * the settled sum per invoice come from the shared money helper, the same
+ * helper the invoice list, the payment routes and the checkout guard use.
+ */
+async function buildDuesSummary(tenant: Record<string, unknown>) {
+  const tenantId = String(tenant._id ?? '');
+  const depositHeld = (tenant.depositPaid as number) ?? 0;
+  // A checked-out tenant owes nothing: the stay is closed.
+  const checkedOut = !tenant.isActive;
+
+  // Find unpaid/partial/overdue invoices (include electricity for breakdown)
+  let unpaidInvoices: unknown[] = [];
+  if (!checkedOut) {
+    unpaidInvoices = await Invoice.find(
+      safeFilter({ tenantId, status: { $in: ['sent', 'partial', 'overdue'] } }),
+    )
+      .select('invoiceNumber month totalAmount status electricityAmount lineItems dueDate')
+      .lean();
+  }
+
+  // Remaining balance per invoice (after paid payments), not gross totals.
+  // One query for the whole set, not one per invoice.
+  const unpaidRows = unpaidInvoices as unknown as Array<Record<string, unknown>>;
+  const unpaidIds = unpaidRows.map((inv) => String(inv._id));
+  const unpaidTotals: Record<string, number | undefined> = {};
+  for (const inv of unpaidRows) {
+    const rawTotal = inv.totalAmount;
+    unpaidTotals[String(inv._id)] =
+      typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+  }
+  const unpaidSettlements = await getInvoiceSettlements(unpaidIds, unpaidTotals);
+
+  const invoiceRows = unpaidRows.map((inv) => {
+    const invId = String(inv._id);
+    const settlement = unpaidSettlements.get(invId);
+    const rawTotal = inv.totalAmount;
+    const totalAmount = typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : 0;
+    // A null balance means the invoice total is unknown: the amount is still
+    // outstanding, never zero, so the invoice stays in the dues list.
+    const remaining = settlement?.balance ?? null;
+    const invDoc = inv as unknown as {
+      electricityAmount?: number;
+      lineItems?: Array<{ description: string; amount: number }>;
+    };
+    const lineElec = (invDoc.lineItems || [])
+      .filter((li) => /electricity/i.test(li.description))
+      .reduce((s, li) => s + (li.amount || 0), 0);
+    const electricityAmount = invDoc.electricityAmount ?? lineElec;
+    // Pro-rate electricity portion of remaining balance
+    const electricityRemaining =
+      remaining != null && totalAmount > 0
+        ? roundMoney(remaining * (electricityAmount / totalAmount))
+        : 0;
+    return {
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      month: inv.month,
+      totalAmount,
+      // The REAL settled sum of the paid rows, never capped at the total.
+      paidAmount: settlement?.paidAmount ?? 0,
+      remaining,
+      electricityAmount,
+      electricityRemaining,
+      status: inv.status,
+      dueDate: inv.dueDate ?? null,
+    };
+  });
+
+  // Only open invoices that still have balance matter for checkout. An
+  // unknown balance counts as open: the tenant still owes it.
+  const openWithBalance = invoiceRows.filter((r) => r.remaining == null || r.remaining > 0.001);
+  const totalDue = openWithBalance.reduce((sum, r) => sum + (r.remaining ?? 0), 0);
+  const electricityDues = openWithBalance.reduce((sum, r) => sum + r.electricityRemaining, 0);
+
+  let pendingPayments: unknown[] = [];
+  if (!checkedOut) {
+    pendingPayments = await Payment.find(
+      safeFilter({ tenantId, status: { $in: ['pending', 'pending_verification', 'overdue'] } }),
+    )
+      .select('amount type status month')
+      .lean();
+  }
+
+  return {
+    totalDue: roundMoney(totalDue),
+    unpaidInvoices: openWithBalance.map((inv) => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      month: inv.month,
+      totalAmount: inv.totalAmount,
+      paidAmount: inv.paidAmount,
+      remaining: inv.remaining,
+      status: inv.status,
+      dueDate: inv.dueDate,
+    })),
+    electricityDues: roundMoney(electricityDues),
+    depositHeld,
+    pendingPayments: pendingPayments.length,
+    checkedOut,
+  };
+}
+
+// ── GET /me/dues — the resident's own dues (tenant only) ──
+// The tenant is resolved from the signed-in user, never from the URL, so a
+// resident can only ever read their own dues. The numbers come from the same
+// helper as the admin view, so the two can never disagree.
+router.get('/me/dues', authGuard, tenantOnly, async (c) => {
+  const user = c.get('user');
+  const tenant = await Tenant.findOne(safeFilter({ userId: user.sub })).lean();
+  if (!tenant) return notFound(c, 'Tenant profile');
+
+  const data = await buildDuesSummary(tenant as unknown as Record<string, unknown>);
+  return c.json({ success: true, data });
 });
 
 // ── GET /:id/dues — checkout dues summary (admin only)
@@ -1726,85 +1923,9 @@ router.get('/:id/dues', authGuard, adminOnly, async (c) => {
 
   const tenant = await Tenant.findById(id).lean();
   if (!tenant) return notFound(c, 'Tenant');
-  if (!tenant.isActive) {
-    return c.json({
-      success: true,
-      data: {
-        totalDue: 0,
-        unpaidInvoices: [],
-        electricityDues: 0,
-        depositHeld: tenant.depositPaid,
-        checkedOut: true,
-      },
-    });
-  }
 
-  // Find unpaid/partial/overdue invoices (include electricity for breakdown)
-  const unpaidInvoices = await Invoice.find(
-    safeFilter({ tenantId: id, status: { $in: ['sent', 'partial', 'overdue'] } }),
-  )
-    .select('invoiceNumber month totalAmount status electricityAmount lineItems')
-    .lean();
-
-  // Remaining balance per invoice (after paid payments), not gross totals
-  const invoiceRows = await Promise.all(
-    unpaidInvoices.map(async (inv) => {
-      const invId = String(inv._id);
-      const totalAmount = inv.totalAmount || 0;
-      const remaining = await getInvoiceBalance(invId, totalAmount);
-      const invDoc = inv as unknown as {
-        electricityAmount?: number;
-        lineItems?: Array<{ description: string; amount: number }>;
-      };
-      const lineElec = (invDoc.lineItems || [])
-        .filter((li) => /electricity/i.test(li.description))
-        .reduce((s, li) => s + (li.amount || 0), 0);
-      const electricityAmount = invDoc.electricityAmount ?? lineElec;
-      // Pro-rate electricity portion of remaining balance
-      const electricityRemaining =
-        totalAmount > 0 ? Math.round(remaining * (electricityAmount / totalAmount) * 100) / 100 : 0;
-      return {
-        _id: inv._id,
-        invoiceNumber: inv.invoiceNumber,
-        month: inv.month,
-        totalAmount,
-        remaining,
-        electricityAmount,
-        electricityRemaining,
-        status: inv.status,
-      };
-    }),
-  );
-
-  // Only open invoices that still have balance matter for checkout
-  const openWithBalance = invoiceRows.filter((r) => r.remaining > 0.001);
-  const totalDue = openWithBalance.reduce((sum, r) => sum + r.remaining, 0);
-  const electricityDues = openWithBalance.reduce((sum, r) => sum + r.electricityRemaining, 0);
-
-  const pendingPayments = await Payment.find(
-    safeFilter({ tenantId: id, status: { $in: ['pending', 'pending_verification', 'overdue'] } }),
-  )
-    .select('amount type status month')
-    .lean();
-
-  return c.json({
-    success: true,
-    data: {
-      totalDue: Math.round(totalDue * 100) / 100,
-      unpaidInvoices: openWithBalance.map((inv) => ({
-        _id: inv._id,
-        invoiceNumber: inv.invoiceNumber,
-        month: inv.month,
-        totalAmount: inv.totalAmount,
-        remaining: inv.remaining,
-        status: inv.status,
-      })),
-      electricityDues: Math.round(electricityDues * 100) / 100,
-      depositHeld: tenant.depositPaid || 0,
-      pendingPayments: pendingPayments.length,
-      checkedOut: false,
-    },
-  });
+  const data = await buildDuesSummary(tenant as unknown as Record<string, unknown>);
+  return c.json({ success: true, data });
 });
 
 // ── GET /:id/statement.pdf — Statement of Account (admin or tenant self) ──
@@ -1829,7 +1950,7 @@ router.get('/:id/statement.pdf', authGuard, async (c) => {
 
   const [invoices, payments, upiConfig] = await Promise.all([
     Invoice.find(safeFilter({ tenantId: id }))
-      .select('invoiceNumber month totalAmount paidAmount status')
+      .select('invoiceNumber month totalAmount status')
       .sort({ month: 1 })
       .lean(),
     Payment.find(safeFilter({ tenantId: id }))
@@ -1839,16 +1960,31 @@ router.get('/:id/statement.pdf', authGuard, async (c) => {
     getPgUpiConfig().catch(() => ({})),
   ]);
 
-  // Remaining balance per invoice via the shared payment-status service
+  // Money per invoice from the shared money helper: the settled sum and the
+  // balance are the same numbers the ledger, the invoice row and the dues
+  // summary report, so the statement can never disagree with them.
   const invoiceRows = await Promise.all(
     (invoices as unknown as Array<Record<string, unknown>>).map(async (inv) => {
-      const totalAmount = (inv.totalAmount as number) || 0;
-      const remaining = await getInvoiceBalance(String(inv._id), totalAmount);
+      const rawTotal = inv.totalAmount;
+      const invoiceTotal =
+        typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+      const { paidAmount, balance } = await getInvoiceSettlement(String(inv._id), invoiceTotal);
+      // An unknown balance means the invoice total is not known. The amount is
+      // still outstanding, never settled. A statement cannot print an unknown
+      // number, so the anomaly is logged instead of being hidden behind a
+      // zero that reads as "nothing due".
+      if (balance == null) {
+        logger.warn(
+          { invoiceId: String(inv._id) },
+          'Statement: the invoice total is unknown, the outstanding amount cannot be printed',
+        );
+      }
+      const remaining = balance ?? 0;
       return {
         invoiceNumber: (inv.invoiceNumber as string) ?? '--',
         month: (inv.month as string) ?? '',
-        totalAmount,
-        paidAmount: Math.max(0, totalAmount - remaining),
+        totalAmount: invoiceTotal ?? 0,
+        paidAmount,
         remaining,
         status: (inv.status as string) ?? 'draft',
       };
@@ -1890,9 +2026,9 @@ router.get('/:id/statement.pdf', authGuard, async (c) => {
     invoices: invoiceRows,
     payments: paymentRows,
     totals: {
-      invoiced: Math.round(totals.invoiced * 100) / 100,
-      paid: Math.round(totals.paid * 100) / 100,
-      outstanding: Math.round(totals.outstanding * 100) / 100,
+      invoiced: roundMoney(totals.invoiced),
+      paid: roundMoney(totals.paid),
+      outstanding: roundMoney(totals.outstanding),
       depositHeld: totals.depositHeld,
     },
     generatedAt: new Date(),

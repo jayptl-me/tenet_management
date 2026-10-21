@@ -11,6 +11,114 @@ import { logger } from '../lib/logger.js';
 let isRunning = false;
 
 /**
+ * Tells the tenants of the invoices that just went overdue.
+ *
+ * The rows are captured BEFORE the bulk write, so a notification always names
+ * an invoice the write really moved. The recipient is the tenant's own user,
+ * resolved from the tenant record, never from a client-supplied id. Every send
+ * has its own try/catch: a failed push never undoes the overdue write.
+ */
+async function notifyOverdueInvoices(invoices: Array<Record<string, unknown>>): Promise<void> {
+  for (const invoice of invoices) {
+    const invoiceId = String(invoice._id ?? '');
+    try {
+      const tenantRaw = await Tenant.findById(String(invoice.tenantId ?? ''))
+        .select('userId')
+        .lean();
+      const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+      if (!tenantRaw || !userId) {
+        logger.warn(
+          { invoiceId, tenantId: String(invoice.tenantId ?? '') },
+          'Overdue invoice notification skipped: tenant has no user',
+        );
+        continue;
+      }
+
+      const invoiceNumber = String(invoice.invoiceNumber ?? '');
+      const month = String(invoice.month ?? '');
+      await createNotification({
+        targetType: 'individual',
+        targetIds: [String(userId)],
+        title: 'Invoice overdue',
+        body:
+          `Your invoice ${invoiceNumber} for ${month} is now overdue. ` +
+          `Please settle the pending amount.`,
+        type: 'payment_reminder',
+        data: { invoiceId, invoiceNumber, month },
+        sendPush: true,
+      });
+    } catch (err) {
+      logger.error({ err, invoiceId }, 'Failed to notify tenant about an overdue invoice');
+    }
+  }
+}
+
+/**
+ * Marks the past-due invoices of one month overdue and tells the tenants.
+ *
+ * The rows are captured BEFORE the bulk write, so a notification always names
+ * an invoice the write really moved.
+ */
+export async function runMonthlyOverdueSweep(month: string): Promise<void> {
+  const now = new Date();
+
+  // The invoices the write below is about to move: captured before the write,
+  // so the notification always names an invoice that really went overdue.
+  const invoicesGoingOverdue = (await Invoice.find({
+    status: 'sent',
+    dueDate: { $lt: now },
+    month,
+  })
+    .select('_id invoiceNumber month tenantId')
+    .lean()) as unknown as Array<Record<string, unknown>>;
+
+  await Payment.updateMany(
+    { status: 'pending', dueDate: { $lt: now }, month },
+    { status: 'overdue' },
+  );
+
+  await Invoice.updateMany({ status: 'sent', dueDate: { $lt: now }, month }, { status: 'overdue' });
+
+  await notifyOverdueInvoices(invoicesGoingOverdue);
+}
+
+/**
+ * Marks every past-due invoice overdue and tells the tenants.
+ *
+ * The rows are captured BEFORE the bulk write, so a notification always names
+ * an invoice the write really moved.
+ */
+export async function runDailyOverdueCheck(): Promise<void> {
+  const now = new Date();
+
+  // The invoices the write below is about to move: captured before the write,
+  // so the notification always names an invoice that really went overdue.
+  const invoicesGoingOverdue = (await Invoice.find({
+    status: 'sent',
+    dueDate: { $lt: now },
+  })
+    .select('_id invoiceNumber month tenantId')
+    .lean()) as unknown as Array<Record<string, unknown>>;
+
+  const [paymentResult, invoiceResult] = await Promise.all([
+    Payment.updateMany({ status: 'pending', dueDate: { $lt: now } }, { status: 'overdue' }),
+    // Never clobber partial: partially paid past-due stays partial for UI filters.
+    Invoice.updateMany({ status: 'sent', dueDate: { $lt: now } }, { status: 'overdue' }),
+  ]);
+
+  await notifyOverdueInvoices(invoicesGoingOverdue);
+
+  logger.info(
+    {
+      paymentsOverdue: paymentResult.modifiedCount,
+      invoicesOverdue: invoiceResult.modifiedCount,
+      invoicesNotified: invoicesGoingOverdue.length,
+    },
+    'Daily overdue check complete',
+  );
+}
+
+/**
  * Starts all scheduled cron jobs. Called once at server startup.
  */
 export function startScheduler(): void {
@@ -74,16 +182,7 @@ export function startScheduler(): void {
       }
 
       // Mark pending as overdue if past due date
-      const now = new Date();
-      await Payment.updateMany(
-        { status: 'pending', dueDate: { $lt: now }, month },
-        { status: 'overdue' },
-      );
-
-      await Invoice.updateMany(
-        { status: 'sent', dueDate: { $lt: now }, month },
-        { status: 'overdue' },
-      );
+      await runMonthlyOverdueSweep(month);
     } catch (err) {
       logger.error({ err, month }, 'Payment reminder job failed');
     }
@@ -91,23 +190,10 @@ export function startScheduler(): void {
 
   // ── Daily at 8 AM: Mark overdue ──────────────────────
   cron.schedule('0 8 * * *', async () => {
-    const now = new Date();
     logger.info('Running daily overdue check');
 
     try {
-      const [paymentResult, invoiceResult] = await Promise.all([
-        Payment.updateMany({ status: 'pending', dueDate: { $lt: now } }, { status: 'overdue' }),
-        // Never clobber partial: partially paid past-due stays partial for UI filters.
-        Invoice.updateMany({ status: 'sent', dueDate: { $lt: now } }, { status: 'overdue' }),
-      ]);
-
-      logger.info(
-        {
-          paymentsOverdue: paymentResult.modifiedCount,
-          invoicesOverdue: invoiceResult.modifiedCount,
-        },
-        'Daily overdue check complete',
-      );
+      await runDailyOverdueCheck();
     } catch (err) {
       logger.error({ err }, 'Daily overdue check failed');
     }

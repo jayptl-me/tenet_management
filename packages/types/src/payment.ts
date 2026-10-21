@@ -19,6 +19,11 @@ export interface IPayment {
   verifiedBy?: string;
   screenshotUrl?: string;
   notes?: string;
+  /**
+   * Key that makes the write idempotent: the server returns the payment that
+   * already carries this key instead of recording the cash twice.
+   */
+  idempotencyKey?: string;
   createdAt: string;
 }
 
@@ -31,6 +36,12 @@ export interface IOfflinePaymentCreate {
   type?: IPaymentType;
   paidAt: string;
   notes?: string;
+  /**
+   * Optional idempotency key. The server also accepts it as the
+   * `Idempotency-Key` header; with the same key twice, the second call returns
+   * the payment that already exists instead of recording the cash again.
+   */
+  idempotencyKey?: string;
 }
 
 export interface IPaymentUpdate {

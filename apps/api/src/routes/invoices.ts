@@ -16,7 +16,18 @@ import { Room } from '../models/room.js';
 import { ElectricityBill } from '../models/electricityBill.js';
 import { AppConfig } from '../models/appConfig.js';
 import { generateSingleInvoice, generateMonthlyInvoices } from '../services/invoice.service.js';
-import { getInvoiceBalance } from '../services/payment-status.service.js';
+import {
+  getInvoiceBalance,
+  getInvoiceBalances,
+  getInvoiceSettlement,
+  getInvoiceSettlements,
+  updateInvoicePaymentStatus,
+  roundMoney,
+  MAX_SETTLEMENT_IDS,
+  type InvoiceSettlement,
+} from '../services/payment-status.service.js';
+import { createNotification } from '../services/notification.service.js';
+import type { INotificationType } from '@pg/types';
 import { InvoicePdf } from '../templates/InvoicePdf.js';
 import { buildWhatsAppUrl, formatInvoiceShareText } from '../lib/whatsapp.js';
 import { getPgUpiConfig } from '../lib/upi.js';
@@ -30,6 +41,130 @@ const invoiceCountDocs = Invoice.countDocuments.bind(Invoice) as unknown as Coun
 const tenantFindOne = Tenant.findOne.bind(Tenant) as unknown as FindOneFn;
 
 const invoices = new Hono();
+
+/**
+ * Adds the server-computed money fields to a batch of invoice rows in one
+ * query.
+ *
+ * `balance` and `paidAmount` come from the shared money helper, the single
+ * source of truth shared with the payment routes, the dues summary and the
+ * cancellation guard, so the invoice list, the invoice detail and every
+ * client read the same numbers.
+ *
+ * `paidAmount` is the REAL settled sum of the paid payment rows, never a
+ * number capped at the invoice total, so an over-collected invoice reports
+ * the overpayment instead of hiding it. `balance` is null when the invoice
+ * total is not known: an unknown balance is OUTSTANDING, never zero.
+ */
+function withMoneyFields(
+  rows: Array<Record<string, unknown>>,
+  settlements: Map<string, InvoiceSettlement>,
+): Array<Record<string, unknown>> {
+  return rows.map((invoice) => {
+    const id = invoice._id ? String(invoice._id) : '';
+    const settlement = settlements.get(id);
+    return {
+      ...invoice,
+      paidAmount: settlement?.paidAmount ?? 0,
+      balance: settlement?.balance ?? null,
+    };
+  });
+}
+
+/**
+ * Collects the ids and totals a batch settlement call needs.
+ *
+ * A missing total is reported as unknown (undefined), never as zero: the
+ * shared helper then returns a null balance, which means the amount is still
+ * outstanding.
+ */
+function balanceInputs(rows: Array<Record<string, unknown>>): {
+  ids: string[];
+  totals: Record<string, number | undefined>;
+} {
+  const ids: string[] = [];
+  const totals: Record<string, number | undefined> = {};
+  for (const row of rows) {
+    const id = row._id ? String(row._id) : '';
+    if (!id) continue;
+    ids.push(id);
+    const rawTotal = row.totalAmount;
+    totals[id] = typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+  }
+  return { ids, totals };
+}
+
+/**
+ * The balance of every invoice in the batch, from the shared money helper.
+ *
+ * The helper caps one batch, so the ids go in chunks: a report over many
+ * invoices must never silently drop the ones past the cap.
+ */
+async function balancesForInvoices(
+  rows: Array<Record<string, unknown>>,
+): Promise<Map<string, number | null>> {
+  const { ids, totals } = balanceInputs(rows);
+  const balances = new Map<string, number | null>();
+  for (let start = 0; start < ids.length; start += MAX_SETTLEMENT_IDS) {
+    const chunk = ids.slice(start, start + MAX_SETTLEMENT_IDS);
+    const chunkTotals: Record<string, number | undefined> = {};
+    for (const id of chunk) chunkTotals[id] = totals[id];
+    const chunkBalances = await getInvoiceBalances(chunk, chunkTotals);
+    for (const [id, balance] of chunkBalances) balances.set(id, balance);
+  }
+  return balances;
+}
+
+// ── Resident notifications ────────────────────────────────
+// The resident waits on their own money: an invoice they owe, an invoice the
+// office voided. Every invoice decision is pushed to the tenant's own user,
+// resolved from the tenant record, never to an admin. A notification failure
+// never undoes the write it follows.
+
+/**
+ * Sends one notification to the user who owns a tenant record.
+ *
+ * The recipient is resolved from the tenant, so an invoice can never notify
+ * the wrong person. Failures are logged, never thrown: the invoice write
+ * already happened and must not be undone by a push that did not go out.
+ */
+async function notifyTenantOfInvoice(
+  tenantId: unknown,
+  notification: {
+    title: string;
+    body: string;
+    type: INotificationType;
+    data?: Record<string, string>;
+  },
+): Promise<void> {
+  const tenantIdStr = String(tenantId ?? '');
+  try {
+    if (!parseId(tenantIdStr)) {
+      logger.warn({ tenantId: tenantIdStr }, 'Invoice notification skipped: invalid tenant id');
+      return;
+    }
+    const tenantRaw = await tenantFindOne(
+      safeFilter({ _id: new mongoose.Types.ObjectId(tenantIdStr) }),
+    );
+    const tenant = tenantRaw as Record<string, unknown> | null;
+    const userId = tenant?.userId;
+    if (!tenant || !userId) {
+      logger.warn({ tenantId: tenantIdStr }, 'Invoice notification skipped: tenant has no user');
+      return;
+    }
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      data: notification.data ?? {},
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: tenantIdStr }, 'Failed to notify tenant about an invoice');
+  }
+}
 
 // ── Schemas ─────────────────────────────────────────────
 const generateBulkSchema = z.strictObject({
@@ -126,9 +261,17 @@ invoices.get('/', authGuard, adminOnly, async (c) => {
     invoiceCountDocs(filter as Record<string, unknown>),
   ]);
 
+  // Additive money fields: every row carries the server-computed settled
+  // amount and balance, so no client has to derive them from the gross
+  // total. One query for the whole page, not one per invoice.
+  const listRows = data as Array<Record<string, unknown>>;
+  const { ids, totals } = balanceInputs(listRows);
+  const settlements = await getInvoiceSettlements(ids, totals);
+  const rows = withMoneyFields(listRows, settlements);
+
   return c.json({
     success: true,
-    data,
+    data: rows,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   });
 });
@@ -214,7 +357,14 @@ invoices.get('/my', authGuard, tenantOnly, async (c) => {
     .populate('tenantId')
     .lean() as unknown);
 
-  return c.json({ success: true, data });
+  // Same money fields as the admin list: the resident sees the real balance,
+  // not the gross total, on the same screen as the UPI QR.
+  const myRows = data as Array<Record<string, unknown>>;
+  const { ids: myIds, totals: myTotals } = balanceInputs(myRows);
+  const mySettlements = await getInvoiceSettlements(myIds, myTotals);
+  const rows = withMoneyFields(myRows, mySettlements);
+
+  return c.json({ success: true, data: rows });
 });
 
 /** Check role-based access to an invoice. Admin can access all; tenant can access own; guardian can access ward. */
@@ -289,11 +439,10 @@ invoices.get('/aging', authGuard, adminOnly, async (c) => {
     .select('totalAmount dueDate status month invoiceNumber tenantId')
     .lean()) as unknown as Array<Record<string, unknown>>;
 
-  const paidAgg = (await Payment.aggregate([
-    { $match: { status: 'paid' } },
-    { $group: { _id: '$invoiceId', total: { $sum: '$amount' } } },
-  ])) as Array<Record<string, unknown>>;
-  const paidMap = new Map(paidAgg.map((r) => [String(r._id), (r.total as number) ?? 0]));
+  // One balance definition: the shared money helper, the same one the invoice
+  // row, the invoice list and the dues summary use. The ledger, the aging
+  // report and the invoice row can never disagree about what is owed.
+  const balances = await balancesForInvoices(outstanding);
 
   const buckets = {
     current: { count: 0, amount: 0 },
@@ -305,9 +454,16 @@ invoices.get('/aging', authGuard, adminOnly, async (c) => {
 
   const nowMs = Date.now();
   for (const inv of outstanding) {
-    const total = (inv.totalAmount as number) ?? 0;
-    const paid = paidMap.get(String(inv._id)) ?? 0;
-    const balance = Math.max(0, total - paid);
+    const id = inv._id ? String(inv._id) : '';
+    const balance = balances.get(id);
+    if (balance == null) {
+      // An unknown total means the amount is still outstanding, never zero.
+      // The amount is not known, so the invoice is counted as open and the
+      // report says so instead of pretending nothing is due.
+      logger.warn({ invoiceId: id }, 'Aging report: invoice total is unknown, amount not counted');
+      buckets.current.count += 1;
+      continue;
+    }
     if (balance <= 0.001) continue;
 
     const due = inv.dueDate ? new Date(inv.dueDate as string | Date) : null;
@@ -316,30 +472,31 @@ invoices.get('/aging', authGuard, adminOnly, async (c) => {
 
     if (daysPastDue <= 0) {
       buckets.current.count += 1;
-      buckets.current.amount += balance;
+      buckets.current.amount = roundMoney(buckets.current.amount + balance);
     } else if (daysPastDue <= 30) {
       buckets.days1_30.count += 1;
-      buckets.days1_30.amount += balance;
+      buckets.days1_30.amount = roundMoney(buckets.days1_30.amount + balance);
     } else if (daysPastDue <= 60) {
       buckets.days31_60.count += 1;
-      buckets.days31_60.amount += balance;
+      buckets.days31_60.amount = roundMoney(buckets.days31_60.amount + balance);
     } else if (daysPastDue <= 90) {
       buckets.days61_90.count += 1;
-      buckets.days61_90.amount += balance;
+      buckets.days61_90.amount = roundMoney(buckets.days61_90.amount + balance);
     } else {
       buckets.days90Plus.count += 1;
-      buckets.days90Plus.amount += balance;
+      buckets.days90Plus.amount = roundMoney(buckets.days90Plus.amount + balance);
     }
   }
 
   const data = {
     buckets,
-    totalOutstanding:
+    totalOutstanding: roundMoney(
       buckets.current.amount +
-      buckets.days1_30.amount +
-      buckets.days31_60.amount +
-      buckets.days61_90.amount +
-      buckets.days90Plus.amount,
+        buckets.days1_30.amount +
+        buckets.days31_60.amount +
+        buckets.days61_90.amount +
+        buckets.days90Plus.amount,
+    ),
   };
 
   return c.json({ success: true, data });
@@ -416,11 +573,15 @@ invoices.get('/:id', authGuard, async (c) => {
     .sort({ createdAt: 1 })
     .lean()) as unknown as Array<Record<string, unknown>>;
 
-  const paidAmount = payments
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
-  const totalAmount = (invoice.totalAmount as number) ?? 0;
-  const balance = totalAmount - paidAmount;
+  const rawTotal = invoice.totalAmount;
+  const invoiceTotal =
+    typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+  // One balance definition everywhere: the same helper the invoice list, the
+  // payment routes and the dues summary use. `paidAmount` is the REAL settled
+  // sum of the paid rows, never a number capped at the invoice total, and
+  // `balance` is null when the total is unknown (still outstanding, never
+  // settled).
+  const { paidAmount, balance } = await getInvoiceSettlement(id, invoiceTotal);
 
   const upiConfig = await getPgUpiConfig();
   const tenantInfo = invoice.tenantId as Record<string, unknown> | null;
@@ -536,6 +697,10 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
   const invoice = await Invoice.findById(id);
   if (!invoice) return notFound(c, 'Invoice');
 
+  // The amount the resident was last told about: the edit is only news when
+  // the number they owe actually moved.
+  const previousTotal = invoice.totalAmount;
+
   const currentStatus = invoice.status;
   if (currentStatus === 'paid') {
     return badRequest(c, 'Paid invoices cannot be edited', 'INVOICE_LOCKED');
@@ -561,13 +726,19 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
   // silently erase dues — collect payment first or adjust amounts instead.
   if (body.status === 'cancelled' && currentStatus !== 'cancelled') {
     const remaining = await getInvoiceBalance(id, invoice.totalAmount ?? 0);
-    if (remaining > 0.001) {
+    // An unknown balance means the amount is still outstanding, never zero:
+    // the cancel is refused, because the dues cannot be proven to be gone.
+    if (remaining == null || remaining > 0.001) {
+      const message =
+        remaining == null
+          ? 'Cannot cancel: the outstanding amount of this invoice is unknown.'
+          : `Cannot cancel: invoice still has ₹${remaining.toLocaleString('en-IN')} outstanding.`;
       return c.json(
         {
           success: false,
           error: {
             code: 'INVOICE_HAS_BALANCE',
-            message: `Cannot cancel: invoice still has ₹${remaining.toLocaleString('en-IN')} outstanding.`,
+            message,
           },
         },
         409,
@@ -629,44 +800,114 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
   // pre-save recomputes totalAmount
   await invoice.save();
 
-  // Re-sync pending obligation amount if not paid/cancelled
+  // ── Re-sync the system obligation, never the resident's transfer ──
+  // A pending_verification row is a resident's money transfer: its amount is
+  // the resident's declaration and only the verification step may change it.
+  // Only a row the system itself created (status 'pending') is adjusted, and
+  // only to the balance the shared money helper reports.
   if (invoice.status !== 'paid' && invoice.status !== 'cancelled') {
-    const openPending = await Payment.findOne(
+    const systemPending = await Payment.findOne(
       safeFilter({
         invoiceId: invoice._id,
-        status: { $in: ['pending', 'pending_verification'] },
+        status: 'pending',
       }),
     );
-    if (openPending) {
-      const paidSum = await Payment.aggregate([
-        {
-          $match: {
-            invoiceId: invoice._id,
-            status: 'paid',
-          },
-        },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]);
-      const alreadyPaid = (paidSum[0]?.total as number) ?? 0;
-      const residual = Math.max(0, invoice.totalAmount - alreadyPaid);
-      openPending.amount = residual;
-      if (invoice.dueDate) openPending.dueDate = invoice.dueDate;
-      await openPending.save();
+    if (systemPending) {
+      // The pending obligation is the balance: same helper as every read path.
+      const residual = await getInvoiceBalance(String(invoice._id), invoice.totalAmount);
+      if (residual == null) {
+        // An unknown balance is outstanding, never zero: the row is left as it
+        // is rather than rewritten with a number nobody can prove.
+        logger.warn(
+          { invoiceId: id },
+          'Invoice edit: the outstanding amount is unknown, the open obligation was left untouched',
+        );
+      } else {
+        systemPending.amount = residual;
+        if (invoice.dueDate) systemPending.dueDate = invoice.dueDate;
+        await systemPending.save();
+      }
     }
   }
 
+  // ── The money decides the payment status ─────────────────
+  // The status must never disagree with the balance: 'partial' with a zero
+  // balance and 'sent' on a settled invoice are both lies. The shared helper
+  // is the ONE definition of that status.
+  const residentTransferRows = (await Payment.find(
+    safeFilter({
+      invoiceId: invoice._id,
+      status: 'pending_verification',
+    }),
+  )
+    .select('_id')
+    .lean()) as unknown as Array<{ _id: mongoose.Types.ObjectId }>;
+  const residentTransferIds = residentTransferRows.map((row) => row._id);
+
+  await updateInvoicePaymentStatus(id);
+
+  if (residentTransferIds.length > 0) {
+    // The shared helper cancels the open rows that no longer fit the balance.
+    // A resident's transfer is not the office's to void: an invoice edit
+    // leaves it alone and the verification step resolves the mismatch.
+    const restored = await Payment.updateMany(
+      safeFilter({ _id: { $in: residentTransferIds }, status: 'cancelled' }),
+      { $set: { status: 'pending_verification' } },
+    );
+    if (restored.modifiedCount > 0) {
+      logger.warn(
+        { invoiceId: id, restored: restored.modifiedCount },
+        'Invoice edit: restored the resident transfer rows the status recompute had voided',
+      );
+    }
+  }
+
+  // The office decides whether an invoice is issued or void; the money
+  // decides everything else. The shared helper keeps 'cancelled' and
+  // 'overdue' and derives 'paid' and 'partial' from the money. The two
+  // decisions it does not own are the office's: an invoice that is not
+  // issued yet ('draft') and one the office voids ('cancelled').
+  let officeStatus: 'draft' | 'cancelled' | undefined;
+  if (body.status === 'cancelled') {
+    officeStatus = 'cancelled';
+  } else if (body.status === 'draft') {
+    const settlement = await getInvoiceSettlement(id, invoice.totalAmount);
+    // A draft invoice with money collected against it is not a draft any
+    // more: the money status wins.
+    if (settlement.paidAmount <= 0) officeStatus = 'draft';
+  }
+  if (officeStatus) {
+    await Invoice.findByIdAndUpdate(id, { status: officeStatus });
+  }
+
   const { writeAuditLog } = await import('../lib/write-audit-log.js');
-  await writeAuditLog({
-    userId: adminId,
-    action: 'update',
-    resource: 'invoice',
-    resourceId: id,
-    details: {
-      fields: Object.keys(body),
-      status: invoice.status,
-      totalAmount: invoice.totalAmount,
-    },
-  });
+
+  // The resident's invoice was voided: they must hear it from the server.
+  if (body.status === 'cancelled' && currentStatus !== 'cancelled') {
+    await notifyTenantOfInvoice(invoice.tenantId, {
+      title: 'Invoice cancelled',
+      body:
+        `Your invoice ${String(invoice.invoiceNumber ?? '')} for ${String(invoice.month ?? '')} ` +
+        `was cancelled by the PG office. Any amount already paid stays on record.`,
+      type: 'payment_reminder',
+      data: { invoiceId: id, invoiceNumber: String(invoice.invoiceNumber ?? '') },
+    });
+  }
+
+  // The amount the resident owes moved: the old number is on their screen and
+  // in their head, so they must hear the new one from the server.
+  const newTotal = invoice.totalAmount;
+  if (newTotal !== previousTotal) {
+    await notifyTenantOfInvoice(invoice.tenantId, {
+      title: 'Invoice updated',
+      body:
+        `Your invoice ${String(invoice.invoiceNumber ?? '')} for ${String(invoice.month ?? '')} ` +
+        `was updated. The amount is now ₹${newTotal.toFixed(2)}, ` +
+        `previously ₹${previousTotal.toFixed(2)}.`,
+      type: 'payment_reminder',
+      data: { invoiceId: id, invoiceNumber: String(invoice.invoiceNumber ?? '') },
+    });
+  }
 
   const populated = await Invoice.findById(id)
     .populate({
@@ -677,6 +918,19 @@ invoices.put('/:id', authGuard, adminOnly, zValidator('json', updateInvoiceSchem
       ],
     })
     .lean();
+
+  await writeAuditLog({
+    userId: adminId,
+    action: 'update',
+    resource: 'invoice',
+    resourceId: id,
+    details: {
+      fields: Object.keys(body),
+      // The status the server committed, not the one the request asked for.
+      status: populated?.status ?? invoice.status,
+      totalAmount: invoice.totalAmount,
+    },
+  });
 
   return c.json({ success: true, data: populated });
 });
@@ -781,10 +1035,38 @@ invoices.delete('/:id', authGuard, adminOnly, async (c) => {
     );
   }
 
-  // Delete all linked payments first
-  await Payment.deleteMany(
-    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) } as Record<string, unknown>),
-  );
+  // A payment row is the evidence that money moved. A pending_verification
+  // row holds a resident's UTR number and its screenshot: deleting it with
+  // the invoice wipes the only trace of the resident's transfer. The delete
+  // is refused while any payment record exists against the invoice, and the
+  // reason is named.
+  const paymentRows = (await Payment.find(
+    safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) }),
+  )
+    .select('status')
+    .lean()) as unknown as Array<{ status?: string }>;
+  if (paymentRows.length > 0) {
+    const livePayments = paymentRows.filter((row) => row.status !== 'cancelled');
+    const reason =
+      livePayments.length > 0
+        ? `${livePayments.length} payment record(s) still exist against this invoice`
+        : `${paymentRows.length} cancelled payment record(s) still exist against this invoice`;
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'INVOICE_HAS_PAYMENTS',
+          message:
+            `Cannot delete invoice: ${reason}. Payment records are evidence of money moved ` +
+            `and cannot be purged. Void the payments instead.`,
+        },
+      },
+      409,
+    );
+  }
+
+  // The invoice carries no payment record at all, so there is nothing to
+  // purge with it.
   await Invoice.findByIdAndDelete(id);
 
   writeAuditLog({
@@ -800,44 +1082,6 @@ invoices.delete('/:id', authGuard, adminOnly, async (c) => {
   });
 
   return c.json({ success: true, data: { message: 'Invoice deleted' } });
-});
-
-// ── GET /invoices/:id/payment-status ────────────────────
-invoices.get('/:id/payment-status', authGuard, async (c) => {
-  const id = parseId(c.req.param('id'));
-  if (!id) return badRequest(c, 'Invalid invoice ID');
-
-  const invoiceRaw = await (Invoice.findById(id)
-    .populate({
-      path: 'tenantId',
-      populate: [{ path: 'userId', select: 'name email phone' }],
-    })
-    .lean() as unknown);
-  if (!invoiceRaw) return notFound(c, 'Invoice');
-
-  const invoice = invoiceRaw as Record<string, unknown>;
-  const user = c.get('user');
-  if (!(await canAccessInvoice(user, invoice))) {
-    return c.json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } }, 403);
-  }
-
-  const payments = (await (Invoice.db
-    ?.model('Payment')
-    .find(safeFilter({ invoiceId: new mongoose.Types.ObjectId(id) }))
-    .sort({ createdAt: -1 })
-    .lean() as unknown)) as Array<Record<string, unknown>>;
-
-  const totalPaid = (payments ?? [])
-    .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
-
-  const totalAmount = (invoice.totalAmount as number) ?? 0;
-  const remaining = totalAmount - totalPaid;
-
-  return c.json({
-    success: true,
-    data: { totalAmount, totalPaid, remaining, paymentCount: (payments ?? []).length, payments },
-  });
 });
 
 export default invoices;

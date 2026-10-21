@@ -7,6 +7,9 @@ import { adminOnly } from '../middleware/roles.js';
 import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { LaundrySlot } from '../models/laundrySlot.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
+import type { INotificationType } from '@pg/types';
 
 const laundry = new Hono();
 
@@ -69,6 +72,56 @@ function mapLaundrySlot(doc: Record<string, unknown>) {
         }
       : undefined,
   };
+}
+
+// ── Resident notifications ────────────────────────────────
+// A booked laundry slot is a promise about a time slot: the resident has to
+// know when to bring the laundry down. The recipient is the tenant who
+// booked the slot, resolved from the slot record itself, never from a
+// client-supplied id. A failed push is logged and never undoes the write it
+// follows.
+
+/**
+ * Sends one notification to the user who owns the tenant a laundry slot
+ * belongs to.
+ *
+ * Failures are logged, never thrown: the slot write already happened and
+ * must not be undone by a push that did not go out.
+ */
+async function notifyTenantOfLaundrySlot(
+  tenantId: unknown,
+  notification: {
+    title: string;
+    body: string;
+    type: INotificationType;
+    data?: Record<string, string>;
+  },
+): Promise<void> {
+  const tenantIdStr = String(tenantId ?? '');
+  try {
+    if (!parseId(tenantIdStr)) {
+      logger.warn({ tenantId: tenantIdStr }, 'Laundry notification skipped: invalid tenant id');
+      return;
+    }
+    const { Tenant } = await import('../models/tenant.js');
+    const tenantRaw = await Tenant.findById(tenantIdStr).select('userId').lean();
+    const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+    if (!tenantRaw || !userId) {
+      logger.warn({ tenantId: tenantIdStr }, 'Laundry notification skipped: tenant has no user');
+      return;
+    }
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      data: notification.data ?? {},
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: tenantIdStr }, 'Failed to notify tenant about a laundry slot');
+  }
 }
 
 // ── GET /laundry-slots ──────────────────────────────────
@@ -353,6 +406,8 @@ laundry.put('/:id', authGuard, adminOnly, zValidator('json', updateSlotSchema), 
     }
   }
 
+  const previousStatus = slot.status;
+
   if (body.status !== undefined) slot.status = body.status;
   if (body.slotDate !== undefined) slot.slotDate = body.slotDate;
   if (body.slotTime !== undefined) slot.slotTime = body.slotTime;
@@ -374,6 +429,17 @@ laundry.put('/:id', authGuard, adminOnly, zValidator('json', updateSlotSchema), 
     });
   } catch {
     // Non-blocking audit log
+  }
+
+  // The resident who booked the slot is waiting to know when to bring the
+  // laundry down: a confirmed slot has to reach them.
+  if (body.status === 'confirmed' && previousStatus !== 'confirmed') {
+    await notifyTenantOfLaundrySlot(slot.tenantId, {
+      title: 'Laundry slot confirmed',
+      body: `Your laundry slot on ${slot.slotDate} at ${slot.slotTime} is confirmed. Please bring your laundry at that time.`,
+      type: 'service_update',
+      data: { slotId: String(slot._id), status: 'confirmed' },
+    });
   }
 
   const populated = await LaundrySlot.findById(slot._id)

@@ -10,6 +10,8 @@ import { authGuard } from '../middleware/auth.js';
 import { adminOnly, tenantOnly } from '../middleware/roles.js';
 import { parsePagination, parseId, notFound, badRequest, safeFilter } from '../lib/routeUtils.js';
 import { requireFeature } from '../middleware/featureFlags.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
 
 /** Inclusive YYYY-MM-DD range as calendar strings (no timezone shift). */
 function eachDateInclusive(fromDate: string, toDate: string): string[] {
@@ -154,6 +156,67 @@ const leaveTenantPopulate = [
     },
   },
 ];
+
+// ── Helper: notify the resident of a leave decision ─────
+// The resident has no other way to learn the outcome: the API returns
+// adminNotes but no portal screen renders it, so the reason travels in the
+// notification body. The recipient is the tenant's own user, resolved from the
+// tenant record. A failed push never blocks the decision.
+
+interface LeaveDecisionNotice {
+  leaveId: string;
+  tenantId: string;
+  fromDate: string;
+  toDate: string;
+  /** The reason the resident gave when applying. */
+  leaveReason: string;
+  outcome: 'approved' | 'rejected' | 'cancelled';
+  /** The admin's reason, when there is one. */
+  decisionReason?: string;
+  /** True when the office withdrew the request, not the resident. */
+  cancelledByOffice?: boolean;
+}
+
+async function notifyLeaveDecision(notice: LeaveDecisionNotice): Promise<void> {
+  try {
+    const tenantRaw = await Tenant.findById(notice.tenantId).select('userId').lean();
+    const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+    if (!tenantRaw || !userId) {
+      logger.warn(
+        { leaveId: notice.leaveId, tenantId: notice.tenantId },
+        'Leave notification skipped: tenant has no user',
+      );
+      return;
+    }
+
+    const reason = notice.decisionReason?.trim();
+    const body =
+      notice.outcome === 'approved'
+        ? `Your leave from ${notice.fromDate} to ${notice.toDate} (${notice.leaveReason}) was approved.` +
+          (reason ? ` Note: ${reason}` : '')
+        : notice.outcome === 'rejected'
+          ? `Your leave from ${notice.fromDate} to ${notice.toDate} (${notice.leaveReason}) was rejected.` +
+            ` Reason: ${reason && reason.length > 0 ? reason : 'no reason was given'}.`
+          : `Your leave from ${notice.fromDate} to ${notice.toDate} (${notice.leaveReason}) was cancelled` +
+            (notice.cancelledByOffice ? ' by the PG office.' : '.');
+
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title:
+        notice.outcome === 'approved'
+          ? 'Leave approved'
+          : notice.outcome === 'rejected'
+            ? 'Leave rejected'
+            : 'Leave cancelled',
+      body,
+      type: 'service_update',
+      data: { leaveId: notice.leaveId, status: notice.outcome },
+    });
+  } catch (err) {
+    logger.error({ err, leaveId: notice.leaveId }, 'Failed to notify tenant of leave decision');
+  }
+}
 
 // ── Router ───────────────────────────────────────────────
 // FLAG-leaves: nav couples Leaves to attendanceEnabled; gate API the same way.
@@ -487,6 +550,18 @@ leaves.post('/:id/cancel', authGuard, async (c) => {
     // Non-blocking audit log
   }
 
+  // Whoever asked for the leave has to learn that it is gone: when the office
+  // withdraws the request, the resident is the one still planning to leave.
+  await notifyLeaveDecision({
+    leaveId: String(leave._id),
+    tenantId: String(leave.tenantId),
+    fromDate: leave.fromDate,
+    toDate: leave.toDate,
+    leaveReason: leave.reason,
+    outcome: 'cancelled',
+    cancelledByOffice: authUser.role !== 'tenant',
+  });
+
   const updated = await LeaveApplication.findById(id)
     .populate(leaveTenantPopulate)
     .populate('approvedBy', 'name')
@@ -589,6 +664,16 @@ leaves.put('/:id/approve', authGuard, adminOnly, async (c) => {
     // Non-blocking audit log
   }
 
+  await notifyLeaveDecision({
+    leaveId: String(leave._id),
+    tenantId: String(leave.tenantId),
+    fromDate: leave.fromDate,
+    toDate: leave.toDate,
+    leaveReason: leave.reason,
+    outcome: 'approved',
+    decisionReason: leave.adminNotes,
+  });
+
   const updated = await LeaveApplication.findById(id)
     .populate(leaveTenantPopulate)
     .populate('approvedBy', 'name')
@@ -645,6 +730,16 @@ leaves.put(
     } catch {
       // Non-blocking audit log
     }
+
+    await notifyLeaveDecision({
+      leaveId: String(leave._id),
+      tenantId: String(leave.tenantId),
+      fromDate: leave.fromDate,
+      toDate: leave.toDate,
+      leaveReason: leave.reason,
+      outcome: 'rejected',
+      decisionReason: body.adminNotes ?? leave.adminNotes,
+    });
 
     const updated = await LeaveApplication.findById(id)
       .populate(leaveTenantPopulate)

@@ -10,6 +10,9 @@ import { Tenant } from '../models/tenant.js';
 import { User } from '../models/user.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
+import type { INotificationType } from '@pg/types';
 import { publishEvent } from '../lib/eventBus.js';
 
 const meals = new Hono();
@@ -56,6 +59,60 @@ function mapMealFeedback(doc: Record<string, unknown>) {
         }
       : null,
   };
+}
+
+// ── Resident notifications ────────────────────────────────
+// A resident who rates the food is waiting to hear what the kitchen did
+// about it. The recipient is the tenant who left the feedback, resolved from
+// the feedback record itself, never from a client-supplied id. A failed push
+// is logged and never undoes the write it follows.
+
+/**
+ * Sends one notification to the user who owns the tenant a piece of meal
+ * feedback belongs to.
+ *
+ * Failures are logged, never thrown: the feedback write already happened and
+ * must not be undone by a push that did not go out.
+ */
+async function notifyTenantOfMealFeedback(
+  tenantId: unknown,
+  notification: {
+    title: string;
+    body: string;
+    type: INotificationType;
+    data?: Record<string, string>;
+  },
+): Promise<void> {
+  const tenantIdStr = String(tenantId ?? '');
+  try {
+    if (!parseId(tenantIdStr)) {
+      logger.warn(
+        { tenantId: tenantIdStr },
+        'Meal feedback notification skipped: invalid tenant id',
+      );
+      return;
+    }
+    const tenantRaw = await Tenant.findById(tenantIdStr).select('userId').lean();
+    const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+    if (!tenantRaw || !userId) {
+      logger.warn(
+        { tenantId: tenantIdStr },
+        'Meal feedback notification skipped: tenant has no user',
+      );
+      return;
+    }
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      data: notification.data ?? {},
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: tenantIdStr }, 'Failed to notify tenant about meal feedback');
+  }
 }
 
 // ── Schemas ─────────────────────────────────────────────
@@ -392,6 +449,16 @@ meals.put(
     if (!/^[a-f\d]{24}$/i.test(id)) return badRequest(c, 'Invalid meal feedback ID');
     const body = c.req.valid('json');
     try {
+      // The feedback before the edit: only a status that actually moved is a
+      // decision the resident has to hear about.
+      const previous = (await MealFeedback.findById(id).lean()) as unknown as {
+        status?: string;
+        tenantId?: unknown;
+        date?: string;
+        mealType?: string;
+      } | null;
+      if (!previous) return notFound(c, 'Meal feedback');
+
       const feedback = await MealFeedback.findByIdAndUpdate(id, body, {
         returnDocument: 'after',
         runValidators: true,
@@ -408,6 +475,22 @@ meals.put(
         ip: c.req.header('x-forwarded-for') ?? c.req.header('x-real-ip'),
         userAgent: c.req.header('user-agent'),
       });
+
+      // The resident who rated the meal is waiting to hear what the kitchen
+      // did about it.
+      if (body.status !== undefined && body.status !== previous.status) {
+        const mealLabel = String(previous.mealType ?? 'meal');
+        const mealDate = String(previous.date ?? '');
+        await notifyTenantOfMealFeedback(previous.tenantId, {
+          title: 'Meal feedback update',
+          body:
+            body.status === 'actioned'
+              ? `We have acted on your feedback about the ${mealLabel} on ${mealDate}.`
+              : `We have read your feedback about the ${mealLabel} on ${mealDate}.`,
+          type: 'meal_feedback',
+          data: { feedbackId: id, status: body.status },
+        });
+      }
 
       return c.json({ success: true, data: feedback });
     } catch (err: unknown) {

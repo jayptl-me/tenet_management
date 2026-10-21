@@ -12,6 +12,12 @@ export interface IPaymentDocument extends Document {
   dueDate: Date;
   paidAt: Date | null;
   utrNumber?: string;
+  /**
+   * Optional client-supplied key that makes a write idempotent: two writes
+   * carrying the same key cannot both be stored. Sparse, so records written
+   * before this field existed (no key) stay valid and need no migration.
+   */
+  idempotencyKey?: string;
   verifiedBy?: Schema.Types.ObjectId | null;
   screenshotUrl?: string;
   notes?: string;
@@ -78,6 +84,11 @@ const paymentSchema = new Schema<IPaymentDocument>(
         message: 'UTR must be 6-22 alphanumeric characters',
       },
     },
+    idempotencyKey: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Idempotency key cannot exceed 100 characters'],
+    },
     verifiedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -116,6 +127,10 @@ paymentSchema.index({ month: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ dueDate: 1 });
 paymentSchema.index({ tenantId: 1, month: 1 });
+// Idempotency guard: two writes carrying the same key cannot both be stored.
+// Sparse, so a payment without a key (every record written before this field
+// existed) is not indexed and no backfill is needed.
+paymentSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 // ── Virtuals ────────────────────────────────────────────
 paymentSchema.virtual('tenant', {

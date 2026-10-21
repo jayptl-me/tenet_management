@@ -346,8 +346,15 @@ guardians.get('/me/ward', authGuard, async (c) => {
     if (unpaidInvoices.length > 0) {
       let totalDue = 0;
       for (const inv of unpaidInvoices) {
-        const remaining = await getInvoiceBalance(String(inv._id), inv.totalAmount || 0);
-        if (remaining > 0.001) totalDue += remaining;
+        // An unknown invoice total means the amount is still outstanding, never
+        // settled: a null balance counts as due rather than being read as zero.
+        const remaining = await getInvoiceBalance(
+          String(inv._id),
+          typeof inv.totalAmount === 'number' ? inv.totalAmount : undefined,
+        );
+        if (remaining == null || remaining > 0.001) {
+          totalDue += remaining ?? (typeof inv.totalAmount === 'number' ? inv.totalAmount : 0);
+        }
       }
       duesSummary = {
         totalDue: Math.round(totalDue * 100) / 100,

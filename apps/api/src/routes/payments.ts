@@ -19,7 +19,11 @@ import { writeAuditLog } from '../lib/write-audit-log.js';
 import {
   updateInvoicePaymentStatus,
   getInvoiceBalance,
+  getInvoiceSettlement,
+  roundMoney,
 } from '../services/payment-status.service.js';
+import { createNotification } from '../services/notification.service.js';
+import type { INotificationType } from '@pg/types';
 
 /** Default due date: 5th of the invoice billing month. */
 function dueDateForMonth(month: string): Date {
@@ -37,18 +41,82 @@ function resolveInvoiceDueDate(invoice: Record<string, unknown>): Date {
 
 // ── Cast helpers (Mongoose 9) ───────────────────────────
 type CreateFn = (doc: Record<string, unknown>) => Promise<unknown>;
-type FindFn = (filter: Record<string, unknown>) => Promise<unknown[]>;
 type FindOneFn = (filter: Record<string, unknown>) => Promise<unknown>;
 type CountFn = (filter: Record<string, unknown>) => Promise<number>;
 type AggregateFn = (pipeline: unknown[]) => Promise<unknown[]>;
 
-const paymentFind = Payment.find.bind(Payment) as unknown as FindFn;
 const paymentFindOne = Payment.findOne.bind(Payment) as unknown as FindOneFn;
 const paymentCreate = Payment.create.bind(Payment) as unknown as CreateFn;
 const paymentAggregate = Payment.aggregate.bind(Payment) as unknown as AggregateFn;
 const paymentCountDocs = Payment.countDocuments.bind(Payment) as unknown as CountFn;
 const invoiceFindOne = Invoice.findOne.bind(Invoice) as unknown as FindOneFn;
 const tenantFindOne = Tenant.findOne.bind(Tenant) as unknown as FindOneFn;
+
+/** Longest idempotency key the payment model accepts. */
+const MAX_IDEMPOTENCY_KEY_LENGTH = 100;
+
+/**
+ * True when a write was refused because a unique index already holds the
+ * value.
+ *
+ * Two requests carrying the same idempotency key can race: both look the key
+ * up before either one writes. The unique index refuses the second write, and
+ * that refusal is the race being closed, not a failure.
+ */
+function isDuplicateKeyError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 11000;
+}
+
+// ── Resident notifications ────────────────────────────────
+// The resident waits on their own money: a UTR they submitted, an invoice they
+// owe, a payment the office voided. Every money decision is pushed to the
+// tenant's own user, resolved from the tenant record, never to an admin.
+// A notification failure never blocks the money write.
+
+/**
+ * Sends one notification to the user who owns a tenant record.
+ *
+ * The recipient is resolved from the tenant, so a payment can never notify the
+ * wrong person. Failures are logged, never thrown: the money write already
+ * happened and must not be undone by a push that did not go out.
+ */
+async function notifyTenantOfPayment(
+  tenantId: unknown,
+  notification: {
+    title: string;
+    body: string;
+    type: INotificationType;
+    data?: Record<string, string>;
+  },
+): Promise<void> {
+  const tenantIdStr = String(tenantId ?? '');
+  try {
+    if (!parseId(tenantIdStr)) {
+      logger.warn({ tenantId: tenantIdStr }, 'Payment notification skipped: invalid tenant id');
+      return;
+    }
+    const tenantRaw = await tenantFindOne(
+      safeFilter({ _id: new mongoose.Types.ObjectId(tenantIdStr) }),
+    );
+    const tenant = tenantRaw as Record<string, unknown> | null;
+    const userId = tenant?.userId;
+    if (!tenant || !userId) {
+      logger.warn({ tenantId: tenantIdStr }, 'Payment notification skipped: tenant has no user');
+      return;
+    }
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      data: notification.data ?? {},
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: tenantIdStr }, 'Failed to notify tenant about a payment');
+  }
+}
 
 const payments = new Hono();
 
@@ -94,6 +162,13 @@ const offlinePaymentSchema = z.strictObject({
   type: z.enum(['rent', 'electricity', 'deposit', 'laundry', 'other']).optional(),
   paidAt: z.string().datetime('Must be ISO 8601 date string'),
   notes: z.string().max(500).optional(),
+  /**
+   * Optional client-supplied key that makes the write idempotent. The
+   * `Idempotency-Key` header wins; this field is the fallback for a client
+   * that cannot set a header. Without one, the write behaves exactly as it
+   * always did.
+   */
+  idempotencyKey: z.string().trim().max(100).optional(),
 });
 
 const utrSubmitSchema = z.strictObject({
@@ -353,6 +428,12 @@ payments.get('/my', authGuard, tenantOnly, async (c) => {
 // ── POST /payments/offline ──────────────────────────────
 // Records an admin offline payment. Reconciles the pending Payment row
 // created by generateSingleInvoice so summary "expected" is not double-counted.
+//
+// The write is idempotent. The client sends an `Idempotency-Key` header and
+// the key is looked up BEFORE anything is written, so two requests carrying
+// the same key can never record the same cash twice: the second one replays
+// the payment the first one created instead of creating a second payment.
+// A request without the key behaves exactly as it always did.
 payments.post(
   '/offline',
   authGuard,
@@ -361,6 +442,33 @@ payments.post(
   async (c) => {
     const body = c.req.valid('json');
     const adminId = c.get('user').sub;
+
+    // ── Idempotency key ─────────────────────────────────
+    // The header is the contract. The body field is the fallback for a client
+    // that cannot set a header; without either, the write behaves exactly as
+    // it always did.
+    const idempotencyKey =
+      c.req.header('Idempotency-Key')?.trim() || body.idempotencyKey?.trim() || undefined;
+    if (idempotencyKey && idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+      return badRequest(
+        c,
+        `Idempotency-Key cannot exceed ${MAX_IDEMPOTENCY_KEY_LENGTH} characters`,
+        'INVALID_IDEMPOTENCY_KEY',
+      );
+    }
+
+    if (idempotencyKey) {
+      // Look the key up FIRST. A replay must not write anything, not even
+      // when the invoice has been settled since the first request.
+      const existing = await paymentFindOne(safeFilter({ idempotencyKey }));
+      if (existing) {
+        logger.info(
+          { idempotencyKey, paymentId: String((existing as Record<string, unknown>)._id ?? '') },
+          'Offline payment replayed: the idempotency key was already recorded',
+        );
+        return c.json({ success: true, data: existing, idempotent: true }, 200);
+      }
+    }
 
     if (!parseId(body.tenantId) || !parseId(body.invoiceId)) {
       return badRequest(c, 'Invalid tenantId or invoiceId');
@@ -389,15 +497,23 @@ payments.post(
       );
     }
 
-    const invoiceTotal = (invoice.totalAmount as number) ?? 0;
-    const paidRows = (await paymentFind(
-      safeFilter({
-        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-        status: 'paid',
-      }),
-    )) as Array<Record<string, unknown>>;
-    const alreadyPaid = paidRows.reduce((sum, p) => sum + ((p.amount as number) ?? 0), 0);
-    const balance = Math.max(0, invoiceTotal - alreadyPaid);
+    // One balance definition: the shared money helper, the same one the
+    // invoice list, the QR, the dues summary and the invoice row use.
+    const rawTotal = invoice.totalAmount;
+    const invoiceTotal =
+      typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? rawTotal : undefined;
+    const settlement = await getInvoiceSettlement(body.invoiceId, invoiceTotal);
+    const balance = settlement.balance;
+    if (balance == null) {
+      // An unknown total means the amount is still outstanding, never zero.
+      // The server cannot check what was collected, so it refuses instead of
+      // recording cash against an unknown balance.
+      return badRequest(
+        c,
+        'Invoice total is unknown, the payment cannot be recorded',
+        'INVOICE_TOTAL_UNKNOWN',
+      );
+    }
 
     if (body.amount > balance + 0.001) {
       return badRequest(
@@ -430,45 +546,40 @@ payments.post(
       verifiedBy: mongoose.Types.ObjectId | null;
       notes?: string;
       dueDate: Date;
+      idempotencyKey?: string;
       save: () => Promise<unknown>;
     }>;
 
     let paymentResult: unknown;
     const paymentType = body.type ?? 'rent';
+    // What is still due after this collection, from the shared money helper.
+    const residual = roundMoney(Math.max(0, balance - body.amount));
 
-    if (openPayments.length > 0) {
-      const primary = openPayments[0]!;
-      primary.amount = body.amount;
-      primary.method = body.method;
-      if (body.type !== undefined) primary.type = body.type;
-      primary.status = 'paid';
-      primary.paidAt = paidAt;
-      primary.verifiedBy = new mongoose.Types.ObjectId(adminId);
-      primary.dueDate = dueDate;
-      if (body.notes !== undefined) primary.notes = body.notes;
-      await primary.save();
-      paymentResult = primary;
+    // The office's own obligation row is the only open row the office may
+    // adjust. A resident's declared transfer (status pending_verification) is
+    // the resident's statement of what they sent: its amount is never
+    // rewritten here, only the verification step may change it.
+    const officeRow = openPayments.find((row) => row.status === 'pending') ?? null;
 
-      for (const extra of openPayments.slice(1)) {
-        extra.status = 'cancelled';
-        await extra.save();
-      }
-
-      const remaining = Math.max(0, balance - body.amount);
-      if (remaining > 0.01) {
-        await paymentCreate({
-          tenantId: new mongoose.Types.ObjectId(body.tenantId),
-          invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-          amount: remaining,
-          type: (primary.type as string | undefined) ?? paymentType,
-          method: 'upi',
-          status: 'pending',
-          month: invoice.month,
-          dueDate,
-        });
-      }
+    if (officeRow) {
+      officeRow.amount = body.amount;
+      officeRow.method = body.method;
+      if (body.type !== undefined) officeRow.type = body.type;
+      officeRow.status = 'paid';
+      officeRow.paidAt = paidAt;
+      officeRow.verifiedBy = new mongoose.Types.ObjectId(adminId);
+      officeRow.dueDate = dueDate;
+      if (body.notes !== undefined) officeRow.notes = body.notes;
+      // The key marks the payment that carries the collected cash, so a
+      // replay of the same request finds this row and nothing else.
+      if (idempotencyKey) officeRow.idempotencyKey = idempotencyKey;
+      await officeRow.save();
+      paymentResult = officeRow;
     } else {
-      paymentResult = await paymentCreate({
+      // No office row to carry the cash: either there is no open row at all,
+      // or the only open row is the resident's declared transfer. The cash is
+      // recorded on a row of its own and the resident's row is left alone.
+      const paymentDoc: Record<string, unknown> = {
         tenantId: new mongoose.Types.ObjectId(body.tenantId),
         invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
         amount: body.amount,
@@ -480,24 +591,77 @@ payments.post(
         paidAt,
         verifiedBy: new mongoose.Types.ObjectId(adminId),
         notes: body.notes,
-      });
+      };
+      if (idempotencyKey) paymentDoc.idempotencyKey = idempotencyKey;
 
-      const remaining = Math.max(0, balance - body.amount);
-      if (remaining > 0.01) {
-        await paymentCreate({
-          tenantId: new mongoose.Types.ObjectId(body.tenantId),
-          invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
-          amount: remaining,
-          type: paymentType,
-          method: 'upi',
-          status: 'pending',
-          month: invoice.month,
-          dueDate,
-        });
+      try {
+        paymentResult = await paymentCreate(paymentDoc);
+      } catch (err) {
+        // Two requests with the same key raced: both looked the key up before
+        // either wrote, so the unique index refused the second write. The
+        // first payment is the answer.
+        if (idempotencyKey && isDuplicateKeyError(err)) {
+          const existing = await paymentFindOne(safeFilter({ idempotencyKey }));
+          if (existing) {
+            const existingId = String((existing as Record<string, unknown>)._id ?? '');
+            logger.info(
+              { idempotencyKey, paymentId: existingId },
+              'Offline payment replayed: a concurrent write took the idempotency key',
+            );
+            return c.json({ success: true, data: existing, idempotent: true }, 200);
+          }
+        }
+        throw err;
       }
     }
 
+    // The office's leftover obligation rows are closed. A resident's declared
+    // transfer is left exactly as it is: the verification step decides it.
+    for (const extra of openPayments) {
+      if (extra === officeRow) continue;
+      if (extra.status !== 'pending') continue;
+      extra.status = 'cancelled';
+      await extra.save();
+    }
+
+    if (residual > 0.01) {
+      await paymentCreate({
+        tenantId: new mongoose.Types.ObjectId(body.tenantId),
+        invoiceId: new mongoose.Types.ObjectId(body.invoiceId),
+        amount: residual,
+        type: (officeRow?.type as string | undefined) ?? paymentType,
+        method: 'upi',
+        status: 'pending',
+        month: invoice.month,
+        dueDate,
+      });
+    }
+
+    // The resident's declared transfer rows, captured before the status
+    // recompute: the shared helper closes the open rows that no longer fit
+    // the balance, and a resident's transfer is not the office's to void.
+    const residentTransferIds = openPayments
+      .filter((row) => row.status === 'pending_verification')
+      .map((row) => row._id);
+
     await updateInvoicePaymentStatus(body.invoiceId);
+
+    if (residentTransferIds.length > 0) {
+      // The shared helper cancels the open rows that no longer fit the
+      // balance. A resident's transfer is not the office's to void: an offline
+      // collection leaves it alone and the verification step resolves the
+      // mismatch.
+      const restored = await Payment.updateMany(
+        safeFilter({ _id: { $in: residentTransferIds }, status: 'cancelled' }),
+        { $set: { status: 'pending_verification' } },
+      );
+      if (restored.modifiedCount > 0) {
+        logger.warn(
+          { invoiceId: body.invoiceId, restored: restored.modifiedCount },
+          'Offline collection: restored the resident transfer rows the status recompute had voided',
+        );
+      }
+    }
 
     const paymentId = String(
       (paymentResult as Record<string, unknown>)?._id ??
@@ -516,7 +680,16 @@ payments.post(
         amount: body.amount,
         method: body.method,
         source: 'offline',
+        idempotencyKey: idempotencyKey ?? undefined,
       },
+    });
+
+    // The money is settled: tell the resident it landed.
+    await notifyTenantOfPayment(body.tenantId, {
+      title: 'Payment recorded',
+      body: `Your payment of ₹${body.amount.toFixed(2)} for ${String(invoice.month ?? '')} has been recorded.`,
+      type: 'payment_verified',
+      data: { paymentId, invoiceId: body.invoiceId },
     });
 
     logger.info(
@@ -524,7 +697,9 @@ payments.post(
       'Offline payment recorded',
     );
 
-    return c.json({ success: true, data: paymentResult }, 201);
+    // `idempotent` tells the client whether this request recorded the cash or
+    // handed back the payment an earlier request with the same key recorded.
+    return c.json({ success: true, data: paymentResult, idempotent: false }, 201);
   },
 );
 
@@ -573,6 +748,15 @@ payments.get('/qr-code', authGuard, async (c) => {
     String(invoice._id),
     invoice.totalAmount as number | undefined,
   );
+  if (balance == null) {
+    // An unknown total means the amount is still outstanding and the amount to
+    // collect cannot be computed. A QR for a zero amount would be a lie.
+    return badRequest(
+      c,
+      'Invoice total is unknown, the amount to pay cannot be computed',
+      'INVOICE_TOTAL_UNKNOWN',
+    );
+  }
   if (balance <= 0) {
     return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
   }
@@ -660,6 +844,15 @@ payments.post(
       String(invoice._id),
       invoice.totalAmount as number | undefined,
     );
+    if (balance == null) {
+      // An unknown total means the amount is still outstanding and the amount
+      // to collect cannot be computed. A UTR for an unknown amount is a guess.
+      return badRequest(
+        c,
+        'Invoice total is unknown, the amount to pay cannot be computed',
+        'INVOICE_TOTAL_UNKNOWN',
+      );
+    }
     if (balance <= 0) {
       return badRequest(c, 'Invoice has no remaining balance', 'INVOICE_PAID');
     }
@@ -796,6 +989,29 @@ payments.post(
       },
     });
 
+    // The resident submitted this UTR and is waiting for the verdict.
+    const amount = (payment.amount as number) ?? 0;
+    const month = String(payment.month ?? '');
+    const invoiceId = String(payment.invoiceId ?? '');
+    if (body.status === 'paid') {
+      await notifyTenantOfPayment(payment.tenantId, {
+        title: 'Payment verified',
+        body: `Your payment of ₹${amount.toFixed(2)} for ${month} has been verified.`,
+        type: 'payment_verified',
+        data: { paymentId, invoiceId },
+      });
+    } else {
+      await notifyTenantOfPayment(payment.tenantId, {
+        title: 'Payment not verified',
+        body:
+          `Your payment of ₹${amount.toFixed(2)} for ${month} could not be verified. ` +
+          `The amount is still due, please submit the payment again.` +
+          (body.notes ? ` Reason: ${body.notes}` : ''),
+        type: 'payment_reminder',
+        data: { paymentId, invoiceId },
+      });
+    }
+
     return c.json({ success: true, data: payment });
   },
 );
@@ -849,36 +1065,6 @@ function mapPayment(doc: Record<string, unknown>) {
     invoiceNumber: inv?.invoiceNumber as string | undefined,
   };
 }
-
-// ── GET /payments/pending-verification ──────────────────
-payments.get('/pending-verification', authGuard, adminOnly, async (c) => {
-  const { page, limit, skip } = parsePagination(c);
-
-  const [data, total] = await Promise.all([
-    Payment.find(safeFilter({ status: 'pending_verification' }))
-      .sort({ createdAt: -1 } as Record<string, -1>)
-      .skip(skip)
-      .limit(limit)
-      .populate({ path: 'tenantId', populate: { path: 'userId', select: 'name email phone' } })
-      .populate({
-        path: 'tenantId',
-        populate: {
-          path: 'roomId',
-          select: 'roomNumber floor',
-          populate: { path: 'floor', select: 'label floorNumber' },
-        },
-      })
-      .populate('invoiceId')
-      .lean() as unknown,
-    paymentCountDocs(safeFilter({ status: 'pending_verification' })),
-  ]);
-
-  return c.json({
-    success: true,
-    data: (data as Record<string, unknown>[]).map(mapPayment),
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  });
-});
 
 // ── GET /payments/:id/receipt ───────────────────────────
 payments.get('/:id/receipt', authGuard, async (c) => {
@@ -1114,6 +1300,29 @@ payments.post(
       },
     });
 
+    // The resident is waiting on this verdict, approved or not.
+    const amount = (payment.amount as number) ?? 0;
+    const month = String(payment.month ?? '');
+    const invoiceId = String(payment.invoiceId ?? '');
+    if (body.approved) {
+      await notifyTenantOfPayment(payment.tenantId, {
+        title: 'Payment verified',
+        body: `Your payment of ₹${amount.toFixed(2)} for ${month} has been verified.`,
+        type: 'payment_verified',
+        data: { paymentId: id, invoiceId },
+      });
+    } else {
+      await notifyTenantOfPayment(payment.tenantId, {
+        title: 'Payment not verified',
+        body:
+          `Your payment of ₹${amount.toFixed(2)} for ${month} was not verified. ` +
+          `The amount is still due, please submit the payment again.` +
+          (body.notes ? ` Reason: ${body.notes}` : ''),
+        type: 'payment_reminder',
+        data: { paymentId: id, invoiceId },
+      });
+    }
+
     return c.json({ success: true, data: payment });
   },
 );
@@ -1165,6 +1374,19 @@ payments.post(
       details: { voided: true, invoiceId: String(payment.invoiceId), notes: body.notes },
     });
 
+    // The money went back to owed: the resident owes it again and must know.
+    const voidedAmount = (payment.amount as number) ?? 0;
+    const voidedMonth = String(payment.month ?? '');
+    await notifyTenantOfPayment(payment.tenantId, {
+      title: 'Payment voided',
+      body:
+        `Your payment of ₹${voidedAmount.toFixed(2)} for ${voidedMonth} was voided, ` +
+        `so the amount is due again.` +
+        (body.notes ? ` Reason: ${body.notes}` : ''),
+      type: 'payment_reminder',
+      data: { paymentId: id, invoiceId: String(payment.invoiceId) },
+    });
+
     return c.json({ success: true, data: payment });
   },
 );
@@ -1192,6 +1414,8 @@ payments.delete('/:id', authGuard, adminOnly, async (c) => {
   }
 
   const invoiceId = String(payment.invoiceId);
+  const deletedAmount = (payment.amount as number) ?? 0;
+  const deletedMonth = String(payment.month ?? '');
   await Payment.findByIdAndDelete(id);
 
   // Update invoice payment status after deletion
@@ -1208,6 +1432,18 @@ payments.delete('/:id', authGuard, adminOnly, async (c) => {
       amount: payment.amount,
       status: payment.status,
     },
+  });
+
+  // The resident's payment record is gone. A UTR number and its screenshot
+  // are the evidence that money moved, so the resident hears it from the
+  // server instead of finding a vanished row later.
+  await notifyTenantOfPayment(payment.tenantId, {
+    title: 'Payment record removed',
+    body:
+      `The payment record of Rs. ${deletedAmount.toFixed(2)} for ${deletedMonth} was removed ` +
+      `from your account. If you have already paid, please contact the PG office.`,
+    type: 'payment_reminder',
+    data: { paymentId: id, invoiceId },
   });
 
   return c.json({ success: true, data: { message: 'Payment deleted' } });

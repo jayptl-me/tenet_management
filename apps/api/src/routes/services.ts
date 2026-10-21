@@ -11,6 +11,8 @@ import { Room } from '../models/room.js';
 import { Tenant } from '../models/tenant.js';
 import { AppConfig, DEFAULT_AMENITY_DEFINITIONS } from '../models/appConfig.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
 import { broadcast } from '../lib/eventBus.js';
 
 // ── Helper: derive complaint categories from AppConfig amenity definitions ──
@@ -105,6 +107,87 @@ async function enrichWithComplaintCounts(
 }
 
 const services = new Hono();
+
+// ── Resident notifications ────────────────────────────────
+// A floor that loses its wifi is a resident's problem, not the operator's.
+// The recipient is the set of residents living on that floor, resolved from
+// the service record through the room and tenant collections, never from a
+// client-supplied id. A failed push is logged and never undoes the write it
+// follows.
+
+/** What a resident hears about a service that changed state. */
+function serviceStatusSentence(status: string): string {
+  if (status === 'down') return 'is not working';
+  if (status === 'degraded') return 'is only partly working';
+  return 'is working again';
+}
+
+/**
+ * Tells the residents of a floor that one of its services changed state.
+ *
+ * The recipients are the residents of the rooms on that floor. A floor with
+ * nobody living on it has nobody to tell, so nothing is sent and the reason
+ * is logged.
+ */
+async function notifyFloorOfServiceChange(notice: {
+  serviceId: string;
+  floorId: string;
+  floorLabel: string;
+  serviceType: string;
+  status: string;
+  note?: string;
+}): Promise<void> {
+  try {
+    const rooms = await Room.find(
+      safeFilter({ floorId: new mongoose.Types.ObjectId(notice.floorId) }),
+    )
+      .select('_id')
+      .lean();
+    const roomIds = (rooms as unknown as Array<{ _id?: unknown }>).map((room) =>
+      String(room._id ?? ''),
+    );
+    const tenants = await Tenant.find(safeFilter({ roomId: { $in: roomIds }, isActive: true }))
+      .select('userId')
+      .lean();
+    const userIds = [
+      ...new Set(
+        (tenants as unknown as Array<{ userId?: unknown }>)
+          .map((tenant) => String(tenant.userId ?? ''))
+          .filter((id) => id !== ''),
+      ),
+    ];
+    if (userIds.length === 0) {
+      logger.warn(
+        { floorId: notice.floorId },
+        'Service notification skipped: no resident lives on this floor',
+      );
+      return;
+    }
+
+    const label = notice.serviceType.replace(/_/g, ' ');
+    const note = notice.note?.trim();
+    await createNotification({
+      targetType: 'individual',
+      targetIds: userIds,
+      title: 'Service update',
+      body:
+        `The ${label} on ${notice.floorLabel} ${serviceStatusSentence(notice.status)}.` +
+        (note ? ` Note: ${note}` : ''),
+      type: 'service_update',
+      data: {
+        serviceId: notice.serviceId,
+        floorId: notice.floorId,
+        serviceType: notice.serviceType,
+      },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error(
+      { err, floorId: notice.floorId },
+      'Failed to notify residents about a service change',
+    );
+  }
+}
 
 // ── Schema ──────────────────────────────────────────────
 const updateServiceSchema = z.strictObject({
@@ -353,6 +436,20 @@ services.put('/:id', authGuard, zValidator('json', updateServiceSchema), async (
     .populate('floor')
     .populate('lastUpdatedBy', 'name email')
     .lean();
+
+  // The floor lives without this service now: the residents of that floor
+  // must hear it from the server, not from a neighbour.
+  if (previousStatus !== body.status) {
+    const populatedFloor = (populated as { floor?: { label?: string } | null } | null)?.floor;
+    await notifyFloorOfServiceChange({
+      serviceId: id,
+      floorId: String(service.floorId ?? ''),
+      floorLabel: String(populatedFloor?.label ?? 'your floor'),
+      serviceType: String(service.serviceType ?? ''),
+      status: body.status,
+      note: service.note,
+    });
+  }
 
   broadcast({
     event: 'service_update',

@@ -7,6 +7,7 @@ import { ElectricityBill } from '../models/electricityBill.js';
 import { nextInvoiceNumber } from '../models/counter.js';
 import { logger } from '../lib/logger.js';
 import { safeFilter } from '../lib/routeUtils.js';
+import { createNotification } from './notification.service.js';
 import type { IInvoiceLineItemSubdoc } from '../models/invoice.js';
 
 // ── Cast helpers (Mongoose 9 strict types) ─────────────
@@ -171,6 +172,34 @@ export async function generateSingleInvoice(params: SingleInvoiceData): Promise<
     month,
     dueDate,
   });
+
+  // The invoice row alone is silent: without this the resident only learns
+  // that an invoice exists the next time the app is loaded. The recipient is
+  // the tenant's own user, taken from the tenant record read above.
+  const tenantUserId = tenant.userId;
+  if (tenantUserId) {
+    try {
+      const dueDateText = dueDate.toISOString().slice(0, 10);
+      await createNotification({
+        targetType: 'individual',
+        targetIds: [String(tenantUserId)],
+        title: 'Invoice issued',
+        body: `Your invoice ${invoiceNumber} for ${month} of ₹${invoice.totalAmount.toFixed(2)} is ready. Payment is due by ${dueDateText}.`,
+        type: 'payment_reminder',
+        data: {
+          invoiceId: String(invoice._id),
+          invoiceNumber,
+          month,
+          amount: String(invoice.totalAmount),
+          dueDate: dueDateText,
+        },
+        sendPush: true,
+      });
+    } catch (notifyErr) {
+      // A push that did not go out must never fail invoice generation.
+      logger.warn({ err: notifyErr, tenantId }, 'Failed to notify tenant of issued invoice');
+    }
+  }
 
   logger.info(
     { invoiceId: invoice._id, tenantId, month, amount: invoice.totalAmount },

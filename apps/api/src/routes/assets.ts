@@ -3,11 +3,14 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
-import { notFound, badRequest, parseId, parsePagination } from '../lib/routeUtils.js';
+import { notFound, badRequest, parseId, parsePagination, safeFilter } from '../lib/routeUtils.js';
 import { Asset } from '../models/asset.js';
-import '../models/floor.js';
-import '../models/room.js';
+import { Floor } from '../models/floor.js';
+import { Room } from '../models/room.js';
+import { Tenant } from '../models/tenant.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
 import mongoose from 'mongoose';
 
 const assets = new Hono();
@@ -52,6 +55,103 @@ function toDateOrUndefined(value: string | undefined): Date | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+// ── Resident notifications ────────────────────────────────
+// An asset that goes out of service is the residents' problem: the geyser in
+// their room stops working. The recipient is the set of residents the asset is
+// attached to (its room, or its floor when it hangs on a floor), resolved
+// from the asset record itself, never from a client-supplied id. A failed push
+// is logged and never undoes the write it follows.
+
+/** The asset statuses that take an item out of service for the residents. */
+const OUT_OF_SERVICE_STATUSES = new Set(['under_maintenance', 'damaged']);
+
+/** What a resident hears about an asset that went out of service. */
+function assetStatusSentence(status: string): string {
+  if (status === 'under_maintenance') return 'is being repaired';
+  if (status === 'damaged') return 'is broken';
+  return 'is out of service';
+}
+
+/**
+ * Tells the residents an asset belongs to that the asset went out of service.
+ *
+ * The recipients are the residents of the room the asset sits in, or of the
+ * floor when the asset hangs on a floor. An asset with nobody attached to it
+ * has nobody to tell, so nothing is sent and the reason is logged.
+ */
+async function notifyAssetOutOfService(asset: {
+  _id: unknown;
+  name: string;
+  status: string;
+  roomId: unknown;
+  floorId: unknown;
+  location: string;
+}): Promise<void> {
+  try {
+    const roomId = asset.roomId ? String(asset.roomId) : '';
+    const floorId = asset.floorId ? String(asset.floorId) : '';
+
+    let userIds: string[] = [];
+    let place = asset.location;
+
+    if (roomId !== '') {
+      const room = await Room.findById(roomId).select('roomNumber').lean();
+      place = String((room as { roomNumber?: string } | null)?.roomNumber ?? asset.location);
+      const tenants = await Tenant.find(
+        safeFilter({ roomId: new mongoose.Types.ObjectId(roomId), isActive: true }),
+      )
+        .select('userId')
+        .lean();
+      userIds = [
+        ...new Set(
+          (tenants as unknown as Array<{ userId?: unknown }>)
+            .map((tenant) => String(tenant.userId ?? ''))
+            .filter((id) => id !== ''),
+        ),
+      ];
+    } else if (floorId !== '') {
+      const floor = await Floor.findById(floorId).select('label').lean();
+      place = String((floor as { label?: string } | null)?.label ?? asset.location);
+      const rooms = await Room.find(safeFilter({ floorId: new mongoose.Types.ObjectId(floorId) }))
+        .select('_id')
+        .lean();
+      const roomIds = (rooms as unknown as Array<{ _id?: unknown }>).map((room) =>
+        String(room._id ?? ''),
+      );
+      const tenants = await Tenant.find(safeFilter({ roomId: { $in: roomIds }, isActive: true }))
+        .select('userId')
+        .lean();
+      userIds = [
+        ...new Set(
+          (tenants as unknown as Array<{ userId?: unknown }>)
+            .map((tenant) => String(tenant.userId ?? ''))
+            .filter((id) => id !== ''),
+        ),
+      ];
+    }
+
+    if (userIds.length === 0) {
+      logger.warn(
+        { asset: asset.name },
+        'Asset notification skipped: no resident is attached to the asset',
+      );
+      return;
+    }
+
+    await createNotification({
+      targetType: 'individual',
+      targetIds: userIds,
+      title: 'Asset out of service',
+      body: `The ${asset.name} in ${place} ${assetStatusSentence(asset.status)}.`,
+      type: 'service_update',
+      data: { assetId: String(asset._id ?? ''), assetName: asset.name },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, asset: asset.name }, 'Failed to notify residents about an asset');
+  }
 }
 
 // ── GET /assets ─────────────────────────────────────────
@@ -196,6 +296,11 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
 
   const body = c.req.valid('json');
   const user = c.get('user');
+  // The status before the edit: only a status that actually moved is a
+  // decision the residents have to hear about.
+  const before = await Asset.findById(id).lean();
+  if (!before) return notFound(c, 'Asset');
+
   const update: Record<string, unknown> = { ...body };
   if (body.floorId !== undefined) {
     update.floorId = body.floorId ? new mongoose.Types.ObjectId(body.floorId) : null;
@@ -229,6 +334,21 @@ assets.put('/:id', authGuard, adminOnly, zValidator('json', updateAssetSchema), 
       updatedFields: Object.keys(body),
     },
   });
+
+  // The item the residents live with just went out of service: they must
+  // hear it from the server, not discover it when the geyser stops.
+  const newStatus = String((asset as { status?: string }).status ?? '');
+  const previousStatus = String((before as { status?: string }).status ?? '');
+  if (OUT_OF_SERVICE_STATUSES.has(newStatus) && newStatus !== previousStatus) {
+    await notifyAssetOutOfService({
+      _id: (asset as { _id?: unknown })._id,
+      name: String((asset as { name?: string }).name ?? 'An item'),
+      status: newStatus,
+      roomId: (asset as { roomId?: unknown }).roomId,
+      floorId: (asset as { floorId?: unknown }).floorId,
+      location: String((asset as { location?: string }).location ?? ''),
+    });
+  }
 
   return c.json({ success: true, data: asset });
 });

@@ -19,6 +19,22 @@ export interface IInvoice {
   /** ISO date string; 5th of billing month by default. May be null on legacy docs. */
   dueDate: string | null;
   status: IInvoiceStatus;
+  /**
+   * Server-computed settled part of this invoice: the sum of every PAID
+   * payment row, NOT capped at totalAmount. It can be larger than
+   * totalAmount when the invoice was over-collected, so the invoice view can
+   * never under-report what the payments ledger shows. Only the API may set
+   * it: clients must never derive it from the gross total.
+   */
+  paidAmount?: number;
+  /**
+   * Server-computed amount still due on this invoice: max(0, totalAmount -
+   * paidAmount). Never negative. `null` when the server could not compute it
+   * (the invoice total is not known): an unknown balance is OUTSTANDING,
+   * never zero, and must never be read as a settled invoice. Only the API may
+   * set it: clients must never derive it from the gross total.
+   */
+  balance?: number | null;
   createdAt: string;
 }
 
@@ -36,7 +52,10 @@ export interface IInvoiceGenerateSingle {
   month: string;
 }
 
-/** Populated list row shape returned by GET /invoices */
+/**
+ * Populated list row shape returned by GET /invoices.
+ * Includes the server-computed `paidAmount` and `balance` fields.
+ */
 export interface IInvoiceListItem extends Omit<IInvoice, 'tenantId'> {
   tenantId:
     | {

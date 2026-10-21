@@ -9,6 +9,9 @@ import { Tenant } from '../models/tenant.js';
 import mongoose from 'mongoose';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
+import type { INotificationType } from '@pg/types';
 
 const visitors = new Hono();
 visitors.use('*', requireFeature('visitorManagementEnabled'));
@@ -45,6 +48,54 @@ function mapVisitor(doc: Record<string, unknown>) {
     name: doc.visitorName ?? doc.name,
     phone: doc.visitorPhone ?? doc.phone,
   };
+}
+
+// ── Resident notifications ────────────────────────────────
+// A visitor pass is a gate decision the resident is waiting on: they
+// registered the visit and they have no other way to learn what the gate did
+// with it. The recipient is the tenant who registered the visitor, resolved
+// from the visitor record itself, never from a client-supplied id. A failed
+// push is logged and never undoes the write it follows.
+
+/**
+ * Sends one notification to the user who owns the tenant a visitor belongs to.
+ *
+ * Failures are logged, never thrown: the gate write already happened and must
+ * not be undone by a push that did not go out.
+ */
+async function notifyTenantOfVisitor(
+  tenantId: unknown,
+  notification: {
+    title: string;
+    body: string;
+    type: INotificationType;
+    data?: Record<string, string>;
+  },
+): Promise<void> {
+  const tenantIdStr = String(tenantId ?? '');
+  try {
+    if (!parseId(tenantIdStr)) {
+      logger.warn({ tenantId: tenantIdStr }, 'Visitor notification skipped: invalid tenant id');
+      return;
+    }
+    const tenantRaw = await Tenant.findById(tenantIdStr).select('userId').lean();
+    const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+    if (!tenantRaw || !userId) {
+      logger.warn({ tenantId: tenantIdStr }, 'Visitor notification skipped: tenant has no user');
+      return;
+    }
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      data: notification.data ?? {},
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: tenantIdStr }, 'Failed to notify tenant about a visitor');
+  }
 }
 
 // ── POST /visitors — admin or tenant ────────────────────
@@ -290,6 +341,18 @@ visitors.post('/:id/approve', authGuard, adminOnly, async (c) => {
     resource: 'visitor',
     resourceId: id,
     details: { previousStatus: 'cancelled', status: 'expected' },
+  });
+
+  // The resident registered this visit and is waiting at the gate for the
+  // verdict. The gate allowed it in, so they must hear it from the server.
+  const visitorName = String(
+    (visitor as unknown as Record<string, unknown>).visitorName ?? 'your visitor',
+  );
+  await notifyTenantOfVisitor(visitor.tenantId, {
+    title: 'Visitor approved',
+    body: `Your visitor ${visitorName} has been approved and is expected at the gate.`,
+    type: 'service_update',
+    data: { visitorId: id },
   });
 
   return c.json({

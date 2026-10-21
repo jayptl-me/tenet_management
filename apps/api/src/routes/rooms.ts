@@ -9,6 +9,8 @@ import { reconcileOccupancy } from '../services/occupancy-reconcile.service.js';
 import { authGuard } from '../middleware/auth.js';
 import { adminOnly } from '../middleware/roles.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { createNotification } from '../services/notification.service.js';
+import { logger } from '../lib/logger.js';
 import {
   parsePagination,
   parseId,
@@ -118,6 +120,90 @@ function rebuildBedsForSharingType(
   }
 
   return { beds, remaps };
+}
+
+// ── Resident notifications ────────────────────────────────
+// An amenity that goes degraded or down is the resident's problem, not the
+// operator's: the geyser stops working in the room they sleep in. The
+// recipient is the set of residents of that room, resolved from the room
+// record through the tenant collection, never from a client-supplied id. A
+// failed push is logged and never undoes the room write it follows.
+
+/** Reads the amenity list of a room into amenityKey -> status. */
+function amenityStatuses(raw: unknown): Map<string, string> {
+  const statuses = new Map<string, string>();
+  if (!Array.isArray(raw)) return statuses;
+  for (const entry of raw as Array<Record<string, unknown>>) {
+    const key = String(entry?.amenityKey ?? '');
+    if (key === '') continue;
+    statuses.set(key, String(entry?.status ?? 'operational'));
+  }
+  return statuses;
+}
+
+/** What a resident hears about one amenity, in the words of the resident. */
+function amenitySentence(amenityKey: string, status: string): string {
+  const label = amenityKey.replace(/_/g, ' ');
+  if (status === 'down') return `The ${label} is not working.`;
+  if (status === 'degraded') return `The ${label} is only partly working.`;
+  return `The ${label} is working again.`;
+}
+
+/**
+ * Tells the residents of a room about the amenities that changed state.
+ *
+ * The recipients are the residents of that room, read from the tenant
+ * collection. A room with no resident attached has nobody to tell, so
+ * nothing is sent and the reason is logged. A failed push never undoes the
+ * room write that came before it.
+ */
+async function notifyRoomAmenityChanges(
+  roomId: string,
+  roomNumber: string,
+  before: unknown,
+  after: unknown,
+): Promise<void> {
+  const beforeStatuses = amenityStatuses(before);
+  const afterStatuses = amenityStatuses(after);
+  const changed = [...afterStatuses.entries()].filter(([key, status]) => {
+    const beforeStatus = beforeStatuses.get(key);
+    // A newly listed amenity only matters when it is not working.
+    if (beforeStatus === undefined) return status !== 'operational';
+    return beforeStatus !== status;
+  });
+  if (changed.length === 0) return;
+
+  try {
+    const tenants = await Tenant.find(
+      safeFilter({ roomId: new mongoose.Types.ObjectId(roomId), isActive: true }),
+    )
+      .select('userId')
+      .lean();
+    const userIds = [
+      ...new Set(
+        (tenants as unknown as Array<{ userId?: unknown }>)
+          .map((tenant) => String(tenant.userId ?? ''))
+          .filter((id) => id !== ''),
+      ),
+    ];
+    if (userIds.length === 0) {
+      logger.warn({ roomId }, 'Room amenity notification skipped: no resident lives in the room');
+      return;
+    }
+
+    const sentences = changed.map(([key, status]) => amenitySentence(key, status));
+    await createNotification({
+      targetType: 'individual',
+      targetIds: userIds,
+      title: 'Room amenity update',
+      body: `In room ${roomNumber}: ${sentences.join(' ')}`,
+      type: 'service_update',
+      data: { roomId, roomNumber },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, roomId }, 'Failed to notify residents about a room amenity change');
+  }
 }
 
 // ── Router ───────────────────────────────────────────────
@@ -246,18 +332,6 @@ router.get('/', authGuard, async (c) => {
     data: enriched,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit), stats },
   });
-});
-
-// GET /available — rooms with vacant beds
-router.get('/available', authGuard, async (c) => {
-  const rooms = await Room.find({
-    isActive: true,
-    'beds.isOccupied': false,
-  })
-    .populate('floor')
-    .lean();
-
-  return c.json({ success: true, data: rooms });
 });
 
 // GET /reconcile-occupancy — dry-run drift report (admin only)
@@ -499,6 +573,15 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
           },
         });
 
+        // The residents of the room live with its amenities: a geyser that
+        // goes down has to reach them, not only the operator.
+        await notifyRoomAmenityChanges(
+          id,
+          String(updated?.roomNumber ?? ''),
+          existingRoom.roomAmenities,
+          updated?.roomAmenities,
+        );
+
         return c.json({ success: true, data: updated });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
@@ -551,6 +634,15 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
       updatedFields: Object.keys(body),
     },
   });
+
+  // The residents of the room live with its amenities: a geyser that goes
+  // down has to reach them, not only the operator.
+  await notifyRoomAmenityChanges(
+    id,
+    String((room as { roomNumber?: string }).roomNumber ?? ''),
+    (before as { roomAmenities?: unknown }).roomAmenities,
+    (room as { roomAmenities?: unknown }).roomAmenities,
+  );
 
   return c.json({ success: true, data: room });
 });
