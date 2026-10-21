@@ -223,3 +223,24 @@ export type {
 
 // ── Health ─────────────────────────────────────────────
 export type { HealthDbStatus, HealthOverallStatus, IHealthResponse } from './health';
+
+// ── Module contracts ───────────────────────────────────
+export { LAYOUT_ARCHETYPES } from './contracts/module';
+export type {
+  CanonicalLoop,
+  ContractLayout,
+  ContractNextBestAction,
+  ContractNotification,
+  ContractProvenance,
+  ContractRuleId,
+  ContractStateMachine,
+  ContractStatus,
+  ContractTruthEntry,
+  LayoutArchetype,
+  ModuleContract,
+  NextBestAction,
+  StatusEntryPoint,
+} from './contracts/module';
+export { PAYMENTS_CONTRACT } from './contracts/payments';
+export { KNOWN_BASELINE } from './contracts/baseline';
+export type { KnownBaselineEntry } from './contracts/baseline';
