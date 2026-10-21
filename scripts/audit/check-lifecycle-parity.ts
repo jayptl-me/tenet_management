@@ -48,6 +48,7 @@ const DOMAIN_MODELS: Record<string, string> = {
   leave: 'leaveApplication.ts',
   visitor: 'visitor.ts',
   enquiry: 'enquiry.ts',
+  electricity: 'electricityBill.ts',
 };
 
 /** One registered route of the API. */

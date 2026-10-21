@@ -223,5 +223,32 @@
         "allowedNext": ["new", "contacted"]
       }
     ]
+  },
+  "electricity": {
+    "kind": "ladder",
+    "label": "Electricity bill",
+    "steps": [
+      {
+        "key": "draft",
+        "label": "Draft",
+        "endpoint": "POST /electricity",
+        "actor": "admin",
+        "allowedNext": ["finalized"]
+      },
+      {
+        "key": "finalized",
+        "label": "Finalized",
+        "endpoint": "POST /electricity/:id/finalize",
+        "actor": "admin",
+        "allowedNext": ["distributed"]
+      },
+      {
+        "key": "distributed",
+        "label": "Distributed",
+        "endpoint": "POST /electricity/:id/distribute",
+        "actor": "admin",
+        "allowedNext": []
+      }
+    ]
   }
 }

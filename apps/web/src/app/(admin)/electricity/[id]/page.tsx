@@ -19,6 +19,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { lifecycleFor } from '@pg/types';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
@@ -105,23 +106,26 @@ interface DistributeResult {
  * move from finalized to distributed is POST /electricity/:id/distribute
  * (apps/api/src/routes/electricity.ts:644-937).
  */
-const BILL_STATES = [
-  {
-    key: 'draft',
-    label: 'Draft',
-    rule: 'The readings can still be edited. No resident is charged and nobody is told.',
-  },
-  {
-    key: 'finalized',
-    label: 'Finalized',
-    rule: 'The readings are locked and the server refuses any later edit. The bill is still on no invoice.',
-  },
-  {
-    key: 'distributed',
-    label: 'Distributed',
-    rule: 'The shares are on the resident invoices. The server refuses to edit or delete the bill.',
-  },
-] as const;
+/**
+ * What each state means for the resident and for the office.
+ *
+ * The states themselves come from the shared lifecycle vocabulary
+ * (packages/types/src/lifecycle.json), so the admin panel, the portal and the
+ * contract all read the same three keys. Only the explanation is local.
+ */
+const BILL_STATE_RULES: Record<string, string> = {
+  draft: 'The readings can still be edited. No resident is charged and nobody is told.',
+  finalized:
+    'The readings are locked and the server refuses any later edit. The bill is still on no invoice.',
+  distributed:
+    'The shares are on the resident invoices. The server refuses to edit or delete the bill.',
+};
+
+const BILL_STATES = lifecycleFor('electricity').steps.map((step) => ({
+  key: step.key,
+  label: step.label,
+  rule: BILL_STATE_RULES[step.key] ?? '',
+}));
 
 const BILL_KEY = (id: string) => ['electricity', id] as const;
 const ELECTRICITY_PREFIX = ['electricity'] as const;

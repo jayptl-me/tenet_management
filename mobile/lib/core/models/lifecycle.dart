@@ -317,4 +317,31 @@ const Map<String, LifecycleDomain> lifecycleDomains = <String, LifecycleDomain>{
       ),
     ],
   ),
+  'electricity': LifecycleDomain(
+    kind: 'ladder',
+    label: 'Electricity bill',
+    steps: <LifecycleStep>[
+      LifecycleStep(
+        key: 'draft',
+        label: 'Draft',
+        endpoint: 'POST /electricity',
+        actor: 'admin',
+        allowedNext: <String>['finalized'],
+      ),
+      LifecycleStep(
+        key: 'finalized',
+        label: 'Finalized',
+        endpoint: 'POST /electricity/:id/finalize',
+        actor: 'admin',
+        allowedNext: <String>['distributed'],
+      ),
+      LifecycleStep(
+        key: 'distributed',
+        label: 'Distributed',
+        endpoint: 'POST /electricity/:id/distribute',
+        actor: 'admin',
+        allowedNext: <String>[],
+      ),
+    ],
+  ),
 };
