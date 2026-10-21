@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -94,7 +95,7 @@ def main() -> int:
     lines.append(f"\n**TOTAL:** {len(results)}  **FAIL:** {len(fails)}  **PASS:** {len(results)-len(fails)}\n")
     out = "\n".join(lines)
     print(out)
-    scratch = Path("/var/folders/89/2t3pc79j3h7bz4y9qs_323080000gn/T/grok-goal-9198ad9fa59e/implementer")
+    scratch = Path(tempfile.gettempdir()) / "tenet-audit-scratch"
     scratch.mkdir(parents=True, exist_ok=True)
     (scratch / "spotcheck-diff.md").write_text(out)
     (scratch / "reconcile-log.txt").write_text(out)

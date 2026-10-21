@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRATCH = Path(
-    "/var/folders/89/2t3pc79j3h7bz4y9qs_323080000gn/T/grok-goal-9198ad9fa59e/implementer"
-)
+# Portable scratch: the pipeline gate must run on Linux boxes and CI, not only on macOS.
+SCRATCH = Path(tempfile.gettempdir()) / "tenet-audit-scratch"
 fails: list[str] = []
 lines: list[str] = [
     "# Spot-check: 3-module field matrix (rooms/services + payments + complaints)\n",
