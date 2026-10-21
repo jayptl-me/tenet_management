@@ -25,6 +25,53 @@ jobs.use('*', async (c, next) => {
   await next();
 });
 
+// ── Overdue notifications ────────────────────────────────
+// The daily cron tells every tenant whose invoice it moved to overdue. The
+// cron-secret routes do the same bulk write, so they have to say the same
+// thing: a tenant who is moved to overdue has to hear it. The rows are
+// captured BEFORE the bulk write, so a notification always names an invoice
+// the write really moved, and the recipient is the tenant's own user,
+// resolved from the tenant record. Every send has its own try/catch: a
+// failed push never undoes the overdue write.
+
+/**
+ * Tells the tenants of the invoices that just went overdue.
+ */
+async function notifyOverdueInvoices(invoices: Array<Record<string, unknown>>): Promise<void> {
+  for (const invoice of invoices) {
+    const invoiceId = String(invoice._id ?? '');
+    try {
+      const tenantRaw = await Tenant.findById(String(invoice.tenantId ?? ''))
+        .select('userId')
+        .lean();
+      const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+      if (!tenantRaw || !userId) {
+        logger.warn(
+          { invoiceId, tenantId: String(invoice.tenantId ?? '') },
+          'Overdue invoice notification skipped: tenant has no user',
+        );
+        continue;
+      }
+
+      const invoiceNumber = String(invoice.invoiceNumber ?? '');
+      const month = String(invoice.month ?? '');
+      await createNotification({
+        targetType: 'individual',
+        targetIds: [String(userId)],
+        title: 'Invoice overdue',
+        body:
+          `Your invoice ${invoiceNumber} for ${month} is now overdue. ` +
+          `Please settle the pending amount.`,
+        type: 'payment_reminder',
+        data: { invoiceId, invoiceNumber, month },
+        sendPush: true,
+      });
+    } catch (err) {
+      logger.error({ err, invoiceId }, 'Failed to notify tenant about an overdue invoice');
+    }
+  }
+}
+
 // POST /jobs/generate-invoices
 jobs.post('/generate-invoices', async (c) => {
   const month = getCurrentMonth();
@@ -54,16 +101,31 @@ jobs.post('/overdue-check', async (c) => {
   const now = new Date();
   logger.info('Triggered job: overdue-check');
   try {
+    // The invoices the write below is about to move: captured before the
+    // write, so the notification always names an invoice that really went
+    // overdue.
+    const invoicesGoingOverdue = (await Invoice.find({
+      status: 'sent',
+      dueDate: { $lt: now },
+    })
+      .select('_id invoiceNumber month tenantId')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
     const [paymentResult, invoiceResult] = await Promise.all([
       Payment.updateMany({ status: 'pending', dueDate: { $lt: now } }, { status: 'overdue' }),
       // Preserve partial status for accounting integrity: only mark 'sent' invoices as overdue
       Invoice.updateMany({ status: 'sent', dueDate: { $lt: now } }, { status: 'overdue' }),
     ]);
 
+    // The same bulk write the daily cron does, said out loud: every tenant
+    // it moved to overdue is told.
+    await notifyOverdueInvoices(invoicesGoingOverdue);
+
     logger.info(
       {
         paymentsOverdue: paymentResult.modifiedCount,
         invoicesOverdue: invoiceResult.modifiedCount,
+        invoicesNotified: invoicesGoingOverdue.length,
       },
       'Job overdue-check complete',
     );
@@ -74,6 +136,7 @@ jobs.post('/overdue-check', async (c) => {
       data: {
         paymentsOverdue: paymentResult.modifiedCount,
         invoicesOverdue: invoiceResult.modifiedCount,
+        invoicesNotified: invoicesGoingOverdue.length,
       },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,6 +198,17 @@ jobs.post('/send-reminders', async (c) => {
 
     // Perform the due date update
     const now = new Date();
+    // The invoices the write below is about to move: captured before the
+    // write, so the notification always names an invoice that really went
+    // overdue.
+    const invoicesGoingOverdue = (await Invoice.find({
+      status: 'sent',
+      dueDate: { $lt: now },
+      month,
+    })
+      .select('_id invoiceNumber month tenantId')
+      .lean()) as unknown as Array<Record<string, unknown>>;
+
     const [paymentUpdate, invoiceUpdate] = await Promise.all([
       Payment.updateMany(
         { status: 'pending', dueDate: { $lt: now }, month },
@@ -142,6 +216,11 @@ jobs.post('/send-reminders', async (c) => {
       ),
       Invoice.updateMany({ status: 'sent', dueDate: { $lt: now }, month }, { status: 'overdue' }),
     ]);
+
+    // The reminder above is generic. The tenant whose invoice actually went
+    // overdue is told which invoice it was, the same way the daily cron
+    // tells them.
+    await notifyOverdueInvoices(invoicesGoingOverdue);
 
     return c.json({
       success: true,
@@ -151,6 +230,7 @@ jobs.post('/send-reminders', async (c) => {
         notificationsDispatched,
         paymentsMarkedOverdue: paymentUpdate.modifiedCount,
         invoicesMarkedOverdue: invoiceUpdate.modifiedCount,
+        invoicesNotified: invoicesGoingOverdue.length,
       },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

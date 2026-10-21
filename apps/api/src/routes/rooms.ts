@@ -206,6 +206,101 @@ async function notifyRoomAmenityChanges(
   }
 }
 
+/**
+ * Tells the residents of a room that the room has been taken out of service.
+ *
+ * The recipients are the residents of that room, read from the tenant
+ * collection. A room with no resident attached has nobody to tell, so
+ * nothing is sent and the reason is logged. A failed push never undoes the
+ * room write that came before it.
+ */
+async function notifyRoomOutOfService(roomId: string, roomNumber: string): Promise<void> {
+  try {
+    const tenants = await Tenant.find(
+      safeFilter({ roomId: new mongoose.Types.ObjectId(roomId), isActive: true }),
+    )
+      .select('userId')
+      .lean();
+    const userIds = [
+      ...new Set(
+        (tenants as unknown as Array<{ userId?: unknown }>)
+          .map((tenant) => String(tenant.userId ?? ''))
+          .filter((id) => id !== ''),
+      ),
+    ];
+    if (userIds.length === 0) {
+      logger.warn(
+        { roomId },
+        'Room out-of-service notification skipped: no resident lives in the room',
+      );
+      return;
+    }
+
+    await createNotification({
+      targetType: 'individual',
+      targetIds: userIds,
+      title: 'Room out of service',
+      body:
+        `Your room ${roomNumber} has been taken out of service and cannot be used at the moment. ` +
+        `Please contact the office if this affects your stay.`,
+      type: 'service_update',
+      data: { roomId, roomNumber },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, roomId }, 'Failed to notify residents about a room out of service');
+  }
+}
+
+/**
+ * Tells one resident that the bed letter in their room changed.
+ *
+ * The recipient is the tenant the room record points at, read from the
+ * tenant record, never from a client-supplied id. A failed push never undoes
+ * the bed move that came before it.
+ */
+async function notifyBedMove(roomId: string, roomNumber: string, remap: BedRemap): Promise<void> {
+  try {
+    const tenantRaw = await Tenant.findById(remap.tenantId).select('userId').lean();
+    const userId = (tenantRaw as { userId?: unknown } | null)?.userId;
+    if (!tenantRaw || !userId) {
+      logger.warn(
+        { tenantId: remap.tenantId },
+        'Bed move notification skipped: tenant has no user',
+      );
+      return;
+    }
+
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [String(userId)],
+      title: 'Your bed changed',
+      body:
+        `Your bed in room ${roomNumber} changed from bed ${remap.fromBedId} ` +
+        `to bed ${remap.toBedId}.`,
+      type: 'service_update',
+      data: {
+        roomId,
+        roomNumber,
+        tenantId: remap.tenantId,
+        fromBedId: remap.fromBedId,
+        toBedId: remap.toBedId,
+      },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, tenantId: remap.tenantId }, 'Failed to notify tenant about a bed move');
+  }
+}
+
+/**
+ * True when the room just left service: it was in service before (or the
+ * record never said otherwise) and it is out of service now.
+ */
+function wentOutOfService(before: unknown, after: unknown): boolean {
+  return after === false && before !== false;
+}
+
 // ── Router ───────────────────────────────────────────────
 
 const router = new Hono();
@@ -505,6 +600,22 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
           newSharingType,
         );
 
+        // The model validator for the bed count compares the number of beds
+        // with the room's sharing type. In an update, a validator sees the
+        // query and not the room, so that comparison can never match and the
+        // write is refused with "Number of beds must equal sharing type"
+        // before a single bed moves. The same rule is enforced here, on the
+        // bed list this write is about to store, so nothing is lost by running
+        // this one update without the model validators.
+        if (rebuiltBeds.length !== newSharingType) {
+          throw Object.assign(
+            new Error(
+              `Cannot change sharing type to ${newSharingType}: the rebuilt bed list holds ${rebuiltBeds.length} bed(s).`,
+            ),
+            { code: 'BEDS_SHARING_TYPE_MISMATCH' },
+          );
+        }
+
         // Apply all changes atomically via findOneAndUpdate inside transaction
         // to prevent race conditions on concurrent sharingType changes.
         const updateData: Record<string, unknown> = {
@@ -530,7 +641,7 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
             updated = await Room.findOneAndUpdate(
               { _id: id, sharingType: oldSharingType },
               updateData,
-              { returnDocument: 'after', runValidators: true, session },
+              { returnDocument: 'after', runValidators: false, session },
             );
             if (!updated) {
               throw Object.assign(
@@ -582,6 +693,17 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
           updated?.roomAmenities,
         );
 
+        // A bed that moved is the bed the resident sleeps in from now on.
+        // The room record says which tenant it belongs to.
+        for (const remap of remaps) {
+          await notifyBedMove(id, String(updated?.roomNumber ?? ''), remap);
+        }
+
+        // The room left service: the people living in it have to know.
+        if (wentOutOfService(existingRoom.isActive, updated?.isActive)) {
+          await notifyRoomOutOfService(id, String(updated?.roomNumber ?? ''));
+        }
+
         return c.json({ success: true, data: updated });
       } catch (err: unknown) {
         const e = err as { code?: string; message?: string };
@@ -597,6 +719,13 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
             c,
             'Room sharing type was changed by another admin. Please reload and try again.',
             'CONCURRENT_MODIFICATION',
+          );
+        }
+        if (e?.code === 'BEDS_SHARING_TYPE_MISMATCH') {
+          return conflict(
+            c,
+            e.message ?? 'The rebuilt bed list does not match the new sharing type',
+            'BEDS_SHARING_TYPE_MISMATCH',
           );
         }
         throw err;
@@ -644,6 +773,16 @@ router.put('/:id', authGuard, adminOnly, zValidator('json', updateRoomSchema), a
     (room as { roomAmenities?: unknown }).roomAmenities,
   );
 
+  // The room left service: the people living in it have to know.
+  if (
+    wentOutOfService(
+      (before as { isActive?: unknown }).isActive,
+      (room as { isActive?: unknown }).isActive,
+    )
+  ) {
+    await notifyRoomOutOfService(id, String((room as { roomNumber?: string }).roomNumber ?? ''));
+  }
+
   return c.json({ success: true, data: room });
 });
 
@@ -688,6 +827,9 @@ router.delete('/:id', authGuard, adminOnly, async (c) => {
       roomNumber: (room as { roomNumber?: string }).roomNumber,
     },
   });
+
+  // The room left service. Anyone still living in it has to hear it.
+  await notifyRoomOutOfService(id, String((room as { roomNumber?: string }).roomNumber ?? ''));
 
   return c.json({ success: true, data: room });
 });

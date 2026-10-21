@@ -425,6 +425,19 @@ visitors.post('/:id/arrive', authGuard, async (c) => {
     details: { transition: 'arrive', previousStatus: 'expected', status: 'arrived' },
   });
 
+  // The resident registered this visit and is waiting to hear what the gate
+  // did with it. The gate says the guest is here, so they must hear it from
+  // the server and not from the gate keeping a list.
+  const visitorName = String(
+    (visitor as unknown as Record<string, unknown>).visitorName ?? 'your visitor',
+  );
+  await notifyTenantOfVisitor(visitor.tenantId, {
+    title: 'Visitor arrived',
+    body: `Your visitor ${visitorName} has arrived at the gate.`,
+    type: 'service_update',
+    data: { visitorId: id },
+  });
+
   return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });
 });
 
@@ -490,6 +503,18 @@ visitors.post('/:id/depart', authGuard, async (c) => {
     resource: 'visitor',
     resourceId: id,
     details: { transition: 'depart', previousStatus: 'arrived', status: 'departed' },
+  });
+
+  // The guest is gone. The resident registered the visit and is the one who
+  // has to know that the visit is over.
+  const visitorName = String(
+    (visitor as unknown as Record<string, unknown>).visitorName ?? 'your visitor',
+  );
+  await notifyTenantOfVisitor(visitor.tenantId, {
+    title: 'Visitor departed',
+    body: `Your visitor ${visitorName} has left the gate.`,
+    type: 'service_update',
+    data: { visitorId: id },
   });
 
   return c.json({ success: true, data: mapVisitor(updated as unknown as Record<string, unknown>) });

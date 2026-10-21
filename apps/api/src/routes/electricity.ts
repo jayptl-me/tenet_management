@@ -9,6 +9,7 @@ import { AppError, ValidationError } from '../lib/errors.js';
 import { isServiceAvailable } from '../lib/serviceAvailability.js';
 import { env } from '../lib/env.js';
 import { ElectricityBill } from '../models/electricityBill.js';
+import { Room } from '../models/room.js';
 import { Tenant } from '../models/tenant.js';
 import { Invoice } from '../models/invoice.js';
 import { Payment } from '../models/payment.js';
@@ -62,6 +63,73 @@ function invalidBillStatusError(current: string): AppError {
   );
 }
 
+// The admin screen calls a bill "not adding up" when the variance is more
+// than half a rupee and the office has not written down why. The server
+// refuses the same bills with the same rule, so a direct API call cannot slip
+// past a screen that refuses.
+const VARIANCE_TOLERANCE = 0.5;
+
+/**
+ * The numbers of a bill that disagree: what the utility total says against
+ * what the room readings add up to.
+ *
+ * The bill stores that snapshot when it is saved. A row written before the
+ * snapshot existed is recomputed with the model's own formula.
+ */
+function billVarianceNumbers(bill: Record<string, unknown>): {
+  variance: number;
+  totalBillAmount: number;
+  computedRoomTotal: number;
+} {
+  const totalBillAmount = Number(bill.totalBillAmount ?? 0);
+  const storedVariance = Number(bill.variance);
+  const storedRoomTotal = Number(bill.computedRoomTotal);
+  if (Number.isFinite(storedVariance) && Number.isFinite(storedRoomTotal)) {
+    return { variance: storedVariance, totalBillAmount, computedRoomTotal: storedRoomTotal };
+  }
+
+  const entries = (bill.roomEntries as Array<Record<string, unknown>>) ?? [];
+  let computedRoomTotal = 0;
+  for (const entry of entries) {
+    const units = Math.max(
+      0,
+      Number(entry.currentReading ?? 0) - Number(entry.previousReading ?? 0),
+    );
+    computedRoomTotal += Math.round(units * Number(entry.ratePerUnit ?? 0) * 100) / 100;
+  }
+  computedRoomTotal = Math.round(computedRoomTotal * 100) / 100;
+
+  return {
+    variance: Math.round((totalBillAmount - computedRoomTotal) * 100) / 100,
+    totalBillAmount,
+    computedRoomTotal,
+  };
+}
+
+/**
+ * The office cannot finalize a bill whose readings do not add up.
+ *
+ * The bill is refused, never altered: the numbers stay as they were read.
+ * The message names the numbers that disagree so the office can fix the
+ * readings or write down the reason.
+ */
+function billVarianceUnresolvedError(numbers: {
+  variance: number;
+  totalBillAmount: number;
+  computedRoomTotal: number;
+}): AppError {
+  const message =
+    `This bill's readings do not add up: the utility total is Rs ${numbers.totalBillAmount.toLocaleString('en-IN')}, ` +
+    `the room readings add up to Rs ${numbers.computedRoomTotal.toLocaleString('en-IN')}, ` +
+    `a difference of Rs ${Math.abs(numbers.variance).toLocaleString('en-IN')}. ` +
+    `Correct the readings or write the reason in the variance reason before finalizing.`;
+  return new AppError(message, 400, 'BILL_VARIANCE_UNRESOLVED', {
+    variance: numbers.variance,
+    totalBillAmount: numbers.totalBillAmount,
+    computedRoomTotal: numbers.computedRoomTotal,
+  });
+}
+
 // ELEC-P1-2: server-side reconcile gate. Room-sum vs bill-total drift beyond
 // this threshold is rejected at the API layer so direct API callers cannot
 // bypass the FE hard block.
@@ -81,6 +149,108 @@ function assertReconcile(
     throw new ValidationError(
       `Room amounts (Rs ${roomSum.toLocaleString('en-IN')}) and total bill (Rs ${(totalBillAmount ?? 0).toLocaleString('en-IN')}) differ by Rs ${diff.toLocaleString('en-IN')}. Fix the readings or total before saving.`,
     );
+  }
+}
+
+// ── Distribution skip reporting ──────────────────────────
+// A share that was not charged is a decision the office has to see, and the
+// resident whose share was left out must not go on believing they owe it.
+
+/** One invoice the distribution left alone, with the reason why. */
+type DistributionSkip = {
+  invoiceId: string;
+  invoiceNumber: string;
+  tenantId: string;
+  roomNumber: string;
+  code: 'INVOICE_CANCELLED' | 'ALREADY_PAID_WITH_ELECTRICITY';
+  reason: string;
+};
+
+/**
+ * Tells the operator which invoices the distribution left alone and why.
+ *
+ * The recipient is the operator who ran the distribution, taken from the
+ * signed request. A failed push never undoes the distribution.
+ */
+async function notifyOperatorOfSkippedShares(
+  operatorId: string,
+  month: string,
+  billId: string,
+  skipped: DistributionSkip[],
+): Promise<void> {
+  if (skipped.length === 0) return;
+  // The body has a length limit, so the office gets the first skips in full
+  // and the count of the rest. The response carries every one of them.
+  const MAX_LISTED_SKIPS = 20;
+  const lines: string[] = [];
+  for (const skip of skipped.slice(0, MAX_LISTED_SKIPS)) {
+    const where = skip.roomNumber ? ` (room ${skip.roomNumber})` : '';
+    lines.push(`- ${skip.invoiceNumber || skip.invoiceId}${where}: ${skip.reason}`);
+  }
+  if (skipped.length > MAX_LISTED_SKIPS) {
+    lines.push(`- and ${skipped.length - MAX_LISTED_SKIPS} more`);
+  }
+  try {
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [operatorId],
+      title: 'Electricity distribution left charges out',
+      body:
+        `The electricity bill for ${month} was distributed, but ${skipped.length} invoice(s) ` +
+        `did not receive a charge:\n${lines.join('\n')}`,
+      type: 'electricity_bill',
+      data: { month, billId, skippedCount: String(skipped.length) },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error(
+      { err, billId },
+      'Failed to notify the operator about the electricity charges that were left out',
+    );
+  }
+}
+
+/**
+ * Tells the resident that their share was not charged, so nobody is left
+ * believing they owe a charge that was never added to their invoice.
+ *
+ * The recipient is the tenant the invoice points at. A failed push never
+ * undoes the distribution.
+ */
+async function notifyResidentOfSkippedShare(
+  userId: unknown,
+  payload: {
+    month: string;
+    billId: string;
+    invoiceNumber: string;
+    roomNumber: string;
+    reason: string;
+  },
+): Promise<void> {
+  const userIdStr = String(userId ?? '');
+  if (!userIdStr) {
+    logger.warn(
+      { billId: payload.billId },
+      'Skipped electricity share notification skipped: tenant has no user',
+    );
+    return;
+  }
+  const { month, billId, invoiceNumber, roomNumber, reason } = payload;
+  try {
+    await createNotification({
+      targetType: 'individual',
+      targetIds: [userIdStr],
+      title: `Electricity Bill -- ${month}`,
+      body:
+        `Your electricity charge for ${month} was not added to your invoice ` +
+        `${invoiceNumber}${roomNumber ? ` (room ${roomNumber})` : ''} ` +
+        `because ${reason}. You do not owe an electricity charge for ${month}.`,
+      type: 'electricity_bill',
+      data: { month, billId, invoiceNumber },
+      sendPush: true,
+    });
+  } catch (err) {
+    logger.error({ err, billId }, 'Failed to notify tenant about a skipped electricity share');
   }
 }
 
@@ -653,6 +823,17 @@ electricity.post('/:id/finalize', authGuard, adminOnly, async (c) => {
     throw invalidBillStatusError(currentStatus);
   }
 
+  // A bill whose readings do not add up cannot be finalized, unless the office
+  // wrote down why they do not. This is the rule the admin screen applies;
+  // the server applies it too so the two never disagree. The bill is refused,
+  // never altered.
+  const varianceNumbers = billVarianceNumbers(existing as unknown as Record<string, unknown>);
+  const rawVarianceReason = (existing as { varianceReason?: string }).varianceReason ?? '';
+  const varianceReason = rawVarianceReason.trim();
+  if (Math.abs(varianceNumbers.variance) > VARIANCE_TOLERANCE && varianceReason === '') {
+    throw billVarianceUnresolvedError(varianceNumbers);
+  }
+
   // Atomic finalize: the status guard lives in the update filter itself so two
   // concurrent finalize calls cannot both pass the read-then-act check.
   const billRaw = await (ElectricityBill.findOneAndUpdate(
@@ -720,6 +901,9 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
   let created = 0;
   let updated = 0;
   let errors = 0;
+  // Every invoice the distribution left alone, with the reason. A share that
+  // was not charged is a decision the office has to see, not a silent gap.
+  const skipped: DistributionSkip[] = [];
 
   for (const entry of roomEntries) {
     try {
@@ -733,6 +917,11 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
         errors++;
         continue;
       }
+
+      // The room number, so the operator and the resident are told which
+      // room the skipped charge belongs to.
+      const roomDoc = await Room.findById(roomId).select('roomNumber').lean();
+      const roomNumber = String(roomDoc?.roomNumber ?? '');
 
       // ELEC-P1-1: use same date-windowed room occupants as calculateElectricityShare
       // (not merely isActive today) so distribute and invoice generate stay aligned.
@@ -771,18 +960,53 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
             // Never rewrite cancelled invoices; skip paid invoices that already include
             // electricity (avoid reopening settled money). Still allow adding electricity
             // only when residual can be expressed as a new pending row on open statuses.
-            if (existing.status === 'cancelled') {
-              continue;
-            }
-
             const alreadyHasElec =
               ((existing.electricityAmount as number) ?? 0) > 0 ||
               (existing.lineItems ?? []).some((li) =>
                 String(li.description).toLowerCase().startsWith('electricity'),
               );
 
+            const invoiceNumber = String(existing.invoiceNumber ?? '');
+
+            if (existing.status === 'cancelled') {
+              // The office is told which invoice was left alone and why, and
+              // the resident is told that nothing was charged, so nobody is
+              // left believing they owe a share that was never added.
+              skipped.push({
+                invoiceId: String(existing._id ?? ''),
+                invoiceNumber,
+                tenantId,
+                roomNumber,
+                code: 'INVOICE_CANCELLED',
+                reason: 'the invoice was cancelled, so no electricity charge was added to it',
+              });
+              await notifyResidentOfSkippedShare(tenantDoc.userId, {
+                month,
+                billId: id,
+                invoiceNumber,
+                roomNumber,
+                reason: 'that invoice was cancelled',
+              });
+              continue;
+            }
+
             if (existing.status === 'paid' && alreadyHasElec) {
               // Settled and already charged — do not mutate.
+              skipped.push({
+                invoiceId: String(existing._id ?? ''),
+                invoiceNumber,
+                tenantId,
+                roomNumber,
+                code: 'ALREADY_PAID_WITH_ELECTRICITY',
+                reason: 'the invoice is already paid and already carries the electricity charge',
+              });
+              await notifyResidentOfSkippedShare(tenantDoc.userId, {
+                month,
+                billId: id,
+                invoiceNumber,
+                roomNumber,
+                reason: 'that invoice is already paid and already carries the electricity charge',
+              });
               continue;
             }
 
@@ -899,6 +1123,11 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
   }
 
   const user = c.get('user');
+
+  // The office is told which invoices it left alone and why. A charge that
+  // was not applied must never be a gap the office only finds in a report.
+  await notifyOperatorOfSkippedShares(user.sub, month, id, skipped);
+
   await writeAuditLog({
     userId: user.sub,
     action: 'update',
@@ -911,11 +1140,12 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
       created,
       updated,
       errors,
+      skippedCount: skipped.length,
     },
   });
 
   logger.info(
-    { billId: id, month, distributed, created, updated, errors },
+    { billId: id, month, distributed, created, updated, errors, skipped: skipped.length },
     'Electricity bill distributed',
   );
 
@@ -925,11 +1155,15 @@ electricity.post('/:id/distribute', authGuard, adminOnly, async (c) => {
       message:
         errors > 0
           ? `Distribution partial. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated, ${errors} errors. Bill left as finalized.`
-          : `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated.`,
+          : skipped.length > 0
+            ? `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated, ${skipped.length} skipped. The skipped invoices and the reason are listed under skipped.`
+            : `Distribution complete. ${distributed} tenant(s): ${updated} invoices updated, ${created} generated.`,
       distributed,
       created,
       updated,
       errors,
+      skipped,
+      skippedCount: skipped.length,
       month,
       fullyDistributed: errors === 0,
     },

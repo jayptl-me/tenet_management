@@ -431,7 +431,11 @@ describe('Module HTTP e2e matrix (real routes)', () => {
         token: adminToken,
         body: {
           month,
-          totalBillAmount: 2000,
+          // The utility total has to agree with the readings: 50 units at 8
+          // is 400. The server refuses to finalise a bill whose readings do
+          // not add up (BILL_VARIANCE_UNRESOLVED), so the bill is written with
+          // numbers that agree.
+          totalBillAmount: 400,
           roomEntries: [
             {
               roomId,
@@ -451,6 +455,37 @@ describe('Module HTTP e2e matrix (real routes)', () => {
       );
 
       if (billId) {
+        // The negative control for the variance rule: a bill whose readings do
+        // not add up must be refused, with the numbers that disagree named.
+        const mismatched = await req('POST', '/api/v1/electricity', {
+          token: adminToken,
+          body: {
+            month: '2026-07',
+            totalBillAmount: 999,
+            roomEntries: [
+              {
+                roomId,
+                previousReading: 100,
+                currentReading: 150,
+                ratePerUnit: 8,
+              },
+            ],
+          },
+        });
+        const mismatchedId = idOf(mismatched.json.data);
+        if (mismatchedId) {
+          const refused = await req('POST', `/api/v1/electricity/${mismatchedId}/finalize`, {
+            token: adminToken,
+          });
+          log(
+            'electricity',
+            'finalize refuses a bill whose readings disagree',
+            refused.status === 400 &&
+              String(refused.json?.error?.code ?? '') === 'BILL_VARIANCE_UNRESOLVED',
+            `status=${refused.status} ${JSON.stringify(refused.json).slice(0, 180)}`,
+          );
+        }
+
         const fin = await req('POST', `/api/v1/electricity/${billId}/finalize`, {
           token: adminToken,
         });
