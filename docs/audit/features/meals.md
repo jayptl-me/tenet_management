@@ -14,3 +14,11 @@ Pass 1 record: docs/audit/features/meals_audit_pass1_20260908-003801.md
 | Create/Edit/Detail | preset picker + unified tenant shape + bed/floor         | WORKING |
 | API                | unified mapper + upsert reset + status filter + parseId  | WORKING |
 | Flutter            | 4-slot menu parse, dead branches removed                 | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

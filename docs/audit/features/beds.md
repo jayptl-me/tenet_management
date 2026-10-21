@@ -162,3 +162,16 @@ export interface IBedSubdoc {
 - [x] [BED-GAP-2] PG-wide bed occupancy matrix/heatmap component implemented on `/rooms` (`BedOccupancyGrid.tsx`)
 - [x] [BED-GAP-3] Pre-submit occupancy indicator and downsize guard added to `/rooms/[id]/edit` form
 - [x] [BED-GAP-4] Room and bed badge added to Flutter tenant home screen (`home_screen.dart`)
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| BED-GAP-1 Dashboard totalBeds calculation and display | CLOSED - corrected across API, types, and admin web (acceptance checklist verified) |
+| BED-GAP-2 PG-wide bed occupancy matrix/heatmap | CLOSED - implemented on /rooms via BedOccupancyGrid.tsx (acceptance checklist verified) |
+| BED-GAP-3 Pre-submit occupancy indicator and downsize guard | CLOSED - added on /rooms/[id]/edit form (acceptance checklist verified) |
+| BED-GAP-4 Room and bed badge on Flutter tenant home | CLOSED - added in home_screen.dart (acceptance checklist verified) |

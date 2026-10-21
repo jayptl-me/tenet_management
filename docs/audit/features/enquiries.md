@@ -15,3 +15,11 @@ Pass 1 record: docs/audit/features/enquiries_audit_pass1_20260908-003801.md
 | Detail  | outreach + conversion card + linked tenant + guards   | WORKING |
 | Edit    | convert guard + pinned disable                        | WORKING |
 | API     | transition guards + converted populate + filter enums | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

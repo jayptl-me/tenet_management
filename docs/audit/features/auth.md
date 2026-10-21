@@ -12,3 +12,11 @@ Pass 1 record: docs/audit/features/auth_audit_pass1_20260908-003801.md
 | ------- | ------------------------------------------------- | ------- |
 | Login   | role-separated portals                            | WORKING |
 | API     | secrets stripped, ward enrichment, lockout, reset | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

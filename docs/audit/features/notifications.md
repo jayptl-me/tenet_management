@@ -13,3 +13,11 @@ Pass 1 record: docs/audit/features/notifications_audit_pass1_20260908-003801.md
 | Compose + History | audience pickers + type/status filters + true counts        | WORKING |
 | Detail/Edit       | metadata-only edit, history-tab redirects                   | WORKING |
 | API               | type/status filters, emergency flag gate, ward-safe history | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

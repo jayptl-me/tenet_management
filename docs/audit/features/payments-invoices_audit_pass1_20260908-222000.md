@@ -80,3 +80,11 @@
 - Backward Compatibility: All 5 theme presets (`saas`, `soft-ui`, `brutalist`, `neumorphic`, `custom`) preserved via CSS custom properties.
 - Surface Split: Zero resident App Router trees in `apps/web`; admin Next.js isolated from Flutter mobile portal.
 - ASCII Rule: Zero emojis introduced across code, comments, and documentation.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

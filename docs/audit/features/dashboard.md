@@ -4,7 +4,7 @@ Module: dashboard
 Scope: admin web + API
 Source verified: 2026-09-08 UTC
 Access rule: admin web = admin only; resident portal = Flutter only; no Next tenant routes
-Pass 1 record: docs/audit/features/dashboard_audit_pass1_20260908-204500.md
+Pass 1 record: docs/audit/features/dashboard_audit_pass1_20260908-214800.md
 
 ## Feature Listing
 
@@ -23,3 +23,11 @@ Pass 1 record: docs/audit/features/dashboard_audit_pass1_20260908-204500.md
 | Operational Stream          | Recent Complaints with age badges + Recent Enquiries                                                                                                                                                         | WORKING |
 | Real-Time SSE               | 11 domain event subscriptions automatically refresh operational stats                                                                                                                                        | WORKING |
 | Telemetry Seeding           | Dynamic live-anchored seed script (bun run seed:dashboard) generating rich data across complaints, menus, 14-day meal feedback, 6-month revenue, and room occupancy                                          | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

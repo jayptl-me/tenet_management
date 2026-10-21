@@ -50,3 +50,19 @@ Source verified: 2026-09-08 UTC
 | Complaint density heatmap | complaints/page.tsx                     | WORKING |
 
 Verification: bun run lint clean; bun run typecheck clean across types/web/api; no tests executed; no emojis; portal boundaries respected.
+
+## Open gaps
+
+| ID | Severity | Gap | Paths |
+|----|----------|-----|--------|
+| CAL-P3-1 | P3 | Guardian Tenancy Calendar not wired; needs ward stay dates on payload or approved tenant fetch | mobile/lib/features/guardian |
+| CAL-P3-2 | P3 | Day-range filters absent for payments/invoices/electricity; APIs are month-scoped | apps/web/src/app/(admin)/payments/page.tsx |
+| CAL-P3-3 | P3 | Export date bounds absent | apps/web/src/app/(admin)/export/page.tsx |
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| Date range filters | FIXED - WORKING - enquiries/page.tsx, complaints/page.tsx |
+| Leave Window calendar | FIXED - WORKING - leaves/[id]/page.tsx |
+| Complaint density heatmap | FIXED - WORKING - complaints/page.tsx |

@@ -134,3 +134,11 @@ Pass 1 record: docs/audit/features/leaves_audit_pass1_20260907-234410.md
 | Approve -> attendance on_leave sync per day                                 | WORKING |
 | Overlap invariant at create + approve re-check                              | WORKING |
 | Range invariant from<=to (400 LEAVE_INVALID_RANGE)                          | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

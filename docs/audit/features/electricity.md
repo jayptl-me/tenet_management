@@ -15,3 +15,11 @@ Pass 1 record: docs/audit/features/electricity_audit_pass1_20260908-003801.md
 | Detail      | StatCards + finalize/distribute + floor col + image viewer  | WORKING |
 | API         | FSM finalize/distribute, guardian ward read, floor populate | WORKING |
 | Flutter     | readings + share + bill proof viewer                        | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

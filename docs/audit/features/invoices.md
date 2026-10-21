@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/invoices_audit_pass1_20260908-003801.md
 | Edit    | paid/partial locks + stay card + floor                                                                   | WORKING |
 | API     | generate/single/bulk, list filters, :id + payment-status guards, PUT balance guard, void-adjacent verify | WORKING |
 | Flutter | list balance + status chips; detail stay card                                                            | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

@@ -16,3 +16,11 @@ Pass 1 record: docs/audit/features/guardians_audit_pass1_20260908-003801.md
 | Edit    | emergency hint text                                 | WORKING |
 | API     | isActive coupling, floor mapping, audits            | WORKING |
 | Flutter | notices unwrap + ward dates + pin + ward enrichment | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

@@ -151,3 +151,17 @@ electricity (room submeter bills: draft -> finalized -> distributed -> invoice s
 | Flutter bill proof image + external open     | electricity_screen.dart                            | WORKING |
 
 Verification: bun run lint clean; bun run typecheck clean across types/web/api; flutter analyze clean; no tests executed; no emojis; portal boundaries respected.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| List StatCards + Units + CSV + parsers | FIXED - WORKING - apps/web/src/app/(admin)/electricity/page.tsx |
+| Detail floor column + parsers | FIXED - WORKING - apps/web/src/app/(admin)/electricity/[id]/page.tsx |
+| Floor populate on list/create/PUT responses | FIXED - WORKING - apps/api/src/routes/electricity.ts |
+| Guardian /my ward mode; :id room-scoped read | FIXED - WORKING - apps/api/src/routes/electricity.ts |
+| Flutter bill proof image + external open | FIXED - WORKING - electricity_screen.dart |

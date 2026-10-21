@@ -18,3 +18,11 @@ Implementation spec: docs/audit/features/tenants_audit_pass1_20260908-230000.md
 | API (self-service)        | PATCH /tenants/me/profile - tenant updates own phone + emergency contact, duplicate-phone 409, audit logged; POST /tenants/me/documents - tenant Aadhaar/photo upload, resets KYC verification for admin re-review, notifies all active admins (kyc_uploaded push + SSE)                            | WORKING |
 | Profile (tenant, Flutter) | hero header with photo, contact card with editable mobile, editable emergency contact (add/edit/call), room/rent incl. floor + move-out, KYC document upload/replace (Aadhaar also as PDF via file_picker) with progress and 5 MB pre-check, real KYC status from tenant.documents, change password | WORKING |
 | Ward (guardian, Flutter)  | ward identity card with avatar, floor, move-in, call-ward action, dues summary from remaining balances (open invoices, outstanding balance), attendance + notices navigation, change password                                                                                                       | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

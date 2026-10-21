@@ -15,3 +15,11 @@ Pass 1 record: docs/audit/features/assets_audit_pass1_20260908-004257.md
 | Detail      | StatCards + timeline + stock meter + history card + links + reschedule CTA + retire       | WORKING |
 | Shared      | AssetVisuals (meter/timeline/category icons) + banners + badges                           | WORKING |
 | API         | enum filters, extended search, floor/room refs + populate, retire audit                   | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

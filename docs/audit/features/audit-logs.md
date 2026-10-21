@@ -12,3 +12,11 @@ Pass 1 record: docs/audit/features/audit-logs_audit_pass1_20260908-003801.md
 | ------- | -------------------------------------------------------------- | ------- |
 | List    | action/resource/user/date filters + detail + CSV guard         | WORKING |
 | Writers | tenant create/delete/reinstate covered; reconcile action added | WORKING |
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+No closed remediation claims recorded in this file.

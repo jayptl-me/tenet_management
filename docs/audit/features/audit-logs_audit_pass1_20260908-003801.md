@@ -31,3 +31,18 @@ audit-logs list (filters, detail, CSV) + writer coverage.
 ## 4. Verification
 
 bun run lint clean; bun run typecheck clean; no tests executed; no emojis; portal boundaries respected.
+
+## Open gaps
+
+No open gap findings recorded in this file.
+
+## Closed
+
+| Claim | Live status |
+|-------|-------------|
+| CSV quoted only; no formula-injection guard (CWE-1236) | FIXED - WORKING - audit-logs/page.tsx |
+| reconcile action absent from filter list | FIXED - WORKING - audit-logs/page.tsx |
+| Resources attendance/electricity/leave/laundry/meal/menu/auth/enquiry absent | FIXED - WORKING - audit-logs/page.tsx |
+| Server ?userId= filter had no UI | FIXED - WORKING - audit-logs/page.tsx |
+| Generic load/export errors | FIXED - WORKING - audit-logs/page.tsx |
+| Writers: tenant create/delete/reinstate unaudited | FIXED - WORKING - apps/api/src/routes/tenants.ts |
