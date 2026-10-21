@@ -11,9 +11,9 @@ import {
   DoorOpen,
   CalendarDays,
   Clock,
-  BedDouble,
   Building2,
   AlertTriangle,
+  FileText,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -177,7 +177,7 @@ export default function NewVisitorPage() {
   return (
     <FormPage
       title="Register Visitor"
-      description="Pre-register a guest pass for a resident"
+      description="Pre-register a guest pass for a resident. The pass lands as expected and waits for the gate."
       backHref="/visitors"
       error={submitError}
       maxWidth="form"
@@ -221,7 +221,7 @@ export default function NewVisitorPage() {
           {tenantIdWatch ? (
             <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-(--color-brand-700)">Loading host stay…</p>
+                <p className="text-xs font-semibold text-(--color-brand-700)">Loading host stay...</p>
               ) : hostPreview ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
@@ -237,12 +237,6 @@ export default function NewVisitorPage() {
                     <span className="inline-flex items-center gap-1">
                       <Building2 className="h-3.5 w-3.5" />
                       {hostPreview.floorLabel}
-                    </span>
-                  )}
-                  {hostPreview.bedId && (
-                    <span className="inline-flex items-center gap-1">
-                      <BedDouble className="h-3.5 w-3.5" />
-                      Bed {hostPreview.bedId}
                     </span>
                   )}
                 </div>
@@ -354,6 +348,44 @@ export default function NewVisitorPage() {
               )}
             </div>
           </FormGrid>
+          <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+            The server accepts any date, so this form is what keeps the expected hour in the
+            future: a pass whose hour has passed sits on the expected list as overdue until the
+            gate stamps the arrival or refuses the visit.
+          </p>
+        </FormSection>
+
+        <FormSection
+          title="What this save commits"
+          icon={<FileText />}
+          description="What the server writes, and what the resident hears"
+          divided
+        >
+          <ul className="space-y-2 text-xs font-medium text-(--color-text-secondary)">
+            <li>
+              <strong className="text-(--color-text-primary)">The pass.</strong> The server creates
+              the visitor record with the state expected, the hour you picked and the resident you
+              picked. It refuses a resident who has checked out (TENANT_INACTIVE), and the phone
+              number has to be an Indian mobile in the +91 form.
+            </li>
+            <li>
+              <strong className="text-(--color-text-primary)">The write trail.</strong> The server
+              writes a create entry in the audit log with the name, the phone, the purpose and the
+              resident, and keeps it for 90 days.
+            </li>
+            <li>
+              <strong className="text-(--color-text-primary)">The resident is not told.</strong>{' '}
+              Registering a pass sends no message. A resident who registered the visit themselves in
+              the portal already knows about it; when the office registers a pass on their behalf,
+              nobody is told and the gate has to say it at the desk. The pass code the gate reads
+              out is the last six characters of the record id, and it shows on the pass page.
+            </li>
+            <li>
+              <strong className="text-(--color-text-primary)">The next step.</strong> The pass
+              waits on the expected list until the gate stamps the arrival. Nobody can move it
+              forward from here: the gate does that.
+            </li>
+          </ul>
         </FormSection>
       </FormCard>
     </FormPage>
