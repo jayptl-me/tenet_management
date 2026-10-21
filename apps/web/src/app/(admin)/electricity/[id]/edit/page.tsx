@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2, Zap, Calculator, Lock, AlertTriangle } from 'lucide-react';
+import { Bell, Calculator, Lock, Plus, Scale, Trash2, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -21,10 +24,17 @@ import { roomLabel } from '@/lib/resource-select-presets';
 import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 
-/** Block submit only when room sum vs bill total diverges by a clearly erroneous amount. */
+/**
+ * The server refuses a bill whose room amounts and total are more than this
+ * apart (apps/api/src/routes/electricity.ts:68-85). The form keeps the same
+ * threshold and says so, so the office is never refused without a reason.
+ */
 const RECONCILE_BLOCK_THRESHOLD = 10000;
 
-// ── Schema ──────────────────────────────────────────────
+/** A difference under a rupee is the server's own rounding, not a gap. */
+const RECONCILE_TOLERANCE = 0.5;
+
+// ── Schema ─────────────────────────────────────────────────────────────
 
 const roomEntrySchema = z.object({
   roomId: z.string().min(1, 'Room is required'),
@@ -60,15 +70,52 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>;
 
-// ── Component ───────────────────────────────────────────
+/** The bill as the server holds it (GET /electricity/:id). */
+interface ElectricityBillData {
+  _id: string;
+  month: string;
+  totalBillAmount: number;
+  computedRoomTotal?: number;
+  variance?: number;
+  varianceReason?: string;
+  billImageUrl?: string;
+  notes?: string;
+  status: string;
+  roomEntries: Array<{
+    roomId?: string | { _id?: string };
+    previousReading: number;
+    currentReading: number;
+    ratePerUnit: number;
+  }>;
+}
+
+const BILL_KEY = (id: string) => ['electricity', id] as const;
+const ELECTRICITY_PREFIX = ['electricity'] as const;
+
+function fmtMoney(n: number): string {
+  return `₹${n.toLocaleString('en-IN')}`;
+}
+
+// ── Component ──────────────────────────────────────────────────────────
 
 export default function EditElectricityPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [submitError, setSubmitError] = useState('');
-  const [billStatus, setBillStatus] = useState('draft');
+
+  /**
+   * The bill is read through the shared query stack, like every other
+   * record: the load takes part in the cache and a write invalidates it.
+   */
+  const {
+    data: bill = null,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<ElectricityBillData>(BILL_KEY(id), `electricity/${id}`, {
+    enabled: Boolean(id),
+  });
 
   const {
     register,
@@ -90,88 +137,72 @@ export default function EditElectricityPage() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'roomEntries' });
 
-  // Watch entries for auto-calculations
+  // The id whose values are already in the form. A refetch of the same record
+  // must never wipe what the operator is typing.
+  const loadedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!bill || loadedIdRef.current === id) return;
+    loadedIdRef.current = id;
+    reset({
+      month: bill.month ?? '',
+      totalBillAmount: bill.totalBillAmount ?? 0,
+      billImageUrl: bill.billImageUrl ?? '',
+      varianceReason: bill.varianceReason ?? '',
+      notes: bill.notes ?? '',
+      roomEntries: (bill.roomEntries ?? []).map((entry) => ({
+        roomId: typeof entry.roomId === 'string' ? entry.roomId : (entry.roomId?._id ?? ''),
+        previousReading: entry.previousReading,
+        currentReading: entry.currentReading,
+        ratePerUnit: entry.ratePerUnit,
+      })),
+    });
+  }, [bill, id, reset]);
+
   const entries = useWatch({ control, name: 'roomEntries' });
   const totalBillAmount = useWatch({ control, name: 'totalBillAmount' });
 
-  const computeAutoTotal = useCallback((roomEntries: FormData['roomEntries']) => {
-    return (roomEntries ?? []).reduce((sum, e) => {
-      const units = Math.max(0, (e.currentReading || 0) - (e.previousReading || 0));
-      return sum + units * (e.ratePerUnit || 0);
-    }, 0);
-  }, []);
+  /**
+   * What the server will compute from the readings.
+   *
+   * The model derives the units and the room amount from the readings when
+   * the bill is saved (apps/api/src/models/electricityBill.ts:138-148), and
+   * the server's figure is the one that ends up on the bill.
+   */
+  const readingsTotal = (entries ?? []).reduce((sum, entry) => {
+    const units = Math.max(0, (entry?.currentReading || 0) - (entry?.previousReading || 0));
+    return sum + units * (entry?.ratePerUnit || 0);
+  }, 0);
 
-  const autoTotal = computeAutoTotal(entries);
   const billTotal = Number(totalBillAmount) || 0;
-  const reconcileDiff = Math.abs(billTotal - autoTotal);
-  const showReconcileWarning = !isNaN(reconcileDiff) && reconcileDiff > 0.5;
-  const blockReconcile = reconcileDiff > RECONCILE_BLOCK_THRESHOLD;
-  const isLocked = billStatus === 'finalized' || billStatus === 'distributed';
+  const reconcileDiff = Math.abs(billTotal - readingsTotal);
+  const addsUp = reconcileDiff <= RECONCILE_TOLERANCE;
+  const blockedByServer = reconcileDiff > RECONCILE_BLOCK_THRESHOLD;
 
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`electricity/${id}`)
-      .json<{
-        success: boolean;
-        data: {
-          month: string;
-          totalBillAmount: number;
-          billImageUrl?: string;
-          varianceReason?: string;
-          notes?: string;
-          status: string;
-          roomEntries: Array<{
-            roomId?: string | { _id?: string };
-            previousReading: number;
-            currentReading: number;
-            ratePerUnit: number;
-          }>;
-        };
-      }>()
-      .then((billRes) => {
-        const b = billRes.data;
-        setBillStatus(b.status);
-
-        reset({
-          month: b.month ?? '',
-          totalBillAmount: b.totalBillAmount ?? 0,
-          billImageUrl: b.billImageUrl ?? '',
-          varianceReason: b.varianceReason ?? '',
-          notes: b.notes ?? '',
-          roomEntries: (b.roomEntries ?? []).map((e) => ({
-            roomId:
-              typeof e.roomId === 'string' ? e.roomId : ((e.roomId as { _id?: string })?._id ?? ''),
-            previousReading: e.previousReading,
-            currentReading: e.currentReading,
-            ratePerUnit: e.ratePerUnit,
-          })),
-        });
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setSubmitError('Failed to load electricity bill');
-        setIsLoading(false);
-      });
-  }, [id, reset]);
+  // The server locks a bill once it is finalized and refuses to delete a
+  // distributed one (apps/api/src/routes/electricity.ts:572-574, :1089-1091).
+  const isLocked = bill?.status === 'finalized' || bill?.status === 'distributed';
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
 
-    if (billStatus === 'distributed' || billStatus === 'finalized') {
+    if (isLocked) {
       setSubmitError(
-        billStatus === 'finalized'
-          ? 'Finalized bills cannot be edited'
-          : 'Distributed bills cannot be edited',
+        bill?.status === 'finalized'
+          ? 'Finalized bills cannot be edited. The server refuses the write.'
+          : 'Distributed bills cannot be edited. The server refuses the write.',
       );
       return;
     }
 
-    const roomSum = computeAutoTotal(data.roomEntries);
+    const roomSum = (data.roomEntries ?? []).reduce((sum, entry) => {
+      const units = Math.max(0, (entry.currentReading || 0) - (entry.previousReading || 0));
+      return sum + units * (entry.ratePerUnit || 0);
+    }, 0);
     const diff = Math.abs(data.totalBillAmount - roomSum);
     if (diff > RECONCILE_BLOCK_THRESHOLD) {
       setSubmitError(
-        `Room amounts (₹${roomSum.toLocaleString('en-IN')}) and total bill (₹${data.totalBillAmount.toLocaleString('en-IN')}) differ by ₹${diff.toLocaleString('en-IN')}. Fix the readings or total before saving.`,
+        `Room amounts (${fmtMoney(roomSum)}) and total bill (${fmtMoney(data.totalBillAmount)}) differ by ${fmtMoney(diff)}. Fix the readings or total before saving.`,
       );
       return;
     }
@@ -194,24 +225,18 @@ export default function EditElectricityPage() {
           },
         })
         .json();
+      // The server wrote the change: re-read the bill so the detail page shows
+      // the server's variance and its status, not a local guess.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: BILL_KEY(id) }),
+        queryClient.invalidateQueries({ queryKey: ELECTRICITY_PREFIX }),
+      ]);
       router.push(`/electricity/${id}`);
     } catch (err) {
       const parsed = await parseApiError(err);
       setSubmitError(parsed.message);
     }
   };
-
-  if (isLoading) {
-    return (
-      <FormPage
-        title="Edit Electricity Bill"
-        description="Loading bill data..."
-        isLoading={true}
-        backHref="/electricity"
-        maxWidth="form"
-      />
-    );
-  }
 
   const err = errors as Record<string, { message?: string }>;
 
@@ -220,275 +245,356 @@ export default function EditElectricityPage() {
       title="Edit Electricity Bill"
       description={
         isLocked
-          ? `This bill is locked (${billStatus}) and cannot be edited`
-          : `Status: ${billStatus} — units and amounts recompute automatically`
+          ? `This bill is locked (${bill?.status}) and cannot be edited`
+          : 'The readings and the utility total of a draft bill. The server recomputes the room amounts from them.'
       }
-      backHref="/electricity"
-      error={submitError}
+      backHref={`/electricity/${id}`}
+      error={submitError || errorMessage(queryError)}
+      isLoading={isLoading}
       maxWidth="form"
     >
-      {isLocked && (
-        <div className="mb-5 flex flex-col gap-3 rounded-(--radius-lg) border border-(--color-warning-400) bg-(--color-warning-50) p-4 text-(--color-warning-800) sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Lock className="mt-0.5 h-5 w-5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-bold">Bill is locked ({billStatus})</p>
-              <p className="mt-0.5 text-xs font-semibold opacity-90">
-                {billStatus === 'finalized'
-                  ? 'Finalized bills cannot be edited. Create a new draft if needed.'
-                  : 'Distributed bills cannot be edited.'}
-              </p>
-            </div>
-          </div>
-          <Link
-            href={`/electricity/${id}`}
-            className="inline-flex items-center justify-center rounded-(--radius-md) border border-(--color-warning-400) bg-(--color-card-bg) px-3 py-1.5 text-xs font-bold text-(--color-warning-800) hover:bg-(--color-warning-100)"
-          >
-            Back to detail
-          </Link>
-        </div>
-      )}
-
-      <FormCard
-        onSubmit={handleSubmit(onSubmit)}
-        footer={
-          <FormActions
-            loading={isSubmitting}
-            cancelHref={`/electricity/${id}`}
-            submitLabel={isLocked ? 'Read Only' : 'Save Changes'}
-            divided={false}
-            hideSubmit={isLocked}
-          />
-        }
-      >
-        <div className="space-y-6">
-          <FormSection
-            title="Bill details"
-            description="Billing month and total amount for this cycle"
-          >
-            <FormGrid>
-              <Input
-                label="Month (YYYY-MM)"
-                placeholder="2025-01"
-                error={err.month?.message}
-                {...register('month')}
-                disabled={isLocked}
-              />
-              <Input
-                label="Total bill amount (₹)"
-                type="number"
-                step="0.01"
-                min={0}
-                error={err.totalBillAmount?.message}
-                {...register('totalBillAmount')}
-                disabled={isLocked}
-              />
-              <Input
-                label="Bill image URL (optional)"
-                type="url"
-                placeholder="https://..."
-                error={err.billImageUrl?.message}
-                {...register('billImageUrl')}
-                disabled={isLocked}
-              />
-            </FormGrid>
-          </FormSection>
-
-          <FormSection
-            title="Room readings"
-            description="Per-room meter readings for this billing period"
-            divided
-            action={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({ roomId: '', previousReading: 0, currentReading: 0, ratePerUnit: 8 })
-                }
-                disabled={isLocked}
-              >
-                <Plus className="h-4 w-4" /> Add room
-              </Button>
-            }
-          >
-            <div className="space-y-3">
-              {fields.length === 0 && (
-                <p className="rounded-(--radius-md) border border-dashed border-(--border-color) px-4 py-8 text-center text-sm text-(--color-text-secondary)">
-                  No room readings yet. Click &quot;Add room&quot; to begin.
+      <div className="space-y-5">
+        {isLocked && (
+          <div className="flex flex-col gap-3 rounded-(--radius-lg) border border-(--color-warning-300) bg-(--color-warning-50) p-4 text-(--color-warning-800) sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Lock className="mt-0.5 h-5 w-5 shrink-0 text-(--color-warning-600)" />
+              <div>
+                <p className="text-sm font-bold">This bill is locked ({bill?.status})</p>
+                <p className="mt-0.5 text-xs font-semibold opacity-90">
+                  {bill?.status === 'finalized'
+                    ? 'The server refuses every edit of a finalized bill (BILL_LOCKED). The readings are locked and the bill is on no invoice yet.'
+                    : 'The server refuses every edit of a distributed bill (BILL_LOCKED). The shares are already on the resident invoices, so a correction is made on their invoice and not here.'}
                 </p>
-              )}
+              </div>
+            </div>
+            <Link
+              href={`/electricity/${id}`}
+              className="inline-flex items-center justify-center rounded-(--radius-md) border border-(--color-warning-400) bg-(--color-card-bg) px-3 py-1.5 text-xs font-bold text-(--color-warning-800) hover:bg-(--color-warning-100)"
+            >
+              Back to the bill
+            </Link>
+          </div>
+        )}
 
-              {fields.map((field, idx) => {
-                const entry = entries?.[idx];
-                const units = entry
-                  ? Math.max(0, (entry.currentReading || 0) - (entry.previousReading || 0))
-                  : 0;
-                const amount = units * (entry?.ratePerUnit || 0);
-
-                return (
-                  <div
-                    key={field.id}
-                    className={clsx(
-                      surfaceNestedClass,
-                      'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
-                    )}
-                  >
-                    <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
-                      <Controller
-                        name={`roomEntries.${idx}.roomId`}
-                        control={control}
-                        render={({ field: rf }) => (
-                          <ResourceSelect
-                            label="Room"
-                            endpoint="rooms?limit=100"
-                            value={rf.value}
-                            onChange={rf.onChange}
-                            placeholder="Select room..."
-                            labelKey={roomLabel}
-                            valueKey="_id"
-                            dataPath="data"
-                            disabled={isLocked}
-                          />
-                        )}
-                      />
-                    </div>
-
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="space-y-6 xl:col-span-2">
+            <FormCard
+              onSubmit={
+                isLocked
+                  ? (event) => {
+                      event.preventDefault();
+                    }
+                  : handleSubmit(onSubmit)
+              }
+              footer={
+                <FormActions
+                  loading={isSubmitting}
+                  cancelHref={`/electricity/${id}`}
+                  submitLabel={isLocked ? 'Read only' : 'Save Changes'}
+                  divided={false}
+                  hideSubmit={isLocked}
+                />
+              }
+            >
+              <div className="space-y-6">
+                <FormSection
+                  title="Bill details"
+                  description="Billing month and total amount for this cycle"
+                >
+                  <FormGrid>
                     <Input
-                      label="Previous reading"
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      error={
-                        (errors.roomEntries?.[idx] as { previousReading?: { message?: string } })
-                          ?.previousReading?.message
-                      }
-                      {...register(`roomEntries.${idx}.previousReading` as const)}
+                      label="Month (YYYY-MM)"
+                      placeholder="2025-01"
+                      error={err.month?.message}
+                      {...register('month')}
                       disabled={isLocked}
                     />
                     <Input
-                      label="Current reading"
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      error={
-                        (errors.roomEntries?.[idx] as { currentReading?: { message?: string } })
-                          ?.currentReading?.message
-                      }
-                      {...register(`roomEntries.${idx}.currentReading` as const)}
-                      disabled={isLocked}
-                    />
-                    <Input
-                      label="Rate/unit (₹)"
+                      label="Total bill amount (₹)"
                       type="number"
                       step="0.01"
-                      inputMode="decimal"
                       min={0}
-                      error={
-                        (errors.roomEntries?.[idx] as { ratePerUnit?: { message?: string } })
-                          ?.ratePerUnit?.message
-                      }
-                      {...register(`roomEntries.${idx}.ratePerUnit` as const)}
+                      error={err.totalBillAmount?.message}
+                      {...register('totalBillAmount')}
                       disabled={isLocked}
                     />
+                    <Input
+                      label="Bill image URL (optional)"
+                      type="url"
+                      placeholder="https://..."
+                      error={err.billImageUrl?.message}
+                      {...register('billImageUrl')}
+                      disabled={isLocked}
+                    />
+                  </FormGrid>
+                </FormSection>
 
-                    <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label={`Remove room ${idx + 1}`}
-                        onClick={() => remove(idx)}
-                        disabled={fields.length <= 1 || isLocked}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <FormSection
+                  title="Room readings"
+                  description="Per-room meter readings for this billing period"
+                  divided
+                  action={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        append({
+                          roomId: '',
+                          previousReading: 0,
+                          currentReading: 0,
+                          ratePerUnit: 8,
+                        })
+                      }
+                      disabled={isLocked}
+                    >
+                      <Plus className="h-4 w-4" /> Add room
+                    </Button>
+                  }
+                >
+                  <div className="space-y-3">
+                    {fields.length === 0 && (
+                      <p className="rounded-(--radius-md) border border-dashed border-(--border-color) px-4 py-8 text-center text-sm text-(--color-text-secondary)">
+                        No room readings yet. Click &quot;Add room&quot; to begin.
+                      </p>
+                    )}
 
-                    {/* Computed values for this entry */}
-                    <div className="col-span-full flex items-center gap-4 rounded-(--radius-md) bg-(--color-surface-50) px-3 py-1.5 text-xs font-semibold text-(--color-text-secondary)">
-                      <Calculator className="h-3.5 w-3.5" />
-                      <span>
-                        Units:{' '}
-                        <strong className="font-mono text-(--color-text-primary)">{units}</strong>
-                      </span>
-                      <span className="text-(--border-color)">|</span>
-                      <span>
-                        Amount:{' '}
-                        <strong className="font-mono text-(--color-text-primary)">
-                          ₹{amount.toLocaleString('en-IN')}
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    {fields.map((field, idx) => {
+                      const entry = entries?.[idx];
+                      const units = entry
+                        ? Math.max(0, (entry.currentReading || 0) - (entry.previousReading || 0))
+                        : 0;
+                      const amount = units * (entry?.ratePerUnit || 0);
 
-            {fields.length > 0 && (
-              <div
-                className={clsx(surfaceNestedClass, 'mt-4 flex items-center justify-between p-4')}
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold text-(--color-text-secondary)">
-                  <Zap className="h-4 w-4" />
-                  Computed total from readings
-                </span>
-                <span className="font-mono text-xl font-bold text-(--color-text-primary) tabular-nums">
-                  ₹{autoTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
+                      return (
+                        <div
+                          key={field.id}
+                          className={clsx(
+                            surfaceNestedClass,
+                            'grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))_auto]',
+                          )}
+                        >
+                          <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
+                            <Controller
+                              name={`roomEntries.${idx}.roomId`}
+                              control={control}
+                              render={({ field: rf }) => (
+                                <ResourceSelect
+                                  label="Room"
+                                  endpoint="rooms?limit=100"
+                                  value={rf.value}
+                                  onChange={rf.onChange}
+                                  placeholder="Select room..."
+                                  labelKey={roomLabel}
+                                  valueKey="_id"
+                                  dataPath="data"
+                                  disabled={isLocked}
+                                />
+                              )}
+                            />
+                          </div>
 
-            {showReconcileWarning && !isLocked && (
-              <div
-                className={clsx(
-                  'mt-4 flex items-start gap-3 rounded-(--radius-lg) border p-4',
-                  blockReconcile
-                    ? 'border-(--color-danger-300) bg-(--color-danger-50) text-(--color-danger-800)'
-                    : 'border-(--color-warning-300) bg-(--color-warning-50) text-(--color-warning-800)',
-                )}
-                role="status"
-              >
-                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
-                <div className="min-w-0 text-sm">
-                  <p className="font-bold">
-                    {blockReconcile
-                      ? 'Bill total and room amounts are far apart'
-                      : 'Bill total and room amounts do not match'}
-                  </p>
-                  <p className="mt-0.5 font-medium opacity-90">
-                    Total bill: ₹{billTotal.toLocaleString('en-IN')} · Room sum: ₹
-                    {autoTotal.toLocaleString('en-IN')} · Difference: ₹
-                    {reconcileDiff.toLocaleString('en-IN', {
-                      maximumFractionDigits: 2,
+                          <Input
+                            label="Previous reading"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            error={
+                              (
+                                errors.roomEntries?.[idx] as {
+                                  previousReading?: { message?: string };
+                                }
+                              )?.previousReading?.message
+                            }
+                            {...register(`roomEntries.${idx}.previousReading` as const)}
+                            disabled={isLocked}
+                          />
+                          <Input
+                            label="Current reading"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            error={
+                              (
+                                errors.roomEntries?.[idx] as {
+                                  currentReading?: { message?: string };
+                                }
+                              )?.currentReading?.message
+                            }
+                            {...register(`roomEntries.${idx}.currentReading` as const)}
+                            disabled={isLocked}
+                          />
+                          <Input
+                            label="Rate/unit (₹)"
+                            type="number"
+                            step="0.01"
+                            inputMode="decimal"
+                            min={0}
+                            error={
+                              (errors.roomEntries?.[idx] as { ratePerUnit?: { message?: string } })
+                                ?.ratePerUnit?.message
+                            }
+                            {...register(`roomEntries.${idx}.ratePerUnit` as const)}
+                            disabled={isLocked}
+                          />
+
+                          <div className="flex items-end justify-end sm:col-span-2 lg:col-span-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label={`Remove room ${idx + 1}`}
+                              onClick={() => remove(idx)}
+                              disabled={fields.length <= 1 || isLocked}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* What the server computes from these readings. */}
+                          <div className="col-span-full flex flex-wrap items-center gap-x-4 gap-y-1 rounded-(--radius-md) bg-(--color-surface-50) px-3 py-1.5 text-xs font-semibold text-(--color-text-secondary)">
+                            <span className="flex items-center gap-1.5">
+                              <Calculator className="h-3.5 w-3.5" />
+                              Units:{' '}
+                              <strong className="font-mono text-(--color-text-primary)">
+                                {units}
+                              </strong>
+                            </span>
+                            <span>
+                              Amount:{' '}
+                              <strong className="font-mono text-(--color-text-primary)">
+                                {fmtMoney(amount)}
+                              </strong>
+                            </span>
+                          </div>
+                        </div>
+                      );
                     })}
-                    {blockReconcile
-                      ? '. Correct values before saving.'
-                      : '. You can still save; common-area or fixed charges may explain a small gap.'}
-                  </p>
+                  </div>
+                </FormSection>
+
+                <FormSection
+                  title="Variance and notes"
+                  description="Why the readings and the utility total differ, if they do"
+                  divided
+                >
+                  <Textarea
+                    label="Variance reason (optional)"
+                    rows={2}
+                    placeholder="Explain any gap between bill total and room sum, e.g. common-area charges..."
+                    {...register('varianceReason')}
+                    disabled={isLocked}
+                  />
+                  <Textarea
+                    label="Notes"
+                    rows={3}
+                    placeholder="Optional notes..."
+                    {...register('notes')}
+                    disabled={isLocked}
+                  />
+                </FormSection>
+              </div>
+            </FormCard>
+          </div>
+
+          {/* The consequence rail: what the numbers say, and what the save
+              does. */}
+          <div className="space-y-4 xl:col-span-1">
+            <div className={clsx(surfaceNestedClass, 'p-4')}>
+              <div className="flex items-center gap-2">
+                <Scale className="h-4 w-4 text-(--color-brand-500)" />
+                <h3 className="font-display text-sm font-bold text-(--color-text-primary)">
+                  Do the numbers add up
+                </h3>
+              </div>
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-(--color-text-muted)">Utility bill</span>
+                  <span className="font-semibold text-(--color-text-primary) tabular-nums">
+                    {fmtMoney(billTotal)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-(--color-text-muted)">Readings at the tariff</span>
+                  <span className="font-semibold text-(--color-text-primary) tabular-nums">
+                    {fmtMoney(readingsTotal)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-(--border-color) pt-2">
+                  <span className="text-(--color-text-muted)">Difference</span>
+                  <span
+                    className={clsx(
+                      'font-display text-base font-bold tabular-nums',
+                      addsUp
+                        ? 'text-(--color-success-700)'
+                        : blockedByServer
+                          ? 'text-(--color-danger-700)'
+                          : 'text-(--color-warning-700)',
+                    )}
+                  >
+                    {fmtMoney(reconcileDiff)}
+                  </span>
                 </div>
               </div>
-            )}
-          </FormSection>
+              <p
+                className={clsx(
+                  'text-2xs mt-3 font-semibold',
+                  addsUp
+                    ? 'text-(--color-success-700)'
+                    : blockedByServer
+                      ? 'text-(--color-danger-700)'
+                      : 'text-(--color-warning-700)',
+                )}
+              >
+                {addsUp
+                  ? 'The readings add up to the utility bill.'
+                  : blockedByServer
+                    ? 'The server refuses to save a bill whose readings and total are more than ₹10,000 apart.'
+                    : 'The readings do not add up to the utility bill. The server saves the bill, but the office cannot finalize it until the reason for the gap is written down.'}
+              </p>
+            </div>
 
-          <FormSection title="Notes" description="Optional remarks for this bill" divided>
-            <Textarea
-              label="Variance reason (optional)"
-              rows={2}
-              placeholder="Explain any gap between bill total and room sum, e.g. common-area charges..."
-              {...register('varianceReason')}
-              disabled={isLocked}
-            />
-            <Textarea
-              label="Notes"
-              rows={3}
-              placeholder="Optional notes..."
-              {...register('notes')}
-              disabled={isLocked}
-            />
-          </FormSection>
+            <div className={clsx(surfaceNestedClass, 'p-4')}>
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-(--color-brand-500)" />
+                <h3 className="font-display text-sm font-bold text-(--color-text-primary)">
+                  What this save does
+                </h3>
+              </div>
+              <div className="text-2xs mt-3 space-y-2.5 font-medium text-(--color-text-secondary)">
+                {isLocked ? (
+                  <>
+                    <p className="flex items-start gap-1.5">
+                      <Lock className="mt-0.5 h-3 w-3 shrink-0 text-(--color-warning-600)" />
+                      Nothing: the server refuses the write with BILL_LOCKED. This bill is read
+                      only.
+                    </p>
+                    <p className="flex items-start gap-1.5">
+                      <Zap className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                      {bill?.status === 'distributed'
+                        ? 'The shares of this bill are already on the resident invoices, so the money it moved lives on their invoice now. A correction is made there, not on this bill.'
+                        : 'The bill is finalized and not on any invoice yet, so no resident carries a share of it.'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="flex items-start gap-1.5">
+                      <Zap className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                      The server recomputes every room amount from the readings and the rate, and
+                      the difference from the utility total, when it saves the bill.
+                    </p>
+                    <p className="flex items-start gap-1.5">
+                      <Bell className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-600)" />
+                      No resident is charged by this save and nobody is told: a draft bill is on no
+                      invoice. The residents are charged when the bill is distributed.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </FormCard>
+      </div>
     </FormPage>
   );
 }
