@@ -1,20 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
+import { FormActions } from '@/components/ui/FormActions';
+import { FormCard } from '@/components/ui/FormCard';
+import { FormGrid, FormSection } from '@/components/ui/FormSection';
+import { FormPage } from '@/components/ui/FormPage';
+import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { FormPage } from '@/components/ui/FormPage';
-import { FormCard } from '@/components/ui/FormCard';
-import { FormActions } from '@/components/ui/FormActions';
-import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
+import type { AmenityDefinition } from '@pg/types';
+
+// ── Shapes ─────────────────────────────────────────────────────────────
+// Every field below is read out of the API response, never invented:
+//   GET /services/:id        apps/api/src/routes/services.ts:464-477
+//   GET /app-config          apps/api/src/models/appConfig.ts
+//   PUT  /services/:id       the status path, apps/api/src/routes/services.ts:361-461
+//   PUT  /services/:id/full  the service type path, apps/api/src/routes/services.ts:480-569
 
 const schema = z.object({
   serviceType: z.string().min(1, 'Service type is required'),
@@ -24,190 +35,243 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const FALLBACK_SERVICE_TYPES = [
-  { value: 'wifi', label: 'WiFi' },
-  { value: 'water_supply', label: 'Water supply' },
-  { value: 'electricity', label: 'Electricity' },
-  { value: 'geyser', label: 'Geyser' },
-  { value: 'washing_machine', label: 'Washing machine' },
-  { value: 'fridge', label: 'Fridge' },
-];
-
-const serviceStatusOptions = [
-  { value: 'operational', label: 'Operational' },
-  { value: 'degraded', label: 'Degraded' },
-  { value: 'down', label: 'Down' },
-];
-
-interface ServiceLoadShape {
-  floorId?: string | { _id?: string };
-  floor?: { _id?: string };
+interface ServiceRecord {
+  _id: string;
   serviceType?: string;
   status?: string;
   note?: string;
+  floor?: { _id?: string; label?: string };
+  floorId?: string | { _id?: string };
+}
+
+const SERVICE_KEY = (id: string) => ['services', id] as const;
+
+// The services list, the board and a single service record live under the
+// same `['services']` prefix, so one invalidation re-reads every service view.
+const SERVICES_PREFIX = ['services'] as const;
+
+const STATUS_OPTIONS = [
+  { value: 'operational', label: 'Operational - it works' },
+  { value: 'degraded', label: 'Degraded - it works badly' },
+  { value: 'down', label: 'Down - it does not work' },
+];
+
+/**
+ * The floor of the service, as the server holds it.
+ *
+ * The record carries the floor id and the populated floor, and the two are
+ * read together so the form shows the floor of the record and not a guess.
+ */
+function floorIdOf(service: ServiceRecord | null): string {
+  const raw = service?.floorId ?? service?.floor?._id;
+  if (raw && typeof raw === 'object') return String(raw._id ?? '');
+  return String(raw ?? '');
 }
 
 export default function EditServicePage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
+
   const [submitError, setSubmitError] = useState('');
-  const [serviceTypeOptions, setServiceTypeOptions] = useState(FALLBACK_SERVICE_TYPES);
-  const [floorView, setFloorView] = useState('');
+
+  // The record is read through the shared query stack, so the form and the
+  // board never disagree about the state of the service.
+  const {
+    data: rawService,
+    isPending: isLoading,
+    error: queryError,
+  } = useApiQuery<ServiceRecord>(SERVICE_KEY(id), `services/${id}`, { enabled: Boolean(id) });
+
+  // The server answers with one service object. Anything else is not a service.
+  const service = rawService && !Array.isArray(rawService) ? rawService : null;
+
+  const { data: appConfig } = useApiQuery<{ amenityDefinitions?: AmenityDefinition[] }>(
+    ['app-config'],
+    'app-config',
+  );
 
   const {
     register,
     control,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    // The values of the form follow the record: the form is filled from the
+    // server's own read, with no second copy of the state to keep in sync.
+    values: {
+      serviceType: service?.serviceType ?? '',
+      status: (service?.status as FormData['status']) ?? 'operational',
+      note: service?.note ?? '',
+    },
   });
 
-  useEffect(() => {
-    if (!id) return;
-    type AmenityDef = { key: string; label: string; isPerFloor?: boolean };
-    Promise.all([
-      api.get(`services/${id}`).json<{ success: boolean; data: ServiceLoadShape }>(),
-      api
-        .get('app-config')
-        .json<{ success: boolean; data: { amenityDefinitions?: AmenityDef[] } }>()
-        .catch((): { success: boolean; data: { amenityDefinitions?: AmenityDef[] } } => ({
-          success: false,
-          data: { amenityDefinitions: [] },
-        })),
-    ])
-      .then(([svcRes, cfgRes]) => {
-        const d = svcRes.data;
-        const rawFloor = d.floorId ?? d.floor;
-        const floorId =
-          typeof rawFloor === 'object' && rawFloor
-            ? String(rawFloor._id ?? '')
-            : String(rawFloor ?? '');
-        setFloorView(floorId);
-        // Strict isPerFloor === true mirror of the API guard: room-only
-        // amenities (fan/bed/…) are rejected server-side with INVALID_SERVICE_TYPE.
-        const defs = (cfgRes.data.amenityDefinitions ?? []).filter(
-          (a: AmenityDef) => a.isPerFloor === true,
-        );
-        if (defs.length > 0) {
-          const opts = defs.map((a: AmenityDef) => ({ value: a.key, label: a.label }));
-          // Keep current type visible even if removed from defs
-          if (d.serviceType && !opts.some((o: { value: string }) => o.value === d.serviceType)) {
-            opts.unshift({ value: d.serviceType, label: d.serviceType });
-          }
-          setServiceTypeOptions(opts);
-        }
-        reset({
-          serviceType: d.serviceType ?? '',
-          status: (d.status as FormData['status']) ?? 'operational',
-          note: d.note ?? '',
-        });
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-        setIsLoading(false);
-      });
-  }, [id, reset]);
+  const serviceTypeOptions = useMemo(
+    () =>
+      (appConfig?.amenityDefinitions ?? [])
+        .filter((def) => def.isPerFloor === true)
+        .map((def) => ({ value: def.key, label: def.label || def.key.replace(/_/g, ' ') })),
+    [appConfig],
+  );
 
+  const floorId = floorIdOf(service);
+
+  /**
+   * Save the record.
+   *
+   * The state and the note go through the status path: the server stamps the
+   * record with the office and the time, writes an update entry in the audit
+   * log with the state it came from, and pushes a service update to the
+   * active residents of the floor when the state moves.
+   *
+   * A service type change goes through the other path, which the server
+   * refuses when the floor already has that service type and which pushes
+   * nothing to the residents.
+   */
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
+    const typeChanged =
+      service?.serviceType !== undefined && service.serviceType !== data.serviceType;
+    let typeWritten = false;
     try {
-      // Full admin update path — status-only PUT rejects serviceType/floorId
+      if (typeChanged) {
+        await api
+          .put(`services/${id}/full`, {
+            json: { serviceType: data.serviceType },
+          })
+          .json();
+        typeWritten = true;
+      }
       await api
-        .put(`services/${id}/full`, {
+        .put(`services/${id}`, {
           json: {
-            serviceType: data.serviceType,
             status: data.status,
             note: data.note ?? '',
           },
         })
         .json();
+      // Invalidate before the navigation: the destination shows the server's
+      // state, and a navigation unmounts this page.
+      await queryClient.invalidateQueries({ queryKey: SERVICES_PREFIX });
       router.push('/services');
     } catch (err) {
-      setSubmitError((await parseApiError(err)).message);
+      const message = (await parseApiError(err)).message;
+      setSubmitError(
+        typeWritten
+          ? `The service type was written, but the state and the note were not: ${message}`
+          : message,
+      );
     }
   };
 
   return (
     <FormPage
-      title="Edit Service Status"
-      description="Update floor-level service status and notes"
+      title="Edit the service"
+      description="The state of one service on one floor, and the service type it carries"
       backHref="/services"
-      error={submitError}
+      error={
+        submitError ||
+        errorMessage(queryError) ||
+        (!isLoading && !service ? 'The server reports no service for this id.' : '')
+      }
       isLoading={isLoading}
       maxWidth="form"
     >
-      <FormCard
-        onSubmit={handleSubmit(onSubmit)}
-        footer={
-          <FormActions
-            loading={isSubmitting}
-            cancelHref="/services"
-            submitLabel="Save Changes"
-            divided={false}
-          />
-        }
-      >
-        <FormSection
-          title="Service"
-          description="Floor, service type, and current operational status"
+      {!isLoading && !service ? null : (
+        <FormCard
+          onSubmit={handleSubmit(onSubmit)}
+          footer={
+            <FormActions
+              loading={isSubmitting}
+              cancelHref="/services"
+              submitLabel="Save the changes"
+              divided={false}
+            />
+          }
         >
-          <FormGrid>
-            <ResourceSelect
-              label="Floor"
-              endpoint="floors"
-              value={floorView}
-              onChange={() => {}}
-              placeholder="Select floor..."
-              valueKey="_id"
-              labelKey={floorLabel}
-              dataPath="data"
-              helperText="Floor assignment is immutable"
-              disabled
-            />
-            <Controller
-              name="serviceType"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  label="Service type"
-                  options={serviceTypeOptions}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.serviceType?.message}
-                />
-              )}
-            />
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  label="Status"
-                  options={serviceStatusOptions}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={errors.status?.message}
-                />
-              )}
-            />
-          </FormGrid>
-        </FormSection>
+          <FormSection title="The service" description="The floor, the service type and the state">
+            <FormGrid>
+              <ResourceSelect
+                label="Floor"
+                endpoint="floors"
+                value={floorId}
+                onChange={() => undefined}
+                placeholder="Select floor..."
+                valueKey="_id"
+                labelKey={floorLabel}
+                dataPath="data"
+                helperText="The floor of a service cannot be changed: the server keeps the row on its floor"
+                disabled
+              />
+              <Controller
+                name="serviceType"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="Service type"
+                    options={serviceTypeOptions}
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.serviceType?.message}
+                    helperText="The server refuses a type the floor already has"
+                  />
+                )}
+              />
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    label="State"
+                    options={STATUS_OPTIONS}
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.status?.message}
+                    helperText="A state that moves reaches the residents of the floor"
+                  />
+                )}
+              />
+            </FormGrid>
+          </FormSection>
 
-        <FormSection title="Notes" description="Optional context for staff" divided>
-          <Textarea
-            label="Note"
-            rows={3}
-            placeholder="Optional note..."
-            error={errors.note?.message}
-            {...register('note')}
-          />
-        </FormSection>
-      </FormCard>
+          <FormSection title="The note" description="What the office wrote down" divided>
+            <Textarea
+              label="Note"
+              rows={3}
+              placeholder="Optional note..."
+              error={errors.note?.message}
+              helperText="The note goes into the audit entry and into the message the residents of the floor receive. A note on its own does not reach them."
+              {...register('note')}
+            />
+          </FormSection>
+
+          {/* What the save moves and who hears about it. */}
+          <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-4">
+            <p className="text-xs font-bold text-(--color-text-primary)">What this save does</p>
+            <ul className="text-2xs mt-2 space-y-1.5 font-medium text-(--color-text-secondary)">
+              <li>
+                <strong className="text-(--color-text-primary)">The state and the note</strong> go
+                through the status path of the server: it stamps the record with your name and the
+                time, writes an update entry in the audit log with the state it came from, and
+                pushes a service update to the active residents of the floor when the state moves.
+              </li>
+              <li>
+                <strong className="text-(--color-text-primary)">A service type change</strong> goes
+                through the other path of the server. It refuses the change when the floor already
+                has that service type, and it pushes nothing to the residents: a type is a label on
+                the row, not a state of the floor.
+              </li>
+              <li>
+                <strong className="text-(--color-text-primary)">The floor does not move.</strong> The
+                server keeps the row on its floor. Remove the row and provision it again on the
+                other floor, and the residents of the floor lose the service in the meantime.
+              </li>
+            </ul>
+          </div>
+        </FormCard>
+      )}
     </FormPage>
   );
 }
