@@ -256,7 +256,28 @@ state (for example `invoices_screen.dart:99`, `payments_screen.dart:415`, `leave
 `apps/web/src/app/login/page.tsx:301,309` - "Auto-fill Demo Admin" fills
 `admin@pgmanagement.local` / `Admin@123456`.
 
-### F11 - Admin and resident disagree about the same fact
+### F11 - The Input control was dropping its value and its change handler
+
+`apps/web/src/components/ui/Input.tsx` destructured `value` and `onChange` out of its props
+(:44-45) and never passed them to the native input (:89-106), so the rest spread could not carry
+them either. Every `Input` in the admin app was an uncontrolled, silent box.
+
+Two consequences, and they are the mechanical explanation for a large part of "the flows feel
+hollow":
+
+- react-hook-form's `register` returns exactly `{ name, onChange, onBlur, ref }`. The change handler
+  was dropped in 48 places, so **live validation never ran**: a field only complained after a
+  submit, which reads as a form that ignores you.
+- A controlled field - a prefilled payment amount, a filtered list - **never showed what it held**,
+  because the value never reached the DOM.
+
+Found while repairing the money path: the record-payment modal would have recorded the prefilled
+balance instead of the amount the operator typed, which is the same class of defect as finding F2
+(the screen asserting a number it does not hold). Fixed with the pass-through, proved by a test that
+fails on the old code (verified on a build box: 2 of 3 assertions fail without the fix). The other
+shared controls were checked for the same pattern; none of them has it.
+
+### F12 - Admin and resident disagree about the same fact
 
 | Concern             | Admin                                 | Resident                                                    | Verdict                       |
 | ------------------- | ------------------------------------- | ----------------------------------------------------------- | ----------------------------- |
@@ -267,7 +288,7 @@ state (for example `invoices_screen.dart:99`, `payments_screen.dart:415`, `leave
 | KYC verified        | verify button and badge               | status chip, no notification                                | asymmetric                    |
 | Notice reach        | post and export                       | read-only feed, no ack                                      | no proof of delivery          |
 
-### F12 - The success signal is a local toast, and a receipt component already exists
+### F13 - The success signal is a local toast, and a receipt component already exists
 
 `toast.success` is still fired on money and status writes:
 `apps/web/src/app/(admin)/payments/page.tsx:187,268`,
@@ -296,11 +317,11 @@ wave that creates it (see section 5); until then they are listed as pending, not
    `mobile/.../invoices_screen.dart:48-53`). The rule must key on the identifiers and the
    arithmetic, not on a literal string, or it will pass a violating codebase.
 2. **[M]** Every mutating response carries a server-issued receipt: `receiptId, actor,
-   serverTimestamp, resource, resourceId, before, after`, where `before`/`after` are read from the
+serverTimestamp, resource, resourceId, before, after`, where `before`/`after` are read from the
    database inside the handler, never echoed from the request body. A write whose receipt does not
    arrive renders FAILED. The artifact renderer already exists
    (`apps/web/src/components/admin/ReceiptDocument.tsx:32-46`); extend it, do not rebuild it.
-3. **[M]** No `toast.success` on a money or status write. The baseline to clear is F12's list of 11
+3. **[M]** No `toast.success` on a money or status write. The baseline to clear is F13's list of 11
    call sites.
 4. **[H]** Helper text that states an outcome must match the API's behaviour, or be deleted. The
    two known lies are "Invoice will be issued in Draft status"
