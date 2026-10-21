@@ -126,7 +126,7 @@ export default function NoticeDetailPage() {
         description="View notice information"
         backHref="/notices"
         error={error || 'Notice not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -137,7 +137,7 @@ export default function NoticeDetailPage() {
       description={notice ? `Notice ID: ${notice._id}` : undefined}
       backHref="/notices"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       actions={
         notice ? (
           <Button variant="outline" onClick={() => router.push(`/notices/${notice._id}/edit`)}>

@@ -271,7 +271,7 @@ export default function ElectricityBillDetailPage() {
         description="Monthly multi-room bill"
         backHref="/electricity"
         error={queryErrorMessage || 'Electricity bill not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -288,7 +288,7 @@ export default function ElectricityBillDetailPage() {
       description="Monthly multi-room bill"
       backHref="/electricity"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         bill ? (
           <StatusBadge

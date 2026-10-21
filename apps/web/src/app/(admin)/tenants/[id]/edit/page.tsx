@@ -314,7 +314,7 @@ export default function EditTenantPage() {
       backHref={`/tenants/${id}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

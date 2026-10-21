@@ -155,7 +155,7 @@ export default function NewLeavePage() {
       description="Record a tenant absence; approval syncs the attendance board"
       backHref="/leaves"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

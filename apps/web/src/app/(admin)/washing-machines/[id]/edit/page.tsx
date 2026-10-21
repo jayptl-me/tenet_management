@@ -129,7 +129,7 @@ export default function EditWashingMachinePage() {
       backHref="/washing-machines"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <div className="space-y-5">
         {machine?.currentUser && (

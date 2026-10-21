@@ -221,7 +221,7 @@ function NewRoomForm() {
       backHref="/rooms"
       error={submitError}
       isLoading={loadingDefs}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

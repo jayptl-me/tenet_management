@@ -210,7 +210,7 @@ export default function EditMenuPage() {
       backHref="/menus"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

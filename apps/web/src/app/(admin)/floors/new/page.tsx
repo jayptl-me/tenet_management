@@ -226,7 +226,7 @@ export default function NewFloorPage() {
       backHref="/floors"
       error={submitError}
       isLoading={loadingDefs}
-      maxWidth="5xl"
+      maxWidth="full"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

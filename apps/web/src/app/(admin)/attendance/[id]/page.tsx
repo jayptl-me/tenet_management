@@ -272,7 +272,7 @@ export default function AttendanceDetailPage() {
         description="View attendance details"
         backHref="/attendance"
         error={loadError || 'Attendance record not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -292,7 +292,7 @@ export default function AttendanceDetailPage() {
       description={record ? `${tenantName} · Room ${roomNumber}` : 'View attendance details'}
       backHref="/attendance"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         record ? (
           <StatusBadge variant={statusVariant} label={record.status.replace(/_/g, ' ')} />

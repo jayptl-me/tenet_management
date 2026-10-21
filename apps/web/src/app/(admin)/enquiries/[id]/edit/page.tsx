@@ -171,7 +171,7 @@ export default function EditEnquiryPage() {
       backHref="/enquiries"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

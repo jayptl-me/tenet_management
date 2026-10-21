@@ -118,7 +118,7 @@ export default function RoomDetailPage() {
         description="View room information"
         backHref="/rooms"
         error={queryErrorMessage || 'Room not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -140,7 +140,7 @@ export default function RoomDetailPage() {
       description={floorDescription}
       backHref="/rooms"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         room ? (
           <StatusBadge

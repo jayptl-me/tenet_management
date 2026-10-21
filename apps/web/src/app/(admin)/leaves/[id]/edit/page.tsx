@@ -133,7 +133,7 @@ export default function EditLeavePage() {
       backHref={leaveData ? `/leaves/${leaveData._id}` : '/leaves'}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       {leaveData && (
         <div className="space-y-5">

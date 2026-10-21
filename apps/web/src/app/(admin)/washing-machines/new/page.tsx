@@ -54,6 +54,7 @@ export default function NewWashingMachinePage() {
       redirectTo="/washing-machines"
       submitLabel="Save Machine"
       mode="create"
+      maxWidth="form"
       form={form}
       submit={async ({ values }) => {
         await api.post('washing-machines', { json: values }).json<{ success: boolean }>();

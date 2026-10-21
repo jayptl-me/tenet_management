@@ -145,7 +145,7 @@ export default function LeaveDetailPage() {
         description="View leave details"
         backHref="/leaves"
         error={error || 'Leave application not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -169,7 +169,7 @@ export default function LeaveDetailPage() {
       }
       backHref="/leaves"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         leave ? (
           <StatusBadge variant={statusVariant} label={leave.status.replace(/_/g, ' ')} />

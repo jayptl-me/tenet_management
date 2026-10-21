@@ -27,6 +27,11 @@ export interface FormCardProps {
 /**
  * Elevated form container with optional header and sticky-style footer.
  * Uses CSS variable surfaces so all theme presets render correctly.
+ *
+ * The card clips with `overflow-clip`, never `overflow-hidden`: `hidden` makes
+ * the card a scroll container, and a sticky footer then has no travel against
+ * the viewport - the Save button scrolled away with the form. `clip` keeps the
+ * rounded-corner clipping and stays out of the sticky business.
  */
 export function FormCard({
   title,
@@ -67,7 +72,7 @@ export function FormCard({
 
   const classes = clsx(
     surfaceCardClass,
-    'overflow-hidden',
+    'overflow-clip',
     !fullWidth && 'mx-auto max-w-2xl',
     className,
   );

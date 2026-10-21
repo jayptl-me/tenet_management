@@ -166,6 +166,7 @@ export default function NewServicePage() {
       description="Floor-level service status from AppConfig amenity definitions"
       backHref="/services"
       error={submitError}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

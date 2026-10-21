@@ -131,7 +131,7 @@ function NewGuardianForm() {
       description="Add a guardian for a tenant (creates login credentials)"
       backHref="/guardians"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

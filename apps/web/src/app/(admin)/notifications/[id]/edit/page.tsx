@@ -169,7 +169,7 @@ export default function EditNotificationPage() {
       backHref="/notifications?tab=history"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

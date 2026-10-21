@@ -151,7 +151,7 @@ export default function FloorDetailPage() {
         description="View floor information"
         backHref="/floors"
         error={queryErrorMessage || 'Floor not found'}
-        maxWidth="5xl"
+        maxWidth="full"
       />
     );
   }
@@ -166,7 +166,7 @@ export default function FloorDetailPage() {
       }
       backHref="/floors"
       isLoading={isLoading}
-      maxWidth="5xl"
+      maxWidth="full"
       actions={
         floor ? (
           <div className="flex items-center gap-2">

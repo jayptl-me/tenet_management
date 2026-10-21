@@ -119,7 +119,7 @@ export default function NewAssetPage() {
       description="Add a new asset to inventory"
       backHref="/assets"
       error={submitError}
-      maxWidth="4xl"
+      maxWidth="full"
     >
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <FormCard

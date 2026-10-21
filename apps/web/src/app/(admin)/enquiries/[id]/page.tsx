@@ -188,7 +188,7 @@ export default function EnquiryDetailPage() {
         description="View enquiry information"
         backHref="/enquiries"
         error={errorMessage(queryError) || 'Enquiry not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -206,7 +206,7 @@ export default function EnquiryDetailPage() {
       }
       backHref="/enquiries"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       actions={
         enquiry ? (
           <div className="flex items-center gap-2">

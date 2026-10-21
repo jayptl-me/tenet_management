@@ -155,6 +155,7 @@ export default function EditNoticePage() {
       backHref="/notices"
       error={submitError}
       isLoading={isLoading}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

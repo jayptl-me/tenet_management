@@ -75,6 +75,7 @@ export default function NewMealFeedbackPage() {
       description="Record tenant meal feedback"
       backHref="/meals"
       error={submitError}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

@@ -42,6 +42,7 @@ export default function NewLaundrySlotPage() {
       redirectTo="/laundry"
       submitLabel="Book Slot"
       mode="create"
+      maxWidth="form"
       form={form}
       submit={async ({ values }) => {
         // Page-owned message shaping: the shell formats thrown errors through

@@ -186,7 +186,7 @@ export default function EditAttendancePage() {
       backHref={id ? `/attendance/${id}` : '/attendance'}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <div className="space-y-5">
         {hasTenant && (

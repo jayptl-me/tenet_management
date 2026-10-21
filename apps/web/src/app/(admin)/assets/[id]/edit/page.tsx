@@ -221,7 +221,7 @@ export default function EditAssetPage() {
       backHref={`/assets/${id}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         loaded ? (
           <StatusBadge

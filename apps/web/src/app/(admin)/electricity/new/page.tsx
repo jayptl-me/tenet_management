@@ -195,7 +195,7 @@ export default function NewElectricityPage() {
       description="Monthly bill with per-room meter readings"
       backHref="/electricity"
       error={submitError}
-      maxWidth="4xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

@@ -94,7 +94,7 @@ export default function NotificationDetailPage() {
         description="View notification information"
         backHref="/notifications?tab=history"
         error={error || 'Notification not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -114,7 +114,7 @@ export default function NotificationDetailPage() {
       description={notification ? `Broadcast ID: ${notifId}` : undefined}
       backHref="/notifications?tab=history"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       actions={
         notification ? (
           <div className="flex items-center gap-2">

@@ -158,7 +158,7 @@ export default function VisitorDetailPage() {
         description="View visitor information"
         backHref="/visitors"
         error={error || 'Visitor not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -183,7 +183,7 @@ export default function VisitorDetailPage() {
       }
       backHref="/visitors"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       error={actionError}
       actions={
         visitor ? (

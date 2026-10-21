@@ -19,8 +19,17 @@ export interface FormPageProps {
   badge?: ReactNode;
   children?: ReactNode;
   className?: string;
-  /** Max width of the form content column. Default 2xl for edit forms; use 4xl/full for detail views. */
-  maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full';
+  /**
+   * Width of the page. The header and the body take the SAME width, so a page
+   * never shows a wide header over a narrow body.
+   *
+   * - 'full' (the default): the whole shell band. Read pages (detail, ledger)
+   *   and every page with a context rail - the rail gets the remaining width.
+   * - 'form': the form measure - a form whose fields must stay a column a
+   *   person can read a label and a value in.
+   * - the numeric sizes stay available for a caller that needs another width.
+   */
+  maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'form' | 'full';
 }
 
 const maxWidthMap: Record<NonNullable<FormPageProps['maxWidth']>, string> = {
@@ -31,6 +40,8 @@ const maxWidthMap: Record<NonNullable<FormPageProps['maxWidth']>, string> = {
   '3xl': 'max-w-3xl',
   '4xl': 'max-w-4xl',
   '5xl': 'max-w-5xl',
+  /** The form measure: a readable column, one step below the whole band. */
+  form: 'max-w-4xl',
   full: 'max-w-none',
 };
 
@@ -49,11 +60,18 @@ export function FormPage({
   badge,
   children,
   className,
-  maxWidth = '2xl',
+  maxWidth = 'full',
 }: FormPageProps) {
+  // One width for the whole page: the header and the body share it.
+  const widthClass = clsx(
+    'w-full min-w-0',
+    maxWidthMap[maxWidth],
+    maxWidth !== 'full' && 'mx-auto',
+  );
+
   if (isLoading) {
     return (
-      <div className={clsx(pageStackClass, 'pb-4 sm:pb-6', className)}>
+      <div className={clsx(pageStackClass, 'pb-4 sm:pb-6', widthClass, className)}>
         {/* Header skeleton */}
         <div className="flex items-center justify-between pb-4">
           <div className="space-y-2">
@@ -64,13 +82,7 @@ export function FormPage({
         </div>
 
         {/* Content skeleton */}
-        <div
-          className={clsx(
-            'w-full min-w-0',
-            maxWidthMap[maxWidth],
-            maxWidth !== 'full' && 'mx-auto',
-          )}
-        >
+        <div className="w-full min-w-0">
           <div className="space-y-6 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
             <ShimmerBlock className="h-5 w-36" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -90,7 +102,7 @@ export function FormPage({
   }
 
   return (
-    <div className={clsx(pageStackClass, 'pb-4 sm:pb-6', className)}>
+    <div className={clsx(pageStackClass, 'pb-4 sm:pb-6', widthClass, className)}>
       <PageHeader
         title={title}
         description={description}
@@ -101,17 +113,7 @@ export function FormPage({
 
       {error && <ErrorBanner message={error} />}
 
-      {children != null && children !== false && (
-        <div
-          className={clsx(
-            'w-full min-w-0',
-            maxWidthMap[maxWidth],
-            maxWidth !== 'full' && 'mx-auto',
-          )}
-        >
-          {children}
-        </div>
-      )}
+      {children != null && children !== false && <div className="w-full min-w-0">{children}</div>}
     </div>
   );
 }

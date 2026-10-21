@@ -94,6 +94,7 @@ export default function NewEnquiryPage() {
       description="Record a new tenant lead from walk-in, phone call, or referral"
       backHref="/enquiries"
       error={submitError}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

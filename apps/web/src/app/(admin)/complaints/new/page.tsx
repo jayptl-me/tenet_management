@@ -209,7 +209,7 @@ function ComplaintForm() {
       description="File an issue on behalf of a resident"
       backHref="/complaints"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
@@ -419,6 +419,7 @@ export default function NewComplaintPage() {
           description="Report an issue"
           backHref="/complaints"
           isLoading
+          maxWidth="form"
         >
           {null}
         </FormPage>

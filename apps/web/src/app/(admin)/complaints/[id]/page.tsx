@@ -198,7 +198,7 @@ export default function ComplaintDetailPage() {
         description="View complaint information"
         backHref="/complaints"
         error={errorMessage(queryError) || 'Complaint not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -217,7 +217,7 @@ export default function ComplaintDetailPage() {
         }
         backHref="/complaints"
         isLoading={isLoading}
-        maxWidth="4xl"
+        maxWidth="full"
         badge={
           complaint ? (
             <StatusBadge variant={statusVariant} label={complaint.status.replace(/_/g, ' ')} />

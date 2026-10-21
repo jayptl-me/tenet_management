@@ -131,7 +131,7 @@ export default function EditMealFeedbackPage() {
       backHref="/meals"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <div className="space-y-5">
         {tenant && (

@@ -332,7 +332,7 @@ export default function EditFloorPage() {
       backHref="/floors"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="5xl"
+      maxWidth="form"
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <Button

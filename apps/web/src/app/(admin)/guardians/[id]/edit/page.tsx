@@ -117,6 +117,7 @@ export default function EditGuardianPage() {
       backHref="/guardians"
       error={submitError}
       isLoading={isLoading}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

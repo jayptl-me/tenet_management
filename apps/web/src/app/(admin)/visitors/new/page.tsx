@@ -180,7 +180,7 @@ export default function NewVisitorPage() {
       description="Pre-register a guest pass for a resident"
       backHref="/visitors"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

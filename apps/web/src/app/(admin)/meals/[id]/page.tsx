@@ -100,7 +100,7 @@ export default function MealFeedbackDetailPage() {
         description="View meal feedback details"
         backHref="/meals"
         error={queryErrorMessage || error || 'Meal feedback not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -117,7 +117,7 @@ export default function MealFeedbackDetailPage() {
       description={feedback ? `${tenantName} · Room ${roomNumber}` : undefined}
       backHref="/meals"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         feedback ? (
           <StatusBadge

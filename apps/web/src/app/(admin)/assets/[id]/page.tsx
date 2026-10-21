@@ -124,7 +124,7 @@ export default function AssetDetailPage() {
         description="View asset information"
         backHref="/assets"
         error={queryErrorMessage || 'Asset not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -142,7 +142,7 @@ export default function AssetDetailPage() {
       }
       backHref="/assets"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         asset ? (
           <StatusBadge

@@ -165,7 +165,7 @@ function MenuForm() {
       description="Create a new daily menu with breakfast, lunch, snacks, and dinner items"
       backHref="/menus"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

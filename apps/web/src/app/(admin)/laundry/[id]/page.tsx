@@ -74,7 +74,7 @@ export default function LaundryDetailPage() {
         description="View laundry slot details"
         backHref="/laundry"
         error={queryErrorMessage || 'Slot not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -90,7 +90,7 @@ export default function LaundryDetailPage() {
       description={slot ? `${tenantName} · Room ${roomNumber}` : 'View laundry slot details'}
       backHref="/laundry"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         slot ? (
           <StatusBadge variant={statusVariant} label={slot.status.replace(/_/g, ' ')} />

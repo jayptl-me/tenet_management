@@ -208,7 +208,7 @@ export default function EditElectricityPage() {
         description="Loading bill data..."
         isLoading={true}
         backHref="/electricity"
-        maxWidth="4xl"
+        maxWidth="form"
       />
     );
   }
@@ -225,7 +225,7 @@ export default function EditElectricityPage() {
       }
       backHref="/electricity"
       error={submitError}
-      maxWidth="4xl"
+      maxWidth="form"
     >
       {isLocked && (
         <div className="mb-5 flex flex-col gap-3 rounded-(--radius-lg) border border-(--color-warning-400) bg-(--color-warning-50) p-4 text-(--color-warning-800) sm:flex-row sm:items-center sm:justify-between">

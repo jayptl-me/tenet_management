@@ -183,7 +183,7 @@ export default function EditComplaintPage() {
       backHref="/complaints"
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <div className="space-y-5">
         {tenant && (

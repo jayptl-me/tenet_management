@@ -123,7 +123,7 @@ export default function NewAttendancePage() {
       description="Mark attendance for a tenant"
       backHref="/attendance"
       error={submitError}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

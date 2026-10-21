@@ -253,7 +253,7 @@ function TenantForm() {
       description="Onboard a new resident and assign to a verified room bed slot"
       backHref="/tenants"
       error={submitError}
-      maxWidth="full"
+      maxWidth="form"
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">

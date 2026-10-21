@@ -84,7 +84,7 @@ export default function ServiceDetailPage() {
         description="View service information"
         backHref="/services"
         error={error || 'Service not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -109,7 +109,7 @@ export default function ServiceDetailPage() {
       }
       backHref="/services"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         service ? (
           <StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} />

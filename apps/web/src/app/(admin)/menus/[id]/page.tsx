@@ -81,7 +81,7 @@ export default function MenuDetailPage() {
         description="View menu details"
         backHref="/menus"
         error={queryErrorMessage || 'Menu not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -96,7 +96,7 @@ export default function MenuDetailPage() {
       description={menu ? dateDisplay : undefined}
       backHref="/menus"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         statusInfo ? (
           <StatusBadge variant={statusInfo.variant} label={statusInfo.label} />

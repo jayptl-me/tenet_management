@@ -219,7 +219,7 @@ export default function EditVisitorPage() {
       backHref={`/visitors/${id}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

@@ -139,6 +139,7 @@ export default function EditServicePage() {
       backHref="/services"
       error={submitError}
       isLoading={isLoading}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

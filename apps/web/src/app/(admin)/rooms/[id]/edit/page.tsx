@@ -245,7 +245,7 @@ export default function EditRoomPage() {
       backHref={`/rooms/${roomId}`}
       error={submitError}
       isLoading={isLoading}
-      maxWidth="3xl"
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}

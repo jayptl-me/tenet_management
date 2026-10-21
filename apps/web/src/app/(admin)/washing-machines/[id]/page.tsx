@@ -94,7 +94,7 @@ export default function WashingMachineDetailPage() {
         description="View washing machine details"
         backHref="/washing-machines"
         error={error || 'Machine not found'}
-        maxWidth="4xl"
+        maxWidth="full"
       />
     );
   }
@@ -114,7 +114,7 @@ export default function WashingMachineDetailPage() {
       description={floorDisplay}
       backHref="/washing-machines"
       isLoading={isLoading}
-      maxWidth="4xl"
+      maxWidth="full"
       badge={
         machine ? (
           <StatusBadge variant={statusVariant} label={machine.status.replace(/_/g, ' ')} />

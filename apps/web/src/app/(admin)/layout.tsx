@@ -156,12 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* ── Page Content ────────────────────────── */}
         {/* The shell owns the one content frame: every admin page sits on the
             same band, the same gutters and the same grid. */}
-        <motion.div
-          variants={pageReveal}
-          initial="initial"
-          animate="animate"
-          className="flex-1"
-        >
+        <motion.div variants={pageReveal} initial="initial" animate="animate" className="flex-1">
           <ContentFrame>{children}</ContentFrame>
         </motion.div>
       </main>

@@ -128,6 +128,7 @@ export default function NewNoticePage() {
       description="Create a new announcement for tenants"
       backHref="/notices"
       error={submitError}
+      maxWidth="form"
     >
       <FormCard
         onSubmit={handleSubmit(onSubmit)}
