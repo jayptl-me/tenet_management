@@ -22,9 +22,13 @@ const enabledBrowsers = new Set(browserList.map((name) => name.trim()));
 
 // The html reporter opens the report on failure by default, which blocks a CI
 // runner forever. In CI it only writes the report file.
+// Playwright accepts a reporter as a plain name, or as an array whose every
+// entry is a tuple [name, optionalArgument]. An array of plain names is
+// rejected at load time ("config.reporter[0] must be a tuple"), so the local
+// case stays a plain string and only CI builds the tuple list.
 const reporters: ReporterDescription[] = process.env.CI
   ? [['list'], ['html', { open: 'never' }]]
-  : ['html'];
+  : [];
 
 export default defineConfig({
   testDir: './e2e',
@@ -32,7 +36,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: reporters,
+  reporter: process.env.CI ? reporters : 'html',
   use: {
     baseURL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     trace: 'on-first-retry',

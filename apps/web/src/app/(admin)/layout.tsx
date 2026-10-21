@@ -12,6 +12,7 @@ import { Breadcrumbs } from '@/components/admin/Breadcrumbs';
 import { CommandPalette } from '@/components/admin/CommandPalette';
 import { QuickCreate } from '@/components/admin/QuickCreate';
 import { GlobalLoadingBar } from '@/components/admin/GlobalLoadingBar';
+import { ContentFrame } from '@/components/ui/ContentFrame';
 import { useTheme } from '@/hooks/useTheme';
 import { motion } from 'motion/react';
 import { pageReveal } from '@/lib/animations';
@@ -25,12 +26,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
+  const isHydrating = useAuthStore((s) => s.isHydrating);
   const { theme, toggleMode } = useTheme();
 
   const [commandOpen, setCommandOpen] = useState(false);
 
   // Auth guard — admin web shell only (tenant/guardian/visitor live in Flutter)
   useEffect(() => {
+    // The persisted session is restored asynchronously. Until it is, the store
+    // is empty, and an empty store is not evidence that nobody is signed in:
+    // deciding here sent a signed-in admin to the login page on every full
+    // page load (a refresh, a shared link, a bookmark).
+    if (isHydrating) return;
+
     if (!accessToken) {
       router.replace('/login');
       return;
@@ -81,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }
         });
     }
-  }, [accessToken, user, router, login, logout, refreshToken]);
+  }, [isHydrating, accessToken, user, router, login, logout, refreshToken]);
 
   // Global Cmd+K listener
   useEffect(() => {
@@ -146,13 +154,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* ── Page Content ────────────────────────── */}
+        {/* The shell owns the one content frame: every admin page sits on the
+            same band, the same gutters and the same grid. */}
         <motion.div
           variants={pageReveal}
           initial="initial"
           animate="animate"
-          className="flex-1 p-6"
+          className="flex-1"
         >
-          {children}
+          <ContentFrame>{children}</ContentFrame>
         </motion.div>
       </main>
 

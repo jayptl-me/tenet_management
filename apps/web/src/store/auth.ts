@@ -9,6 +9,14 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  /**
+   * True until the persisted session has been restored from storage.
+   *
+   * The restore is asynchronous, so on the first render of a page the store is
+   * still empty. Anything that decides "this person is not signed in" from an
+   * empty store would send a signed-in admin to the login page on every full
+   * page load. Wait for this flag to go false before deciding.
+   */
   isHydrating: boolean;
 
   login: (user: IUser, accessToken: string, refreshToken: string) => void;
@@ -24,7 +32,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
-      isHydrating: false,
+      isHydrating: true,
 
       login: (user, accessToken, refreshToken) =>
         set({
