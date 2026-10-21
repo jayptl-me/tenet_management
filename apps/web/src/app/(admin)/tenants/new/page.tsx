@@ -121,7 +121,8 @@ function TenantForm() {
       emergencyRelation: '',
     },
   });
-
+  const watchedMoveInDate = useWatch({ control, name: 'moveInDate' }) ?? '';
+  const watchedDob = useWatch({ control, name: 'dob' }) ?? '';
   const roomIdWatch = useWatch({ control, name: 'roomId' });
   const bedIdWatch = useWatch({ control, name: 'bedId' });
   const moveInDateWatch = useWatch({ control, name: 'moveInDate' });
@@ -414,7 +415,9 @@ function TenantForm() {
                     error={err.moveInDate?.message}
                     leftIcon={<CalendarDays className="h-4 w-4" />}
                     required
-                    {...register('moveInDate')}
+                    name="moveInDate"
+                    value={watchedMoveInDate}
+                    onChange={(value) => setValue('moveInDate', value, { shouldValidate: true })}
                   />
                   <div>
                     <Input
@@ -500,7 +503,9 @@ function TenantForm() {
                     label="Date of Birth"
                     error={err.dob?.message}
                     leftIcon={<CalendarDays className="h-4 w-4" />}
-                    {...register('dob')}
+                    name="dob"
+                    value={watchedDob}
+                    onChange={(value) => setValue('dob', value, { shouldValidate: true })}
                   />
                   <Select
                     label="Gender"

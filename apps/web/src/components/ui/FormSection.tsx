@@ -32,7 +32,7 @@ export function FormSection({
     <section
       className={clsx(
         'space-y-4',
-        divided && 'mt-6 border-t border-[color:var(--border-color)] pt-6 sm:mt-8 sm:pt-8',
+        divided && 'mt-6 border-t border-(--border-color) pt-6 sm:mt-8 sm:pt-8',
         className,
       )}
     >
@@ -40,9 +40,9 @@ export function FormSection({
         <header className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 space-y-1">
             {title && (
-              <h3 className="font-display sm:text-15 flex items-center gap-2 text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+              <h3 className="font-display sm:text-15 flex items-center gap-2 text-sm font-bold tracking-tight text-(--color-text-primary)">
                 {icon && (
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] [&_svg]:h-3.5 [&_svg]:w-3.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-(--color-field-bg) text-(--color-text-secondary) [&_svg]:h-3.5 [&_svg]:w-3.5">
                     {icon}
                   </span>
                 )}
@@ -50,7 +50,7 @@ export function FormSection({
               </h3>
             )}
             {description && (
-              <p className="sm:text-13 max-w-prose text-xs leading-relaxed text-[color:var(--color-text-secondary)]">
+              <p className="sm:text-13 max-w-prose text-xs leading-relaxed text-(--color-text-secondary)">
                 {description}
               </p>
             )}

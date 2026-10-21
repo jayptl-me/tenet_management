@@ -1,31 +1,29 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import {
-  Building2,
-  LayoutGrid,
-  Layers,
-  Shirt,
-  Refrigerator,
-  Home,
-  DoorOpen,
-  BedDouble,
-  IndianRupee,
-  Plus,
-  Eye,
-  Wrench,
-  AlertTriangle,
-  Pencil,
-  Hash,
   ArrowRight,
+  Building2,
+  CheckCircle2,
+  DoorOpen,
+  Hash,
+  Layers,
+  LayoutGrid,
+  Refrigerator,
+  Shirt,
+  TriangleAlert,
+  Wrench,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { FormPage } from '@/components/ui/FormPage';
@@ -34,36 +32,34 @@ import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { AmenityCountStepper } from '@/components/ui/AmenityCountStepper';
 import { FloorStackPreview } from '@/components/ui/FloorStackPreview';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { DetailCard } from '@/components/ui/DetailCard';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { BedMiniGrid, OccupancyBar } from '@/components/ui/BedMiniGrid';
-import { surfaceNestedClass } from '@/lib/field-styles';
 import { clsx } from 'clsx';
 import type { IAppConfig } from '@pg/types';
 
-// ── Types ──────────────────────────────────────────────
+// ── Shapes ─────────────────────────────────────────────────────────────
+// Every field below is read out of the API response, never invented:
+//   GET /floors/:id       apps/api/src/routes/floors.ts:175-183
+//   GET /floors           the floors of the building
+//   GET /floors/:id/rooms apps/api/src/routes/floors.ts:188-260
+//   PUT /floors/:id       apps/api/src/routes/floors.ts:299-334
 
-type PerFloorAmenity = { key: string; label: string; maxPerFloor?: number; icon?: string };
-
-interface ExistingFloor {
-  id: string;
-  floorNumber: number;
-  label: string;
-  totalRooms: number;
-}
-
-interface FloorDetail {
+interface FloorRecord {
   _id: string;
   label: string;
   floorNumber: number;
   totalRooms: number;
   amenityCounts?: Array<{ amenityKey: string; count: number }>;
-  createdAt?: string;
 }
 
-interface FloorStats {
+interface ExistingFloor {
+  id: string;
+  _id?: string;
+  floorNumber: number;
+  label: string;
+  totalRooms: number;
+}
+
+interface FloorRoomsStats {
   activeRooms: number;
   inactiveRooms: number;
   totalBeds: number;
@@ -73,21 +69,14 @@ interface FloorStats {
   potentialRent: number;
 }
 
-interface RoomListing {
-  _id: string;
-  roomNumber: string;
-  sharingType: number;
-  monthlyRent: number;
-  isActive: boolean;
-  beds?: Array<{ bedId: string; isOccupied: boolean; tenantName?: string }>;
+interface FloorFormValues {
+  label: string;
+  floorNumber: number;
+  [key: string]: number | string | undefined;
 }
 
-interface MachineListing {
-  _id: string;
-  machineNumber: number;
-  label?: string;
-  status: string;
-}
+const APP_CONFIG_KEY = ['app-config'] as const;
+const FLOORS_KEY = ['floors', 'list'] as const;
 
 const FALLBACK_ICON_MAP: Record<string, React.ReactNode> = {
   washing_machine: <Shirt className="h-4 w-4" />,
@@ -100,6 +89,12 @@ function amenityIcon(key: string): React.ReactNode {
   return FALLBACK_ICON_MAP[key] ?? <LayoutGrid className="h-4 w-4" />;
 }
 
+/**
+ * The labels the office writes a floor with.
+ *
+ * The level is not one of them: the server refuses a level below 0, so a
+ * basement is a label on a level the building already has.
+ */
 const FLOOR_PRESETS = [
   'Ground Floor',
   'First Floor',
@@ -112,225 +107,184 @@ const FLOOR_PRESETS = [
   'Terrace',
 ];
 
-function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '\u20B90';
-  try {
-    return `\u20B9${amount.toLocaleString('en-IN')}`;
-  } catch {
-    return `\u20B9${amount}`;
-  }
-}
-
-function buildSchema(perFloorAmenities: PerFloorAmenity[]) {
+/** The schema of the form. The amenity fields are the per floor definitions. */
+function buildSchema(perFloorAmenities: Array<{ key: string; maxPerFloor?: number }>) {
   const amenityFields: Record<string, z.ZodNumber> = {};
-  for (const a of perFloorAmenities) {
-    amenityFields[a.key] = z.coerce
+  for (const amenity of perFloorAmenities) {
+    amenityFields[amenity.key] = z.coerce
       .number()
       .int()
       .min(0, 'Must be >= 0')
-      .max(a.maxPerFloor ?? 10, `Max ${a.maxPerFloor ?? 10}`);
+      .max(amenity.maxPerFloor ?? 10, `Max ${amenity.maxPerFloor ?? 10}`);
   }
   return z.object({
     label: z.string().min(1, 'Label is required').max(50, 'Label cannot exceed 50 characters'),
-    floorNumber: z.coerce.number().int().min(0, 'Floor number must be >= 0'),
+    floorNumber: z.coerce.number().int().min(0, 'The server refuses a level below 0'),
     ...amenityFields,
   });
 }
 
 export default function EditFloorPage() {
-  const router = useRouter();
   const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const id = params.id as string;
 
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [floor, setFloor] = useState<FloorDetail | null>(null);
-  const [perFloorAmenities, setPerFloorAmenities] = useState<PerFloorAmenity[]>([]);
-  const [existingFloors, setExistingFloors] = useState<ExistingFloor[]>([]);
-  const [rooms, setRooms] = useState<RoomListing[]>([]);
-  const [floorStats, setFloorStats] = useState<FloorStats | null>(null);
-  const [machines, setMachines] = useState<MachineListing[]>([]);
-  const [totalRooms, setTotalRooms] = useState(0);
+
+  const {
+    data: floor,
+    isPending: floorPending,
+    error: floorError,
+  } = useApiQuery<FloorRecord>(['floors', id], `floors/${id}`, { enabled: Boolean(id) });
+  const {
+    data: appConfig,
+    isPending: configPending,
+    error: configError,
+  } = useApiQuery<IAppConfig>(APP_CONFIG_KEY, 'app-config');
+  const { data: floors, isPending: floorsPending } = useApiQuery<ExistingFloor[]>(
+    FLOORS_KEY,
+    'floors',
+  );
+  const { data: roomsData } = useApiQuery<{ stats: FloorRoomsStats }>(
+    ['floors', id, 'rooms'],
+    `floors/${id}/rooms`,
+    { enabled: Boolean(id) },
+  );
+
+  // The skeleton is shown while the record is still on its way. It is derived
+  // from the query, so a record that never arrives shows the error state
+  // instead of a page that spins for ever.
+  const isLoading = floorPending || configPending || floorsPending;
+
+  const perFloorAmenities = useMemo(
+    () =>
+      (appConfig?.amenityDefinitions ?? [])
+        .filter((definition) => definition.isPerFloor)
+        .map((definition) => ({
+          key: definition.key,
+          label: definition.label,
+          maxPerFloor: definition.maxPerFloor,
+        })),
+    [appConfig],
+  );
+
+  const existingFloors = useMemo<ExistingFloor[]>(
+    () =>
+      (floors ?? []).map((entry) => ({
+        // The list route reads the floors lean, so the record carries the mongo
+        // id and not the virtual one.
+        id: String(entry.id ?? entry._id ?? ''),
+        floorNumber: Number(entry.floorNumber ?? 0),
+        label: String(entry.label ?? ''),
+        totalRooms: Number(entry.totalRooms ?? 0),
+      })),
+    [floors],
+  );
 
   const schema = buildSchema(perFloorAmenities);
+
+  /**
+   * The values the form starts from: the record the server holds.
+   *
+   * They are handed to the form as its reactive values, so the form is filled
+   * in from the server data without a second copy of that data in a state of
+   * its own.
+   */
+  const formValues = useMemo<FloorFormValues>(() => {
+    const values: FloorFormValues = {
+      label: floor?.label ?? '',
+      floorNumber: Number(floor?.floorNumber ?? 0),
+    };
+    const counts = floor?.amenityCounts ?? [];
+    for (const amenity of perFloorAmenities) {
+      values[amenity.key] = counts.find((count) => count.amenityKey === amenity.key)?.count ?? 0;
+    }
+    return values;
+  }, [floor, perFloorAmenities]);
 
   const {
     register,
     control,
     handleSubmit,
-    reset,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
+    defaultValues: formValues,
+    values: formValues,
   });
 
-  // Whole-form subscription. watch() during render is incompatible with
-  // memoization; useWatch is the supported reactive replacement.
   const watchedValues = useWatch({ control });
+  const watchedLabel = String(watchedValues.label ?? '');
+  const watchedFloorNumber = Number(watchedValues.floorNumber ?? 0);
 
-  // Next.js reuses this component across /floors/[id]/edit navigations, so
-  // reset loading + error when the route param changes during render
-  // (react.dev: adjusting state when a prop changes) rather than calling
-  // setState synchronously inside the effect.
-  const [activeId, setActiveId] = useState(id);
-  if (activeId !== id) {
-    setActiveId(id);
-    setIsLoading(true);
-    setSubmitError('');
-  }
+  /** The other floor that already holds the level or the label of this one. */
+  const collision = useMemo(() => {
+    const others = existingFloors.filter((entry) => String(entry.id) !== String(id));
+    const sameLevel = others.find((entry) => entry.floorNumber === watchedFloorNumber);
+    // The server holds a unique index on the label and it compares the label
+    // as it is written, so the check here compares it the same way.
+    const sameLabel = others.find((entry) => entry.label === watchedLabel.trim());
+    return { sameLevel, sameLabel };
+  }, [existingFloors, id, watchedFloorNumber, watchedLabel]);
 
-  useEffect(() => {
-    if (!id) return;
-
-    Promise.all([
-      api.get(`floors/${id}`).json<{ success: boolean; data: FloorDetail }>(),
-      api.get('app-config').json<{ success: boolean; data: IAppConfig }>(),
-      api
-        .get('floors')
-        .json<{ success: boolean; data: Array<ExistingFloor & { _id?: string }> }>()
-        .catch(() => null),
-      api
-        .get(`floors/${id}/rooms`)
-        .json<{
-          success: boolean;
-          data: { floor: FloorDetail; rooms: RoomListing[]; stats: FloorStats };
-        }>()
-        .catch(() => null),
-      api
-        .get(`washing-machines?floorId=${id}`)
-        .json<{ success: boolean; data: MachineListing[] }>()
-        .catch(() => null),
-    ])
-      .then(([floorRes, configRes, floorsRes, roomsRes, machinesRes]) => {
-        const currentFloor = floorRes.data;
-        setFloor(currentFloor);
-        setTotalRooms(currentFloor.totalRooms ?? 0);
-
-        const defs = (configRes.data.amenityDefinitions ?? [])
-          .filter((d) => d.isPerFloor)
-          .map((d) => ({ key: d.key, label: d.label, maxPerFloor: d.maxPerFloor, icon: d.icon }));
-        setPerFloorAmenities(defs);
-
-        const rawFloors = floorsRes?.data ?? [];
-        setExistingFloors(
-          rawFloors.map((f) => ({
-            id: String(f.id ?? f._id ?? ''),
-            floorNumber: f.floorNumber,
-            label: f.label,
-            totalRooms: f.totalRooms,
-          })),
-        );
-
-        if (roomsRes?.data) {
-          setRooms(roomsRes.data.rooms ?? []);
-          setFloorStats(roomsRes.data.stats ?? null);
-        }
-
-        if (machinesRes?.data) {
-          setMachines(machinesRes.data ?? []);
-        }
-
-        const defaults: Record<string, number | string> = {
-          label: currentFloor.label ?? '',
-          floorNumber: currentFloor.floorNumber ?? 0,
-        };
-
-        const amenityCounts = currentFloor.amenityCounts ?? [];
-        for (const a of defs) {
-          const existing = amenityCounts.find((ac) => ac.amenityKey === a.key);
-          defaults[a.key] = existing?.count ?? 0;
-        }
-
-        reset(defaults);
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-        setIsLoading(false);
-      });
-  }, [id, reset]);
-
-  // Live preview & collision calculation
-  const watchedLabel = (watchedValues.label as string) ?? '';
-  const watchedFloorNumber = Number(watchedValues.floorNumber) || 0;
-
-  // Real-time client-side collision check against other floors
-  const collidingFloor = useMemo(() => {
-    return existingFloors.find(
-      (f) => f.floorNumber === watchedFloorNumber && String(f.id) !== String(id),
-    );
-  }, [existingFloors, watchedFloorNumber, id]);
-
-  const previewFloors = useMemo(
-    () =>
-      existingFloors.map((f) => ({
-        id: f.id,
-        floorNumber: f.floorNumber,
-        label: f.label,
-        totalRooms: f.totalRooms,
-      })),
-    [existingFloors],
-  );
-
-  const stats = useMemo(() => {
-    const s: FloorStats = floorStats ?? {
-      activeRooms: 0,
-      inactiveRooms: 0,
-      totalBeds: 0,
-      occupiedBeds: 0,
-      vacantBeds: 0,
-      occupancyPct: 0,
-      potentialRent: 0,
-    };
-    const activeRooms = rooms.filter((r) => r.isActive !== false);
-    return {
-      ...s,
-      activeRooms,
-      bedsCount: s.totalBeds,
-      occupiedBedsDisplay: s.occupiedBeds,
-    };
-  }, [rooms, floorStats]);
-
-  const onSubmit = async (data: Record<string, unknown>) => {
-    if (collidingFloor) {
+  const onSubmit = async (data: FloorFormValues) => {
+    if (collision.sameLevel) {
       setSubmitError(
-        `Floor number ${watchedFloorNumber} is already used by "${collidingFloor.label}". Please choose an unused floor number.`,
+        `Level ${watchedFloorNumber} already belongs to "${collision.sameLevel.label}". The server ` +
+          `refuses a duplicate level (DUPLICATE_FLOOR), so pick another level.`,
+      );
+      return;
+    }
+    if (collision.sameLabel) {
+      setSubmitError(
+        `"${collision.sameLabel.label}" is already the label of another floor. The server refuses ` +
+          `a duplicate label (DUPLICATE_FLOOR), so pick another label.`,
       );
       return;
     }
 
     setSubmitError('');
     try {
-      const amenityCounts = perFloorAmenities.map((a) => ({
-        amenityKey: a.key,
-        count: Number(data[a.key]) || 0,
+      const amenityCounts = perFloorAmenities.map((amenity) => ({
+        amenityKey: amenity.key,
+        count: Number(data[amenity.key]) || 0,
       }));
 
-      // totalRooms is auto-synced by API from active rooms
-      const payload = {
-        label: data.label,
-        floorNumber: Number(data.floorNumber),
-        amenityCounts,
-      };
+      // The server strips the room count from the body: the count is kept in
+      // step with the active rooms of the floor by the room hooks.
+      await api
+        .put(`floors/${id}`, {
+          json: {
+            label: String(data.label),
+            floorNumber: Number(data.floorNumber),
+            amenityCounts,
+          },
+        })
+        .json();
 
-      await api.put(`floors/${id}`, { json: payload }).json();
-      router.push('/floors');
+      // The floor is re-read from the server, so the page the operator lands
+      // on shows the state the server committed and not a local claim.
+      await queryClient.invalidateQueries({ queryKey: ['floors'] });
+      router.push(`/floors/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
     }
   };
 
+  const stats = roomsData?.stats ?? null;
+
   return (
     <FormPage
-      title={`Edit ${floor?.label ?? 'Floor'}`}
+      title={floor ? `Edit ${floor.label}` : 'Edit floor'}
       description={
         floor
-          ? `Configure structural details, floor numbering, and amenities for Floor #${floor.floorNumber}`
-          : 'Update floor details'
+          ? `Level ${floor.floorNumber} · the label, the level and the amenity counts of this floor`
+          : 'The label, the level and the amenity counts of this floor'
       }
-      backHref="/floors"
-      error={submitError}
+      backHref={`/floors/${id}`}
+      error={submitError || errorMessage(floorError) || errorMessage(configError)}
       isLoading={isLoading}
       maxWidth="form"
       actions={
@@ -339,467 +293,286 @@ export default function EditFloorPage() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => router.push(`/floors/${id}`)}
-          >
-            <Eye className="h-4 w-4" />
-            View Details
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
             onClick={() => router.push(`/rooms/new?floorId=${id}`)}
           >
-            <Plus className="h-4 w-4" />
+            <DoorOpen className="h-4 w-4" />
             Add Room
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => router.push('/services')}
+            onClick={() => router.push(`/services?floorId=${id}`)}
           >
             <Wrench className="h-4 w-4" />
-            Floor Services
+            Services
           </Button>
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* Top Telemetry Strip */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Occupancy Rate"
-            value={`${stats.occupancyPct}%`}
-            subtitle={`${stats.occupiedBedsDisplay} of ${stats.bedsCount} beds occupied`}
-            icon={<DoorOpen className="h-4 w-4" />}
-            variant="brand"
-            progress={{
-              value: stats.occupancyPct,
-              max: 100,
-              color: 'var(--color-brand-500)',
-            }}
-          />
-          <StatCard
-            title="Active Rooms"
-            value={stats.activeRooms.length}
-            subtitle={
-              stats.inactiveRooms > 0
-                ? `${stats.inactiveRooms} inactive room${stats.inactiveRooms !== 1 ? 's' : ''}`
-                : `All ${totalRooms} room${totalRooms !== 1 ? 's' : ''} operational`
-            }
-            icon={<Building2 className="h-4 w-4" />}
-            variant="default"
-          />
-          <StatCard
-            title="Available Beds"
-            value={stats.vacantBeds}
-            subtitle={`${stats.bedsCount} total beds capacity`}
-            icon={<BedDouble className="h-4 w-4" />}
-            variant={stats.vacantBeds > 0 ? 'success' : 'default'}
-          />
-          <StatCard
-            title="Potential Rent /mo"
-            value={formatCurrency(stats.potentialRent)}
-            subtitle="Monthly yield from active rooms"
-            icon={<IndianRupee className="h-4 w-4" />}
-            variant="default"
-          />
-        </div>
-
-        {/* Form Card & Architectural Elevation Preview */}
-        <FormCard
-          onSubmit={handleSubmit(onSubmit)}
-          footer={
-            <FormActions
-              loading={isSubmitting}
-              cancelHref="/floors"
-              submitLabel="Save Changes"
-              disabled={Boolean(collidingFloor)}
-              divided={false}
-            />
-          }
-        >
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_var(--content-rail-width)]">
-            {/* Left Column: Form Controls */}
-            <div className="space-y-6">
-              <FormSection
-                title="Floor details"
-                icon={<Building2 />}
-                description="Physical labeling, level number, and auto-synced capacity"
-              >
-                {/* 1-Click Label Presets */}
-                <div className="space-y-1.5 pb-1">
-                  <span className="text-2xs font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                    Quick Label Presets
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {FLOOR_PRESETS.map((preset) => {
-                      const isActive = watchedLabel === preset;
-                      return (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() =>
-                            setValue('label', preset, { shouldValidate: true, shouldDirty: true })
-                          }
-                          className={clsx(
-                            'text-2xs rounded-full border px-2.5 py-1 font-semibold transition-all duration-150',
-                            isActive
-                              ? 'border-(--badge-info-border) bg-(--badge-info-bg) text-(--badge-info-text) shadow-(--shadow-xs)'
-                              : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--border-color-hover) hover:text-(--color-text-primary)',
-                          )}
-                        >
-                          {preset}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <FormGrid cols={2}>
-                  <Input
-                    label="Floor Label"
-                    placeholder="e.g. First Floor"
-                    leftIcon={<Building2 className="h-4 w-4" />}
-                    error={(errors as Record<string, { message?: string }>).label?.message}
-                    {...register('label')}
-                  />
-                  <div className="space-y-1">
-                    <Input
-                      label="Floor Level"
-                      type="number"
-                      placeholder="e.g. 1"
-                      leftIcon={<Hash className="h-4 w-4" />}
-                      helperText="Level 0 is ground floor. Basements use negative numbers."
-                      error={(errors as Record<string, { message?: string }>).floorNumber?.message}
-                      {...register('floorNumber')}
-                    />
-                    {collidingFloor && (
-                      <p className="text-2xs flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        Floor number {watchedFloorNumber} is already used by &quot;
-                        {collidingFloor.label}&quot;.
-                      </p>
-                    )}
-                  </div>
-                </FormGrid>
-
-                {/* Live Capacity Telemetry Banner */}
-                <div className="mt-4 flex flex-col justify-between gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--color-brand-100) text-(--color-brand-700)">
-                      <DoorOpen className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-(--color-text-primary)">
-                          Active Capacity: {totalRooms} Room{totalRooms !== 1 ? 's' : ''} (
-                          {stats.bedsCount} Total Beds)
-                        </span>
-                        <StatusBadge variant="info" label="Auto-Synced" />
-                      </div>
-                      <p className="text-2xs text-(--color-text-muted)">
-                        Room count and capacity are calculated automatically from active rooms
-                        assigned to this floor.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/rooms?floorId=${id}`}
-                    className="inline-flex shrink-0 items-center gap-1 self-start text-xs font-medium text-(--color-brand-600) hover:text-(--color-brand-700) hover:underline sm:self-center"
-                  >
-                    Manage Rooms <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              </FormSection>
-
-              {perFloorAmenities.length > 0 && (
-                <FormSection
-                  title="Per-floor amenity counts"
-                  icon={<Layers />}
-                  description="Hardware units assigned and maintained specifically for this floor"
-                  divided
-                >
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {perFloorAmenities.map((a) => {
-                      const value = Number(watchedValues[a.key]) || 0;
-                      return (
-                        <AmenityCountStepper
-                          key={a.key}
-                          label={a.label}
-                          icon={amenityIcon(a.key)}
-                          value={value}
-                          min={0}
-                          max={a.maxPerFloor ?? 10}
-                          error={(errors as Record<string, { message?: string }>)[a.key]?.message}
-                          onChange={(v) =>
-                            setValue(a.key, v, { shouldValidate: true, shouldDirty: true })
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </FormSection>
-              )}
-
-              <FormSection
-                title="Architectural and Safety Advisory"
-                icon={<Home />}
-                description="Structural consequences of updating or renumbering this level"
-                divided
-              >
-                <div className="text-12 space-y-2 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5 leading-relaxed font-medium text-(--color-text-secondary)">
-                  <p>
-                    <strong className="text-(--color-text-primary)">Level Numbering:</strong>{' '}
-                    Renumbering this floor updates its building elevation index across all{' '}
-                    {stats.activeRooms.length} room(s) and {machines.length} machine(s). Existing
-                    room numbers (e.g., Room 101) and active lease contracts remain unaltered.
-                  </p>
-                  <p>
-                    <strong className="text-(--color-text-primary)">Capacity Management:</strong>{' '}
-                    Room capacity on this floor is maintained dynamically. To create new rooms, use
-                    the &quot;Add Room to Floor&quot; button.
-                  </p>
-                  <p>
-                    <strong className="text-(--color-text-primary)">Deletion Rules:</strong> A floor
-                    cannot be deleted while it houses active rooms or washing machines.
-                  </p>
-                </div>
-              </FormSection>
-            </div>
-
-            {/* Right Column: Building Elevation Preview & Quick Snapshot */}
-            <div className="space-y-4">
-              <FloorStackPreview
-                floors={previewFloors}
-                current={{
-                  floorNumber: watchedFloorNumber,
-                  label: watchedLabel || 'Unnamed Floor',
-                  totalRooms,
-                }}
-                currentId={id}
-                mode="edit"
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_var(--content-rail-width)]">
+        {/* The form */}
+        <div className="space-y-6">
+          <FormCard
+            onSubmit={handleSubmit(onSubmit)}
+            footer={
+              <FormActions
+                loading={isSubmitting}
+                cancelHref={`/floors/${id}`}
+                submitLabel="Save Changes"
+                disabled={Boolean(collision.sameLevel || collision.sameLabel)}
+                divided={false}
               />
-
-              {/* Floor Health Card */}
-              <div className="space-y-3 rounded-(--radius-xl) border border-(--border-color) bg-(--color-field-bg) p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-(--color-text-primary)">
-                    Floor Health Snapshot
-                  </span>
-                  <StatusBadge
-                    variant={collidingFloor ? 'danger' : 'success'}
-                    label={collidingFloor ? 'Number Conflict' : 'Operational'}
-                  />
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between text-(--color-text-secondary)">
-                    <span>Active Rooms:</span>
-                    <span className="font-semibold text-(--color-text-primary)">
-                      {stats.activeRooms.length} / {totalRooms}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-(--color-text-secondary)">
-                    <span>Beds Occupied:</span>
-                    <span className="font-semibold text-(--color-text-primary)">
-                      {stats.occupiedBedsDisplay} / {stats.bedsCount}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-(--color-text-secondary)">
-                    <span>Washing Machines:</span>
-                    <span className="font-semibold text-(--color-text-primary)">
-                      {machines.length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-(--color-text-secondary)">
-                    <span>Monthly Yield:</span>
-                    <span className="font-semibold text-(--color-text-primary)">
-                      {formatCurrency(stats.potentialRent)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </FormCard>
-
-        {/* Embedded Rooms Roster */}
-        <DetailCard
-          title={`Rooms on this Floor (${stats.activeRooms.length})`}
-          icon={<DoorOpen />}
-          action={
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/rooms/new?floorId=${id}`)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Room
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/rooms?floorId=${id}`)}
-              >
-                View all
-              </Button>
-            </div>
-          }
-        >
-          {stats.activeRooms.length === 0 ? (
-            <EmptyState
-              icon={<BedDouble className="h-10 w-10" />}
-              title="No active rooms on this floor"
-              description="Add a room to assign beds, set rent pricing, and house tenants."
-              action={{
-                label: 'Add Room to Floor',
-                onClick: () => router.push(`/rooms/new?floorId=${id}`),
-              }}
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {stats.activeRooms.map((room) => {
-                const totalBeds = room.beds?.length ?? room.sharingType ?? 0;
-                const occupied = room.beds?.filter((b) => b.isOccupied).length ?? 0;
-                const isFull = totalBeds > 0 && occupied === totalBeds;
-                const hasVacancy = totalBeds > occupied;
-
-                return (
-                  <div
-                    key={room._id}
-                    className={clsx(
-                      surfaceNestedClass,
-                      'group flex flex-col justify-between p-4 transition-all duration-(--transition-duration)',
-                      'hover:border-(--color-brand-300) hover:shadow-(--shadow-sm)',
-                    )}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/rooms/${room._id}`)}
-                          className="flex items-center gap-1.5 text-sm font-bold text-(--color-text-primary) hover:text-(--color-brand-600)"
-                        >
-                          <BedDouble className="h-4 w-4 text-(--color-text-muted)" />
-                          Room {room.roomNumber}
-                        </button>
-                        <StatusBadge
-                          variant={
-                            isFull ? 'danger' : hasVacancy && occupied > 0 ? 'warning' : 'success'
-                          }
-                          label={
-                            isFull ? 'Full' : hasVacancy && occupied > 0 ? 'Available' : 'Vacant'
-                          }
-                        />
-                      </div>
-                      <p className="text-2xs mt-1 font-medium text-(--color-text-muted)">
-                        {room.sharingType}-sharing · {formatCurrency(room.monthlyRent)}/mo
-                      </p>
-
-                      <div className="mt-3 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <BedMiniGrid beds={room.beds ?? []} />
-                          <span
-                            className={clsx(
-                              'text-2xs font-bold tabular-nums',
-                              isFull
-                                ? 'text-(--color-danger-600)'
-                                : occupied > 0
-                                  ? 'text-(--color-warning-600)'
-                                  : 'text-(--color-success-600)',
-                            )}
-                          >
-                            {occupied}/{totalBeds} beds
-                          </span>
-                        </div>
-                        <OccupancyBar occupied={occupied} total={totalBeds} />
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-(--border-color)/60 pt-2.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/rooms/${room._id}`)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/rooms/${room._id}/edit`)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </DetailCard>
-
-        {/* Per-Floor Washing Machines & Connected Assets */}
-        {machines.length > 0 && (
-          <DetailCard
-            title={`Washing Machines on Floor (${machines.length})`}
-            icon={<Shirt />}
-            action={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/washing-machines')}
-              >
-                Manage Machines
-              </Button>
             }
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {machines.map((m) => (
-                <div
-                  key={m._id}
-                  className={clsx(
-                    surfaceNestedClass,
-                    'flex items-center justify-between gap-2 p-3.5',
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-(--radius-md) bg-(--color-brand-100) text-(--color-brand-600)">
-                      <Shirt className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-(--color-text-primary)">
-                        Machine #{m.machineNumber}
-                      </p>
-                      {m.label && (
-                        <p className="text-2xs font-medium text-(--color-text-muted)">{m.label}</p>
-                      )}
-                    </div>
-                  </div>
-                  <StatusBadge
-                    variant={
-                      m.status === 'available'
-                        ? 'success'
-                        : m.status === 'in_use'
-                          ? 'warning'
-                          : 'danger'
-                    }
-                    label={m.status.replace(/_/g, ' ')}
-                  />
+            <FormSection
+              title="Floor details"
+              icon={<Building2 />}
+              description="The label the office writes the floor with and the level of the building"
+            >
+              {/* Quick Label Presets */}
+              <div className="space-y-1.5 pb-1">
+                <span className="text-2xs font-semibold tracking-wide text-(--color-text-muted) uppercase">
+                  Quick Label Presets
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {FLOOR_PRESETS.map((preset) => {
+                    const isActive = watchedLabel === preset;
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() =>
+                          setValue('label', preset, { shouldValidate: true, shouldDirty: true })
+                        }
+                        className={clsx(
+                          'text-2xs rounded-full border px-2.5 py-1 font-semibold transition-all duration-150',
+                          isActive
+                            ? 'border-(--badge-info-border) bg-(--badge-info-bg) text-(--badge-info-text) shadow-(--shadow-xs)'
+                            : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--border-color-hover) hover:text-(--color-text-primary)',
+                        )}
+                      >
+                        {preset}
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
+
+              <FormGrid cols={2}>
+                <Input
+                  label="Floor Label"
+                  placeholder="e.g. First Floor"
+                  leftIcon={<Building2 className="h-4 w-4" />}
+                  error={(errors as Record<string, { message?: string }>).label?.message}
+                  {...register('label')}
+                />
+                <div className="space-y-1">
+                  <Input
+                    label="Floor Level"
+                    type="number"
+                    placeholder="e.g. 1"
+                    leftIcon={<Hash className="h-4 w-4" />}
+                    helperText="The server refuses a level below 0 and a level or a label that another floor already holds."
+                    error={(errors as Record<string, { message?: string }>).floorNumber?.message}
+                    {...register('floorNumber')}
+                  />
+                  {collision.sameLevel && (
+                    <p className="text-2xs flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
+                      <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                      Level {watchedFloorNumber} already belongs to &quot;
+                      {collision.sameLevel.label}&quot;.
+                    </p>
+                  )}
+                  {collision.sameLabel && (
+                    <p className="text-2xs flex items-center gap-1.5 rounded-(--radius-md) border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
+                      <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                      &quot;{collision.sameLabel.label}&quot; is already the label of another floor.
+                    </p>
+                  )}
+                </div>
+              </FormGrid>
+
+              {/* The room count is not the office's to set here. */}
+              <div className="mt-4 flex items-start gap-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-(--radius-md) bg-(--color-brand-100) text-(--color-brand-700)">
+                  <DoorOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-(--color-text-primary)">
+                      {floor?.totalRooms ?? 0} room{(floor?.totalRooms ?? 0) === 1 ? '' : 's'} in
+                      service
+                      {stats ? ` · ${stats.totalBeds} bed(s)` : ''}
+                    </span>
+                    <StatusBadge variant="info" label="Kept by the server" />
+                  </div>
+                  <p className="text-2xs mt-1 font-medium text-(--color-text-muted)">
+                    The room count is not written by this form. The server strips it from the body
+                    and keeps it in step with the active rooms of the floor every time a room is
+                    saved or retired.
+                  </p>
+                  <Link
+                    href={`/rooms?floorId=${id}`}
+                    className="text-2xs mt-1.5 inline-flex items-center gap-1 font-bold text-(--color-brand-600) hover:underline"
+                  >
+                    <ArrowRight className="h-3 w-3" />
+                    Manage the rooms of this floor
+                  </Link>
+                </div>
+              </div>
+            </FormSection>
+
+            {perFloorAmenities.length > 0 && (
+              <FormSection
+                title="Per-floor amenity counts"
+                icon={<Layers />}
+                description="The hardware units the office declares for this level"
+                divided
+              >
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {perFloorAmenities.map((amenity) => {
+                    const value = Number(watchedValues[amenity.key]) || 0;
+                    return (
+                      <AmenityCountStepper
+                        key={amenity.key}
+                        label={amenity.label}
+                        icon={amenityIcon(amenity.key)}
+                        value={value}
+                        min={0}
+                        max={amenity.maxPerFloor ?? 10}
+                        error={
+                          (errors as Record<string, { message?: string }>)[amenity.key]?.message
+                        }
+                        onChange={(next) =>
+                          setValue(amenity.key, next, { shouldValidate: true, shouldDirty: true })
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </FormSection>
+            )}
+          </FormCard>
+
+          {/* What the save commits, and what it refuses. */}
+          <div className="rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-5 shadow-(--shadow-card)">
+            <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+              What this save commits
+            </h3>
+            <ul className="mt-3 space-y-2.5">
+              <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                <span>
+                  The server writes the label, the level and the amenity counts of this floor, and
+                  it writes an update entry in the audit log with the fields that moved.
+                </span>
+              </li>
+              <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                <span>
+                  The room count is not part of the save: the server strips it and keeps it in step
+                  with the active rooms of the floor.
+                </span>
+              </li>
+              <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                <span>
+                  The services of the floor are not touched. The health of a service is a service
+                  record, and it lives on the service board.
+                </span>
+              </li>
+              <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                <span>
+                  Renaming a floor moves nothing: the rooms stay on it, the residents stay in their
+                  beds and the leases keep their terms. Nobody is told.
+                </span>
+              </li>
+            </ul>
+
+            <div className="mt-4 border-t border-(--border-color) pt-3">
+              <p className="tracking-label text-2xs font-bold text-(--color-text-muted) uppercase">
+                What this save refuses
+              </p>
+              <ul className="text-2xs mt-2 space-y-1.5 font-medium text-(--color-text-secondary)">
+                <li className="flex items-start gap-2">
+                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
+                  <span>
+                    A level that another floor holds and a label that another floor holds
+                    (DUPLICATE_FLOOR), a level below 0, a label over 50 characters and an amenity
+                    count above the maximum the definition allows.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
+                  <span>
+                    A floor with active rooms or washing machines cannot be deleted from here. The
+                    deletion lives on the floors list and it names what is in the way.
+                  </span>
+                </li>
+              </ul>
             </div>
-          </DetailCard>
-        )}
+          </div>
+        </div>
+
+        {/* The rail: where this floor stands and where it sits in the building. */}
+        <div className="space-y-4">
+          <FloorStackPreview
+            floors={existingFloors}
+            current={{
+              floorNumber: watchedFloorNumber,
+              label: watchedLabel || 'Unnamed floor',
+              totalRooms: floor?.totalRooms ?? 0,
+            }}
+            currentId={id}
+            mode="edit"
+          />
+
+          <div className="space-y-3 rounded-(--radius-xl) border border-(--border-color) bg-(--color-field-bg) p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-(--color-text-primary)">
+                The floor as it stands
+              </span>
+              <StatusBadge
+                variant={collision.sameLevel || collision.sameLabel ? 'danger' : 'success'}
+                label={collision.sameLevel || collision.sameLabel ? 'Duplicate' : 'In the building'}
+              />
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between text-(--color-text-secondary)">
+                <span>Rooms in service:</span>
+                <span className="font-semibold text-(--color-text-primary)">
+                  {stats ? stats.activeRooms : 'not reported'} / {floor?.totalRooms ?? 0}
+                </span>
+              </div>
+              <div className="flex justify-between text-(--color-text-secondary)">
+                <span>Beds taken:</span>
+                <span className="font-semibold text-(--color-text-primary)">
+                  {stats ? `${stats.occupiedBeds} / ${stats.totalBeds}` : 'not reported'}
+                </span>
+              </div>
+              <div className="flex justify-between text-(--color-text-secondary)">
+                <span>Beds free:</span>
+                <span className="font-semibold text-(--color-text-primary)">
+                  {stats ? stats.vacantBeds : 'not reported'}
+                </span>
+              </div>
+              <div className="flex justify-between text-(--color-text-secondary)">
+                <span>Floor rent /mo:</span>
+                <span className="font-semibold text-(--color-text-primary)">
+                  {stats ? `₹${stats.potentialRent.toLocaleString('en-IN')}` : 'not reported'}
+                </span>
+              </div>
+            </div>
+            <Link
+              href={`/floors/${id}`}
+              className="text-2xs inline-flex items-center gap-1 font-bold text-(--color-brand-600) hover:underline"
+            >
+              Open the floor
+            </Link>
+          </div>
+        </div>
       </div>
     </FormPage>
   );

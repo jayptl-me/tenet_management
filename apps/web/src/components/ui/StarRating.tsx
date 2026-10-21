@@ -50,8 +50,8 @@ export function StarRating({
             className={clsx(
               starSize,
               filled
-                ? 'fill-[color:var(--color-warning-400)] text-[color:var(--color-warning-400)]'
-                : 'text-[color:var(--color-text-muted)]',
+                ? 'fill-(--color-warning-400) text-(--color-warning-400)'
+                : 'text-(--color-text-muted)',
               isInteractive && 'cursor-pointer transition-colors',
             )}
           />

@@ -131,28 +131,28 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
   return (
     <div className={clsx('space-y-4', className)}>
       {/* ── Top Header Telemetry Strip ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-color)] pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--border-color) pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)]">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-(--color-brand-50) text-(--color-brand-600)">
             <UtensilsCrossed className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-2xl font-bold tracking-tight text-[color:var(--color-text-primary)]">
+              <span className="font-mono text-2xl font-bold tracking-tight text-(--color-text-primary)">
                 {overallAverage > 0 ? overallAverage : '4.2'}
               </span>
-              <span className="text-11 font-medium text-[color:var(--color-text-muted)]">
+              <span className="text-11 font-medium text-(--color-text-muted)">
                 / 5.0 composite satisfaction
               </span>
             </div>
-            <p className="text-11 font-medium text-[color:var(--color-text-secondary)]">
+            <p className="text-11 font-medium text-(--color-text-secondary)">
               Based on 14-day rolling resident evaluations
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-11 flex items-center gap-1 rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2.5 py-1 font-semibold text-[color:var(--color-success-700)]">
+          <span className="text-11 flex items-center gap-1 rounded-full border border-(--color-success-200) bg-(--color-success-50) px-2.5 py-1 font-semibold text-(--color-success-700)">
             <Sparkles className="h-3 w-3" />
             94% Positive Sentiment
           </span>
@@ -162,15 +162,15 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
       {/* ── 14-Day Smoothed Satisfaction Trajectory Sparkline ── */}
       <div>
         <div className="text-11 mb-1.5 flex items-center justify-between">
-          <span className="font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+          <span className="font-bold tracking-wider text-(--color-text-muted) uppercase">
             14-Day Food Satisfaction Trajectory
           </span>
-          <span className="text-10 font-mono text-[color:var(--color-text-muted)]">
+          <span className="text-10 font-mono text-(--color-text-muted)">
             Dashed line: 4.0 SLA Target
           </span>
         </div>
 
-        <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]/40 p-2">
+        <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-field-bg)/40 p-2">
           <svg
             className="w-full overflow-visible"
             viewBox={`0 0 ${sparkWidth} ${sparkHeight}`}
@@ -223,7 +223,7 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
           </svg>
 
           {/* Date Range Footer */}
-          <div className="text-10 mt-1 flex items-center justify-between font-mono text-[color:var(--color-text-muted)]">
+          <div className="text-10 mt-1 flex items-center justify-between font-mono text-(--color-text-muted)">
             <span>{trend[0]?.date ? trend[0].date.slice(5) : '14d ago'}</span>
             <span>7d ago</span>
             <span>Today</span>
@@ -234,15 +234,15 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
       {/* ── Continuous Meal Comparison Ledger (Zero Nested Cards) ── */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-11 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+          <p className="text-11 font-bold tracking-wider text-(--color-text-muted) uppercase">
             Meal Breakdown & Sentiment Aspects
           </p>
-          <span className="text-10 font-medium text-[color:var(--color-text-muted)]">
+          <span className="text-10 font-medium text-(--color-text-muted)">
             Score & Tenant Feedback Tags
           </span>
         </div>
 
-        <div className="divide-y divide-[color:var(--border-color)] overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]/40">
+        <div className="divide-y divide-(--border-color) overflow-hidden rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-field-bg)/40">
           {mealConfigs.map(({ key, label, icon: Icon, score, delta, trendType }) => {
             const pct = Math.min(100, Math.max(0, (score / 5) * 100));
             const tags = ASPECT_TAGS[key];
@@ -250,51 +250,49 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
             return (
               <div
                 key={key}
-                className="flex flex-col gap-2 p-3 transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-field-bg)]/70 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 p-3 transition-colors duration-[var(--transition-duration)] hover:bg-(--color-field-bg)/70 sm:flex-row sm:items-center sm:justify-between"
               >
                 {/* Left: Meal Identity & Rating */}
                 <div className="flex min-w-40 items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-(--color-field-bg) text-(--color-text-secondary)">
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
-                      {label}
-                    </p>
+                    <p className="text-13 font-semibold text-(--color-text-primary)">{label}</p>
                     <div className="flex items-center gap-1.5">
                       <span
                         className={clsx(
                           'font-mono text-sm font-bold',
                           pct >= 75
-                            ? 'text-[color:var(--color-success-600)]'
+                            ? 'text-(--color-success-600)'
                             : pct >= 50
-                              ? 'text-[color:var(--color-warning-600)]'
-                              : 'text-[color:var(--color-danger-600)]',
+                              ? 'text-(--color-warning-600)'
+                              : 'text-(--color-danger-600)',
                         )}
                       >
                         {score.toFixed(1)}
                       </span>
-                      <span className="text-10 text-[color:var(--color-text-muted)]">/ 5.0</span>
+                      <span className="text-10 text-(--color-text-muted)">/ 5.0</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Center: Satisfaction Fill Bar */}
                 <div className="max-w-xs flex-1">
-                  <div className="text-10 mb-1 flex items-center justify-between font-mono text-[color:var(--color-text-muted)]">
+                  <div className="text-10 mb-1 flex items-center justify-between font-mono text-(--color-text-muted)">
                     <span>Satisfaction</span>
                     <span>{Math.round(pct)}%</span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--chart-track)]">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--chart-track)">
                     <div
                       style={{ width: `${pct}%` }}
                       className={clsx(
                         'h-full rounded-full transition-all duration-500',
                         pct >= 75
-                          ? 'bg-[color:var(--color-success-500)]'
+                          ? 'bg-(--color-success-500)'
                           : pct >= 50
-                            ? 'bg-[color:var(--color-warning-500)]'
-                            : 'bg-[color:var(--color-danger-500)]',
+                            ? 'bg-(--color-warning-500)'
+                            : 'bg-(--color-danger-500)',
                       )}
                     />
                   </div>
@@ -305,18 +303,18 @@ export function MealFeedbackLedger({ trend, averages, className }: MealFeedbackL
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-10 rounded-full border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2 py-0.5 font-mono font-medium text-[color:var(--color-text-secondary)]"
+                      className="text-10 rounded-full border border-(--border-color) bg-(--color-card-bg) px-2 py-0.5 font-mono font-medium text-(--color-text-secondary)"
                     >
                       {tag}
                     </span>
                   ))}
-                  <div className="text-10 ml-1 flex items-center gap-1 text-[color:var(--color-text-muted)]">
+                  <div className="text-10 ml-1 flex items-center gap-1 text-(--color-text-muted)">
                     {trendType === 'up' ? (
-                      <TrendingUp className="h-3 w-3 text-[color:var(--color-success-600)]" />
+                      <TrendingUp className="h-3 w-3 text-(--color-success-600)" />
                     ) : trendType === 'down' ? (
-                      <TrendingDown className="h-3 w-3 text-[color:var(--color-danger-600)]" />
+                      <TrendingDown className="h-3 w-3 text-(--color-danger-600)" />
                     ) : (
-                      <Minus className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+                      <Minus className="h-3 w-3 text-(--color-text-muted)" />
                     )}
                     <span className="hidden sm:inline">{delta}</span>
                   </div>

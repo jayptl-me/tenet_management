@@ -316,9 +316,13 @@ export default function LeaveDetailPage() {
   );
 
   /** The resident on the record: the rent is raised from this record. */
-  const { data: tenant } = useApiQuery<TenantRow>(['leaves', 'tenant', tenantId], `tenants/${tenantId}`, {
-    enabled: !!tenantId,
-  });
+  const { data: tenant } = useApiQuery<TenantRow>(
+    ['leaves', 'tenant', tenantId],
+    `tenants/${tenantId}`,
+    {
+      enabled: !!tenantId,
+    },
+  );
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['leaves'] });
@@ -443,7 +447,11 @@ export default function LeaveDetailPage() {
             </Button>
           </div>
         ) : leave ? (
-          <Button variant="outline" size="sm" onClick={() => router.push(`/leaves/${leave._id}/edit`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/leaves/${leave._id}/edit`)}
+          >
             <FileText className="h-4 w-4" />
             Open the review
           </Button>
@@ -573,7 +581,7 @@ export default function LeaveDetailPage() {
                     <p className="mt-1 text-sm leading-relaxed text-(--color-text-secondary)">
                       {notification.body ?? ''}
                     </p>
-                    <p className="mt-2 text-2xs font-semibold text-(--color-text-muted)">
+                    <p className="text-2xs mt-2 font-semibold text-(--color-text-muted)">
                       Pushed {formatDateTime(notification.sentAt ?? notification.createdAt)} ·{' '}
                       {residentHasNotRead
                         ? 'the resident has not opened it yet'
@@ -588,8 +596,8 @@ export default function LeaveDetailPage() {
                   </p>
                 ) : (
                   <p className="text-sm leading-relaxed text-(--color-text-secondary)">
-                    The server holds no notification for this leave among the {NOTIFICATION_LIMIT} most
-                    recent service updates it lists
+                    The server holds no notification for this leave among the {NOTIFICATION_LIMIT}{' '}
+                    most recent service updates it lists
                     {notificationTotal > NOTIFICATION_LIMIT
                       ? ` (it lists ${notificationTotal} in total)`
                       : ''}
@@ -650,8 +658,8 @@ export default function LeaveDetailPage() {
                 <>
                   <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                     Approving marks each of the {days} day{days === 1 ? '' : 's'} of the window as
-                    an on-leave record on the attendance board. A day with a real on-site check-in is
-                    kept as it is. The rent does not change: the monthly bill is raised from the
+                    an on-leave record on the attendance board. A day with a real on-site check-in
+                    is kept as it is. The rent does not change: the monthly bill is raised from the
                     resident&apos;s own record, so a leave is not a deduction.
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-(--color-text-secondary)">
@@ -738,10 +746,7 @@ export default function LeaveDetailPage() {
                 <DetailRow label="To" value={formatDate(to)} />
                 <DetailRow label="Days" value={`${days} day${days === 1 ? '' : 's'}`} />
                 <DetailRow label="Status" value={status.replace(/_/g, ' ')} />
-                <DetailRow
-                  label="Applied"
-                  value={`${formatDateTime(leave.createdAt)}`}
-                />
+                <DetailRow label="Applied" value={`${formatDateTime(leave.createdAt)}`} />
                 <DetailRow label="Last change" value={`${formatDateTime(leave.updatedAt)}`} />
               </DetailList>
               <p className="mt-3 text-sm leading-relaxed text-(--color-text-secondary)">
@@ -848,8 +853,8 @@ export default function LeaveDetailPage() {
               <p className="text-2xs mt-3 flex items-start gap-1.5 font-medium text-(--color-text-secondary)">
                 <Info className="mt-0.5 h-3 w-3 shrink-0" />
                 An approved leave writes the row itself: the state becomes on leave, the method is
-                manual, the note reads Leave approved and the office is the one recorded. A day
-                with a real on-site check-in keeps its own row.
+                manual, the note reads Leave approved and the office is the one recorded. A day with
+                a real on-site check-in keeps its own row.
               </p>
             </DetailCard>
           </div>

@@ -264,8 +264,8 @@ export default function EditServicePage() {
                 the row, not a state of the floor.
               </li>
               <li>
-                <strong className="text-(--color-text-primary)">The floor does not move.</strong> The
-                server keeps the row on its floor. Remove the row and provision it again on the
+                <strong className="text-(--color-text-primary)">The floor does not move.</strong>{' '}
+                The server keeps the row on its floor. Remove the row and provision it again on the
                 other floor, and the residents of the floor lose the service in the meantime.
               </li>
             </ul>

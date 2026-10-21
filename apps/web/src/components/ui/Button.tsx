@@ -23,53 +23,53 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 // ── Style Maps ─────────────────────────────────────────
 
 const focusRing =
-  'focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--focus-ring-offset-bg)]';
+  'focus-visible:ring-2 focus-visible:ring-(--focus-ring-color) focus-visible:ring-offset-2 focus-visible:ring-offset-(--focus-ring-offset-bg)';
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary: [
-    'bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]',
-    'border border-[color:var(--color-brand-600)]',
+    'bg-(--color-brand-500) text-(--color-on-brand)',
+    'border border-(--color-brand-600)',
     'shadow-[var(--shadow-button)]',
-    'hover:bg-[color:var(--color-brand-600)] hover:shadow-[var(--shadow-md)]',
-    'active:bg-[color:var(--color-brand-700)] active:scale-[0.98]',
+    'hover:bg-(--color-brand-600) hover:shadow-[var(--shadow-md)]',
+    'active:bg-(--color-brand-700) active:scale-[0.98]',
     focusRing,
   ].join(' '),
   secondary: [
-    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-primary)]',
-    'border border-[color:var(--border-color)]',
+    'bg-(--color-field-bg) text-(--color-text-primary)',
+    'border border-(--border-color)',
     'shadow-[var(--shadow-xs)]',
-    'hover:bg-[color:var(--color-field-bg-hover)] hover:border-[color:var(--color-field-border-hover)] hover:shadow-[var(--shadow-sm)]',
-    'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
+    'hover:bg-(--color-field-bg-hover) hover:border-(--color-field-border-hover) hover:shadow-[var(--shadow-sm)]',
+    'active:bg-(--color-surface-200) active:scale-[0.98]',
     focusRing,
   ].join(' '),
   danger: [
-    'bg-[color:var(--color-danger-500)] text-[color:var(--color-on-danger)]',
-    'border border-[color:var(--color-danger-600)]',
+    'bg-(--color-danger-500) text-(--color-on-danger)',
+    'border border-(--color-danger-600)',
     'shadow-[var(--shadow-button)]',
-    'hover:bg-[color:var(--color-danger-600)] hover:shadow-[var(--shadow-md)]',
-    'active:bg-[color:var(--color-danger-700)] active:scale-[0.98]',
-    'focus-visible:ring-2 focus-visible:ring-[color:var(--color-danger-400)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--focus-ring-offset-bg)]',
+    'hover:bg-(--color-danger-600) hover:shadow-[var(--shadow-md)]',
+    'active:bg-(--color-danger-700) active:scale-[0.98]',
+    'focus-visible:ring-2 focus-visible:ring-(--color-danger-400) focus-visible:ring-offset-2 focus-visible:ring-offset-(--focus-ring-offset-bg)',
   ].join(' '),
   ghost: [
-    'bg-transparent text-[color:var(--color-text-secondary)]',
+    'bg-transparent text-(--color-text-secondary)',
     'border border-transparent',
-    'hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)]',
-    'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
+    'hover:bg-(--color-field-bg-hover) hover:text-(--color-text-primary)',
+    'active:bg-(--color-surface-200) active:scale-[0.98]',
     focusRing,
   ].join(' '),
   outline: [
-    'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)]',
-    'border border-[color:var(--border-color)]',
-    'hover:bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-400)]',
-    'active:bg-[color:var(--color-field-bg-hover)] active:scale-[0.98]',
+    'bg-(--color-card-bg) text-(--color-text-primary)',
+    'border border-(--border-color)',
+    'hover:bg-(--color-field-bg) hover:border-(--color-brand-400)',
+    'active:bg-(--color-field-bg-hover) active:scale-[0.98]',
     focusRing,
   ].join(' '),
   // Deprecated: glass maps to outline internally so existing callers keep working.
   glass: [
-    'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-primary)]',
-    'border border-[color:var(--border-color)]',
-    'hover:bg-[color:var(--color-field-bg)] hover:border-[color:var(--color-brand-400)]',
-    'active:bg-[color:var(--color-field-bg-hover)] active:scale-[0.98]',
+    'bg-(--color-card-bg) text-(--color-text-primary)',
+    'border border-(--border-color)',
+    'hover:bg-(--color-field-bg) hover:border-(--color-brand-400)',
+    'active:bg-(--color-field-bg-hover) active:scale-[0.98]',
     focusRing,
   ].join(' '),
   // On-dark outline treatment for marketing hero surfaces.
@@ -83,10 +83,10 @@ const variantStyles: Record<ButtonVariant, string> = {
   // Quiet mini action (clear-filter / reset rows): ghost chrome, muted text.
   // The component applies text-xs for this variant (see sizeTextStyles usage).
   muted: [
-    'bg-transparent text-[color:var(--color-text-muted)]',
+    'bg-transparent text-(--color-text-muted)',
     'border border-transparent',
-    'hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)]',
-    'active:bg-[color:var(--color-surface-200)] active:scale-[0.98]',
+    'hover:bg-(--color-field-bg-hover) hover:text-(--color-text-primary)',
+    'active:bg-(--color-surface-200) active:scale-[0.98]',
     focusRing,
   ].join(' '),
 };

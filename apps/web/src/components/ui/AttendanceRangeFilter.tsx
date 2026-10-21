@@ -74,35 +74,35 @@ export function AttendanceRangeFilter({
           <button
             type="button"
             onClick={() => applyPreset('today')}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             Today
           </button>
           <button
             type="button"
             onClick={() => applyPreset('week')}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             Last 7 days
           </button>
           <button
             type="button"
             onClick={() => applyPreset('month')}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             This month
           </button>
           <button
             type="button"
             onClick={() => onClear?.()}
-            className="rounded-[var(--radius-md)] border border-transparent bg-transparent px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-transparent bg-transparent px-2.5 py-1.5 text-xs font-semibold text-(--color-text-muted) transition-colors hover:text-(--color-text-primary)"
           >
             Clear
           </button>
         </div>
       </div>
       {fromDate !== '' && toDate !== '' && fromDate > toDate && (
-        <p className="text-xs font-semibold text-[color:var(--color-danger-600)]">
+        <p className="text-xs font-semibold text-(--color-danger-600)">
           From date must be on or before To date.
         </p>
       )}

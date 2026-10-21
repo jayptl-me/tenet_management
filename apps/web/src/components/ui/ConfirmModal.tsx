@@ -23,9 +23,9 @@ interface ConfirmModalProps {
 // ── Style Maps ─────────────────────────────────────────
 
 const iconStyles: Record<string, string> = {
-  danger: 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-600)]',
-  warning: 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-600)]',
-  info: 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-600)]',
+  danger: 'bg-(--color-danger-100) text-(--color-danger-600)',
+  warning: 'bg-(--color-warning-100) text-(--color-warning-600)',
+  info: 'bg-(--color-brand-100) text-(--color-brand-600)',
 };
 
 const confirmVariant: Record<string, 'danger' | 'primary'> = {
@@ -82,7 +82,7 @@ export function ConfirmModal({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+            className="relative z-10 mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-modal)]"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
@@ -95,13 +95,13 @@ export function ConfirmModal({
                 <div>
                   <h3
                     id="confirm-modal-title"
-                    className="text-15 font-bold text-[color:var(--color-text-primary)]"
+                    className="text-15 font-bold text-(--color-text-primary)"
                   >
                     {title}
                   </h3>
                   <p
                     id="confirm-modal-desc"
-                    className="text-13 mt-1 leading-relaxed text-[color:var(--color-text-secondary)]"
+                    className="text-13 mt-1 leading-relaxed text-(--color-text-secondary)"
                   >
                     {message}
                   </p>
@@ -110,7 +110,7 @@ export function ConfirmModal({
               <button
                 onClick={loading ? undefined : onCancel}
                 disabled={loading}
-                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-secondary)] disabled:pointer-events-none disabled:opacity-40"
+                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-(--color-text-muted) transition-colors hover:bg-(--color-field-bg-hover) hover:text-(--color-text-secondary) disabled:pointer-events-none disabled:opacity-40"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

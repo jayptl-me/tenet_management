@@ -98,6 +98,7 @@ export default function EditInvoicePage() {
   const [initial, setInitial] = useState<Partial<FormData>>({});
 
   const {
+    setValue,
     register,
     handleSubmit,
     reset,
@@ -106,7 +107,7 @@ export default function EditInvoicePage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
-
+  const watchedDueDate = useWatch({ control, name: 'dueDate' }) ?? '';
   /**
    * The invoice is read through the shared query stack, like every other
    * record: the load takes part in the cache and a write invalidates it.
@@ -372,7 +373,9 @@ export default function EditInvoicePage() {
                   label="Due date"
                   disabled={isPaidLocked}
                   error={errors.dueDate?.message}
-                  {...register('dueDate')}
+                  name="dueDate"
+                  value={watchedDueDate}
+                  onChange={(value) => setValue('dueDate', value, { shouldValidate: true })}
                 />
               </FormSection>
 

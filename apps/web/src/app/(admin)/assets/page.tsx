@@ -79,13 +79,7 @@ interface AssetsListBody {
 // ── Filter vocabulary ──────────────────────────────────────────────────
 
 /** The five states the model holds (apps/api/src/models/asset.ts:63). */
-const STATUS_VALUES = [
-  'available',
-  'in_use',
-  'under_maintenance',
-  'damaged',
-  'retired',
-] as const;
+const STATUS_VALUES = ['available', 'in_use', 'under_maintenance', 'damaged', 'retired'] as const;
 
 const STATUS_TABS = [
   { key: '', label: 'All assets' },
@@ -293,9 +287,7 @@ function AssetsContent() {
         ? lowStockRows === undefined
         : serviceDueRows === undefined;
   const fetchErrorMessage =
-    errorMessage(listError) ||
-    errorMessage(lowStockError) ||
-    errorMessage(serviceDueError);
+    errorMessage(listError) || errorMessage(lowStockError) || errorMessage(serviceDueError);
 
   const refreshAssets = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ASSETS_LIST_KEY });
@@ -404,7 +396,6 @@ function AssetsContent() {
         return `"${str.replace(/"/g, '""')}"`;
       };
       const exportRows = exported.map((row) => {
-        const floor = floorOf(row);
         const room = roomOf(row);
         return [
           escapeCsv(row.name),
@@ -887,9 +878,7 @@ function AssetsContent() {
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-(--color-text-muted)">
                 <span>{assetCategoryLabel(row.category)}</span>
-                <span>
-                  {floor?.label ?? room?.roomNumber ?? row.location ?? 'No location'}
-                </span>
+                <span>{floor?.label ?? room?.roomNumber ?? row.location ?? 'No location'}</span>
                 <span>Qty {row.quantity ?? '-'}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -913,27 +902,39 @@ function AssetsContent() {
       <div className="text-2xs space-y-1 font-medium text-(--color-text-muted)">
         <p>
           <Info className="mr-1 inline h-3 w-3" />
-          {'Every number in the band is the server count over the whole filtered set, not over the page on screen. The filters and the view live in the address bar, so this view is a link.'}
+          {
+            'Every number in the band is the server count over the whole filtered set, not over the page on screen. The filters and the view live in the address bar, so this view is a link.'
+          }
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Below threshold</strong>
-          {' is the server low stock set: every asset whose count has reached its own threshold. The set takes no filter and does not leave out a retired asset, so a retired item that was left counted still shows there.'}
+          {
+            ' is the server low stock set: every asset whose count has reached its own threshold. The set takes no filter and does not leave out a retired asset, so a retired item that was left counted still shows there.'
+          }
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Service due</strong>
-          {' is the server service set: every asset with a next service date within thirty days. A retired asset is left out of it.'}
+          {
+            ' is the server service set: every asset with a next service date within thirty days. A retired asset is left out of it.'
+          }
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Out of service</strong>
-          {' counts the assets under maintenance and the assets damaged, over the filters of the search and the category. The server sends no number for the whole register, so it is the sum of two server counts and not a count of the rows on screen.'}
+          {
+            ' counts the assets under maintenance and the assets damaged, over the filters of the search and the category. The server sends no number for the whole register, so it is the sum of two server counts and not a count of the rows on screen.'
+          }
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Where it lives</strong>
-          {' is the floor and the room the server resolved for the row. The two clock views come from endpoints that do not resolve them, so a row there shows its free-text location only.'}
+          {
+            ' is the floor and the room the server resolved for the row. The two clock views come from endpoints that do not resolve them, so a row there shows its free-text location only.'
+          }
         </p>
         <p>
           <TriangleAlert className="mr-1 inline h-3 w-3" />
-          {'The server cannot filter by room or floor, so the placement of a row is read from the row itself. Every asset links to the room and the floor it lives in from its own page.'}
+          {
+            'The server cannot filter by room or floor, so the placement of a row is read from the row itself. Every asset links to the room and the floor it lives in from its own page.'
+          }
         </p>
       </div>
 

@@ -3,13 +3,14 @@
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { WashingMachine, Settings2 } from 'lucide-react';
+import { Info, Settings2, WashingMachine } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { CrudFormPage } from '@/components/ui/CrudFormPage';
+import { DetailCard } from '@/components/ui/DetailCard';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
 
@@ -30,9 +31,15 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+/**
+ * The states a machine can be registered in.
+ *
+ * The running state is not here: the server refuses a create or an edit that
+ * writes it, because a claim is written by a resident and only by a resident.
+ */
 const STATUS_OPTIONS = [
-  { value: 'available', label: 'Available' },
-  { value: 'under_maintenance', label: 'Under Maintenance' },
+  { value: 'available', label: 'Free to claim' },
+  { value: 'under_maintenance', label: 'In maintenance' },
   { value: 'down', label: 'Down' },
 ];
 
@@ -48,8 +55,8 @@ export default function NewWashingMachinePage() {
 
   return (
     <CrudFormPage
-      title="New Washing Machine"
-      description="Add a washing machine to a floor"
+      title="New washing machine"
+      description="Register a machine on a floor: the residents of that floor claim it from their own machine list"
       backHref="/washing-machines"
       redirectTo="/washing-machines"
       submitLabel="Save Machine"
@@ -59,6 +66,30 @@ export default function NewWashingMachinePage() {
       submit={async ({ values }) => {
         await api.post('washing-machines', { json: values }).json<{ success: boolean }>();
       }}
+      preflight={
+        <DetailCard title="What this save commits" icon={<Info />}>
+          <ul className="text-2xs space-y-2 leading-relaxed font-medium text-(--color-text-secondary)">
+            <li>
+              The server writes the machine on the floor, with the number, the label, the length of
+              a claim and the state you pick, and it writes a create entry in the audit log.
+            </li>
+            <li>
+              The machine number has to be free on that floor. The server refuses a duplicate with
+              the message &quot;A machine with this number already exists on this floor&quot; and
+              keeps the machine you already registered.
+            </li>
+            <li>
+              The residents of the floor are not told. They read the machine list of their own floor
+              right before they claim, and that list is the channel of this module: a claim on a
+              machine that is not free to claim is refused.
+            </li>
+            <li>
+              A resident claims the machine for the window the timer holds, between 10 and 180
+              minutes. The server releases the machine on its own when the window runs out.
+            </li>
+          </ul>
+        </DetailCard>
+      }
     >
       <FormSection
         title="Placement"
@@ -86,6 +117,7 @@ export default function NewWashingMachinePage() {
             type="number"
             min={1}
             error={err.machineNumber?.message}
+            hint="The number the residents of the floor read on the machine. It has to be free on this floor."
             {...register('machineNumber')}
           />
         </FormGrid>
@@ -101,6 +133,7 @@ export default function NewWashingMachinePage() {
             label="Label (optional)"
             placeholder="e.g. Washing Machine 1, Front Loader"
             error={err.label?.message}
+            hint="The name the office reads. Without it the machine is called by its number."
             {...register('label')}
           />
           <Input
@@ -109,6 +142,7 @@ export default function NewWashingMachinePage() {
             min={10}
             max={180}
             error={err.timerDuration?.message}
+            helperText="The length of a claim when the resident does not pick one. The server releases it on its own when the window runs out."
             {...register('timerDuration')}
           />
         </FormGrid>
@@ -123,6 +157,7 @@ export default function NewWashingMachinePage() {
                 value={field.value}
                 onChange={field.onChange}
                 error={err.status?.message}
+                helperText="The state the machine starts in. A machine that is free to claim can be claimed by a resident of the floor right away."
               />
             )}
           />

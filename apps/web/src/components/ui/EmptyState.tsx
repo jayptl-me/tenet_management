@@ -27,20 +27,20 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       initial="hidden"
       animate="visible"
       className={clsx(
-        'flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-8 py-14 text-center shadow-[var(--shadow-card)]',
+        'flex flex-col items-center justify-center rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) px-8 py-14 text-center shadow-[var(--shadow-card)]',
         className,
       )}
     >
       {icon && (
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--color-surface-100)] text-[color:var(--color-text-muted)] [&_svg]:h-7 [&_svg]:w-7">
+        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-(--color-surface-100) text-(--color-text-muted) [&_svg]:h-7 [&_svg]:w-7">
           {icon}
         </div>
       )}
-      <h3 className="font-display text-lg font-bold tracking-tight text-[color:var(--color-text-primary)]">
+      <h3 className="font-display text-lg font-bold tracking-tight text-(--color-text-primary)">
         {title}
       </h3>
       {description && (
-        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-[color:var(--color-text-muted)]">
+        <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-(--color-text-muted)">
           {description}
         </p>
       )}

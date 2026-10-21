@@ -635,11 +635,11 @@ export function CommandPalette({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 mx-4 w-full max-w-lg overflow-hidden rounded-xl border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)]"
+            className="relative z-10 mx-4 w-full max-w-lg overflow-hidden rounded-xl border border-(--border-color) bg-(--color-card-bg) shadow-[var(--shadow-modal)]"
           >
             {/* Search input */}
-            <div className="flex items-center gap-3 border-b border-b-[color:var(--border-color)] px-4 py-3">
-              <Search className="h-4 w-4 flex-shrink-0 text-[color:var(--color-text-muted)]" />
+            <div className="flex items-center gap-3 border-b border-b-(--border-color) px-4 py-3">
+              <Search className="h-4 w-4 flex-shrink-0 text-(--color-text-muted)" />
               <input
                 ref={inputRef}
                 type="text"
@@ -650,14 +650,14 @@ export function CommandPalette({
                 }}
                 placeholder="Search pages and actions..."
                 aria-label="Search pages and actions"
-                className="text-15 flex-1 bg-transparent font-medium text-[color:var(--color-text-primary)] outline-none placeholder:text-[color:var(--color-text-muted)]"
+                className="text-15 flex-1 bg-transparent font-medium text-(--color-text-primary) outline-none placeholder:text-(--color-text-muted)"
               />
-              <kbd className="text-10 hidden h-5 items-center gap-0.5 rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 font-semibold text-[color:var(--color-text-muted)] sm:inline-flex">
+              <kbd className="text-10 hidden h-5 items-center gap-0.5 rounded-md border border-(--border-color) bg-(--color-surface-50) px-1.5 font-semibold text-(--color-text-muted) sm:inline-flex">
                 <span className="text-11">⌘</span>K
               </kbd>
               <button
                 onClick={onClose}
-                className="rounded-md p-0.5 text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-secondary)]"
+                className="rounded-md p-0.5 text-(--color-text-muted) transition-colors hover:text-(--color-text-secondary)"
                 aria-label="Close command palette"
               >
                 <span className="text-xs font-semibold">ESC</span>
@@ -668,7 +668,7 @@ export function CommandPalette({
             <div ref={listRef} className="max-h-64 overflow-y-auto p-2">
               {Object.entries(groupedResults).map(([category, items]) => (
                 <div key={category} className="mb-2 last:mb-0">
-                  <div className="text-10 px-3 py-1.5 font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
+                  <div className="text-10 px-3 py-1.5 font-semibold tracking-widest text-(--color-text-muted) uppercase">
                     {category}
                   </div>
                   {items.map((item) => {
@@ -690,16 +690,14 @@ export function CommandPalette({
                         className={clsx(
                           'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-[var(--transition-duration)]',
                           isSelected
-                            ? 'bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]'
-                            : 'text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-surface-50)]',
+                            ? 'bg-(--color-brand-50) text-(--color-brand-700)'
+                            : 'text-(--color-text-secondary) hover:bg-(--color-surface-50)',
                         )}
                       >
                         <Icon
                           className={clsx(
                             'h-4 w-4 flex-shrink-0',
-                            isSelected
-                              ? 'text-[color:var(--color-brand-600)]'
-                              : 'text-[color:var(--color-text-muted)]',
+                            isSelected ? 'text-(--color-brand-600)' : 'text-(--color-text-muted)',
                           )}
                         />
                         <span className="text-13 font-medium">{item.label}</span>
@@ -711,29 +709,27 @@ export function CommandPalette({
 
               {results.length === 0 && (
                 <div className="px-3 py-8 text-center">
-                  <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
-                    No results found
-                  </p>
+                  <p className="text-13 font-medium text-(--color-text-muted)">No results found</p>
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="text-10 flex items-center gap-4 border-t border-t-[color:var(--border-color)] px-4 py-2 font-medium text-[color:var(--color-text-muted)]">
+            <div className="text-10 flex items-center gap-4 border-t border-t-(--border-color) px-4 py-2 font-medium text-(--color-text-muted)">
               <span className="flex items-center gap-1">
-                <kbd className="rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1 py-0.5">
+                <kbd className="rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5">
                   ↑↓
                 </kbd>
                 Navigate
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1 py-0.5">
+                <kbd className="rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5">
                   ↵
                 </kbd>
                 Select
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1 py-0.5">
+                <kbd className="rounded border border-(--border-color) bg-(--color-surface-50) px-1 py-0.5">
                   ESC
                 </kbd>
                 Close

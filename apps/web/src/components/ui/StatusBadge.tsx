@@ -10,23 +10,19 @@ import { STATUS_COLOR_MAP, type StatusVariant } from '@pg/types';
  * theme preset without per-mode overrides.
  */
 const variantStyles: Record<StatusVariant, string> = {
-  success:
-    'bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)] border-[color:var(--badge-success-border)]',
-  warning:
-    'bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)] border-[color:var(--badge-warning-border)]',
-  danger:
-    'bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)] border-[color:var(--badge-danger-border)]',
-  info: 'bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)] border-[color:var(--badge-info-border)]',
-  neutral:
-    'bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)] border-[color:var(--badge-neutral-border)]',
+  success: 'bg-(--badge-success-bg) text-(--badge-success-text) border-(--badge-success-border)',
+  warning: 'bg-(--badge-warning-bg) text-(--badge-warning-text) border-(--badge-warning-border)',
+  danger: 'bg-(--badge-danger-bg) text-(--badge-danger-text) border-(--badge-danger-border)',
+  info: 'bg-(--badge-info-bg) text-(--badge-info-text) border-(--badge-info-border)',
+  neutral: 'bg-(--badge-neutral-bg) text-(--badge-neutral-text) border-(--badge-neutral-border)',
 };
 
 const dotStyles: Record<StatusVariant, string> = {
-  success: 'bg-[color:var(--color-success-500)]',
-  warning: 'bg-[color:var(--color-warning-500)]',
-  danger: 'bg-[color:var(--color-danger-500)]',
-  info: 'bg-[color:var(--color-brand-500)]',
-  neutral: 'bg-[color:var(--color-text-muted)]',
+  success: 'bg-(--color-success-500)',
+  warning: 'bg-(--color-warning-500)',
+  danger: 'bg-(--color-danger-500)',
+  info: 'bg-(--color-brand-500)',
+  neutral: 'bg-(--color-text-muted)',
 };
 
 export interface StatusBadgeProps {

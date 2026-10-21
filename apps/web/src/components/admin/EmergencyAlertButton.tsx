@@ -70,7 +70,7 @@ export function EmergencyAlertButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-danger-500)] px-3 py-1.5 text-xs font-bold text-[color:var(--color-on-danger)] transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-[color:var(--color-danger-600)] active:scale-[var(--active-press-scale)]"
+        className="font-display inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-danger-500) px-3 py-1.5 text-xs font-bold text-(--color-on-danger) transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] hover:bg-(--color-danger-600) active:scale-[var(--active-press-scale)]"
         title="Send Emergency Alert"
         aria-label="Send Emergency Alert"
       >
@@ -85,31 +85,28 @@ export function EmergencyAlertButton() {
             aria-modal="true"
             aria-labelledby="emergency-alert-title"
             aria-describedby="emergency-alert-desc"
-            className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+            className="animate-fade-in-up mx-4 w-full max-w-md rounded-[var(--radius-xl)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-modal)]"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-100)]">
-                  <AlertTriangle className="h-5 w-5 text-[color:var(--color-danger-600)]" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-[length:var(--bw-default)] border-(--color-danger-300) bg-(--color-danger-100)">
+                  <AlertTriangle className="h-5 w-5 text-(--color-danger-600)" />
                 </div>
                 <div>
                   <h3
                     id="emergency-alert-title"
-                    className="font-display text-lg font-bold text-[color:var(--color-surface-900)]"
+                    className="font-display text-lg font-bold text-(--color-surface-900)"
                   >
                     Emergency Alert
                   </h3>
-                  <p
-                    id="emergency-alert-desc"
-                    className="text-sm text-[color:var(--color-surface-500)]"
-                  >
+                  <p id="emergency-alert-desc" className="text-sm text-(--color-surface-500)">
                     This will notify ALL tenants immediately via push + in-app
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-md p-1 text-[color:var(--color-surface-400)] transition-colors hover:text-[color:var(--color-surface-600)]"
+                className="rounded-md p-1 text-(--color-surface-400) transition-colors hover:text-(--color-surface-600)"
                 disabled={sending}
                 aria-label="Close"
               >
@@ -118,13 +115,13 @@ export function EmergencyAlertButton() {
             </div>
 
             {error && (
-              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-100)] p-3 text-sm font-semibold text-[color:var(--color-danger-800)]">
+              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-(--color-danger-500) bg-(--color-danger-100) p-3 text-sm font-semibold text-(--color-danger-800)">
                 {error}
               </div>
             )}
 
             {sent ? (
-              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--color-success-500)] bg-[color:var(--color-success-100)] p-4 text-center text-[color:var(--color-success-800)]">
+              <div className="mt-4 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-(--color-success-500) bg-(--color-success-100) p-4 text-center text-(--color-success-800)">
                 <p className="font-display text-lg font-bold">Alert Sent!</p>
                 <p className="text-sm">All active tenants have been notified immediately.</p>
               </div>

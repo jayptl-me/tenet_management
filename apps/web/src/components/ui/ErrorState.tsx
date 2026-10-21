@@ -25,23 +25,23 @@ export function ErrorState({ title, description, errorCode, onRetry, className }
       initial="hidden"
       animate="visible"
       className={clsx(
-        'rounded-xl border border-[color:var(--color-danger-400)] bg-[color:var(--color-danger-50)] px-6 py-8 shadow-[var(--shadow-card)]',
+        'rounded-xl border border-(--color-danger-400) bg-(--color-danger-50) px-6 py-8 shadow-[var(--shadow-card)]',
         className,
       )}
     >
       <div className="flex items-start gap-4">
         <div className="mt-0.5 flex-shrink-0">
-          <AlertTriangle className="h-6 w-6 text-[color:var(--color-danger-500)]" />
+          <AlertTriangle className="h-6 w-6 text-(--color-danger-500)" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold text-[color:var(--color-danger-700)]">{title}</h3>
+          <h3 className="text-base font-bold text-(--color-danger-700)">{title}</h3>
           {description && (
-            <p className="mt-1.5 text-sm leading-relaxed text-[color:var(--color-danger-600)]">
+            <p className="mt-1.5 text-sm leading-relaxed text-(--color-danger-600)">
               {description}
             </p>
           )}
           {errorCode && (
-            <p className="text-11 mt-2 font-mono font-medium tracking-wider text-[color:var(--color-danger-400)] uppercase">
+            <p className="text-11 mt-2 font-mono font-medium tracking-wider text-(--color-danger-400) uppercase">
               {errorCode}
             </p>
           )}

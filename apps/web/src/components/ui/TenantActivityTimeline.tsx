@@ -86,7 +86,7 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[color:var(--color-surface-300)] border-t-[color:var(--color-brand-500)]" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-(--color-surface-300) border-t-(--color-brand-500)" />
       </div>
     );
   }
@@ -94,8 +94,8 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
   if (error || events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <AlertTriangle className="h-6 w-6 text-[color:var(--color-text-muted)]" />
-        <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
+        <AlertTriangle className="h-6 w-6 text-(--color-text-muted)" />
+        <p className="mt-2 text-xs text-(--color-text-muted)">
           {error || 'No activity recorded yet'}
         </p>
       </div>
@@ -129,7 +129,7 @@ export function TenantActivityTimeline({ tenantId, compact = false }: TenantActi
       />
 
       {compact && events.length > 5 && (
-        <p className="mt-2 pl-7 text-xs text-[color:var(--color-text-muted)]">
+        <p className="mt-2 pl-7 text-xs text-(--color-text-muted)">
           {events.length - 5} more events
         </p>
       )}

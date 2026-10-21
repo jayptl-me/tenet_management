@@ -26,11 +26,11 @@ export function Timeline({
   className?: string;
 }) {
   const statusDot: Record<string, string> = {
-    success: 'bg-[color:var(--color-success-500)]',
-    warning: 'bg-[color:var(--color-warning-500)]',
-    danger: 'bg-[color:var(--color-danger-500)]',
-    info: 'bg-[color:var(--color-brand-500)]',
-    neutral: 'bg-[color:var(--color-surface-300)]',
+    success: 'bg-(--color-success-500)',
+    warning: 'bg-(--color-warning-500)',
+    danger: 'bg-(--color-danger-500)',
+    info: 'bg-(--color-brand-500)',
+    neutral: 'bg-(--color-surface-300)',
   };
 
   const formatDate = (d: Date | string): string => {
@@ -49,9 +49,7 @@ export function Timeline({
   if (events.length === 0) {
     return (
       <div className={clsx('py-8 text-center', className)}>
-        <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
-          No events recorded
-        </p>
+        <p className="text-13 font-medium text-(--color-text-muted)">No events recorded</p>
       </div>
     );
   }
@@ -62,7 +60,7 @@ export function Timeline({
       style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}
     >
       {/* Vertical line */}
-      <div className="absolute top-1 bottom-1 left-[11px] w-0.5 rounded-full bg-[color:var(--color-surface-200)]" />
+      <div className="absolute top-1 bottom-1 left-[11px] w-0.5 rounded-full bg-(--color-surface-200)" />
 
       <div className="space-y-4">
         {events.map((event) => {
@@ -73,7 +71,7 @@ export function Timeline({
               {/* Dot on the timeline */}
               <span
                 className={clsx(
-                  'absolute top-1.5 left-[7px] z-10 h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-[color:var(--color-surface-100)]',
+                  'absolute top-1.5 left-[7px] z-10 h-2.5 w-2.5 flex-shrink-0 rounded-full border-2 border-(--color-surface-100)',
                   dotColor,
                 )}
               />
@@ -81,18 +79,16 @@ export function Timeline({
               {/* Content */}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <p className="text-11 font-semibold text-[color:var(--color-text-muted)]">
+                  <p className="text-11 font-semibold text-(--color-text-muted)">
                     {formatDate(event.date)}
                   </p>
-                  <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
-                    {event.title}
-                  </p>
+                  <p className="text-13 font-semibold text-(--color-text-primary)">{event.title}</p>
                   {showIcons && event.icon && (
-                    <span className="text-[color:var(--color-text-muted)]">{event.icon}</span>
+                    <span className="text-(--color-text-muted)">{event.icon}</span>
                   )}
                 </div>
                 {event.description && (
-                  <p className="text-11 mt-0.5 leading-relaxed text-[color:var(--color-text-muted)]">
+                  <p className="text-11 mt-0.5 leading-relaxed text-(--color-text-muted)">
                     {event.description}
                   </p>
                 )}

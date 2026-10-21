@@ -45,24 +45,24 @@ const ICONS: Record<ToastType, ReactNode> = {
 };
 
 const BORDER_COLORS: Record<ToastType, string> = {
-  success: 'border-[color:var(--color-success-500)]',
-  error: 'border-[color:var(--color-danger-500)]',
-  warning: 'border-[color:var(--color-warning-500)]',
-  info: 'border-[color:var(--color-brand-500)]',
+  success: 'border-(--color-success-500)',
+  error: 'border-(--color-danger-500)',
+  warning: 'border-(--color-warning-500)',
+  info: 'border-(--color-brand-500)',
 };
 
 const TEXT_COLORS: Record<ToastType, string> = {
-  success: 'text-[color:var(--color-success-700)]',
-  error: 'text-[color:var(--color-danger-700)]',
-  warning: 'text-[color:var(--color-warning-700)]',
-  info: 'text-[color:var(--color-brand-700)]',
+  success: 'text-(--color-success-700)',
+  error: 'text-(--color-danger-700)',
+  warning: 'text-(--color-warning-700)',
+  info: 'text-(--color-brand-700)',
 };
 
 const BG_COLORS: Record<ToastType, string> = {
-  success: 'bg-[color:var(--color-success-50)]',
-  error: 'bg-[color:var(--color-danger-50)]',
-  warning: 'bg-[color:var(--color-warning-50)]',
-  info: 'bg-[color:var(--color-brand-50)]',
+  success: 'bg-(--color-success-50)',
+  error: 'bg-(--color-danger-50)',
+  warning: 'bg-(--color-warning-50)',
+  info: 'bg-(--color-brand-50)',
 };
 
 // Portals only exist in the browser: useSyncExternalStore flips to true

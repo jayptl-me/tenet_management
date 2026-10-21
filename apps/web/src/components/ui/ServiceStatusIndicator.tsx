@@ -42,16 +42,16 @@ function resolveIcon(iconName: string): LucideIcon {
 // ── Theme-token based status colors ──
 const STATUS_COLORS: Record<string, { dot: string; bg: string }> = {
   operational: {
-    dot: 'bg-[color:var(--color-success-500)]',
-    bg: 'bg-[color:var(--color-success-100)]',
+    dot: 'bg-(--color-success-500)',
+    bg: 'bg-(--color-success-100)',
   },
   degraded: {
-    dot: 'bg-[color:var(--color-warning-500)]',
-    bg: 'bg-[color:var(--color-warning-100)]',
+    dot: 'bg-(--color-warning-500)',
+    bg: 'bg-(--color-warning-100)',
   },
   down: {
-    dot: 'bg-[color:var(--color-danger-500)]',
-    bg: 'bg-[color:var(--color-danger-100)]',
+    dot: 'bg-(--color-danger-500)',
+    bg: 'bg-(--color-danger-100)',
   },
 };
 
@@ -213,20 +213,20 @@ export function ServiceStatusIndicator({
       <div
         className={`text-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 leading-none font-semibold ${
           anyDown
-            ? 'bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
+            ? 'bg-(--color-danger-100) text-(--color-danger-700)'
             : allOk
-              ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
-              : 'bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-700)]'
+              ? 'bg-(--color-success-100) text-(--color-success-700)'
+              : 'bg-(--color-warning-100) text-(--color-warning-700)'
         }`}
         title={displayServices.map((s) => `${getLabel(s.serviceType)}: ${s.status}`).join(', ')}
       >
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full ${
             anyDown
-              ? 'bg-[color:var(--color-danger-500)]'
+              ? 'bg-(--color-danger-500)'
               : allOk
-                ? 'bg-[color:var(--color-success-500)]'
-                : 'bg-[color:var(--color-warning-500)]'
+                ? 'bg-(--color-success-500)'
+                : 'bg-(--color-warning-500)'
           }`}
         />
         {anyDown ? 'Service Issue' : allOk ? 'All OK' : 'Degraded'}
@@ -248,8 +248,8 @@ export function ServiceStatusIndicator({
             title={`${getLabel(s.serviceType)}: ${s.status}`}
           >
             <span className={`inline-block h-1.5 w-1.5 rounded-full ${colors.dot}`} />
-            <Icon className="h-3 w-3 text-[color:var(--color-text-secondary)]" />
-            <span className="hidden text-[color:var(--color-text-secondary)] sm:inline">
+            <Icon className="h-3 w-3 text-(--color-text-secondary)" />
+            <span className="hidden text-(--color-text-secondary) sm:inline">
               {getLabel(s.serviceType)}
             </span>
           </div>

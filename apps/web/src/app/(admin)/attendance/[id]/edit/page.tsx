@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Clock, UserRound, Hash, ExternalLink, TriangleAlert } from 'lucide-react';
+import { Clock, ExternalLink, Hash, Info, TriangleAlert, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
@@ -22,7 +26,10 @@ import { toTimeInputValue } from '@/lib/api-shapes';
 
 const schema = z
   .object({
-    date: z.string().min(1, 'Date is required'),
+    date: z
+      .string()
+      .min(1, 'Date is required')
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format: YYYY-MM-DD'),
     status: z.enum(['present', 'absent', 'on_leave', 'not_returned']),
     checkInTime: z.string().optional(),
     checkOutTime: z.string().optional(),
@@ -37,7 +44,6 @@ const schema = z
       });
     }
   });
-
 type FormData = z.infer<typeof schema>;
 
 const statusOptions = [
@@ -47,17 +53,25 @@ const statusOptions = [
   { value: 'not_returned', label: 'Not Returned' },
 ];
 
+const STATUS_VALUES = ['present', 'absent', 'on_leave', 'not_returned'];
+const STATUS_LABELS: Record<string, string> = {
+  present: 'present',
+  absent: 'absent',
+  on_leave: 'on leave',
+  not_returned: 'not returned',
+};
+
 interface AttendanceDetail {
   _id: string;
   date: string;
   status: string;
-  checkInTime?: string;
-  checkOutTime?: string;
-  checkIn?: string;
-  checkOut?: string;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
   notes?: string;
   bedId?: string;
-  recordedBy?: { _id: string; name: string } | null;
+  recordedBy?: { _id?: string; name?: string } | null;
   createdAt: string;
   updatedAt?: string;
   tenant?: {
@@ -73,6 +87,12 @@ interface AttendanceDetail {
   };
 }
 
+interface ClashRow {
+  _id: string;
+  date: string;
+  status: string;
+}
+
 /** Derived check-in/out duration label; empty until both times are set. */
 function computeHoursRange(checkIn?: string, checkOut?: string): string {
   if (!checkIn || !checkOut) return '';
@@ -84,27 +104,71 @@ function computeHoursRange(checkIn?: string, checkOut?: string): string {
     const mins = totalMinutes % 60;
     return `${hours}h ${mins}m`;
   }
-  return 'Invalid (out < in) — fix before saving';
+  return 'Invalid (out before in) - fix before saving';
+}
+
+function formatClock(value: string | null | undefined): string {
+  if (!value) return '-';
+  try {
+    return new Date(value).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '-';
+  }
 }
 
 export default function EditAttendancePage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [attendanceData, setAttendanceData] = useState<AttendanceDetail | null>(null);
-  const [originalDate, setOriginalDate] = useState('');
+  const [clash, setClash] = useState<ClashRow | null>(null);
+
+  /**
+   * The record, read through the shared query stack.
+   *
+   * The skeleton is derived from the query instead of being pushed by an
+   * effect, so a record that never arrives shows the error state instead of a
+   * page that spins for ever.
+   */
+  const { data: attendanceData, error: queryError } = useApiQuery<AttendanceDetail>(
+    ['attendance', 'detail', id],
+    `attendance/${id}`,
+    { enabled: id !== '' },
+  );
+  const isLoading = attendanceData === undefined && queryError === undefined;
+
+  /**
+   * The form is seeded from the record.
+   *
+   * The values are handed to the form itself, so the form follows the record
+   * without a copy of it in state and without a write in an effect.
+   */
+  const seededValues = useMemo<FormData | undefined>(() => {
+    if (!attendanceData) return undefined;
+    const status = STATUS_VALUES.includes(attendanceData.status)
+      ? (attendanceData.status as FormData['status'])
+      : 'present';
+    return {
+      date: attendanceData.date ? String(attendanceData.date).slice(0, 10) : '',
+      status,
+      checkInTime: toTimeInputValue(attendanceData.checkInTime ?? attendanceData.checkIn),
+      checkOutTime: toTimeInputValue(attendanceData.checkOutTime ?? attendanceData.checkOut),
+      notes: attendanceData.notes ?? '',
+    };
+  }, [attendanceData]);
 
   const {
     register,
     handleSubmit,
-    reset,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    values: seededValues,
   });
+  const watchedDate = useWatch({ control, name: 'date' }) ?? '';
 
   const checkIn = useWatch({ control, name: 'checkInTime' });
   const checkOut = useWatch({ control, name: 'checkOutTime' });
@@ -113,57 +177,41 @@ export default function EditAttendancePage() {
 
   const computedHours = computeHoursRange(checkIn, checkOut);
 
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`attendance/${id}`)
-      .json<{ success: boolean; data: AttendanceDetail }>()
-      .then((res) => {
-        setAttendanceData(res.data);
-        const d = res.data;
-        const ymd = d.date ? String(d.date).slice(0, 10) : '';
-        setOriginalDate(ymd);
-        reset({
-          date: ymd,
-          status: (d.status as FormData['status']) ?? 'present',
-          checkInTime: toTimeInputValue(d.checkInTime ?? d.checkIn),
-          checkOutTime: toTimeInputValue(d.checkOutTime ?? d.checkOut),
-          notes: d.notes ?? '',
-        });
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-        setIsLoading(false);
-      });
-  }, [id, reset]);
-
   const tenantIdForCheck =
     attendanceData?.tenant?._id ??
     (typeof attendanceData?.tenantId === 'object' ? attendanceData?.tenantId?._id : undefined) ??
     '';
+  const originalDate = attendanceData?.date ? String(attendanceData.date).slice(0, 10) : '';
+  const dateChanged = dateValue !== '' && dateValue !== originalDate;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
+    setClash(null);
     try {
-      if (data.date !== originalDate && tenantIdForCheck !== '') {
+      // A record is one resident on one day: the server holds a unique index
+      // on that pair (apps/api/src/models/attendanceRecord.ts:74), so a move
+      // to a day that already holds a record of this resident is refused.
+      if (dateChanged && tenantIdForCheck !== '') {
         const params = new URLSearchParams();
         params.set('date', data.date);
         params.set('tenantId', tenantIdForCheck);
         params.set('limit', '5');
         const existing = await api.get(`attendance?${params.toString()}`).json<{
           success: boolean;
-          data: Array<{ _id: string }>;
+          data: ClashRow[];
         }>();
-        const clash = (existing.data ?? []).find((r) => r._id !== id);
-        if (clash) {
+        const other = (existing.data ?? []).find((row) => row._id !== id);
+        if (other) {
+          setClash(other);
           setSubmitError(
-            'Another attendance record already exists for this tenant on the new date.',
+            `This resident already has a record on ${other.date}. The server holds one record per resident per day, so the move is refused.`,
           );
           return;
         }
       }
       await api.put(`attendance/${id}`, { json: data }).json();
+      // The record the operator lands on is the record the server holds.
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       router.push(`/attendance/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
@@ -172,27 +220,27 @@ export default function EditAttendancePage() {
 
   const tenantMapped = attendanceData?.tenant;
   const tenantRaw = attendanceData?.tenantId;
-  const tenantName = tenantMapped?.user?.name ?? tenantRaw?.userId?.name ?? 'N/A';
-  const roomNumber = tenantMapped?.room?.roomNumber ?? tenantRaw?.roomId?.roomNumber ?? 'N/A';
-  const bedId = tenantRaw?.bedId ?? attendanceData?.bedId ?? 'N/A';
+  const tenantName = tenantMapped?.user?.name ?? tenantRaw?.userId?.name ?? 'Unknown resident';
+  const roomNumber = tenantMapped?.room?.roomNumber ?? tenantRaw?.roomId?.roomNumber ?? 'no room';
+  const bedId = tenantRaw?.bedId ?? attendanceData?.bedId ?? '?';
   const hasTenant = Boolean(tenantMapped || tenantRaw);
   const err = errors as Record<string, { message?: string }>;
-  const dateChanged = dateValue !== undefined && dateValue !== '' && dateValue !== originalDate;
+  const loadError = errorMessage(queryError);
 
   return (
     <FormPage
-      title="Edit Attendance Record"
-      description="Update attendance status, check-in/out times, and notes"
+      title="Correct an attendance record"
+      description="Change the day, the status, the times or the note of one record"
       backHref={id ? `/attendance/${id}` : '/attendance'}
-      error={submitError}
+      error={submitError !== '' ? submitError : loadError}
       isLoading={isLoading}
       maxWidth="form"
     >
       <div className="space-y-5">
         {hasTenant && (
-          <DetailCard title="Tenant" icon={<UserRound />}>
+          <DetailCard title="The record you are correcting" icon={<UserRound />}>
             <DetailList>
-              <DetailRow label="Name" value={tenantName} />
+              <DetailRow label="Resident" value={tenantName} />
               <DetailRow
                 label="Room"
                 value={
@@ -204,14 +252,14 @@ export default function EditAttendancePage() {
               />
               {tenantIdForCheck !== '' && (
                 <DetailRow
-                  label="Tenant"
+                  label="Resident record"
                   value={
                     <button
                       type="button"
                       onClick={() => router.push(`/tenants/${tenantIdForCheck}`)}
                       className="inline-flex items-center gap-1 font-semibold text-(--color-brand-600) hover:underline"
                     >
-                      View tenant
+                      View resident
                       <ExternalLink className="h-3.5 w-3.5" />
                     </button>
                   }
@@ -219,15 +267,17 @@ export default function EditAttendancePage() {
               )}
               {attendanceData && (
                 <DetailRow
-                  label="Current"
+                  label="As the server holds it"
                   value={
-                    <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex flex-wrap items-center gap-2">
                       <StatusBadge
                         variant={statusToVariant(attendanceData.status)}
-                        label={attendanceData.status.replace(/_/g, ' ')}
+                        label={STATUS_LABELS[attendanceData.status] ?? attendanceData.status}
                       />
                       <span className="text-xs text-(--color-text-muted)">
-                        {String(attendanceData.date).slice(0, 10)}
+                        {String(attendanceData.date).slice(0, 10)} · in{' '}
+                        {formatClock(attendanceData.checkInTime ?? attendanceData.checkIn)} · out{' '}
+                        {formatClock(attendanceData.checkOutTime ?? attendanceData.checkOut)}
                       </span>
                     </span>
                   }
@@ -242,16 +292,23 @@ export default function EditAttendancePage() {
           footer={
             <FormActions
               loading={isSubmitting}
+              disabled={clash !== null}
               cancelHref={id ? `/attendance/${id}` : '/attendance'}
-              submitLabel="Save Changes"
+              submitLabel="Save the correction"
               divided={false}
             />
           }
         >
           <div className="space-y-6">
-            <FormSection title="Record" description="Date and presence status">
+            <FormSection title="The day and the mark" description="Which day, and what it says">
               <FormGrid>
-                <DatePicker label="Date" error={err.date?.message} {...register('date')} />
+                <DatePicker
+                  label="Date"
+                  error={err.date?.message}
+                  name="date"
+                  value={watchedDate}
+                  onChange={(value) => setValue('date', value, { shouldValidate: true })}
+                />
                 <Select
                   label="Status"
                   options={statusOptions}
@@ -262,14 +319,28 @@ export default function EditAttendancePage() {
               {dateChanged && (
                 <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-(--color-warning-700)">
                   <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Date changed — duplicate check runs on save. Another record for this tenant on the
-                  new date will block the update.
+                  The day moves. The server holds one record per resident per day, so the save is
+                  refused when the resident already has a record on the new day.
+                </p>
+              )}
+              {clash !== null && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-(--color-danger-700)">
+                  <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  The resident already has a record on {clash.date} (
+                  {STATUS_LABELS[clash.status] ?? clash.status}).{' '}
+                  <Link
+                    href={`/attendance/${clash._id}`}
+                    className="underline underline-offset-2 hover:text-(--color-brand-600)"
+                  >
+                    Open that record
+                  </Link>
+                  .
                 </p>
               )}
               {status === 'on_leave' && (
                 <p className="mt-2 text-xs text-(--color-text-muted)">
-                  On-leave rows are normally created by leave approval. Editing to on-leave should
-                  reference the covering leave in notes.
+                  An on-leave day is normally written by the approval of a leave. If you write it by
+                  hand, name the leave in the notes so the office can find it again.
                 </p>
               )}
             </FormSection>
@@ -313,15 +384,45 @@ export default function EditAttendancePage() {
               </FormFullWidth>
               {attendanceData?.recordedBy && (
                 <p className="text-xs text-(--color-text-muted)">
-                  Recorded by {attendanceData.recordedBy.name ?? 'System'}
+                  Recorded by {attendanceData.recordedBy.name ?? 'the gate'}
                   {attendanceData.updatedAt
-                    ? ` · Updated ${String(attendanceData.updatedAt).slice(0, 10)}`
+                    ? ` · Last changed ${String(attendanceData.updatedAt).slice(0, 10)}`
                     : ''}
                 </p>
               )}
             </FormSection>
           </div>
         </FormCard>
+
+        {/* What the save commits, and what it does not. */}
+        <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-(--color-text-primary)">
+            <Info className="h-4 w-4 text-(--color-brand-600)" />
+            What this save does
+          </p>
+          <ul className="text-2xs mt-2 space-y-1 font-medium text-(--color-text-secondary)">
+            <li>
+              The server rewrites the day, the status, the two times and the note of this one
+              record, and writes an update entry in the audit log with the fields that changed
+              (apps/api/src/routes/attendance.ts:650-704).
+            </li>
+            <li>
+              It changes no money. Nothing in the server reads an attendance mark when it raises a
+              bill: what a resident owes comes from the rent on their own record
+              (apps/api/src/services/invoice.service.ts:97). A correction of a mark moves no charge
+              and creates no invoice.
+            </li>
+            <li>
+              The resident is not told. The server sends no message for a correction: the resident
+              sees the corrected row in their attendance history the next time they open the app.
+            </li>
+            <li>
+              The mark you write here is the mark the day carries. A day that says the resident
+              never came back while it carries their sign-in is a record that disagrees with itself,
+              and the day board names it.
+            </li>
+          </ul>
+        </div>
       </div>
     </FormPage>
   );

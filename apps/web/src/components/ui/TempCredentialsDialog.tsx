@@ -71,24 +71,24 @@ export function TempCredentialsDialog({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+            className="relative z-10 mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-modal)]"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[color:var(--color-warning-100)] text-[color:var(--color-warning-600)]">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-(--color-warning-100) text-(--color-warning-600)">
                   <KeyRound className="h-5 w-5" />
                 </div>
                 <div>
                   <h3
                     id="temp-creds-title"
-                    className="text-15 font-bold text-[color:var(--color-text-primary)]"
+                    className="text-15 font-bold text-(--color-text-primary)"
                   >
                     {entityLabel} created
                   </h3>
                   <p
                     id="temp-creds-desc"
-                    className="text-13 mt-1 leading-relaxed text-[color:var(--color-text-secondary)]"
+                    className="text-13 mt-1 leading-relaxed text-(--color-text-secondary)"
                   >
                     A login account was created for this {entityLabel.toLowerCase()}.
                   </p>
@@ -96,7 +96,7 @@ export function TempCredentialsDialog({
               </div>
               <button
                 onClick={onClose}
-                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-secondary)]"
+                className="flex-shrink-0 rounded-[var(--radius-md)] p-1 text-(--color-text-muted) transition-colors hover:bg-(--color-field-bg-hover) hover:text-(--color-text-secondary)"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -104,12 +104,12 @@ export function TempCredentialsDialog({
             </div>
 
             {/* Warning + password display */}
-            <div className="mt-5 rounded-[var(--radius-lg)] border border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] p-4">
-              <p className="text-13 font-semibold text-[color:var(--color-warning-800)]">
+            <div className="mt-5 rounded-[var(--radius-lg)] border border-(--color-warning-300) bg-(--color-warning-50) p-4">
+              <p className="text-13 font-semibold text-(--color-warning-800)">
                 Share this temporary password once. It will not be shown again.
               </p>
               <div className="mt-3 flex items-center gap-2">
-                <code className="flex-1 rounded-[var(--radius-md)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-card-bg)] px-3 py-2.5 font-mono text-base font-bold tracking-wide text-[color:var(--color-text-primary)]">
+                <code className="flex-1 rounded-[var(--radius-md)] border border-(--color-warning-200) bg-(--color-card-bg) px-3 py-2.5 font-mono text-base font-bold tracking-wide text-(--color-text-primary)">
                   {temporaryPassword}
                 </code>
                 <Button variant="outline" size="sm" onClick={handleCopy} animate={false}>

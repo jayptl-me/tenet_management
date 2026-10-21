@@ -100,22 +100,20 @@ export function Breadcrumbs() {
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 py-1">
       <Link
         href="/dashboard"
-        className="rounded-md p-1 text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-secondary)]"
+        className="rounded-md p-1 text-(--color-text-muted) transition-colors duration-[var(--transition-duration)] hover:bg-(--color-surface-100) hover:text-(--color-text-secondary)"
         aria-label="Dashboard"
       >
         <Home className="h-3.5 w-3.5" />
       </Link>
       {breadcrumbs.map((crumb) => (
         <div key={crumb.href} className="flex items-center gap-1.5">
-          <ChevronRight className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+          <ChevronRight className="h-3 w-3 text-(--color-text-muted)" />
           {crumb.isLast ? (
-            <span className="text-13 font-semibold text-[color:var(--color-text-primary)]">
-              {crumb.label}
-            </span>
+            <span className="text-13 font-semibold text-(--color-text-primary)">{crumb.label}</span>
           ) : (
             <Link
               href={crumb.href}
-              className="text-13 rounded-md px-1.5 py-0.5 font-medium text-[color:var(--color-text-muted)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-secondary)]"
+              className="text-13 rounded-md px-1.5 py-0.5 font-medium text-(--color-text-muted) transition-colors duration-[var(--transition-duration)] hover:bg-(--color-surface-100) hover:text-(--color-text-secondary)"
             >
               {crumb.label}
             </Link>

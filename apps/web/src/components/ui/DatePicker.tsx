@@ -272,9 +272,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           <div className="flex items-center justify-between gap-2">
             <label htmlFor={inputId} className={fieldLabelClass}>
               {label}
-              {required ? (
-                <span className="ml-0.5 text-[color:var(--color-danger-600)]">*</span>
-              ) : null}
+              {required ? <span className="ml-0.5 text-(--color-danger-600)">*</span> : null}
             </label>
             {hint && <span className={fieldHintClass}>{hint}</span>}
           </div>
@@ -302,7 +300,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
               className={clsx(
                 fieldControlBase,
                 'flex items-center justify-between gap-2 text-left',
-                !current && 'text-[color:var(--color-text-muted)]',
+                !current && 'text-(--color-text-muted)',
                 error ? fieldControlBorderError : fieldControlBorderOk,
               )}
               aria-label={ariaLabel || label || defaultPlaceholder}
@@ -313,11 +311,11 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             >
               <span className="flex items-center gap-2 truncate">
                 {leftIcon ? (
-                  <span className="text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+                  <span className="text-(--color-text-muted) [&_svg]:h-4 [&_svg]:w-4">
                     {leftIcon}
                   </span>
                 ) : (
-                  <CalendarIcon className="h-4 w-4 shrink-0 text-[color:var(--color-text-muted)]" />
+                  <CalendarIcon className="h-4 w-4 shrink-0 text-(--color-text-muted)" />
                 )}
                 <span className="truncate">
                   {displayValue || placeholder || defaultPlaceholder}
@@ -333,7 +331,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                     onKeyDown={(e) =>
                       e.key === 'Enter' && handleClear(e as unknown as React.MouseEvent)
                     }
-                    className="rounded p-0.5 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-surface-200)] hover:text-[color:var(--color-text-primary)]"
+                    className="rounded p-0.5 text-(--color-text-muted) transition-colors hover:bg-(--color-surface-200) hover:text-(--color-text-primary)"
                     aria-label="Clear date"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -347,27 +345,27 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             <Popover.Content
               align="start"
               sideOffset={4}
-              className="z-50 w-72 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-3 shadow-[var(--shadow-dropdown)] outline-none"
+              className="z-50 w-72 rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-3 shadow-[var(--shadow-dropdown)] outline-none"
             >
               {/* Header */}
               <div className="mb-3 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={handlePrev}
-                  className="rounded-[var(--radius-md)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+                  className="rounded-[var(--radius-md)] p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
                   aria-label="Previous"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
 
-                <div className="text-sm font-bold text-[color:var(--color-text-primary)]">
+                <div className="text-sm font-bold text-(--color-text-primary)">
                   {type === 'month' ? viewYear : `${MONTH_NAMES[viewMonth]} ${viewYear}`}
                 </div>
 
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="rounded-[var(--radius-md)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+                  className="rounded-[var(--radius-md)] p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
                   aria-label="Next"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -377,7 +375,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
               {/* Day Grid View */}
               {type === 'date' && (
                 <div>
-                  <div className="mb-1 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-[color:var(--color-text-muted)]">
+                  <div className="mb-1 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-(--color-text-muted)">
                     {DAY_NAMES.map((d) => (
                       <div key={d} className="flex h-7 items-center justify-center">
                         {d}
@@ -408,10 +406,10 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           className={clsx(
                             'h-8 w-full rounded-[var(--radius-md)] text-xs font-medium transition-colors',
                             isSelected
-                              ? 'bg-[color:var(--color-brand-solid)] font-bold text-[color:var(--color-on-brand-solid)] shadow-[var(--shadow-xs)]'
+                              ? 'bg-(--color-brand-solid) font-bold text-(--color-on-brand-solid) shadow-[var(--shadow-xs)]'
                               : isToday
-                                ? 'border border-[color:var(--color-brand-500)] font-bold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-field-bg)]'
-                                : 'text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-field-bg)]',
+                                ? 'border border-(--color-brand-500) font-bold text-(--color-brand-600) hover:bg-(--color-field-bg)'
+                                : 'text-(--color-text-primary) hover:bg-(--color-field-bg)',
                             isDayDisabled && 'pointer-events-none opacity-30',
                           )}
                         >
@@ -422,14 +420,14 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                   </div>
 
                   {/* Shortcuts */}
-                  <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-color)] pt-2">
+                  <div className="mt-3 flex items-center justify-between border-t border-(--border-color) pt-2">
                     <button
                       type="button"
                       onClick={() => {
                         emitChange(today);
                         setOpen(false);
                       }}
-                      className="text-xs font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      className="text-xs font-semibold text-(--color-brand-600) hover:underline"
                     >
                       Today
                     </button>
@@ -440,7 +438,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           emitChange('');
                           setOpen(false);
                         }}
-                        className="text-xs font-medium text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
+                        className="text-xs font-medium text-(--color-text-muted) hover:text-(--color-text-primary)"
                       >
                         Clear
                       </button>
@@ -470,10 +468,10 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           className={clsx(
                             'h-9 rounded-[var(--radius-md)] text-xs font-medium transition-colors',
                             isSelected
-                              ? 'bg-[color:var(--color-brand-solid)] font-bold text-[color:var(--color-on-brand-solid)] shadow-[var(--shadow-xs)]'
+                              ? 'bg-(--color-brand-solid) font-bold text-(--color-on-brand-solid) shadow-[var(--shadow-xs)]'
                               : isThisMonth
-                                ? 'border border-[color:var(--color-brand-500)] font-bold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-field-bg)]'
-                                : 'text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-field-bg)]',
+                                ? 'border border-(--color-brand-500) font-bold text-(--color-brand-600) hover:bg-(--color-field-bg)'
+                                : 'text-(--color-text-primary) hover:bg-(--color-field-bg)',
                             isMonthDisabled && 'pointer-events-none opacity-30',
                           )}
                         >
@@ -484,14 +482,14 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                   </div>
 
                   {/* Shortcuts */}
-                  <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-color)] pt-2">
+                  <div className="mt-3 flex items-center justify-between border-t border-(--border-color) pt-2">
                     <button
                       type="button"
                       onClick={() => {
                         emitChange(thisMonth);
                         setOpen(false);
                       }}
-                      className="text-xs font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      className="text-xs font-semibold text-(--color-brand-600) hover:underline"
                     >
                       This Month
                     </button>
@@ -502,7 +500,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
                           emitChange('');
                           setOpen(false);
                         }}
-                        className="text-xs font-medium text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-primary)]"
+                        className="text-xs font-medium text-(--color-text-muted) hover:text-(--color-text-primary)"
                       >
                         Clear
                       </button>

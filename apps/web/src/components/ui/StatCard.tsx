@@ -43,26 +43,21 @@ export interface StatCardProps {
 // ── Accent Tile Styles ─────────────────────────────────
 
 const iconTileStyles: Record<StatCardTone, string> = {
-  brand:
-    'bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)] border-[color:var(--badge-info-border)]',
-  success:
-    'bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)] border-[color:var(--badge-success-border)]',
-  warning:
-    'bg-[color:var(--badge-warning-bg)] text-[color:var(--badge-warning-text)] border-[color:var(--badge-warning-border)]',
-  danger:
-    'bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)] border-[color:var(--badge-danger-border)]',
-  default:
-    'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] border-[color:var(--border-color)]',
+  brand: 'bg-(--badge-info-bg) text-(--badge-info-text) border-(--badge-info-border)',
+  success: 'bg-(--badge-success-bg) text-(--badge-success-text) border-(--badge-success-border)',
+  warning: 'bg-(--badge-warning-bg) text-(--badge-warning-text) border-(--badge-warning-border)',
+  danger: 'bg-(--badge-danger-bg) text-(--badge-danger-text) border-(--badge-danger-border)',
+  default: 'bg-(--color-field-bg) text-(--color-text-secondary) border-(--border-color)',
 };
 
 // ── Selected Ring Styles ───────────────────────────────
 
 const selectedRingStyles: Record<StatCardTone, string> = {
-  brand: 'ring-2 ring-[color:var(--color-brand-500)]',
-  success: 'ring-2 ring-[color:var(--color-success-500)]',
-  warning: 'ring-2 ring-[color:var(--color-warning-500)]',
-  danger: 'ring-2 ring-[color:var(--color-danger-500)]',
-  default: 'ring-2 ring-[color:var(--color-text-primary)]',
+  brand: 'ring-2 ring-(--color-brand-500)',
+  success: 'ring-2 ring-(--color-success-500)',
+  warning: 'ring-2 ring-(--color-warning-500)',
+  danger: 'ring-2 ring-(--color-danger-500)',
+  default: 'ring-2 ring-(--color-text-primary)',
 };
 
 // ── Helpers ────────────────────────────────────────────
@@ -80,12 +75,12 @@ function renderDeltaPill(
         className={clsx(
           'text-11 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 leading-tight font-semibold tabular-nums',
           isUp &&
-            'border-[color:var(--badge-success-border)] bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)]',
+            'border-(--badge-success-border) bg-(--badge-success-bg) text-(--badge-success-text)',
           isDown &&
-            'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)]',
+            'border-(--badge-danger-border) bg-(--badge-danger-bg) text-(--badge-danger-text)',
           !isUp &&
             !isDown &&
-            'border-[color:var(--badge-neutral-border)] bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)]',
+            'border-(--badge-neutral-border) bg-(--badge-neutral-bg) text-(--badge-neutral-text)',
         )}
       >
         {isUp && <ArrowUpRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />}
@@ -94,9 +89,7 @@ function renderDeltaPill(
         <span>{item.value}</span>
       </span>
       {item.label && (
-        <span className="text-11 font-medium text-[color:var(--color-text-muted)]">
-          {item.label}
-        </span>
+        <span className="text-11 font-medium text-(--color-text-muted)">{item.label}</span>
       )}
     </span>
   );
@@ -133,7 +126,7 @@ export function StatCard({
     surfaceCardClass,
     '@container group relative flex h-full min-h-37 flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] p-5 text-left',
     'transition-[border-color,box-shadow,transform] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-    'hover:border-[color:var(--border-color-hover)] hover:shadow-[var(--shadow-card-hover)]',
+    'hover:border-(--border-color-hover) hover:shadow-[var(--shadow-card-hover)]',
     isInteractive && 'cursor-pointer',
     selected && selectedRingStyles[resolvedTone],
     className,
@@ -144,7 +137,7 @@ export function StatCard({
       {/* Top Row: Metric Label + Tone-Aware Accent Icon Tile */}
       <div>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-12 font-semibold tracking-wide text-[color:var(--color-text-secondary)] uppercase">
+          <p className="text-12 font-semibold tracking-wide text-(--color-text-secondary) uppercase">
             {title}
           </p>
           {icon && (
@@ -162,14 +155,14 @@ export function StatCard({
 
         {/* Primary Metric Value */}
         <div className="mt-2 flex items-baseline gap-2">
-          <p className="font-display text-2xl leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums sm:text-3xl">
+          <p className="font-display text-2xl leading-none font-bold tracking-tight text-(--color-text-primary) tabular-nums sm:text-3xl">
             {value}
           </p>
         </div>
 
         {/* Contextual Subtitle */}
         {subtitle && (
-          <p className="text-11 mt-1.5 truncate font-medium text-[color:var(--color-text-muted)]">
+          <p className="text-11 mt-1.5 truncate font-medium text-(--color-text-muted)">
             {subtitle}
           </p>
         )}
@@ -178,7 +171,7 @@ export function StatCard({
       {/* Middle Slot: Sleek Micro Progress Bar */}
       {progress && (
         <div className="my-2 space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--chart-track)]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--chart-track)">
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
@@ -188,7 +181,7 @@ export function StatCard({
             />
           </div>
           {progress.label && (
-            <div className="text-10 flex items-center justify-between font-medium text-[color:var(--color-text-muted)]">
+            <div className="text-10 flex items-center justify-between font-medium text-(--color-text-muted)">
               <span>{progress.label}</span>
             </div>
           )}
@@ -200,11 +193,11 @@ export function StatCard({
 
       {/* Bottom Row: Tinted Delta Pills & Navigation Affordance */}
       {(trend || delta || isInteractive) && (
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-[color:var(--border-color)]/60 pt-2.5">
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-(--border-color)/60 pt-2.5">
           <div className="flex flex-wrap items-center gap-2">
             {trend && renderDeltaPill(trend, 'trend')}
             {trend && delta && (
-              <span className="text-[color:var(--border-color)]" aria-hidden="true">
+              <span className="text-(--border-color)" aria-hidden="true">
                 ·
               </span>
             )}
@@ -213,7 +206,7 @@ export function StatCard({
 
           {isInteractive && (
             <span
-              className="-translate-x-1 text-[color:var(--color-text-muted)] opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-[color:var(--color-brand-600)] group-hover:opacity-100"
+              className="-translate-x-1 text-(--color-text-muted) opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-(--color-brand-600) group-hover:opacity-100"
               aria-hidden="true"
             >
               <ArrowRight className="h-3.5 w-3.5" />
@@ -253,7 +246,7 @@ export function StatCard({
         onClick={onClick}
         className={clsx(
           sharedClasses,
-          'w-full focus:ring-2 focus:ring-[color:var(--focus-ring-color)] focus:ring-offset-2 focus:outline-none',
+          'w-full focus:ring-2 focus:ring-(--focus-ring-color) focus:ring-offset-2 focus:outline-none',
         )}
       >
         {content}

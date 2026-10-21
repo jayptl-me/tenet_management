@@ -221,7 +221,9 @@ export default function NewVisitorPage() {
           {tenantIdWatch ? (
             <div className="mt-3 rounded-(--radius-md) border border-(--color-brand-200) bg-(--color-brand-50) p-3">
               {hostLoading ? (
-                <p className="text-xs font-semibold text-(--color-brand-700)">Loading host stay...</p>
+                <p className="text-xs font-semibold text-(--color-brand-700)">
+                  Loading host stay...
+                </p>
               ) : hostPreview ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-(--color-brand-800)">
                   <span className="inline-flex items-center gap-1">
@@ -349,9 +351,9 @@ export default function NewVisitorPage() {
             </div>
           </FormGrid>
           <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
-            The server accepts any date, so this form is what keeps the expected hour in the
-            future: a pass whose hour has passed sits on the expected list as overdue until the
-            gate stamps the arrival or refuses the visit.
+            The server accepts any date, so this form is what keeps the expected hour in the future:
+            a pass whose hour has passed sits on the expected list as overdue until the gate stamps
+            the arrival or refuses the visit.
           </p>
         </FormSection>
 
@@ -381,9 +383,9 @@ export default function NewVisitorPage() {
               out is the last six characters of the record id, and it shows on the pass page.
             </li>
             <li>
-              <strong className="text-(--color-text-primary)">The next step.</strong> The pass
-              waits on the expected list until the gate stamps the arrival. Nobody can move it
-              forward from here: the gate does that.
+              <strong className="text-(--color-text-primary)">The next step.</strong> The pass waits
+              on the expected list until the gate stamps the arrival. Nobody can move it forward
+              from here: the gate does that.
             </li>
           </ul>
         </FormSection>

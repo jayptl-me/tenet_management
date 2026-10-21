@@ -41,7 +41,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         <div className="relative">
           {leftIcon && (
-            <span className="pointer-events-none absolute top-5 left-3 text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+            <span className="pointer-events-none absolute top-5 left-3 text-(--color-text-muted) [&_svg]:h-4 [&_svg]:w-4">
               {leftIcon}
             </span>
           )}

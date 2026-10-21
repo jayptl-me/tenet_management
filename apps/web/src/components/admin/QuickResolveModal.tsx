@@ -92,21 +92,21 @@ export function QuickResolveModal({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+            className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-modal)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--color-brand-100) text-(--color-brand-700)">
                   <Wrench className="h-5 w-5" />
                 </div>
                 <div>
                   <h3
                     id="quick-resolve-title"
-                    className="font-display text-base font-bold tracking-tight text-[color:var(--color-text-primary)]"
+                    className="font-display text-base font-bold tracking-tight text-(--color-text-primary)"
                   >
                     Quick Resolve Complaint
                   </h3>
-                  <p className="text-xs text-[color:var(--color-text-muted)]">
+                  <p className="text-xs text-(--color-text-muted)">
                     Update ticket status and log maintenance resolution notes
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export function QuickResolveModal({
                 type="button"
                 onClick={onClose}
                 disabled={loading || isSubmitting}
-                className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)]"
+                className="rounded-[var(--radius-md)] p-1 text-(--color-text-muted) transition-colors hover:bg-(--color-field-bg-hover) hover:text-(--color-text-primary)"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -123,9 +123,9 @@ export function QuickResolveModal({
             </div>
 
             {/* Ticket Context Card */}
-            <div className="mt-4 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3.5 text-xs">
+            <div className="mt-4 rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-field-bg) p-3.5 text-xs">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-display line-clamp-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+                <p className="font-display line-clamp-2 text-sm font-bold text-(--color-text-primary)">
                   {target.title}
                 </p>
                 <StatusBadge
@@ -134,8 +134,8 @@ export function QuickResolveModal({
                   className="text-10 shrink-0"
                 />
               </div>
-              <div className="text-11 mt-2 flex flex-wrap items-center gap-2 text-[color:var(--color-text-muted)]">
-                <span className="font-semibold text-[color:var(--color-text-primary)]">
+              <div className="text-11 mt-2 flex flex-wrap items-center gap-2 text-(--color-text-muted)">
+                <span className="font-semibold text-(--color-text-primary)">
                   {target.tenantName ?? 'Resident'}
                 </span>
                 {target.roomNumber && (
@@ -152,7 +152,7 @@ export function QuickResolveModal({
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
               {/* Resolution Action Toggle */}
               <div>
-                <label className="mb-2 block text-xs font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                <label className="mb-2 block text-xs font-bold tracking-wider text-(--color-text-muted) uppercase">
                   Action
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -161,21 +161,21 @@ export function QuickResolveModal({
                     onClick={() => setResolutionStatus('resolved')}
                     className={`flex flex-col items-start rounded-[var(--radius-lg)] border p-3 text-left transition-all ${
                       resolutionStatus === 'resolved'
-                        ? 'border-[color:var(--color-success-500)] bg-[color:var(--color-success-50)] text-[color:var(--color-success-900)] shadow-sm ring-1 ring-[color:var(--color-success-500)]'
-                        : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]'
+                        ? 'border-(--color-success-500) bg-(--color-success-50) text-(--color-success-900) shadow-sm ring-1 ring-(--color-success-500)'
+                        : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:bg-(--color-field-bg)'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 text-xs font-semibold">
                       <CheckCircle2
                         className={`h-4 w-4 ${
                           resolutionStatus === 'resolved'
-                            ? 'text-[color:var(--color-success-600)]'
-                            : 'text-[color:var(--color-text-muted)]'
+                            ? 'text-(--color-success-600)'
+                            : 'text-(--color-text-muted)'
                         }`}
                       />
                       Mark as Resolved
                     </div>
-                    <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
+                    <p className="text-11 mt-1 text-(--color-text-muted)">
                       Issue fixed and inspected
                     </p>
                   </button>
@@ -185,21 +185,21 @@ export function QuickResolveModal({
                     onClick={() => setResolutionStatus('dismissed')}
                     className={`flex flex-col items-start rounded-[var(--radius-lg)] border p-3 text-left transition-all ${
                       resolutionStatus === 'dismissed'
-                        ? 'border-[color:var(--color-danger-500)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-900)] shadow-sm ring-1 ring-[color:var(--color-danger-500)]'
-                        : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]'
+                        ? 'border-(--color-danger-500) bg-(--color-danger-50) text-(--color-danger-900) shadow-sm ring-1 ring-(--color-danger-500)'
+                        : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:bg-(--color-field-bg)'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 text-xs font-semibold">
                       <XCircle
                         className={`h-4 w-4 ${
                           resolutionStatus === 'dismissed'
-                            ? 'text-[color:var(--color-danger-600)]'
-                            : 'text-[color:var(--color-text-muted)]'
+                            ? 'text-(--color-danger-600)'
+                            : 'text-(--color-text-muted)'
                         }`}
                       />
                       Dismiss / Reject
                     </div>
-                    <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
+                    <p className="text-11 mt-1 text-(--color-text-muted)">
                       Duplicate or invalid request
                     </p>
                   </button>
@@ -224,7 +224,7 @@ export function QuickResolveModal({
               </div>
 
               {/* Actions Footer */}
-              <div className="flex items-center justify-end gap-2 border-t border-[color:var(--border-color)] pt-4">
+              <div className="flex items-center justify-end gap-2 border-t border-(--border-color) pt-4">
                 <Button
                   type="button"
                   variant="outline"

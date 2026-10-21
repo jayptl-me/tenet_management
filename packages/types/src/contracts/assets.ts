@@ -75,7 +75,8 @@ export const ASSETS_CONTRACT: ModuleContract = {
         enteredBy: {
           method: 'PUT',
           path: '/assets/:id',
-          condition: 'an admin moves an asset to in_use by hand (apps/api/src/routes/assets.ts:321-324)',
+          condition:
+            'an admin moves an asset to in_use by hand (apps/api/src/routes/assets.ts:321-324)',
         },
       },
       {

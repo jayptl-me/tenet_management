@@ -4,15 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Building2,
-  FileText,
-  Pencil,
-  Trash2,
-  TriangleAlert,
-  Users,
-  Wrench,
-} from 'lucide-react';
+import { Building2, FileText, Pencil, Trash2, TriangleAlert, Users, Wrench } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
@@ -128,7 +120,9 @@ function formatServiceType(serviceType: string): string {
 function auditSummary(entry: AuditEntry): string {
   const details = entry.details ?? {};
   const serviceType =
-    typeof details.serviceType === 'string' ? formatServiceType(details.serviceType) : 'the service';
+    typeof details.serviceType === 'string'
+      ? formatServiceType(details.serviceType)
+      : 'the service';
   if (entry.action === 'create') {
     const status = typeof details.status === 'string' ? details.status : 'operational';
     return `The row was created for ${serviceType} in state ${status}.`;
@@ -435,9 +429,9 @@ export default function ServiceDetailPage() {
                   <DetailRow label="Open complaints" value={`${service.openComplaintCount ?? 0}`} />
                 </DetailList>
                 <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
-                  A service belongs to a floor, so the residents it reaches are the residents of that
-                  floor. The complaint count is the server&apos;s own: the open complaints of the
-                  rooms of the floor in the categories mapped to this service.
+                  A service belongs to a floor, so the residents it reaches are the residents of
+                  that floor. The complaint count is the server&apos;s own: the open complaints of
+                  the rooms of the floor in the categories mapped to this service.
                 </p>
               </DetailCard>
 
@@ -448,7 +442,10 @@ export default function ServiceDetailPage() {
                   <DetailRow
                     label="State"
                     value={
-                      <StatusBadge variant={statusVariant} label={service.status.replace(/_/g, ' ')} />
+                      <StatusBadge
+                        variant={statusVariant}
+                        label={service.status.replace(/_/g, ' ')}
+                      />
                     }
                   />
                   <DetailRow
@@ -533,8 +530,8 @@ export default function ServiceDetailPage() {
             <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
               The server pushes a service update to the active residents of the floor when the state
               moves. The list above is the beds the server reports as taken on that floor; the two
-              counts differ when a resident record and a bed disagree, and the reconcile on the rooms
-              list reports that as an orphan.
+              counts differ when a resident record and a bed disagree, and the reconcile on the
+              rooms list reports that as an orphan.
             </p>
           </DetailCard>
 
@@ -558,8 +555,8 @@ export default function ServiceDetailPage() {
           >
             {!auditTrail || auditTrail.length === 0 ? (
               <p className="text-2xs font-medium text-(--color-text-secondary)">
-                The server holds no write entry for this service in the entries it keeps (the entries
-                expire after 90 days).
+                The server holds no write entry for this service in the entries it keeps (the
+                entries expire after 90 days).
               </p>
             ) : (
               <ul className="space-y-2">
@@ -604,8 +601,8 @@ export default function ServiceDetailPage() {
           </DetailCard>
 
           <p className="text-2xs flex items-start gap-1.5 font-medium text-(--color-text-muted)">
-            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
-            A state change reaches the residents of the floor through the server only. If the push
+            <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />A
+            state change reaches the residents of the floor through the server only. If the push
             failed, the record still reads the new state and the residents are still without the
             service: the write trail above says when the state moved, and the office has to tell the
             floor by hand.

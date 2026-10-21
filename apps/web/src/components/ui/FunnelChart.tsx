@@ -23,7 +23,7 @@ export function FunnelChart({
   if (stages.length === 0) {
     return (
       <div className={className} role="img" aria-label="No funnel data">
-        <p className="text-13 py-8 text-center font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 py-8 text-center font-medium text-(--color-text-muted)">
           No data to display
         </p>
       </div>
@@ -115,8 +115,8 @@ export function FunnelChart({
               style={{ backgroundColor: stage.color }}
               aria-hidden
             />
-            <span className="text-[color:var(--color-text-secondary)]">{stage.label}</span>
-            <span className="font-mono text-[color:var(--color-text-primary)] tabular-nums">
+            <span className="text-(--color-text-secondary)">{stage.label}</span>
+            <span className="font-mono text-(--color-text-primary) tabular-nums">
               {stage.value}
             </span>
           </div>

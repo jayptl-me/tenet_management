@@ -106,13 +106,13 @@ export function LeaveAttendanceImpact({
   return (
     <div className={className}>
       <div className="flex items-center gap-2">
-        <CalendarDays className="h-4 w-4 text-[color:var(--color-text-muted)]" />
-        <p className="text-sm font-bold text-[color:var(--color-text-primary)]">
+        <CalendarDays className="h-4 w-4 text-(--color-text-muted)" />
+        <p className="text-sm font-bold text-(--color-text-primary)">
           {approved
             ? `${toMark} day${toMark === 1 ? '' : 's'} marked on leave`
             : `Approval marks ${toMark} day${toMark === 1 ? '' : 's'} on leave`}
           {preserved.length > 0 && (
-            <span className="font-semibold text-[color:var(--color-text-muted)]">
+            <span className="font-semibold text-(--color-text-muted)">
               {' '}
               · {preserved.length} on-site check-in{preserved.length === 1 ? '' : 's'} preserved
             </span>
@@ -136,10 +136,10 @@ export function LeaveAttendanceImpact({
               className={clsx(
                 'text-11 rounded-full border px-2.5 py-1 font-bold',
                 kept
-                  ? 'border-[color:var(--color-success-300)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-800)]'
+                  ? 'border-(--color-success-300) bg-(--color-success-100) text-(--color-success-800)'
                   : record?.status === 'on_leave'
-                    ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)]'
-                    : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]',
+                    ? 'border-(--color-brand-300) bg-(--color-brand-100) text-(--color-brand-800)'
+                    : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary)',
               )}
             >
               {formatShort(d)}
@@ -148,7 +148,7 @@ export function LeaveAttendanceImpact({
         })}
       </div>
       {loading && (
-        <p className="text-11 mt-2 font-semibold text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-2 font-semibold text-(--color-text-muted)">
           Loading attendance rows…
         </p>
       )}

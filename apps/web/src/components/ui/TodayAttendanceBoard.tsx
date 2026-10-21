@@ -49,7 +49,7 @@ export function TodayAttendanceBoard({
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="h-22 animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
+            className="h-22 animate-pulse rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg)"
           />
         ))}
       </div>
@@ -58,7 +58,7 @@ export function TodayAttendanceBoard({
 
   if (error || !summary) {
     return (
-      <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] px-4 py-3 text-sm text-[color:var(--color-danger-800)]">
+      <div className="rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-(--color-danger-300) bg-(--color-danger-50) px-4 py-3 text-sm text-(--color-danger-800)">
         Failed to load today&apos;s attendance summary.
       </div>
     );
@@ -75,7 +75,7 @@ export function TodayAttendanceBoard({
   return (
     <div className="space-y-3">
       {formattedDate && (
-        <p className="text-13 font-semibold text-[color:var(--color-text-muted)]">
+        <p className="text-13 font-semibold text-(--color-text-muted)">
           Today&apos;s attendance — {formattedDate}
         </p>
       )}
@@ -86,9 +86,7 @@ export function TodayAttendanceBoard({
           icon={<Users className="h-4 w-4" />}
           variant="brand"
           className={
-            selectedStatus === ''
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
-              : undefined
+            selectedStatus === '' ? 'border-(--color-brand-200) bg-(--color-brand-50)' : undefined
           }
           onClick={onSelectStatus ? () => onSelectStatus('') : undefined}
         />
@@ -99,7 +97,7 @@ export function TodayAttendanceBoard({
           variant="success"
           className={
             selectedStatus === 'present'
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              ? 'border-(--color-brand-200) bg-(--color-brand-50)'
               : undefined
           }
           onClick={onSelectStatus ? () => onSelectStatus('present') : undefined}
@@ -111,7 +109,7 @@ export function TodayAttendanceBoard({
           variant="danger"
           className={
             selectedStatus === 'absent'
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              ? 'border-(--color-brand-200) bg-(--color-brand-50)'
               : undefined
           }
           onClick={onSelectStatus ? () => onSelectStatus('absent') : undefined}
@@ -123,7 +121,7 @@ export function TodayAttendanceBoard({
           variant="brand"
           className={
             selectedStatus === 'on_leave'
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              ? 'border-(--color-brand-200) bg-(--color-brand-50)'
               : undefined
           }
           onClick={onSelectStatus ? () => onSelectStatus('on_leave') : undefined}
@@ -135,7 +133,7 @@ export function TodayAttendanceBoard({
           variant="warning"
           className={
             selectedStatus === 'not_returned'
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
+              ? 'border-(--color-brand-200) bg-(--color-brand-50)'
               : undefined
           }
           onClick={onSelectStatus ? () => onSelectStatus('not_returned') : undefined}

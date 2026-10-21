@@ -25,19 +25,19 @@ export interface OccupancyRingProps {
 const TONE_COLORS: Record<Exclude<OccupancyTone, 'auto'>, { ring: string; text: string }> = {
   success: {
     ring: 'var(--color-success-500)',
-    text: 'text-[color:var(--color-success-600)]',
+    text: 'text-(--color-success-600)',
   },
   warning: {
     ring: 'var(--color-warning-500)',
-    text: 'text-[color:var(--color-warning-600)]',
+    text: 'text-(--color-warning-600)',
   },
   danger: {
     ring: 'var(--color-danger-500)',
-    text: 'text-[color:var(--color-danger-600)]',
+    text: 'text-(--color-danger-600)',
   },
   brand: {
     ring: 'var(--color-brand-500)',
-    text: 'text-[color:var(--color-brand-600)]',
+    text: 'text-(--color-brand-600)',
   },
 };
 
@@ -110,16 +110,14 @@ export function OccupancyRing({
             {clamped}%
           </span>
           {size >= 80 && (
-            <span className="text-10 mt-0.5 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+            <span className="text-10 mt-0.5 font-semibold tracking-wide text-(--color-text-muted) uppercase">
               occupied
             </span>
           )}
         </div>
       </div>
       {caption && (
-        <span className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
-          {caption}
-        </span>
+        <span className="text-xs font-semibold text-(--color-text-secondary)">{caption}</span>
       )}
     </div>
   );

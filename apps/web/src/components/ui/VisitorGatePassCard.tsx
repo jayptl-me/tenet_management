@@ -84,58 +84,56 @@ export function VisitorGatePassCard({ visit, host, className }: VisitorGatePassC
 
   return (
     <div className={className}>
-      <div className="visitor-pass-print-area rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-[color:var(--color-brand-300)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="visitor-pass-print-area rounded-[var(--radius-lg)] border-[length:var(--bw-default)] border-(--color-brand-300) bg-(--color-card-bg) p-5 shadow-[var(--shadow-sm)]">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-11 flex items-center gap-1.5 font-extrabold tracking-[0.12em] text-[color:var(--color-text-muted)] uppercase">
-            <BadgeCheck className="h-4 w-4 text-[color:var(--color-brand-600)]" />
+          <p className="text-11 flex items-center gap-1.5 font-extrabold tracking-[0.12em] text-(--color-text-muted) uppercase">
+            <BadgeCheck className="h-4 w-4 text-(--color-brand-600)" />
             Visitor Gate Pass
           </p>
-          <span className="rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] px-2.5 py-1 font-mono text-xs font-extrabold tracking-widest text-[color:var(--color-text-primary)]">
+          <span className="rounded-[var(--radius-md)] bg-(--color-field-bg) px-2.5 py-1 font-mono text-xs font-extrabold tracking-widest text-(--color-text-primary)">
             #{passCode}
           </span>
         </div>
         <div className="mt-3 flex items-center gap-3">
           <span
             aria-hidden
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-lg font-extrabold text-[color:var(--color-brand-700)]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--color-brand-100) text-lg font-extrabold text-(--color-brand-700)"
           >
             {(visit.visitorName ?? 'V').charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-base font-extrabold text-[color:var(--color-text-primary)]">
+            <p className="truncate text-base font-extrabold text-(--color-text-primary)">
               {visit.visitorName}
             </p>
-            <p className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
+            <p className="text-xs font-semibold text-(--color-text-secondary)">
               {visit.visitorPhone ?? '—'} ·{' '}
               <span className="capitalize">{visit.purpose ?? 'Visit'}</span>
             </p>
           </div>
         </div>
-        <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-md)] bg-[color:var(--color-field-bg)] p-3">
+        <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-md)] bg-(--color-field-bg) p-3">
           <div className="flex items-center justify-between gap-3">
-            <dt className="font-semibold text-[color:var(--color-text-muted)]">Host resident</dt>
-            <dd className="text-right font-bold text-[color:var(--color-text-primary)]">
-              {hostLine}
-            </dd>
+            <dt className="font-semibold text-(--color-text-muted)">Host resident</dt>
+            <dd className="text-right font-bold text-(--color-text-primary)">{hostLine}</dd>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <dt className="font-semibold text-[color:var(--color-text-muted)]">Expected</dt>
-            <dd className="text-right font-bold text-[color:var(--color-text-primary)]">
+            <dt className="font-semibold text-(--color-text-muted)">Expected</dt>
+            <dd className="text-right font-bold text-(--color-text-primary)">
               {formatDateTime(visit.expectedArrival)}
             </dd>
           </div>
           {visit.actualArrival && (
             <div className="flex items-center justify-between gap-3">
-              <dt className="font-semibold text-[color:var(--color-text-muted)]">Checked in</dt>
-              <dd className="text-right font-bold text-[color:var(--color-text-primary)]">
+              <dt className="font-semibold text-(--color-text-muted)">Checked in</dt>
+              <dd className="text-right font-bold text-(--color-text-primary)">
                 {formatDateTime(visit.actualArrival)}
               </dd>
             </div>
           )}
           {visit.actualDeparture && (
             <div className="flex items-center justify-between gap-3">
-              <dt className="font-semibold text-[color:var(--color-text-muted)]">Checked out</dt>
-              <dd className="text-right font-bold text-[color:var(--color-text-primary)]">
+              <dt className="font-semibold text-(--color-text-muted)">Checked out</dt>
+              <dd className="text-right font-bold text-(--color-text-primary)">
                 {formatDateTime(visit.actualDeparture)}
               </dd>
             </div>

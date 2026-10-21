@@ -69,14 +69,10 @@ export function GaugeChart({
         </text>
       </svg>
       {label && (
-        <span className="font-display text-xs font-bold text-[color:var(--color-text-primary)]">
-          {label}
-        </span>
+        <span className="font-display text-xs font-bold text-(--color-text-primary)">{label}</span>
       )}
       {sublabel && (
-        <span className="text-11 font-medium text-[color:var(--color-text-secondary)]">
-          {sublabel}
-        </span>
+        <span className="text-11 font-medium text-(--color-text-secondary)">{sublabel}</span>
       )}
     </div>
   );

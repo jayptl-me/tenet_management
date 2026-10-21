@@ -81,16 +81,14 @@ export function BarChart({
     return (
       <div
         className={clsx(
-          'flex items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--chart-track)]/50',
+          'flex items-center justify-center rounded-[var(--radius-md)] bg-(--chart-track)/50',
           className,
         )}
         style={{ height }}
         role="img"
         aria-label="No bar chart data"
       >
-        <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
-          No data to display
-        </p>
+        <p className="text-13 font-medium text-(--color-text-muted)">No data to display</p>
       </div>
     );
   }

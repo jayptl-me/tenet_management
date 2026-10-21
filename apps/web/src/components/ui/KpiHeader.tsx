@@ -31,24 +31,24 @@ export interface KpiHeaderProps {
 // ── Style Maps ─────────────────────────────────────────
 
 const toneAccent: Record<NonNullable<KpiHeaderItem['tone']>, string> = {
-  default: 'bg-[color:var(--color-surface-300)]',
-  success: 'bg-[color:var(--color-success-500)]',
-  warning: 'bg-[color:var(--color-warning-500)]',
-  danger: 'bg-[color:var(--color-danger-500)]',
-  brand: 'bg-[color:var(--color-brand-500)]',
+  default: 'bg-(--color-surface-300)',
+  success: 'bg-(--color-success-500)',
+  warning: 'bg-(--color-warning-500)',
+  danger: 'bg-(--color-danger-500)',
+  brand: 'bg-(--color-brand-500)',
 };
 
 const deltaTone = (percent: number | null): string => {
   if (percent == null) {
-    return 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border-[color:var(--color-surface-200)]';
+    return 'bg-(--color-surface-100) text-(--color-text-secondary) border-(--color-surface-200)';
   }
   if (percent > 0) {
-    return 'bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)] border-[color:var(--color-success-200)]';
+    return 'bg-(--color-success-50) text-(--color-success-700) border-(--color-success-200)';
   }
   if (percent < 0) {
-    return 'bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)] border-[color:var(--color-danger-200)]';
+    return 'bg-(--color-danger-50) text-(--color-danger-700) border-(--color-danger-200)';
   }
-  return 'bg-[color:var(--color-surface-100)] text-[color:var(--color-text-secondary)] border-[color:var(--color-surface-200)]';
+  return 'bg-(--color-surface-100) text-(--color-text-secondary) border-(--color-surface-200)';
 };
 
 // ── Component ──────────────────────────────────────────
@@ -61,7 +61,7 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
   return (
     <div
       className={clsx(
-        'grid grid-cols-1 gap-px overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--border-color)] shadow-[var(--shadow-card)] sm:grid-cols-2 lg:grid-cols-4',
+        'grid grid-cols-1 gap-px overflow-hidden rounded-[var(--radius-xl)] border border-(--border-color) bg-(--border-color) shadow-[var(--shadow-card)] sm:grid-cols-2 lg:grid-cols-4',
         className,
       )}
       role="list"
@@ -75,16 +75,16 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
               className={clsx('absolute inset-x-0 top-0 h-0.5', toneAccent[item.tone ?? 'default'])}
             />
             <div className="flex items-start justify-between gap-3">
-              <p className="text-11 font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
+              <p className="text-11 font-semibold tracking-[0.01em] text-(--color-text-secondary)">
                 {item.label}
               </p>
               {item.icon && (
-                <span className="text-[color:var(--color-text-muted)] [&_svg]:h-4 [&_svg]:w-4">
+                <span className="text-(--color-text-muted) [&_svg]:h-4 [&_svg]:w-4">
                   {item.icon}
                 </span>
               )}
             </div>
-            <p className="font-display mt-2 text-2xl leading-none font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
+            <p className="font-display mt-2 text-2xl leading-none font-bold tracking-tight text-(--color-text-primary) tabular-nums">
               {item.value}
             </p>
             <div className="mt-2.5 flex min-h-5 items-center gap-2">
@@ -110,12 +110,12 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
                 </span>
               )}
               {item.delta?.label && (
-                <span className="text-11 truncate font-medium text-[color:var(--color-text-muted)]">
+                <span className="text-11 truncate font-medium text-(--color-text-muted)">
                   {item.delta.label}
                 </span>
               )}
               {!item.delta && item.sub && (
-                <span className="text-11 truncate font-medium text-[color:var(--color-text-muted)]">
+                <span className="text-11 truncate font-medium text-(--color-text-muted)">
                   {item.sub}
                 </span>
               )}
@@ -124,9 +124,8 @@ export function KpiHeader({ items, className }: KpiHeaderProps) {
         );
 
         const shell = clsx(
-          'relative bg-[color:var(--color-card-bg)] px-5 py-4',
-          interactive &&
-            'cursor-pointer transition-colors hover:bg-[color:var(--color-field-bg-hover)]',
+          'relative bg-(--color-card-bg) px-5 py-4',
+          interactive && 'cursor-pointer transition-colors hover:bg-(--color-field-bg-hover)',
         );
 
         return interactive ? (

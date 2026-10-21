@@ -58,10 +58,10 @@ export function FloorCard({
   const occupancyPct = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
   const occupancyFill =
     occupancyPct >= 100
-      ? 'bg-[color:var(--color-danger-500)]'
+      ? 'bg-(--color-danger-500)'
       : occupancyPct >= 90
-        ? 'bg-[color:var(--color-warning-500)]'
-        : 'bg-[color:var(--color-success-500)]';
+        ? 'bg-(--color-warning-500)'
+        : 'bg-(--color-success-500)';
   const hasServiceIssues = services.degraded + services.down > 0;
 
   return (
@@ -71,9 +71,9 @@ export function FloorCard({
       animate="visible"
       className={clsx(
         'group relative flex flex-col overflow-hidden rounded-[var(--radius-xl)]',
-        'border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]',
+        'border border-(--border-color) bg-(--color-card-bg) shadow-[var(--shadow-card)]',
         'transition-[border-color,box-shadow] duration-[var(--transition-duration)] ease-[var(--transition-easing)]',
-        'hover:border-[color:var(--color-field-border-hover)] hover:shadow-[var(--shadow-card-hover)]',
+        'hover:border-(--color-field-border-hover) hover:shadow-[var(--shadow-card-hover)]',
         onView && 'cursor-pointer',
         className,
       )}
@@ -83,19 +83,19 @@ export function FloorCard({
       <div className="flex items-start justify-between gap-2 px-5 pt-4 pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-1.5 text-xs font-bold text-[color:var(--color-text-secondary)] tabular-nums">
+            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-surface-100) px-1.5 text-xs font-bold text-(--color-text-secondary) tabular-nums">
               F{floorNumber}
             </span>
-            <h3 className="text-15 truncate font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <h3 className="text-15 truncate font-bold tracking-tight text-(--color-text-primary)">
               {label}
             </h3>
           </div>
-          <p className="text-11 mt-1 flex items-center gap-1.5 font-medium text-[color:var(--color-text-muted)]">
+          <p className="text-11 mt-1 flex items-center gap-1.5 font-medium text-(--color-text-muted)">
             <DoorOpen className="h-3 w-3" />
             {activeRooms}
             {activeRooms !== totalRooms ? ` of ${totalRooms} rooms active` : ' rooms'}
             {hasServiceIssues && (
-              <span className="text-10 ml-1 inline-flex items-center gap-0.5 rounded-full border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] px-1.5 py-0.5 font-bold text-[color:var(--color-danger-700)]">
+              <span className="text-10 ml-1 inline-flex items-center gap-0.5 rounded-full border border-(--color-danger-200) bg-(--color-danger-50) px-1.5 py-0.5 font-bold text-(--color-danger-700)">
                 <AlertTriangle className="h-2.5 w-2.5" />
                 {services.down + services.degraded} service issue
                 {services.down + services.degraded !== 1 ? 's' : ''}
@@ -113,14 +113,14 @@ export function FloorCard({
 
       {/* Occupancy */}
       <div className="space-y-2 px-5 pb-3">
-        <div className="text-11 flex items-center justify-between gap-3 font-semibold text-[color:var(--color-text-secondary)]">
+        <div className="text-11 flex items-center justify-between gap-3 font-semibold text-(--color-text-secondary)">
           <span className="inline-flex items-center gap-1">
-            <BedDouble className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+            <BedDouble className="h-3 w-3 text-(--color-text-muted)" />
             {occupiedBeds}/{totalBeds} beds
           </span>
           <span className="tabular-nums">{occupancyPct}% occupied</span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
+        <div className="h-1.5 overflow-hidden rounded-full bg-(--color-surface-200)">
           <div
             className={clsx('h-full rounded-full transition-all duration-500', occupancyFill)}
             style={{ width: `${occupancyPct}%` }}
@@ -130,19 +130,19 @@ export function FloorCard({
       </div>
 
       {/* Footer stats */}
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-5 py-2.5">
-        <span className="text-11 inline-flex items-center gap-1 font-bold text-[color:var(--color-text-secondary)] tabular-nums">
-          <IndianRupee className="h-3 w-3 text-[color:var(--color-success-600)]" />
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-(--border-color) bg-(--color-field-bg) px-5 py-2.5">
+        <span className="text-11 inline-flex items-center gap-1 font-bold text-(--color-text-secondary) tabular-nums">
+          <IndianRupee className="h-3 w-3 text-(--color-success-600)" />
           {formatCurrency(potentialRent)}
-          <span className="font-medium text-[color:var(--color-text-muted)]">/mo potential</span>
+          <span className="font-medium text-(--color-text-muted)">/mo potential</span>
         </span>
-        <span className="text-11 inline-flex items-center gap-1 font-bold text-[color:var(--color-text-secondary)]">
-          <Users className="h-3 w-3 text-[color:var(--color-text-muted)]" />
+        <span className="text-11 inline-flex items-center gap-1 font-bold text-(--color-text-secondary)">
+          <Users className="h-3 w-3 text-(--color-text-muted)" />
           {occupiedBeds} tenants
-          <Wrench className="ml-1.5 h-3 w-3 text-[color:var(--color-text-muted)]" />
+          <Wrench className="ml-1.5 h-3 w-3 text-(--color-text-muted)" />
           {services.operational}/{services.operational + services.degraded + services.down}
           {onView && (
-            <ChevronRight className="ml-0.5 h-3 w-3 text-[color:var(--color-text-muted)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-[color:var(--color-text-primary)]" />
+            <ChevronRight className="ml-0.5 h-3 w-3 text-(--color-text-muted) transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-(--color-text-primary)" />
           )}
         </span>
       </div>

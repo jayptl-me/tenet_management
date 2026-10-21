@@ -74,7 +74,8 @@ function fmtMoney(value: number | undefined): string {
 }
 
 /** The days of the window, counted the way the server counts them. */
-function inclusiveDays(from: string, to: string): number | null {  if (!from || !to) return null;
+function inclusiveDays(from: string, to: string): number | null {
+  if (!from || !to) return null;
   const start = new Date(`${from}T00:00:00.000Z`);
   const end = new Date(`${to}T00:00:00.000Z`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
@@ -107,7 +108,8 @@ export default function NewLeavePage() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
-
+  const watchedFromDate = useWatch({ control, name: 'fromDate' }) ?? '';
+  const watchedToDate = useWatch({ control, name: 'toDate' }) ?? '';
   const tenantIdWatch = useWatch({ control, name: 'tenantId' });
   const fromWatch = useWatch({ control, name: 'fromDate' });
   const toWatch = useWatch({ control, name: 'toDate' });
@@ -244,13 +246,17 @@ export default function NewLeavePage() {
               label="From date"
               error={err.fromDate?.message}
               leftIcon={<CalendarDays className="h-4 w-4" />}
-              {...register('fromDate')}
+              name="fromDate"
+              value={watchedFromDate}
+              onChange={(value) => setValue('fromDate', value, { shouldValidate: true })}
             />
             <DatePicker
               label="To date"
               error={err.toDate?.message}
               leftIcon={<CalendarDays className="h-4 w-4" />}
-              {...register('toDate')}
+              name="toDate"
+              value={watchedToDate}
+              onChange={(value) => setValue('toDate', value, { shouldValidate: true })}
             />
           </FormGrid>
           <div

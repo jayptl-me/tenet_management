@@ -37,15 +37,14 @@ function parseToLocalYmd(value: string): string {
 }
 
 function eventDotClass(type: string): string {
-  if (type === 'payment' || type === 'payment_verified')
-    return 'bg-[color:var(--color-success-500)]';
-  if (type === 'complaint_filed') return 'bg-[color:var(--color-warning-500)]';
-  if (type === 'complaint_resolved') return 'bg-[color:var(--color-success-400)]';
-  if (type === 'leave') return 'bg-[color:var(--color-brand-400)]';
-  if (type === 'notice') return 'bg-[color:var(--color-info-500)]';
-  if (type === 'checkout') return 'bg-[color:var(--color-danger-500)]';
-  if (type === 'move_in') return 'bg-[color:var(--color-brand-600)]';
-  return 'bg-[color:var(--color-surface-400)]';
+  if (type === 'payment' || type === 'payment_verified') return 'bg-(--color-success-500)';
+  if (type === 'complaint_filed') return 'bg-(--color-warning-500)';
+  if (type === 'complaint_resolved') return 'bg-(--color-success-400)';
+  if (type === 'leave') return 'bg-(--color-brand-400)';
+  if (type === 'notice') return 'bg-(--color-info-500)';
+  if (type === 'checkout') return 'bg-(--color-danger-500)';
+  if (type === 'move_in') return 'bg-(--color-brand-600)';
+  return 'bg-(--color-surface-400)';
 }
 
 export function TenantStayCalendar({
@@ -145,22 +144,20 @@ export function TenantStayCalendar({
       aria-label={`Tenancy calendar for ${monthLabel}`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
-          {monthLabel}
-        </p>
+        <p className="font-display text-sm font-bold text-(--color-text-primary)">{monthLabel}</p>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={goPrev}
             aria-label="Previous month"
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={goToday}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             Today
           </button>
@@ -168,7 +165,7 @@ export function TenantStayCalendar({
             type="button"
             onClick={goNext}
             aria-label="Next month"
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -179,7 +176,7 @@ export function TenantStayCalendar({
         {DAY_NAMES.map((d) => (
           <p
             key={d}
-            className="text-10 pb-1 text-center font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase"
+            className="text-10 pb-1 text-center font-bold tracking-wider text-(--color-text-muted) uppercase"
           >
             {d}
           </p>
@@ -210,19 +207,19 @@ export function TenantStayCalendar({
               className={clsx(
                 'flex min-h-11 flex-col items-center justify-start rounded-[var(--radius-md)] border px-1 pt-1 pb-1.5 transition-colors',
                 inStay
-                  ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
-                  : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] hover:bg-[color:var(--color-field-bg)]',
-                isSelected && 'ring-2 ring-[color:var(--color-brand-500)] ring-offset-1',
+                  ? 'border-(--color-brand-200) bg-(--color-brand-50)'
+                  : 'border-(--border-color) bg-(--color-card-bg) hover:bg-(--color-field-bg)',
+                isSelected && 'ring-2 ring-(--color-brand-500) ring-offset-1',
               )}
             >
               <span
                 className={clsx(
                   'text-11 flex h-5 w-5 items-center justify-center rounded-full font-bold',
                   isToday
-                    ? 'bg-[color:var(--color-brand-solid)] text-[color:var(--color-on-brand-solid)]'
+                    ? 'bg-(--color-brand-solid) text-(--color-on-brand-solid)'
                     : isMoveIn || isMoveOut
-                      ? 'bg-[color:var(--color-text-primary)] text-[color:var(--color-card-bg)]'
-                      : 'text-[color:var(--color-text-primary)]',
+                      ? 'bg-(--color-text-primary) text-(--color-card-bg)'
+                      : 'text-(--color-text-primary)',
                 )}
               >
                 {cell.day}
@@ -236,7 +233,7 @@ export function TenantStayCalendar({
                     />
                   ))}
                   {dayEvents.length > 3 && (
-                    <span className="text-10 font-bold text-[color:var(--color-text-muted)]">
+                    <span className="text-10 font-bold text-(--color-text-muted)">
                       +{dayEvents.length - 3}
                     </span>
                   )}
@@ -247,36 +244,36 @@ export function TenantStayCalendar({
         })}
       </div>
 
-      <div className="text-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-semibold text-[color:var(--color-text-muted)]">
+      <div className="text-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-semibold text-(--color-text-muted)">
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-sm border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]" />
+          <span className="h-2 w-2 rounded-sm border border-(--color-brand-200) bg-(--color-brand-50)" />
           In stay
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-brand-500)" />
           Today
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-success-500)" />
           Payment
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-warning-500)" />
           Complaint
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-brand-400)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-brand-400)" />
           Leave
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-info-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-info-500)" />
           Notice
         </span>
       </div>
 
       {selected && (
-        <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3">
-          <p className="text-xs font-bold text-[color:var(--color-text-primary)]">
+        <div className="mt-3 rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) p-3">
+          <p className="text-xs font-bold text-(--color-text-primary)">
             {new Date(selected + 'T00:00:00').toLocaleDateString('en-IN', {
               day: '2-digit',
               month: 'short',
@@ -284,9 +281,7 @@ export function TenantStayCalendar({
             })}
           </p>
           {selectedEvents.length === 0 ? (
-            <p className="mt-1 text-xs text-[color:var(--color-text-muted)]">
-              No events on this day.
-            </p>
+            <p className="mt-1 text-xs text-(--color-text-muted)">No events on this day.</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {selectedEvents.map((e) => (
@@ -295,13 +290,9 @@ export function TenantStayCalendar({
                     className={clsx('mt-1 h-2 w-2 shrink-0 rounded-full', eventDotClass(e.type))}
                   />
                   <span>
-                    <span className="font-semibold text-[color:var(--color-text-primary)]">
-                      {e.title}
-                    </span>
+                    <span className="font-semibold text-(--color-text-primary)">{e.title}</span>
                     {e.subtitle && (
-                      <span className="block text-[color:var(--color-text-muted)]">
-                        {e.subtitle}
-                      </span>
+                      <span className="block text-(--color-text-muted)">{e.subtitle}</span>
                     )}
                   </span>
                 </li>

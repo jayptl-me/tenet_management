@@ -60,7 +60,7 @@ export function StackedBarChart({
   if (safeBars.length === 0) {
     return (
       <div className={className} role="img" aria-label="No stacked bar data">
-        <p className="text-13 py-8 text-center font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-13 py-8 text-center font-medium text-(--color-text-muted)">
           No data to display
         </p>
       </div>
@@ -234,7 +234,7 @@ export function StackedBarChart({
                 style={{ backgroundColor: item.color }}
                 aria-hidden
               />
-              <span className="text-[color:var(--color-text-secondary)]">{item.label}</span>
+              <span className="text-(--color-text-secondary)">{item.label}</span>
             </div>
           ))}
         </div>

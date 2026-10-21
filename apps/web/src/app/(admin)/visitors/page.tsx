@@ -914,8 +914,8 @@ function VisitorsContent() {
         <p>
           <Info className="mr-1 inline h-3 w-3" />
           Every number in the band is the server&apos;s count over the whole filtered set (the
-          search and the resident), not over the page on screen. The filters and the tab live in
-          the address bar, so this view of the gate is a link.
+          search and the resident), not over the page on screen. The filters and the tab live in the
+          address bar, so this view of the gate is a link.
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">On site now</strong> is the number of
@@ -924,8 +924,8 @@ function VisitorsContent() {
           number.
         </p>
         <p>
-          <strong className="text-(--color-text-secondary)">At the gate</strong> is the clock of
-          the pass: when it was expected, when it came in and when it left. The office stamps the
+          <strong className="text-(--color-text-secondary)">At the gate</strong> is the clock of the
+          pass: when it was expected, when it came in and when it left. The office stamps the
           arrival and the departure; the server keeps the timestamps.
         </p>
         <p>

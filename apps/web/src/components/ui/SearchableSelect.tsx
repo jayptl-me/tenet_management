@@ -211,7 +211,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
           className={clsx(
             fieldControlBase,
             'flex items-center gap-2 text-left',
-            !value && 'text-[color:var(--color-text-muted)]',
+            !value && 'text-(--color-text-muted)',
             error ? fieldControlBorderError : fieldControlBorderOk,
           )}
           aria-haspopup="listbox"
@@ -220,7 +220,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
           aria-describedby={error ? `${selectId}-error` : undefined}
         >
           {isLoading ? (
-            <span className="flex items-center gap-2 text-[color:var(--color-text-muted)]">
+            <span className="flex items-center gap-2 text-(--color-text-muted)">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading...
             </span>
@@ -236,7 +236,7 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
                   e.stopPropagation();
                   handleClear();
                 }}
-                className="rounded p-0.5 transition-colors hover:bg-[color:var(--color-surface-200)]"
+                className="rounded p-0.5 transition-colors hover:bg-(--color-surface-200)"
                 aria-label="Clear selection"
               >
                 <X className="h-3.5 w-3.5" />
@@ -248,17 +248,17 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-dropdown)]">
+          <div className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) shadow-[var(--shadow-dropdown)]">
             {/* Search */}
-            <div className="relative border-b border-[color:var(--border-color)]">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <div className="relative border-b border-(--border-color)">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-(--color-text-muted)" />
               <input
                 ref={inputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full border-0 bg-transparent py-2.5 pr-3 pl-9 text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none"
+                className="w-full border-0 bg-transparent py-2.5 pr-3 pl-9 text-sm text-(--color-text-primary) placeholder:text-(--color-text-muted) focus:outline-none"
                 aria-label="Search options"
               />
             </div>
@@ -270,11 +270,11 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
               aria-label={label ?? 'Options'}
             >
               {fetchError ? (
-                <div className="px-3 py-6 text-center text-xs font-medium text-[color:var(--color-warning-600)]">
+                <div className="px-3 py-6 text-center text-xs font-medium text-(--color-warning-600)">
                   {fetchError}
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="px-3 py-6 text-center text-xs font-medium text-[color:var(--color-text-muted)]">
+                <div className="px-3 py-6 text-center text-xs font-medium text-(--color-text-muted)">
                   {search ? 'No matching options' : 'No options available'}
                 </div>
               ) : (
@@ -288,15 +288,13 @@ export function SearchableSelect<T extends Record<string, unknown> = Record<stri
                     className={clsx(
                       'flex w-full flex-col gap-0.5 px-3 py-2.5 text-left text-sm transition-colors',
                       opt.value === value
-                        ? 'bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]'
-                        : 'text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-field-bg)]',
+                        ? 'bg-(--color-brand-50) text-(--color-brand-700)'
+                        : 'text-(--color-text-primary) hover:bg-(--color-field-bg)',
                     )}
                   >
                     <span className="font-medium">{opt.label}</span>
                     {opt.sublabel && (
-                      <span className="text-xs text-[color:var(--color-text-muted)]">
-                        {opt.sublabel}
-                      </span>
+                      <span className="text-xs text-(--color-text-muted)">{opt.sublabel}</span>
                     )}
                   </button>
                 ))

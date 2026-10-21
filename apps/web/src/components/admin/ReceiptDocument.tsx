@@ -188,48 +188,40 @@ export function ReceiptDocument({
     <div className={clsx('receipt-print-area', className)}>
       <div className={clsx(surfaceCardClass, 'overflow-hidden')}>
         {/* Receipt head */}
-        <div className="border-b border-[color:var(--border-color)] px-6 pt-6 pb-4 text-center">
+        <div className="border-b border-(--border-color) px-6 pt-6 pb-4 text-center">
           {pgBranding?.pgName && (
-            <div className="mb-3 space-y-0.5 border-b border-[color:var(--border-color)] pb-3">
-              <p className="font-display text-base font-bold tracking-tight text-[color:var(--color-text-primary)]">
+            <div className="mb-3 space-y-0.5 border-b border-(--border-color) pb-3">
+              <p className="font-display text-base font-bold tracking-tight text-(--color-text-primary)">
                 {pgBranding.pgName}
               </p>
               {addressParts.length > 0 && (
-                <p className="text-11 text-[color:var(--color-text-muted)]">
-                  {addressParts.join(', ')}
-                </p>
+                <p className="text-11 text-(--color-text-muted)">{addressParts.join(', ')}</p>
               )}
-              <div className="text-10 flex flex-wrap items-center justify-center gap-2 text-[color:var(--color-text-muted)]">
+              <div className="text-10 flex flex-wrap items-center justify-center gap-2 text-(--color-text-muted)">
                 {pgBranding.phone && <span>Tel: {pgBranding.phone}</span>}
                 {pgBranding.email && <span>Email: {pgBranding.email}</span>}
                 {pgBranding.gstNumber && <span>GSTIN: {pgBranding.gstNumber}</span>}
               </div>
             </div>
           )}
-          <p className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          <p className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
             {title}
           </p>
-          <p className="text-11 mt-0.5 font-mono text-[color:var(--color-text-muted)]">
-            {reference}
-          </p>
-          <p className="font-display mt-4 text-3xl font-bold tracking-tight text-[color:var(--color-text-primary)] tabular-nums">
+          <p className="text-11 mt-0.5 font-mono text-(--color-text-muted)">{reference}</p>
+          <p className="font-display mt-4 text-3xl font-bold tracking-tight text-(--color-text-primary) tabular-nums">
             {amount}
           </p>
-          <p className="mt-1 text-xs font-semibold text-[color:var(--color-text-secondary)]">
-            {statusLabel}
-          </p>
+          <p className="mt-1 text-xs font-semibold text-(--color-text-secondary)">{statusLabel}</p>
         </div>
 
         {/* Receipt body */}
-        <dl className="divide-y divide-[color:var(--border-color)] px-6">
+        <dl className="divide-y divide-(--border-color) px-6">
           {lines.map((line) => (
             <div key={line.label} className="flex items-baseline justify-between gap-4 py-2.5">
-              <dt className="text-13 font-medium text-[color:var(--color-text-muted)]">
-                {line.label}
-              </dt>
+              <dt className="text-13 font-medium text-(--color-text-muted)">{line.label}</dt>
               <dd
                 className={clsx(
-                  'text-13 text-right font-semibold text-[color:var(--color-text-primary)]',
+                  'text-13 text-right font-semibold text-(--color-text-primary)',
                   line.mono && 'font-mono text-xs',
                 )}
               >
@@ -240,24 +232,24 @@ export function ReceiptDocument({
         </dl>
 
         {notes && (
-          <div className="border-t border-[color:var(--border-color)] px-6 py-3">
-            <p className="text-11 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+          <div className="border-t border-(--border-color) px-6 py-3">
+            <p className="text-11 font-semibold tracking-wide text-(--color-text-muted) uppercase">
               Notes
             </p>
-            <p className="text-13 mt-1 leading-relaxed whitespace-pre-wrap text-[color:var(--color-text-secondary)]">
+            <p className="text-13 mt-1 leading-relaxed whitespace-pre-wrap text-(--color-text-secondary)">
               {notes}
             </p>
           </div>
         )}
 
         {footerNote && (
-          <p className="text-11 border-t border-[color:var(--border-color)] px-6 py-3 text-center text-[color:var(--color-text-muted)]">
+          <p className="text-11 border-t border-(--border-color) px-6 py-3 text-center text-(--color-text-muted)">
             {footerNote}
           </p>
         )}
 
         {showActions && (
-          <div className="receipt-print-no-print flex justify-end gap-2 border-t border-[color:var(--border-color)] px-6 py-4">
+          <div className="receipt-print-no-print flex justify-end gap-2 border-t border-(--border-color) px-6 py-4">
             {onClose && (
               <Button variant="outline" onClick={onClose}>
                 Close

@@ -141,8 +141,8 @@ export function DonutChart({
               style={{ backgroundColor: segment.color }}
               aria-hidden
             />
-            <span className="text-[color:var(--color-text-secondary)]">{segment.label}</span>
-            <span className="font-mono text-[color:var(--color-text-primary)] tabular-nums">
+            <span className="text-(--color-text-secondary)">{segment.label}</span>
+            <span className="font-mono text-(--color-text-primary) tabular-nums">
               {segment.value}
             </span>
           </div>

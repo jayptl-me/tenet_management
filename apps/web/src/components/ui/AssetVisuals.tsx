@@ -67,10 +67,10 @@ export function AssetStockMeter({
   if (th <= 0) {
     return (
       <div className={clsx('min-w-0', className)}>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
-          <div className="h-full w-full rounded-full bg-[color:var(--color-surface-300)]" />
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-surface-200)">
+          <div className="h-full w-full rounded-full bg-(--color-surface-300)" />
         </div>
-        <p className="text-11 mt-1 font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-1 font-medium text-(--color-text-muted)">
           Qty {qty} · no threshold set
         </p>
       </div>
@@ -81,7 +81,7 @@ export function AssetStockMeter({
   return (
     <div className={clsx('min-w-0', className)}>
       <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-surface-200)]"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-surface-200)"
         role="progressbar"
         aria-valuenow={qty}
         aria-valuemin={0}
@@ -91,7 +91,7 @@ export function AssetStockMeter({
         <div
           className={clsx(
             'h-full rounded-full transition-all duration-[var(--transition-duration-slow)]',
-            low ? 'bg-[color:var(--color-warning-500)]' : 'bg-[color:var(--color-success-500)]',
+            low ? 'bg-(--color-warning-500)' : 'bg-(--color-success-500)',
           )}
           style={{ width: `${fill}%` }}
         />
@@ -99,7 +99,7 @@ export function AssetStockMeter({
       <p
         className={clsx(
           'text-11 mt-1 font-semibold',
-          low ? 'text-[color:var(--color-warning-700)]' : 'text-[color:var(--color-text-muted)]',
+          low ? 'text-(--color-warning-700)' : 'text-(--color-text-muted)',
         )}
       >
         Qty {qty} / threshold {th}
@@ -169,7 +169,7 @@ export function AssetServiceTimeline({
                   aria-hidden
                   className={clsx(
                     'absolute top-5 bottom-0 left-[15px] w-0.5 sm:top-[15px] sm:right-0 sm:bottom-auto sm:left-8 sm:h-0.5 sm:w-auto',
-                    done ? 'bg-[color:var(--color-success-400)]' : 'bg-[color:var(--border-color)]',
+                    done ? 'bg-(--color-success-400)' : 'bg-(--border-color)',
                   )}
                 />
               )}
@@ -178,10 +178,10 @@ export function AssetServiceTimeline({
                   className={clsx(
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-strong)]',
                     isOverdueNode
-                      ? 'border-[color:var(--color-danger-400)] bg-[color:var(--color-danger-100)] text-[color:var(--color-danger-700)]'
+                      ? 'border-(--color-danger-400) bg-(--color-danger-100) text-(--color-danger-700)'
                       : done
-                        ? 'border-[color:var(--color-success-400)] bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
-                        : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
+                        ? 'border-(--color-success-400) bg-(--color-success-100) text-(--color-success-700)'
+                        : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-muted)',
                   )}
                 >
                   {isOverdueNode ? (
@@ -193,15 +193,11 @@ export function AssetServiceTimeline({
                   )}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[color:var(--color-text-primary)]">
-                    {node.label}
-                  </p>
+                  <p className="text-xs font-bold text-(--color-text-primary)">{node.label}</p>
                   <p
                     className={clsx(
                       'text-xs font-medium',
-                      isOverdueNode
-                        ? 'text-[color:var(--color-danger-700)]'
-                        : 'text-[color:var(--color-text-muted)]',
+                      isOverdueNode ? 'text-(--color-danger-700)' : 'text-(--color-text-muted)',
                     )}
                   >
                     {formatShortDate(node.date)}
@@ -214,7 +210,7 @@ export function AssetServiceTimeline({
         })}
       </ol>
       {retired && (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-3 py-2 text-xs font-semibold text-[color:var(--color-text-muted)]">
+        <p className="mt-3 rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) px-3 py-2 text-xs font-semibold text-(--color-text-muted)">
           Retired — service schedule is closed for this asset.
         </p>
       )}

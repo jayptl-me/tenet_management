@@ -46,14 +46,14 @@ export function FormCard({
   const body = (
     <>
       {(title || description) && (
-        <div className="border-b border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-5 py-4 sm:px-6">
+        <div className="border-b border-(--border-color) bg-(--color-field-bg) px-5 py-4 sm:px-6">
           {title && (
-            <h2 className="font-display text-base font-bold tracking-tight text-[color:var(--color-text-primary)] sm:text-lg">
+            <h2 className="font-display text-base font-bold tracking-tight text-(--color-text-primary) sm:text-lg">
               {title}
             </h2>
           )}
           {description && (
-            <p className="mt-1 text-sm leading-relaxed text-[color:var(--color-text-secondary)]">
+            <p className="mt-1 text-sm leading-relaxed text-(--color-text-secondary)">
               {description}
             </p>
           )}
@@ -63,7 +63,7 @@ export function FormCard({
       <div className="px-5 py-5 sm:px-6 sm:py-6">{children}</div>
 
       {footer && (
-        <div className="sticky bottom-0 z-[1] border-t border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] sm:px-6">
+        <div className="sticky bottom-0 z-[1] border-t border-(--border-color) bg-(--color-card-bg) px-5 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] sm:px-6">
           {footer}
         </div>
       )}

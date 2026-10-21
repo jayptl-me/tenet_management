@@ -138,7 +138,7 @@ export function QuickCreate() {
       {/* FAB trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed right-6 bottom-6 z-40 flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)] shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-600)] active:scale-95"
+        className="fixed right-6 bottom-6 z-40 flex h-14 w-14 items-center justify-center rounded-[var(--radius-lg)] bg-(--color-brand-500) text-(--color-on-brand) shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:bg-(--color-brand-600) active:scale-95"
         title="Quick Create (Cmd+N)"
         aria-label="Quick Create (Cmd+N)"
       >
@@ -166,11 +166,11 @@ export function QuickCreate() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed right-6 bottom-24 z-50 w-80 overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-modal)]"
+              className="fixed right-6 bottom-24 z-50 w-80 overflow-hidden rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) shadow-[var(--shadow-modal)]"
             >
               {/* Search bar */}
-              <div className="flex items-center gap-2 border-b border-[color:var(--border-color)] px-4 py-3">
-                <Search className="h-4 w-4 text-[color:var(--color-text-muted)]" />
+              <div className="flex items-center gap-2 border-b border-(--border-color) px-4 py-3">
+                <Search className="h-4 w-4 text-(--color-text-muted)" />
                 <input
                   type="text"
                   placeholder="Quick create..."
@@ -178,14 +178,14 @@ export function QuickCreate() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   autoFocus
-                  className="flex-1 bg-transparent text-sm font-medium text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-muted)] focus:outline-none"
+                  className="flex-1 bg-transparent text-sm font-medium text-(--color-text-primary) placeholder:text-(--color-text-muted) focus:outline-none"
                 />
-                <kbd className="text-10 rounded border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-1.5 py-0.5 font-semibold text-[color:var(--color-text-muted)]">
+                <kbd className="text-10 rounded border border-(--border-color) bg-(--color-surface-50) px-1.5 py-0.5 font-semibold text-(--color-text-muted)">
                   Cmd+N
                 </kbd>
                 <button
                   onClick={() => setOpen(false)}
-                  className="text-[color:var(--color-text-muted)] transition-colors hover:text-[color:var(--color-text-primary)]"
+                  className="text-(--color-text-muted) transition-colors hover:text-(--color-text-primary)"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />
@@ -195,7 +195,7 @@ export function QuickCreate() {
               {/* Action list */}
               <div className="max-h-72 overflow-y-auto py-2">
                 {filtered.length === 0 ? (
-                  <p className="px-4 py-8 text-center text-xs text-[color:var(--color-text-muted)]">
+                  <p className="px-4 py-8 text-center text-xs text-(--color-text-muted)">
                     No matching actions
                   </p>
                 ) : (
@@ -206,9 +206,9 @@ export function QuickCreate() {
                         router.push(action.href);
                         setOpen(false);
                       }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-[color:var(--color-text-primary)] transition-colors duration-[var(--transition-duration)] hover:bg-[color:var(--color-brand-50)]"
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-(--color-text-primary) transition-colors duration-[var(--transition-duration)] hover:bg-(--color-brand-50)"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-(--border-color) bg-(--color-surface-50) text-(--color-text-muted)">
                         {action.icon}
                       </span>
                       {action.label}

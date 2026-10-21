@@ -224,7 +224,7 @@ function saveCollapsed(collapsed: boolean) {
 function BadgePill({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
-    <span className="text-10 ml-auto flex-shrink-0 rounded-full bg-[color:var(--color-danger-500)] px-1.5 py-0.5 font-mono leading-none font-bold text-[color:var(--color-on-danger)]">
+    <span className="text-10 ml-auto flex-shrink-0 rounded-full bg-(--color-danger-500) px-1.5 py-0.5 font-mono leading-none font-bold text-(--color-on-danger)">
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -390,8 +390,8 @@ export function Sidebar() {
           className={clsx(
             'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
             isActive
-              ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)] shadow-[var(--shadow-xs)]'
-              : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)] group-hover:border-[color:var(--color-brand-200)] group-hover:bg-[color:var(--color-brand-50)] group-hover:text-[color:var(--color-brand-600)]',
+              ? 'border-(--color-brand-300) bg-(--color-brand-500) text-(--color-on-brand) shadow-[var(--shadow-xs)]'
+              : 'border-(--border-color) bg-(--color-surface-50) text-(--color-text-muted) group-hover:border-(--color-brand-200) group-hover:bg-(--color-brand-50) group-hover:text-(--color-brand-600)',
           )}
         >
           {item.icon}
@@ -413,8 +413,8 @@ export function Sidebar() {
           className={clsx(
             'text-13 flex flex-1 items-center gap-2.5 rounded-lg border px-2.5 py-2 font-medium transition-all duration-[var(--transition-duration)]',
             isActive
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-xs)]'
-              : 'border-transparent text-[color:var(--color-text-secondary)] hover:border-[color:var(--border-color)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] hover:shadow-[var(--shadow-xs)]',
+              ? 'border-(--color-brand-200) bg-(--color-brand-50) text-(--color-brand-700) shadow-[var(--shadow-xs)]'
+              : 'border-transparent text-(--color-text-secondary) hover:border-(--border-color) hover:bg-(--color-surface-50) hover:text-(--color-text-primary) hover:shadow-[var(--shadow-xs)]',
           )}
         >
           {linkContent}
@@ -431,8 +431,8 @@ export function Sidebar() {
             className={clsx(
               'absolute right-1 rounded p-0.5 opacity-0 transition-opacity duration-[var(--transition-duration)] group-hover:opacity-100',
               isPinned
-                ? 'text-[color:var(--color-warning-500)]'
-                : 'text-[color:var(--color-text-muted)] hover:text-[color:var(--color-warning-500)]',
+                ? 'text-(--color-warning-500)'
+                : 'text-(--color-text-muted) hover:text-(--color-warning-500)',
             )}
             title={isPinned ? 'Unpin' : 'Pin to top'}
           >
@@ -446,30 +446,28 @@ export function Sidebar() {
   const sidebarContent = (
     <nav
       className={clsx(
-        'flex h-full flex-col border-r border-r-[color:var(--border-color)] bg-[color:var(--color-surface-100)] transition-all duration-[var(--transition-duration-slow)]',
+        'flex h-full flex-col border-r border-r-(--border-color) bg-(--color-surface-100) transition-all duration-[var(--transition-duration-slow)]',
         collapsed ? 'w-[var(--sidebar-collapsed-width)]' : 'w-[var(--sidebar-width)]',
       )}
     >
       {/* Brand */}
-      <div className="flex items-center justify-between border-b border-b-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-5 py-4">
+      <div className="flex items-center justify-between border-b border-b-(--border-color) bg-(--color-surface-100) px-5 py-4">
         <Link href="/dashboard" className="group flex items-center gap-2.5">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[color:var(--color-brand-500)] shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
-            <span className="text-sm font-semibold tracking-tight text-[color:var(--color-on-brand)]">
-              A
-            </span>
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-(--color-brand-500) shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] group-hover:scale-105 group-hover:shadow-[var(--shadow-md)]">
+            <span className="text-sm font-semibold tracking-tight text-(--color-on-brand)">A</span>
           </div>
           {!collapsed && (
-            <span className="text-lg font-semibold tracking-tight text-[color:var(--color-text-primary)]">
+            <span className="text-lg font-semibold tracking-tight text-(--color-text-primary)">
               Apex PG
             </span>
           )}
         </Link>
         <button
-          className="rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] p-1.5 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-100)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)] lg:hidden"
+          className="rounded-lg border border-(--border-color) bg-(--color-surface-50) p-1.5 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)] hover:bg-(--color-surface-100) hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)] lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-label="Close sidebar"
         >
-          <X className="h-4 w-4 text-[color:var(--color-text-secondary)]" />
+          <X className="h-4 w-4 text-(--color-text-secondary)" />
         </button>
       </div>
 
@@ -477,13 +475,13 @@ export function Sidebar() {
       {!collapsed && (
         <div className="px-3 pt-3 pb-1">
           <div className="relative">
-            <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+            <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-(--color-text-muted)" />
             <input
               type="text"
               placeholder="Search pages..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-13 w-full rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] py-1.5 pr-3 pl-8 font-medium text-[color:var(--color-text-primary)] transition-all duration-[var(--transition-duration)] placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--color-brand-300)] focus:ring-1 focus:ring-[color:var(--color-brand-300)] focus:outline-none"
+              className="text-13 w-full rounded-lg border border-(--border-color) bg-(--color-surface-50) py-1.5 pr-3 pl-8 font-medium text-(--color-text-primary) transition-all duration-[var(--transition-duration)] placeholder:text-(--color-text-muted) focus:border-(--color-brand-300) focus:ring-1 focus:ring-(--color-brand-300) focus:outline-none"
             />
           </div>
         </div>
@@ -495,10 +493,10 @@ export function Sidebar() {
         {!collapsed && pinnedItems.length > 0 && !searchQuery.trim() && (
           <div>
             <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-11 font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase">
+              <span className="text-11 font-semibold tracking-widest text-(--color-text-muted) uppercase">
                 Pinned
               </span>
-              <span className="text-10 font-medium text-[color:var(--color-text-muted)]">
+              <span className="text-10 font-medium text-(--color-text-muted)">
                 {pinnedItems.length}/{MAX_PINNED}
               </span>
             </div>
@@ -522,7 +520,7 @@ export function Sidebar() {
                 <button
                   onClick={() => toggleSection(section.id)}
                   className={clsx(
-                    'text-11 flex w-full items-center justify-between px-2 py-1 font-semibold tracking-widest text-[color:var(--color-text-muted)] uppercase transition-colors duration-[var(--transition-duration)] hover:text-[color:var(--color-text-secondary)]',
+                    'text-11 flex w-full items-center justify-between px-2 py-1 font-semibold tracking-widest text-(--color-text-muted) uppercase transition-colors duration-[var(--transition-duration)] hover:text-(--color-text-secondary)',
                   )}
                 >
                   <span>{section.label}</span>
@@ -565,7 +563,7 @@ export function Sidebar() {
         {/* No results */}
         {searchQuery.trim() && filteredSections.length === 0 && (
           <div className="px-3 py-6 text-center">
-            <p className="text-13 font-medium text-[color:var(--color-text-muted)]">
+            <p className="text-13 font-medium text-(--color-text-muted)">
               No pages matching &ldquo;{searchQuery}&rdquo;
             </p>
           </div>
@@ -573,14 +571,14 @@ export function Sidebar() {
       </div>
 
       {/* Footer */}
-      <div className="space-y-1 border-t border-t-[color:var(--border-color)] bg-[color:var(--color-surface-100)] px-3 py-3">
+      <div className="space-y-1 border-t border-t-(--border-color) bg-(--color-surface-100) px-3 py-3">
         {/* Collapse toggle */}
         <button
           onClick={toggleCollapsed}
-          className="text-13 hidden w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-secondary)] lg:flex"
+          className="text-13 hidden w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 font-medium text-(--color-text-muted) transition-all duration-[var(--transition-duration)] hover:bg-(--color-surface-50) hover:text-(--color-text-secondary) lg:flex"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md border border-(--border-color) bg-(--color-surface-50) text-(--color-text-muted)">
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </span>
           {!collapsed && <span>Collapse</span>}
@@ -592,8 +590,8 @@ export function Sidebar() {
           className={clsx(
             'text-13 flex items-center gap-2.5 rounded-lg border px-2.5 py-2 font-medium transition-all duration-[var(--transition-duration)]',
             pathname === '/settings' || pathname.startsWith('/settings/')
-              ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-xs)]'
-              : 'border-transparent text-[color:var(--color-text-secondary)] hover:border-[color:var(--border-color)] hover:bg-[color:var(--color-surface-50)] hover:text-[color:var(--color-text-primary)] hover:shadow-[var(--shadow-xs)]',
+              ? 'border-(--color-brand-200) bg-(--color-brand-50) text-(--color-brand-700) shadow-[var(--shadow-xs)]'
+              : 'border-transparent text-(--color-text-secondary) hover:border-(--border-color) hover:bg-(--color-surface-50) hover:text-(--color-text-primary) hover:shadow-[var(--shadow-xs)]',
           )}
           title={collapsed ? 'Settings' : undefined}
         >
@@ -601,8 +599,8 @@ export function Sidebar() {
             className={clsx(
               'flex h-6 w-6 items-center justify-center rounded-md border transition-colors duration-[var(--transition-duration)]',
               pathname === '/settings' || pathname.startsWith('/settings/')
-                ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]'
-                : 'border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]',
+                ? 'border-(--color-brand-300) bg-(--color-brand-500) text-(--color-on-brand)'
+                : 'border-(--border-color) bg-(--color-surface-50) text-(--color-text-muted)',
             )}
           >
             <Settings className="h-4 w-4" />
@@ -613,10 +611,10 @@ export function Sidebar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="text-13 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 font-medium text-[color:var(--color-text-muted)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-danger-200)] hover:bg-[color:var(--color-danger-50)] hover:text-[color:var(--color-danger-700)] hover:shadow-[var(--shadow-xs)]"
+          className="text-13 flex w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-2 font-medium text-(--color-text-muted) transition-all duration-[var(--transition-duration)] hover:border-(--color-danger-200) hover:bg-(--color-danger-50) hover:text-(--color-danger-700) hover:shadow-[var(--shadow-xs)]"
           title={collapsed ? 'Logout' : undefined}
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-md border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] text-[color:var(--color-text-muted)]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-md border border-(--border-color) bg-(--color-surface-50) text-(--color-text-muted)">
             <LogOut className="h-4 w-4" />
           </span>
           {!collapsed && <span>Logout</span>}
@@ -624,11 +622,11 @@ export function Sidebar() {
 
         {/* User info */}
         {user && !collapsed && (
-          <div className="mt-2 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-50)] px-3 py-2">
-            <p className="text-12 truncate font-semibold text-[color:var(--color-text-primary)]">
+          <div className="mt-2 rounded-lg border border-(--border-color) bg-(--color-surface-50) px-3 py-2">
+            <p className="text-12 truncate font-semibold text-(--color-text-primary)">
               {user.name}
             </p>
-            <p className="text-10 font-semibold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+            <p className="text-10 font-semibold tracking-wider text-(--color-text-muted) uppercase">
               {user.role}
             </p>
           </div>
@@ -641,11 +639,11 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger */}
       <button
-        className="fixed top-3 left-3 z-50 rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-surface-100)] p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:translate-[var(--hover-lift)] hover:shadow-[var(--shadow-lg)] active:scale-[var(--active-press-scale)] lg:hidden"
+        className="fixed top-3 left-3 z-50 rounded-lg border border-(--border-color) bg-(--color-surface-100) p-2.5 shadow-[var(--shadow-md)] transition-all duration-[var(--transition-duration)] hover:translate-[var(--hover-lift)] hover:shadow-[var(--shadow-lg)] active:scale-[var(--active-press-scale)] lg:hidden"
         onClick={() => setMobileOpen(true)}
         aria-label="Open sidebar"
       >
-        <Menu className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
+        <Menu className="h-5 w-5 text-(--color-text-secondary)" />
       </button>
 
       {/* Desktop sidebar */}

@@ -50,28 +50,26 @@ export function TenantLeasePassport({
   return (
     <div
       className={clsx(
-        'sticky top-6 flex flex-col gap-4 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'sticky top-6 flex flex-col gap-4 rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
       {/* ── Card Header ────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-b border-[color:var(--border-color)]/60 pb-3">
+      <div className="flex items-center justify-between border-b border-(--border-color)/60 pb-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-600)]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-(--color-brand-50) text-(--color-brand-600)">
             <KeyRound className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-[color:var(--color-text-primary)]">
-              Lease & Unit Passport
-            </h3>
-            <p className="text-11 font-medium text-[color:var(--color-text-muted)]">
+            <h3 className="text-sm font-bold text-(--color-text-primary)">Lease & Unit Passport</h3>
+            <p className="text-11 font-medium text-(--color-text-muted)">
               Real-time lease & roommate preview
             </p>
           </div>
         </div>
 
         {room && (
-          <span className="text-10 rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2.5 py-0.5 font-bold text-[color:var(--color-success-700)]">
+          <span className="text-10 rounded-full border border-(--color-success-200) bg-(--color-success-50) px-2.5 py-0.5 font-bold text-(--color-success-700)">
             Unit Selected
           </span>
         )}
@@ -80,13 +78,11 @@ export function TenantLeasePassport({
       {!room ? (
         /* ── Empty State ───────────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-(--color-field-bg) text-(--color-text-muted)">
             <BedDouble className="h-6 w-6" />
           </div>
-          <p className="text-sm font-semibold text-[color:var(--color-text-primary)]">
-            No Room Selected
-          </p>
-          <p className="mt-1 max-w-55 text-xs font-medium text-[color:var(--color-text-muted)]">
+          <p className="text-sm font-semibold text-(--color-text-primary)">No Room Selected</p>
+          <p className="mt-1 max-w-55 text-xs font-medium text-(--color-text-muted)">
             Select a room from the form or bed matrix to view unit terms and roommate layout.
           </p>
         </div>
@@ -97,34 +93,34 @@ export function TenantLeasePassport({
           <div className={clsx(surfaceNestedClass, 'p-3.5')}>
             <div className="flex items-start justify-between">
               <div>
-                <span className="text-10 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+                <span className="text-10 font-bold tracking-wider text-(--color-text-muted) uppercase">
                   Selected Room
                 </span>
-                <p className="font-mono text-xl font-bold text-[color:var(--color-text-primary)]">
+                <p className="font-mono text-xl font-bold text-(--color-text-primary)">
                   Room {room.roomNumber}
                 </p>
               </div>
 
               {selectedBedId && (
                 <div className="flex flex-col items-end">
-                  <span className="text-10 font-bold tracking-wider text-[color:var(--color-brand-600)] uppercase">
+                  <span className="text-10 font-bold tracking-wider text-(--color-brand-600) uppercase">
                     Assigned Bed
                   </span>
-                  <span className="rounded-full bg-[color:var(--color-brand-500)] px-2.5 py-0.5 font-mono text-xs font-bold text-[color:var(--color-on-brand)] shadow-sm">
+                  <span className="rounded-full bg-(--color-brand-500) px-2.5 py-0.5 font-mono text-xs font-bold text-(--color-on-brand) shadow-sm">
                     Bed {selectedBedId}
                   </span>
                 </div>
               )}
             </div>
 
-            <div className="text-11 mt-2.5 flex flex-wrap items-center gap-2 border-t border-[color:var(--border-color)]/60 pt-2">
-              <span className="inline-flex items-center gap-1 font-medium text-[color:var(--color-text-secondary)]">
-                <Building className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+            <div className="text-11 mt-2.5 flex flex-wrap items-center gap-2 border-t border-(--border-color)/60 pt-2">
+              <span className="inline-flex items-center gap-1 font-medium text-(--color-text-secondary)">
+                <Building className="h-3.5 w-3.5 text-(--color-text-muted)" />
                 {floorLabel}
               </span>
-              <span className="text-[color:var(--border-color)]">·</span>
-              <span className="inline-flex items-center gap-1 font-medium text-[color:var(--color-text-secondary)]">
-                <Users className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+              <span className="text-(--border-color)">·</span>
+              <span className="inline-flex items-center gap-1 font-medium text-(--color-text-secondary)">
+                <Users className="h-3.5 w-3.5 text-(--color-text-muted)" />
                 {room.sharingType} Sharing
               </span>
             </div>
@@ -132,7 +128,7 @@ export function TenantLeasePassport({
 
           {/* Roommates & Bed Layout Matrix */}
           <div>
-            <p className="text-11 mb-2 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+            <p className="text-11 mb-2 font-bold tracking-wider text-(--color-text-muted) uppercase">
               Room Bed Slots & Roommates
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -145,41 +141,39 @@ export function TenantLeasePassport({
                     className={clsx(
                       'flex flex-col justify-between rounded-[var(--radius-md)] border p-2 text-left transition-all',
                       isThisSlot
-                        ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)]/60 ring-1 ring-[color:var(--color-brand-500)]'
+                        ? 'border-(--color-brand-500) bg-(--color-brand-50)/60 ring-1 ring-(--color-brand-500)'
                         : bed.isOccupied
-                          ? 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]'
-                          : 'border-dashed border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)]/30',
+                          ? 'border-(--border-color) bg-(--color-field-bg)'
+                          : 'border-dashed border-(--color-success-300) bg-(--color-success-50)/30',
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)]">
+                      <span className="font-mono text-xs font-bold text-(--color-text-primary)">
                         Bed {bed.bedId}
                       </span>
                       <span
                         className={clsx(
                           'h-2 w-2 rounded-full',
                           isThisSlot
-                            ? 'bg-[color:var(--color-brand-500)]'
+                            ? 'bg-(--color-brand-500)'
                             : bed.isOccupied
-                              ? 'bg-[color:var(--color-warning-500)]'
-                              : 'bg-[color:var(--color-success-500)]',
+                              ? 'bg-(--color-warning-500)'
+                              : 'bg-(--color-success-500)',
                         )}
                       />
                     </div>
 
                     <div className="text-11 mt-1.5 truncate">
                       {isThisSlot ? (
-                        <span className="font-bold text-[color:var(--color-brand-700)]">
+                        <span className="font-bold text-(--color-brand-700)">
                           {tenantName?.trim() ? tenantName : 'New Tenant'}
                         </span>
                       ) : bed.isOccupied ? (
-                        <span className="font-medium text-[color:var(--color-text-secondary)]">
+                        <span className="font-medium text-(--color-text-secondary)">
                           {bed.tenantName || 'Occupied'}
                         </span>
                       ) : (
-                        <span className="font-medium text-[color:var(--color-success-700)]">
-                          Vacant
-                        </span>
+                        <span className="font-medium text-(--color-success-700)">Vacant</span>
                       )}
                     </div>
                   </div>
@@ -189,38 +183,38 @@ export function TenantLeasePassport({
           </div>
 
           {/* Live Financial Move-In Calculator */}
-          <div className="border-t border-[color:var(--border-color)]/60 pt-3">
-            <p className="text-11 mb-2 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+          <div className="border-t border-(--border-color)/60 pt-3">
+            <p className="text-11 mb-2 font-bold tracking-wider text-(--color-text-muted) uppercase">
               Move-In Financial Summary
             </p>
 
             <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-[color:var(--color-text-secondary)]">
+              <div className="flex items-center justify-between text-(--color-text-secondary)">
                 <span>Monthly Rent</span>
-                <span className="font-mono font-semibold text-[color:var(--color-text-primary)]">
+                <span className="font-mono font-semibold text-(--color-text-primary)">
                   ₹{rent.toLocaleString()}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-[color:var(--color-text-secondary)]">
+              <div className="flex items-center justify-between text-(--color-text-secondary)">
                 <span>Security Deposit</span>
-                <span className="font-mono font-semibold text-[color:var(--color-text-primary)]">
+                <span className="font-mono font-semibold text-(--color-text-primary)">
                   ₹{deposit.toLocaleString()}
                 </span>
               </div>
 
               {moveInDate && (
-                <div className="flex items-center justify-between text-[color:var(--color-text-secondary)]">
+                <div className="flex items-center justify-between text-(--color-text-secondary)">
                   <span>Move-In Date</span>
-                  <span className="font-mono font-medium text-[color:var(--color-text-primary)]">
+                  <span className="font-mono font-medium text-(--color-text-primary)">
                     {moveInDate}
                   </span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between border-t border-[color:var(--border-color)]/60 pt-2 font-bold text-[color:var(--color-text-primary)]">
+              <div className="flex items-center justify-between border-t border-(--border-color)/60 pt-2 font-bold text-(--color-text-primary)">
                 <span className="text-xs">Total Due at Move-In</span>
-                <span className="font-mono text-sm text-[color:var(--color-brand-600)]">
+                <span className="font-mono text-sm text-(--color-brand-600)">
                   ₹{totalMoveIn.toLocaleString()}
                 </span>
               </div>
@@ -228,14 +222,14 @@ export function TenantLeasePassport({
           </div>
 
           {/* Portal Credentials Notice */}
-          <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/40 p-3">
+          <div className="rounded-[var(--radius-lg)] border border-(--color-brand-200) bg-(--color-brand-50)/40 p-3">
             <div className="flex items-start gap-2">
-              <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-[color:var(--color-brand-600)]" />
+              <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-(--color-brand-600)" />
               <div className="text-11">
-                <p className="font-semibold text-[color:var(--color-brand-800)]">
+                <p className="font-semibold text-(--color-brand-800)">
                   Instant Portal Provisioning
                 </p>
-                <p className="mt-0.5 text-[color:var(--color-brand-700)]">
+                <p className="mt-0.5 text-(--color-brand-700)">
                   Resident account will be provisioned with login identifier{' '}
                   <span className="font-mono font-semibold">
                     {tenantPhone?.trim() ? tenantPhone : 'tenant mobile'}

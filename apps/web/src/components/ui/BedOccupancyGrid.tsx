@@ -78,7 +78,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-20 animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
+              className="h-20 animate-pulse rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg)"
             />
           ))}
         </div>
@@ -86,7 +86,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="h-44 animate-pulse rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]"
+              className="h-44 animate-pulse rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg)"
             />
           ))}
         </div>
@@ -96,12 +96,12 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
 
   if (rooms.length === 0) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-8 text-center">
-        <Home className="mx-auto h-8 w-8 text-[color:var(--color-text-muted)]" />
-        <h3 className="font-display mt-2 text-sm font-bold text-[color:var(--color-text-primary)]">
+      <div className="rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-8 text-center">
+        <Home className="mx-auto h-8 w-8 text-(--color-text-muted)" />
+        <h3 className="font-display mt-2 text-sm font-bold text-(--color-text-primary)">
           No rooms match filters
         </h3>
-        <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
+        <p className="mt-1 text-xs text-(--color-text-secondary)">
           Adjust the search criteria or add new rooms to view bed occupancy.
         </p>
       </div>
@@ -112,47 +112,41 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
     <div className="space-y-8" role="region" aria-label="Bed Occupancy Matrix">
       {/* ── Summary Counters ──────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-sm)]">
-          <div className="flex items-center gap-2 text-[color:var(--color-text-muted)]">
+        <div className="rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-4 shadow-[var(--shadow-sm)]">
+          <div className="flex items-center gap-2 text-(--color-text-muted)">
             <Home className="h-4 w-4" />
             <span className="text-xs font-semibold tracking-wider uppercase">Rooms</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-[color:var(--color-text-primary)]">
-            {stats.totalRooms}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-(--color-text-primary)">{stats.totalRooms}</p>
         </div>
 
-        <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-sm)]">
-          <div className="flex items-center gap-2 text-[color:var(--color-text-muted)]">
+        <div className="rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-4 shadow-[var(--shadow-sm)]">
+          <div className="flex items-center gap-2 text-(--color-text-muted)">
             <Bed className="h-4 w-4" />
             <span className="text-xs font-semibold tracking-wider uppercase">Total Beds</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-[color:var(--color-text-primary)]">
-            {stats.totalBeds}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-(--color-text-primary)">{stats.totalBeds}</p>
         </div>
 
-        <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] p-4 shadow-[var(--shadow-sm)]">
-          <div className="flex items-center gap-2 text-[color:var(--color-warning-700)]">
+        <div className="rounded-[var(--radius-lg)] border border-(--color-warning-200) bg-(--color-warning-50) p-4 shadow-[var(--shadow-sm)]">
+          <div className="flex items-center gap-2 text-(--color-warning-700)">
             <Users className="h-4 w-4" />
             <span className="text-xs font-semibold tracking-wider uppercase">Occupied</span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-[color:var(--color-warning-800)]">
-            {stats.occupiedBeds}
-          </p>
+          <p className="mt-2 text-2xl font-bold text-(--color-warning-800)">{stats.occupiedBeds}</p>
         </div>
 
-        <div className="rounded-[var(--radius-lg)] border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] p-4 shadow-[var(--shadow-sm)]">
+        <div className="rounded-[var(--radius-lg)] border border-(--color-success-200) bg-(--color-success-50) p-4 shadow-[var(--shadow-sm)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-[color:var(--color-success-700)]">
+            <div className="flex items-center gap-2 text-(--color-success-700)">
               <Users className="h-4 w-4" />
               <span className="text-xs font-semibold tracking-wider uppercase">Available</span>
             </div>
-            <span className="text-11 rounded-full bg-[color:var(--color-success-200)] px-2 py-0.5 font-bold text-[color:var(--color-success-800)]">
+            <span className="text-11 rounded-full bg-(--color-success-200) px-2 py-0.5 font-bold text-(--color-success-800)">
               {stats.occupancyRate}% full
             </span>
           </div>
-          <p className="mt-2 text-2xl font-bold text-[color:var(--color-success-800)]">
+          <p className="mt-2 text-2xl font-bold text-(--color-success-800)">
             {stats.availableBeds}
           </p>
         </div>
@@ -162,11 +156,11 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
       <div className="space-y-6">
         {floorGroups.map((group) => (
           <div key={group.label} className="space-y-3">
-            <div className="flex items-center justify-between border-b border-[color:var(--border-color)] pb-2">
-              <h3 className="font-display text-base font-bold text-[color:var(--color-text-primary)]">
+            <div className="flex items-center justify-between border-b border-(--border-color) pb-2">
+              <h3 className="font-display text-base font-bold text-(--color-text-primary)">
                 {group.label}
               </h3>
-              <span className="text-xs font-medium text-[color:var(--color-text-secondary)]">
+              <span className="text-xs font-medium text-(--color-text-secondary)">
                 {group.rooms.length} {group.rooms.length === 1 ? 'room' : 'rooms'}
               </span>
             </div>
@@ -180,7 +174,7 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                 return (
                   <div
                     key={room._id}
-                    className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:border-[color:var(--color-brand-400)]"
+                    className="flex flex-col justify-between rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-4 shadow-[var(--shadow-sm)] transition-all duration-[var(--transition-duration)] hover:border-(--color-brand-400)"
                   >
                     <div>
                       {/* Room Header */}
@@ -188,20 +182,20 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                         <div>
                           <Link
                             href={`/rooms/${room._id}`}
-                            className="group font-display inline-flex items-center gap-1 text-base font-bold text-[color:var(--color-text-primary)] hover:text-[color:var(--color-brand-600)]"
+                            className="group font-display inline-flex items-center gap-1 text-base font-bold text-(--color-text-primary) hover:text-(--color-brand-600)"
                           >
                             Room {room.roomNumber}
                             <ExternalLink className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
                           </Link>
-                          <p className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+                          <p className="text-xs font-semibold text-(--color-text-muted)">
                             {room.sharingType} Sharing · ₹{room.monthlyRent.toLocaleString()}/mo
                           </p>
                         </div>
                         <span
                           className={`text-10 rounded-full px-2 py-0.5 font-bold ${
                             availableBedList.length > 0
-                              ? 'bg-[color:var(--color-success-100)] text-[color:var(--color-success-700)]'
-                              : 'bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)]'
+                              ? 'bg-(--color-success-100) text-(--color-success-700)'
+                              : 'bg-(--color-field-bg) text-(--color-text-secondary)'
                           }`}
                         >
                           {availableBedList.length > 0 ? `${availableBedList.length} free` : 'Full'}
@@ -219,17 +213,17 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                                 onClick={() =>
                                   router.push(`/tenants/new?roomId=${room._id}&bedId=${bed.bedId}`)
                                 }
-                                className="group/bed flex flex-col justify-between rounded-[var(--radius-md)] border border-dashed border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)]/30 p-2.5 text-left transition-all duration-[var(--transition-duration)] hover:border-solid hover:border-[color:var(--color-brand-400)] hover:bg-[color:var(--color-brand-50)]/50 hover:shadow-[var(--shadow-sm)]"
+                                className="group/bed flex flex-col justify-between rounded-[var(--radius-md)] border border-dashed border-(--color-success-300) bg-(--color-success-50)/30 p-2.5 text-left transition-all duration-[var(--transition-duration)] hover:border-solid hover:border-(--color-brand-400) hover:bg-(--color-brand-50)/50 hover:shadow-[var(--shadow-sm)]"
                                 title={`Click to assign Bed ${bed.bedId} to a new tenant`}
                               >
                                 <div className="flex w-full items-center justify-between">
-                                  <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)] group-hover/bed:text-[color:var(--color-brand-700)]">
+                                  <span className="font-mono text-xs font-bold text-(--color-text-primary) group-hover/bed:text-(--color-brand-700)">
                                     Bed {bed.bedId}
                                   </span>
-                                  <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-success-500)] group-hover/bed:bg-[color:var(--color-brand-500)]" />
+                                  <span className="inline-block h-2 w-2 rounded-full bg-(--color-success-500) group-hover/bed:bg-(--color-brand-500)" />
                                 </div>
 
-                                <div className="text-11 mt-2 flex items-center justify-between truncate font-semibold text-[color:var(--color-success-700)] group-hover/bed:text-[color:var(--color-brand-700)]">
+                                <div className="text-11 mt-2 flex items-center justify-between truncate font-semibold text-(--color-success-700) group-hover/bed:text-(--color-brand-700)">
                                   <span>Available</span>
                                   <span className="text-10 font-bold opacity-0 transition-opacity group-hover/bed:opacity-100">
                                     Assign +
@@ -242,26 +236,26 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                           return (
                             <div
                               key={bed.bedId}
-                              className="flex flex-col justify-between rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-2.5 transition-colors"
+                              className="flex flex-col justify-between rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) p-2.5 transition-colors"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)]">
+                                <span className="font-mono text-xs font-bold text-(--color-text-primary)">
                                   Bed {bed.bedId}
                                 </span>
-                                <span className="inline-block h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
+                                <span className="inline-block h-2 w-2 rounded-full bg-(--color-warning-500)" />
                               </div>
 
                               <div className="text-11 mt-2 truncate font-semibold">
                                 {bed.tenantId ? (
                                   <Link
                                     href={`/tenants/${bed.tenantId}`}
-                                    className="truncate text-[color:var(--color-brand-600)] underline-offset-2 hover:underline"
+                                    className="truncate text-(--color-brand-600) underline-offset-2 hover:underline"
                                     title={bed.tenantName ?? 'Occupied tenant'}
                                   >
                                     {bed.tenantName ?? 'Occupied'}
                                   </Link>
                                 ) : (
-                                  <span className="text-[color:var(--color-warning-700)]">
+                                  <span className="text-(--color-warning-700)">
                                     {bed.tenantName ?? 'Occupied'}
                                   </span>
                                 )}
@@ -273,11 +267,11 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                     </div>
 
                     {/* Room Quick Action */}
-                    <div className="mt-4 flex items-center justify-between border-t border-[color:var(--border-color)] pt-3 text-xs">
+                    <div className="mt-4 flex items-center justify-between border-t border-(--border-color) pt-3 text-xs">
                       <button
                         type="button"
                         onClick={() => router.push(`/rooms/${room._id}`)}
-                        className="font-semibold text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]"
+                        className="font-semibold text-(--color-text-secondary) hover:text-(--color-text-primary)"
                       >
                         Details
                       </button>
@@ -291,13 +285,13 @@ export function BedOccupancyGrid({ rooms, isLoading }: BedOccupancyGridProps) {
                               `/tenants/new?roomId=${room._id}&bedId=${firstAvailableBed}`,
                             )
                           }
-                          className="h-7 px-2 text-xs font-bold text-[color:var(--color-brand-600)] hover:bg-[color:var(--color-brand-50)]"
+                          className="h-7 px-2 text-xs font-bold text-(--color-brand-600) hover:bg-(--color-brand-50)"
                         >
                           <Plus className="mr-1 h-3 w-3" />
                           Assign
                         </Button>
                       ) : (
-                        <span className="text-11 font-medium text-[color:var(--color-text-muted)]">
+                        <span className="text-11 font-medium text-(--color-text-muted)">
                           Occupied
                         </span>
                       )}

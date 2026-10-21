@@ -15,11 +15,9 @@ const iconMap: Record<ErrorBannerVariant, ReactNode> = {
 };
 
 const styles: Record<ErrorBannerVariant, string> = {
-  error:
-    'border-[color:var(--color-danger-400)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-800)]',
-  warning:
-    'border-[color:var(--color-warning-400)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-800)]',
-  info: 'border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-800)]',
+  error: 'border-(--color-danger-400) bg-(--color-danger-50) text-(--color-danger-800)',
+  warning: 'border-(--color-warning-400) bg-(--color-warning-50) text-(--color-warning-800)',
+  info: 'border-(--color-brand-400) bg-(--color-brand-50) text-(--color-brand-800)',
 };
 
 export interface ErrorBannerProps {

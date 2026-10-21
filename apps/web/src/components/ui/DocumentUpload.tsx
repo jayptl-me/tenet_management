@@ -144,20 +144,20 @@ export function DocumentUpload({
     <div
       className={clsx(
         surfaceNestedClass,
-        'rounded-[var(--radius-lg)] border border-[color:var(--border-color)] p-4',
+        'rounded-[var(--radius-lg)] border border-(--border-color) p-4',
       )}
     >
       <div className="mb-3 flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--color-text-primary)]">
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-(--color-text-primary)">
           {isPhoto ? (
-            <Camera className="h-4 w-4 text-[color:var(--color-brand-600)]" />
+            <Camera className="h-4 w-4 text-(--color-brand-600)" />
           ) : (
-            <Lock className="h-4 w-4 text-[color:var(--color-brand-600)]" />
+            <Lock className="h-4 w-4 text-(--color-brand-600)" />
           )}
           {title}
         </p>
         {isVerified && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-success-700)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-(--color-success-200) bg-(--color-success-50) px-2 py-0.5 text-xs font-semibold text-(--color-success-700)">
             <ShieldCheck className="h-3 w-3" />
             Verified
           </span>
@@ -168,13 +168,13 @@ export function DocumentUpload({
         <div className="mb-3 space-y-2.5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-[color:var(--color-text-secondary)]">
+              <label className="mb-1 block text-xs font-medium text-(--color-text-secondary)">
                 Document Type
               </label>
               <select
                 value={selectedIdType}
                 onChange={(e) => setSelectedIdType(e.target.value as GovIdType)}
-                className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) px-2.5 py-1.5 text-xs font-medium text-(--color-text-primary) focus:border-(--color-brand-500) focus:outline-none"
               >
                 {ID_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -184,7 +184,7 @@ export function DocumentUpload({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-[color:var(--color-text-secondary)]">
+              <label className="mb-1 block text-xs font-medium text-(--color-text-secondary)">
                 Masked ID Number
               </label>
               <input
@@ -192,20 +192,20 @@ export function DocumentUpload({
                 value={maskedId}
                 onChange={(e) => setMaskedId(e.target.value)}
                 placeholder={selectedIdType === 'aadhaar' ? 'XXXX-XXXX-1234' : 'Masked ID #'}
-                className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-2.5 py-1.5 font-mono text-xs text-[color:var(--color-text-primary)] focus:border-[color:var(--color-brand-500)] focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) px-2.5 py-1.5 font-mono text-xs text-(--color-text-primary) focus:border-(--color-brand-500) focus:outline-none"
               />
             </div>
           </div>
 
           {selectedIdType === 'aadhaar' && (
-            <div className="text-11 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]/70 p-2 text-[color:var(--color-brand-900)]">
+            <div className="text-11 rounded-[var(--radius-md)] border border-(--color-brand-200) bg-(--color-brand-50)/70 p-2 text-(--color-brand-900)">
               <span className="font-semibold">UIDAI Advisory:</span> Upload a Masked Aadhaar (first
               8 digits hidden). Residents can download this at{' '}
               <a
                 href="https://myaadhaar.uidai.gov.in"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold underline hover:text-[color:var(--color-brand-700)]"
+                className="font-semibold underline hover:text-(--color-brand-700)"
               >
                 myaadhaar.uidai.gov.in
               </a>
@@ -213,12 +213,12 @@ export function DocumentUpload({
             </div>
           )}
 
-          <label className="text-11 flex cursor-pointer items-start gap-2 pt-0.5 text-[color:var(--color-text-secondary)]">
+          <label className="text-11 flex cursor-pointer items-start gap-2 pt-0.5 text-(--color-text-secondary)">
             <input
               type="checkbox"
               checked={consentGiven}
               onChange={(e) => setConsentGiven(e.target.checked)}
-              className="mt-0.5 rounded border-[color:var(--border-color)] text-[color:var(--color-brand-600)] focus:ring-[color:var(--color-brand-500)]"
+              className="mt-0.5 rounded border-(--border-color) text-(--color-brand-600) focus:ring-(--color-brand-500)"
             />
             <span>
               Resident provided statutory consent under Aadhaar Act & DPDP Act 2023 for police
@@ -229,10 +229,10 @@ export function DocumentUpload({
       )}
 
       {currentUrl ? (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-2">
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) p-2">
           <div className="flex items-center gap-2 overflow-hidden">
-            <FileText className="h-4 w-4 shrink-0 text-[color:var(--color-brand-600)]" />
-            <span className="truncate font-mono text-xs font-medium text-[color:var(--color-text-primary)]">
+            <FileText className="h-4 w-4 shrink-0 text-(--color-brand-600)" />
+            <span className="truncate font-mono text-xs font-medium text-(--color-text-primary)">
               {maskedId ? `${maskedId}` : isPhoto ? 'Profile Photo' : 'Identity Document'}
             </span>
           </div>
@@ -242,14 +242,14 @@ export function DocumentUpload({
             size="sm"
             loading={isViewing}
             onClick={handleViewSecureDocument}
-            className="shrink-0 text-xs text-[color:var(--color-brand-600)] hover:text-[color:var(--color-brand-700)]"
+            className="shrink-0 text-xs text-(--color-brand-600) hover:text-(--color-brand-700)"
           >
             <ExternalLink className="mr-1 h-3.5 w-3.5" />
             View Secure
           </Button>
         </div>
       ) : (
-        <p className="mb-3 text-xs text-[color:var(--color-text-muted)]">
+        <p className="mb-3 text-xs text-(--color-text-muted)">
           No document uploaded yet. Stored with 10-minute expiring signed security.
         </p>
       )}
@@ -286,7 +286,7 @@ export function DocumentUpload({
 
       {error && (
         <p
-          className="mt-2 flex items-center gap-1 text-xs font-medium text-[color:var(--color-danger-600)]"
+          className="mt-2 flex items-center gap-1 text-xs font-medium text-(--color-danger-600)"
           role="alert"
         >
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />

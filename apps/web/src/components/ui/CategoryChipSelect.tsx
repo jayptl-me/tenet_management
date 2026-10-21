@@ -48,8 +48,8 @@ export function CategoryChipSelect({
               className={clsx(
                 'rounded-[var(--radius-full)] border px-3 py-1.5 text-xs font-semibold capitalize transition-colors',
                 selected
-                  ? 'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-800)]'
-                  : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] hover:border-[color:var(--color-brand-200)]',
+                  ? 'border-(--color-brand-300) bg-(--color-brand-100) text-(--color-brand-800)'
+                  : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) hover:border-(--color-brand-200)',
               )}
             >
               {cat}

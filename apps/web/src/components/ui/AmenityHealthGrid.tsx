@@ -55,11 +55,9 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
   if (entries.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-        <Wifi className="mb-2 h-10 w-10 text-[color:var(--color-text-muted)]" />
-        <p className="text-13 font-semibold text-[color:var(--color-text-primary)]">
-          No amenities configured
-        </p>
-        <p className="text-11 mt-1 max-w-xs font-medium text-[color:var(--color-text-muted)]">
+        <Wifi className="mb-2 h-10 w-10 text-(--color-text-muted)" />
+        <p className="text-13 font-semibold text-(--color-text-primary)">No amenities configured</p>
+        <p className="text-11 mt-1 max-w-xs font-medium text-(--color-text-muted)">
           Service monitoring will appear once floor amenities are configured.
         </p>
       </div>
@@ -83,7 +81,7 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
             className={clsx(
               surfaceNestedClass,
               'group relative flex flex-col justify-between p-3.5 transition-all duration-[var(--transition-duration)]',
-              'hover:border-[color:var(--color-brand-300)] hover:shadow-[var(--shadow-xs)]',
+              'hover:border-(--color-brand-300) hover:shadow-[var(--shadow-xs)]',
               onManageClick && 'cursor-pointer',
             )}
           >
@@ -94,20 +92,20 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
                   className={clsx(
                     'flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] border',
                     statusTone === 'success' &&
-                      'border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]',
+                      'border-(--color-success-200) bg-(--color-success-50) text-(--color-success-700)',
                     statusTone === 'warning' &&
-                      'border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)]',
+                      'border-(--color-warning-200) bg-(--color-warning-50) text-(--color-warning-700)',
                     statusTone === 'danger' &&
-                      'border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)]',
+                      'border-(--color-danger-200) bg-(--color-danger-50) text-(--color-danger-700)',
                   )}
                 >
                   {getAmenityIcon(key)}
                 </div>
                 <div>
-                  <p className="text-12 font-bold text-[color:var(--color-text-primary)]">
+                  <p className="text-12 font-bold text-(--color-text-primary)">
                     {formatAmenityTitle(key)}
                   </p>
-                  <p className="text-10 font-medium text-[color:var(--color-text-muted)]">
+                  <p className="text-10 font-medium text-(--color-text-muted)">
                     {total} checks across floors
                   </p>
                 </div>
@@ -118,11 +116,11 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
                 className={clsx(
                   'text-10 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-bold tracking-tight',
                   statusTone === 'success' &&
-                    'border-[color:var(--color-success-200)] bg-[color:var(--color-success-50)] text-[color:var(--color-success-700)]',
+                    'border-(--color-success-200) bg-(--color-success-50) text-(--color-success-700)',
                   statusTone === 'warning' &&
-                    'border-[color:var(--color-warning-200)] bg-[color:var(--color-warning-50)] text-[color:var(--color-warning-700)]',
+                    'border-(--color-warning-200) bg-(--color-warning-50) text-(--color-warning-700)',
                   statusTone === 'danger' &&
-                    'border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] text-[color:var(--color-danger-700)]',
+                    'border-(--color-danger-200) bg-(--color-danger-50) text-(--color-danger-700)',
                 )}
               >
                 {statusTone === 'success' && <CheckCircle2 className="h-2.5 w-2.5" />}
@@ -139,18 +137,18 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
             {/* Health Meter */}
             <div className="mt-3 space-y-1.5">
               <div className="text-10 flex items-center justify-between font-medium">
-                <span className="text-[color:var(--color-text-muted)]">Health index</span>
-                <span className="font-mono font-bold text-[color:var(--color-text-primary)] tabular-nums">
+                <span className="text-(--color-text-muted)">Health index</span>
+                <span className="font-mono font-bold text-(--color-text-primary) tabular-nums">
                   {uptimePct}%
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-surface-200)">
                 <div
                   className={clsx(
                     'h-full rounded-full transition-all duration-500',
-                    statusTone === 'success' && 'bg-[color:var(--color-success-500)]',
-                    statusTone === 'warning' && 'bg-[color:var(--color-warning-500)]',
-                    statusTone === 'danger' && 'bg-[color:var(--color-danger-500)]',
+                    statusTone === 'success' && 'bg-(--color-success-500)',
+                    statusTone === 'warning' && 'bg-(--color-warning-500)',
+                    statusTone === 'danger' && 'bg-(--color-danger-500)',
                   )}
                   style={{ width: `${uptimePct}%` }}
                 />
@@ -158,22 +156,22 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
             </div>
 
             {/* Footer Breakdown Chips */}
-            <div className="text-10 mt-3 flex items-center justify-between border-t border-[color:var(--border-color)]/50 pt-2">
-              <div className="flex items-center gap-1.5 text-[color:var(--color-text-secondary)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-success-500)]" />
+            <div className="text-10 mt-3 flex items-center justify-between border-t border-(--border-color)/50 pt-2">
+              <div className="flex items-center gap-1.5 text-(--color-text-secondary)">
+                <span className="h-1.5 w-1.5 rounded-full bg-(--color-success-500)" />
                 <span>{data.operational} operational</span>
                 {data.degraded > 0 && (
                   <>
-                    <span className="text-[color:var(--color-text-muted)]">·</span>
-                    <span className="font-semibold text-[color:var(--color-warning-700)]">
+                    <span className="text-(--color-text-muted)">·</span>
+                    <span className="font-semibold text-(--color-warning-700)">
                       {data.degraded} degraded
                     </span>
                   </>
                 )}
                 {data.down > 0 && (
                   <>
-                    <span className="text-[color:var(--color-text-muted)]">·</span>
-                    <span className="font-semibold text-[color:var(--color-danger-700)]">
+                    <span className="text-(--color-text-muted)">·</span>
+                    <span className="font-semibold text-(--color-danger-700)">
                       {data.down} down
                     </span>
                   </>
@@ -181,7 +179,7 @@ export function AmenityHealthGrid({ amenities, onManageClick, className }: Ameni
               </div>
 
               {onManageClick && (
-                <ArrowRight className="h-3 w-3 text-[color:var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
+                <ArrowRight className="h-3 w-3 text-(--color-text-muted) opacity-0 transition-opacity group-hover:opacity-100" />
               )}
             </div>
           </div>

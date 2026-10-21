@@ -154,20 +154,20 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
     <div className={clsx(surfaceCardClass, 'p-5')}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarDays className="h-5 w-5 text-[color:var(--color-text-secondary)]" />
-          <h3 className="font-display text-base font-bold text-[color:var(--color-text-primary)]">
+          <CalendarDays className="h-5 w-5 text-(--color-text-secondary)" />
+          <h3 className="font-display text-base font-bold text-(--color-text-primary)">
             Week of {formatDayLabel(monday)}
           </h3>
         </div>
         {copySource && (
-          <span className="text-xs font-semibold text-[color:var(--color-brand-600)]">
+          <span className="text-xs font-semibold text-(--color-brand-600)">
             Select a target day to copy {formatDayLabel(copySource)}
           </span>
         )}
       </div>
 
       {error && (
-        <p className="text-12 mb-3 font-medium text-[color:var(--color-danger-600)]" role="alert">
+        <p className="text-12 mb-3 font-medium text-(--color-danger-600)" role="alert">
           {error}
         </p>
       )}
@@ -184,18 +184,18 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
               className={clsx(
                 'rounded-[var(--radius-lg)] border p-3 transition-colors',
                 isCopySource
-                  ? 'border-[color:var(--color-brand-400)] bg-[color:var(--color-brand-50)]'
+                  ? 'border-(--color-brand-400) bg-(--color-brand-50)'
                   : isToday
-                    ? 'border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]'
-                    : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]',
+                    ? 'border-(--color-brand-200) bg-(--color-brand-50)'
+                    : 'border-(--border-color) bg-(--color-field-bg)',
               )}
             >
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <p className="text-11 font-bold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+                  <p className="text-11 font-bold tracking-wide text-(--color-text-muted) uppercase">
                     {DAY_NAMES[idx]}
                   </p>
-                  <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
+                  <p className="font-display text-sm font-bold text-(--color-text-primary)">
                     {formatDayLabel(date)}
                   </p>
                 </div>
@@ -207,8 +207,8 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                   className={clsx(
                     'rounded-[var(--radius-md)] border p-1 transition-colors',
                     isCopySource
-                      ? 'border-[color:var(--color-brand-400)] text-[color:var(--color-brand-600)]'
-                      : 'border-[color:var(--border-color)] text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text-secondary)]',
+                      ? 'border-(--color-brand-400) text-(--color-brand-600)'
+                      : 'border-(--border-color) text-(--color-text-muted) hover:text-(--color-text-secondary)',
                   )}
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -220,14 +220,12 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                   const items = menu?.meals?.[key] ?? [];
                   return (
                     <div key={key} className="flex items-start gap-1.5">
-                      <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[color:var(--color-text-muted)]" />
+                      <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-(--color-text-muted)" />
                       <div className="min-w-0 flex-1">
                         {items.length === 0 ? (
-                          <p className="text-11 text-[color:var(--color-text-muted)] italic">
-                            Not set
-                          </p>
+                          <p className="text-11 text-(--color-text-muted) italic">Not set</p>
                         ) : (
-                          <p className="text-11 truncate font-medium text-[color:var(--color-text-secondary)]">
+                          <p className="text-11 truncate font-medium text-(--color-text-secondary)">
                             {items.map((i) => i.name).join(', ')}
                           </p>
                         )}
@@ -243,7 +241,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                     type="button"
                     onClick={() => handleCopy(date)}
                     disabled={copyLoading && copyTarget === date}
-                    className="text-11 font-semibold text-[color:var(--color-brand-600)] hover:underline disabled:opacity-50"
+                    className="text-11 font-semibold text-(--color-brand-600) hover:underline disabled:opacity-50"
                   >
                     {copyLoading && copyTarget === date ? 'Copying...' : 'Paste here'}
                   </button>
@@ -252,7 +250,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
                     <button
                       type="button"
                       onClick={() => onDayClick(date, menu ?? null)}
-                      className="text-11 font-semibold text-[color:var(--color-brand-600)] hover:underline"
+                      className="text-11 font-semibold text-(--color-brand-600) hover:underline"
                     >
                       {menu ? 'View' : 'Create'}
                     </button>
@@ -265,7 +263,7 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
       </div>
 
       {isLoading && (
-        <div className="mt-3 flex items-center gap-2 text-xs font-medium text-[color:var(--color-text-muted)]">
+        <div className="mt-3 flex items-center gap-2 text-xs font-medium text-(--color-text-muted)">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading weekly menus...
         </div>
       )}

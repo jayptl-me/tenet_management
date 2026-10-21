@@ -131,8 +131,7 @@ export const SERVICES_CONTRACT: ModuleContract = {
       operatorBelieves: 'the office wrote down what is wrong and the record keeps it',
       serverCommits:
         'PUT /services/:id writes the note, stamps the record with the office and the time and writes an update audit log entry with noteChanged (apps/api/src/routes/services.ts:409-433). The state did not move, so no notification goes to the residents: the note reaches the audit trail and the portal only.',
-      mismatchSurfacedAt:
-        'the service page shows the note and the write trail shows the entry',
+      mismatchSurfacedAt: 'the service page shows the note and the write trail shows the entry',
       provenance: {
         auditAction: 'update',
         screen: '/services/[id]',
@@ -165,8 +164,7 @@ export const SERVICES_CONTRACT: ModuleContract = {
       operatorBelieves: 'every floor carries the service afterwards',
       serverCommits:
         'The admin screen asks the server once per floor (POST /services) and reports the answer of every floor on its own: created, held because that floor already has the service, or failed with the reason the server gave (apps/web/src/app/(admin)/services/new/page.tsx). The server refuses a second row for the same floor and service type with a conflict, so a floor that already has the service is held, not overwritten (apps/api/src/routes/services.ts:351-354). The answer of every floor is carried to the board in the address bar and shown there.',
-      mismatchSurfacedAt:
-        'the board opens on the per floor answer of the run, one row per floor',
+      mismatchSurfacedAt: 'the board opens on the per floor answer of the run, one row per floor',
       provenance: {
         screen: '/services',
         actor: 'admin',
@@ -215,8 +213,7 @@ export const SERVICES_CONTRACT: ModuleContract = {
       operatorBelieves: 'every floor now carries every service the office tracks per floor',
       serverCommits:
         'POST /floors/reseed-services walks every floor and creates only the service rows that are missing for the per floor amenity keys, so the run is idempotent, and reports how many floors it touched and how many rows it created (apps/api/src/routes/floors.ts:388-414). The new rows start operational and it writes no notification: a row that was missing is a row nobody had reported.',
-      mismatchSurfacedAt:
-        'the board shows the new tiles and the run reports the floors it touched',
+      mismatchSurfacedAt: 'the board shows the new tiles and the run reports the floors it touched',
       provenance: {
         screen: '/services',
         actor: 'admin',

@@ -69,10 +69,10 @@ export function ComplaintCategoryMatrix({
       <div
         className={clsx('flex flex-col items-center justify-center py-8 text-center', className)}
       >
-        <p className="text-13 font-medium text-[color:var(--color-text-secondary)]">
+        <p className="text-13 font-medium text-(--color-text-secondary)">
           No complaints logged in this period
         </p>
-        <p className="text-11 mt-1 text-[color:var(--color-text-muted)]">
+        <p className="text-11 mt-1 text-(--color-text-muted)">
           All systems and resident amenities operating smoothly
         </p>
       </div>
@@ -85,11 +85,11 @@ export function ComplaintCategoryMatrix({
   return (
     <div className={clsx('space-y-3', className)}>
       {/* ── Subtitle / Filter Hint ── */}
-      <div className="text-11 flex items-center justify-between border-b border-[color:var(--border-color)] pb-2">
-        <span className="font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+      <div className="text-11 flex items-center justify-between border-b border-(--border-color) pb-2">
+        <span className="font-bold tracking-wider text-(--color-text-muted) uppercase">
           Ranked Category Distribution
         </span>
-        <span className="text-10 font-medium text-[color:var(--color-text-muted)]">
+        <span className="text-10 font-medium text-(--color-text-muted)">
           Click category to filter
         </span>
       </div>
@@ -107,19 +107,19 @@ export function ComplaintCategoryMatrix({
               onClick={() => onCategoryClick?.(item._id)}
               className={clsx(
                 'group w-full rounded-[var(--radius-md)] border border-transparent p-2 text-left transition-all duration-[var(--transition-duration)]',
-                'hover:border-[color:var(--border-color-hover)] hover:bg-[color:var(--color-field-bg)]/60',
+                'hover:border-(--border-color-hover) hover:bg-(--color-field-bg)/60',
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] group-hover:text-[color:var(--color-brand-600)]">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-(--color-field-bg) text-(--color-text-secondary) group-hover:text-(--color-brand-600)">
                     {getCategoryIcon(item._id)}
                   </div>
-                  <span className="text-12 truncate font-semibold text-[color:var(--color-text-primary)]">
+                  <span className="text-12 truncate font-semibold text-(--color-text-primary)">
                     {formatCategoryName(item._id)}
                   </span>
                   {item.hasOverdue && (
-                    <span className="py-0.2 text-10 flex items-center gap-0.5 rounded-full border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-1.5 font-bold text-[color:var(--badge-danger-text)]">
+                    <span className="py-0.2 text-10 flex items-center gap-0.5 rounded-full border border-(--badge-danger-border) bg-(--badge-danger-bg) px-1.5 font-bold text-(--badge-danger-text)">
                       <AlertCircle className="h-2.5 w-2.5" />
                       Overdue
                     </span>
@@ -127,21 +127,19 @@ export function ComplaintCategoryMatrix({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-11 font-mono font-bold text-[color:var(--color-text-primary)]">
+                  <span className="text-11 font-mono font-bold text-(--color-text-primary)">
                     {item.count}
                   </span>
-                  <span className="text-10 font-mono text-[color:var(--color-text-muted)]">
-                    ({pct}%)
-                  </span>
-                  <ArrowRight className="h-3 w-3 text-[color:var(--color-text-muted)] opacity-0 transition-opacity group-hover:opacity-100" />
+                  <span className="text-10 font-mono text-(--color-text-muted)">({pct}%)</span>
+                  <ArrowRight className="h-3 w-3 text-(--color-text-muted) opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
               </div>
 
               {/* Proportional Multi-Tone Severity / Volume Bar */}
-              <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--chart-track)]">
+              <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-(--chart-track)">
                 <div
                   style={{ width: `${relativeWidth}%` }}
-                  className="rounded-full bg-[color:var(--color-brand-500)] transition-all duration-500 group-hover:bg-[color:var(--color-brand-600)]"
+                  className="rounded-full bg-(--color-brand-500) transition-all duration-500 group-hover:bg-(--color-brand-600)"
                 />
               </div>
             </button>
@@ -150,7 +148,7 @@ export function ComplaintCategoryMatrix({
       </div>
 
       {/* ── Footer Telemetry Hint ── */}
-      <div className="text-10 flex items-center justify-between pt-1 text-[color:var(--color-text-muted)]">
+      <div className="text-10 flex items-center justify-between pt-1 text-(--color-text-muted)">
         <span>Showing top {Math.min(categories.length, 6)} categories</span>
         <span className="font-mono font-medium">Total: {totalComplaints} tickets</span>
       </div>

@@ -222,7 +222,7 @@ export function RecordPaymentModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="rounded-[var(--radius-md)] border border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] p-3 text-xs font-semibold text-[color:var(--color-danger-800)]">
+          <div className="rounded-[var(--radius-md)] border border-(--color-danger-300) bg-(--color-danger-50) p-3 text-xs font-semibold text-(--color-danger-800)">
             {error}
           </div>
         )}
@@ -231,36 +231,36 @@ export function RecordPaymentModal({
         <div className={clsx(surfaceNestedClass, 'space-y-2 rounded-[var(--radius-lg)] p-4')}>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
+              <p className="font-display text-sm font-bold text-(--color-text-primary)">
                 {target.tenantName ?? 'Tenant'}
               </p>
-              <p className="text-xs text-[color:var(--color-text-muted)]">
+              <p className="text-xs text-(--color-text-muted)">
                 {target.roomNumber ? `Room ${target.roomNumber}` : ''}
                 {target.invoiceNumber ? ` · ${target.invoiceNumber}` : ''}
                 {target.month ? ` (${target.month})` : ''}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-11 font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase">
+              <p className="text-11 font-bold tracking-wider text-(--color-text-muted) uppercase">
                 Balance Due
               </p>
               <p
                 className={clsx(
                   'font-display text-base font-bold tabular-nums',
                   balance == null || balance === 0
-                    ? 'text-[color:var(--color-text-primary)]'
-                    : 'text-[color:var(--color-danger-700)]',
+                    ? 'text-(--color-text-primary)'
+                    : 'text-(--color-danger-700)',
                 )}
               >
                 {balance != null ? fmtMoney(balance) : 'Not reported'}
               </p>
               {balance == null ? (
-                <p className="text-11 leading-snug font-medium text-[color:var(--color-text-muted)]">
+                <p className="text-11 leading-snug font-medium text-(--color-text-muted)">
                   The server did not report a balance for this invoice. The amount that is accepted
                   is decided by the server when the payment is saved.
                 </p>
               ) : balance === 0 ? (
-                <p className="text-11 leading-snug font-medium text-[color:var(--color-text-muted)]">
+                <p className="text-11 leading-snug font-medium text-(--color-text-muted)">
                   The server reports nothing due on this invoice.
                 </p>
               ) : null}
@@ -270,7 +270,7 @@ export function RecordPaymentModal({
 
         {/* Payment method selector */}
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-[color:var(--color-text-secondary)]">
+          <label className="mb-1.5 block text-xs font-semibold text-(--color-text-secondary)">
             Payment Method
           </label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -285,16 +285,14 @@ export function RecordPaymentModal({
                   className={clsx(
                     'flex flex-col items-center gap-1.5 rounded-[var(--radius-lg)] border p-2.5 text-center transition-all',
                     isSelected
-                      ? 'border-[color:var(--color-brand-600)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-900)]'
-                      : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]',
+                      ? 'border-(--color-brand-600) bg-(--color-brand-50) text-(--color-brand-900)'
+                      : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:bg-(--color-field-bg)',
                   )}
                 >
                   <Icon
                     className={clsx(
                       'h-4 w-4',
-                      isSelected
-                        ? 'text-[color:var(--color-brand-600)]'
-                        : 'text-[color:var(--color-text-muted)]',
+                      isSelected ? 'text-(--color-brand-600)' : 'text-(--color-text-muted)',
                     )}
                   />
                   <span className="text-xs font-semibold">{m.label}</span>
@@ -308,7 +306,7 @@ export function RecordPaymentModal({
         <div>
           <label
             htmlFor="modal-payment-amount"
-            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+            className="mb-1 block text-xs font-semibold text-(--color-text-secondary)"
           >
             Amount (₹)
           </label>
@@ -334,8 +332,8 @@ export function RecordPaymentModal({
                   className={clsx(
                     'text-11 rounded-full border px-2.5 py-0.5 font-semibold transition-colors',
                     amount === q.value
-                      ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-900)]'
-                      : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:bg-[color:var(--color-field-bg)]',
+                      ? 'border-(--color-brand-500) bg-(--color-brand-100) text-(--color-brand-900)'
+                      : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:bg-(--color-field-bg)',
                   )}
                 >
                   {q.label} ({fmtMoney(q.value)})
@@ -345,7 +343,7 @@ export function RecordPaymentModal({
           )}
 
           {isOverpay && balance != null && (
-            <p className="text-11 mt-1 font-semibold text-[color:var(--color-danger-700)]">
+            <p className="text-11 mt-1 font-semibold text-(--color-danger-700)">
               The server reports a balance of {fmtMoney(balance)} for this invoice, so an amount
               above that would be rejected. Record {fmtMoney(balance)} or less.
             </p>
@@ -356,7 +354,7 @@ export function RecordPaymentModal({
         <div>
           <label
             htmlFor="modal-payment-date"
-            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+            className="mb-1 block text-xs font-semibold text-(--color-text-secondary)"
           >
             Payment Date & Time
           </label>
@@ -373,7 +371,7 @@ export function RecordPaymentModal({
         <div>
           <label
             htmlFor="modal-payment-notes"
-            className="mb-1 block text-xs font-semibold text-[color:var(--color-text-secondary)]"
+            className="mb-1 block text-xs font-semibold text-(--color-text-secondary)"
           >
             Notes (optional)
           </label>
@@ -388,16 +386,14 @@ export function RecordPaymentModal({
 
         {/* Projection of the current snapshot, not a promise about the server */}
         {remainingAfter != null && (
-          <div className="flex items-center justify-between border-t border-[color:var(--border-color)] pt-3 text-xs">
-            <span className="font-medium text-[color:var(--color-text-muted)]">
+          <div className="flex items-center justify-between border-t border-(--border-color) pt-3 text-xs">
+            <span className="font-medium text-(--color-text-muted)">
               Projected balance after this payment, from the balance reported now:
             </span>
             <span
               className={clsx(
                 'font-bold tabular-nums',
-                remainingAfter === 0
-                  ? 'text-[color:var(--color-success-600)]'
-                  : 'text-[color:var(--color-text-primary)]',
+                remainingAfter === 0 ? 'text-(--color-success-600)' : 'text-(--color-text-primary)',
               )}
             >
               {fmtMoney(remainingAfter)}
@@ -406,7 +402,7 @@ export function RecordPaymentModal({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 border-t border-[color:var(--border-color)] pt-2">
+        <div className="flex justify-end gap-2 border-t border-(--border-color) pt-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>

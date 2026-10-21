@@ -116,8 +116,6 @@ const ALLOWLIST: readonly AllowlistEntry[] = [
   ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'h-[160px]', 1, R_CHART_HEIGHT],
   ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
   ['app/(admin)/invoices/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_FILTER_170],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
-  ['app/(admin)/meals/page.tsx', 'PX_DIM', 'w-[170px]', 1, R_FILTER_170],
   ['app/(admin)/menus/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],
   ['app/(admin)/notices/page.tsx', 'PX_DIM', 'max-w-[250px]', 1, R_TRUNCATE_250],
   ['app/(admin)/notices/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_ACTIONS_COL],

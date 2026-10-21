@@ -34,11 +34,11 @@ export function AmenityCountStepper({
   const clamp = (v: number) => Math.max(min, Math.min(max, v));
 
   const stepBtn =
-    'flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[color:var(--border-color)] ' +
-    'bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] shadow-[var(--shadow-xs)] ' +
+    'flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-(--border-color) ' +
+    'bg-(--color-card-bg) text-(--color-text-secondary) shadow-[var(--shadow-xs)] ' +
     'transition-colors duration-[var(--transition-duration)] ease-[var(--transition-easing)] ' +
-    'hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)] ' +
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-color)] ' +
+    'hover:bg-(--color-field-bg-hover) hover:text-(--color-text-primary) ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--focus-ring-color) ' +
     'disabled:cursor-not-allowed disabled:opacity-[var(--disabled-opacity)]';
 
   return (
@@ -46,9 +46,7 @@ export function AmenityCountStepper({
       <div className="flex items-center justify-between gap-2">
         <label className={clsx(fieldLabelClass, 'inline-flex items-center gap-1.5')}>
           {icon && (
-            <span className="text-[color:var(--color-text-muted)] [&_svg]:h-3.5 [&_svg]:w-3.5">
-              {icon}
-            </span>
+            <span className="text-(--color-text-muted) [&_svg]:h-3.5 [&_svg]:w-3.5">{icon}</span>
           )}
           {label}
         </label>
@@ -57,10 +55,10 @@ export function AmenityCountStepper({
       <div
         className={clsx(
           'flex items-center justify-between gap-2 rounded-[var(--radius-md)] border px-2 py-1.5',
-          'bg-[color:var(--color-field-bg)] shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)]',
+          'bg-(--color-field-bg) shadow-[var(--shadow-xs)] transition-colors duration-[var(--transition-duration)]',
           error
-            ? 'border-[color:var(--border-color-error)]'
-            : 'border-[color:var(--color-field-border)] focus-within:border-[color:var(--border-color-focus)]',
+            ? 'border-(--border-color-error)'
+            : 'border-(--color-field-border) focus-within:border-(--border-color-focus)',
         )}
       >
         <button
@@ -76,9 +74,7 @@ export function AmenityCountStepper({
         <span
           className={clsx(
             'font-display text-lg font-bold tabular-nums',
-            value > 0
-              ? 'text-[color:var(--color-text-primary)]'
-              : 'text-[color:var(--color-text-muted)]',
+            value > 0 ? 'text-(--color-text-primary)' : 'text-(--color-text-muted)',
           )}
           aria-live="polite"
         >

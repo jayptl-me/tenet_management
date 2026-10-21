@@ -115,21 +115,21 @@ export function VerifyPaymentModal({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-modal)]"
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-modal)]"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-(--color-brand-100) text-(--color-brand-700)">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
                   <h3
                     id="verify-modal-title"
-                    className="text-15 font-display font-bold tracking-tight text-[color:var(--color-text-primary)]"
+                    className="text-15 font-display font-bold tracking-tight text-(--color-text-primary)"
                   >
                     Verify UPI payment
                   </h3>
-                  <p className="text-xs font-medium text-[color:var(--color-text-muted)]">
+                  <p className="text-xs font-medium text-(--color-text-muted)">
                     {target.tenantName ?? 'Tenant'}
                     {target.roomNumber ? ` · Room ${target.roomNumber}` : ''}
                     {target.invoiceNumber ? ` · ${target.invoiceNumber}` : ''}
@@ -140,7 +140,7 @@ export function VerifyPaymentModal({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="rounded-[var(--radius-md)] p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-field-bg-hover)] hover:text-[color:var(--color-text-primary)]"
+                className="rounded-[var(--radius-md)] p-1 text-(--color-text-muted) transition-colors hover:bg-(--color-field-bg-hover) hover:text-(--color-text-primary)"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -148,28 +148,28 @@ export function VerifyPaymentModal({
             </div>
 
             {/* Evidence block */}
-            <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3.5">
+            <dl className="text-13 mt-4 space-y-2 rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-field-bg) p-3.5">
               <div className="flex items-center justify-between gap-3">
-                <dt className="font-medium text-[color:var(--color-text-muted)]">Amount</dt>
-                <dd className="font-display text-base font-bold text-[color:var(--color-text-primary)] tabular-nums">
+                <dt className="font-medium text-(--color-text-muted)">Amount</dt>
+                <dd className="font-display text-base font-bold text-(--color-text-primary) tabular-nums">
                   {fmtMoney(target.amount)}
                 </dd>
               </div>
               {target.utrNumber && (
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="font-medium text-[color:var(--color-text-muted)]">UTR</dt>
+                  <dt className="font-medium text-(--color-text-muted)">UTR</dt>
                   <dd className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs font-bold tracking-wide text-[color:var(--color-brand-700)]">
+                    <span className="font-mono text-xs font-bold tracking-wide text-(--color-brand-700)">
                       {target.utrNumber}
                     </span>
                     <button
                       type="button"
                       onClick={copyUtr}
-                      className="rounded p-1 text-[color:var(--color-text-muted)] transition-colors hover:bg-[color:var(--color-surface-100)] hover:text-[color:var(--color-text-primary)]"
+                      className="rounded p-1 text-(--color-text-muted) transition-colors hover:bg-(--color-surface-100) hover:text-(--color-text-primary)"
                       aria-label="Copy UTR"
                     >
                       {copied ? (
-                        <Check className="h-3.5 w-3.5 text-[color:var(--color-success-600)]" />
+                        <Check className="h-3.5 w-3.5 text-(--color-success-600)" />
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
@@ -178,13 +178,13 @@ export function VerifyPaymentModal({
                 </div>
               )}
               <div className="flex items-center justify-between gap-3">
-                <dt className="font-medium text-[color:var(--color-text-muted)]">Submitted</dt>
-                <dd className="text-xs font-semibold text-[color:var(--color-text-primary)]">
+                <dt className="font-medium text-(--color-text-muted)">Submitted</dt>
+                <dd className="text-xs font-semibold text-(--color-text-primary)">
                   {fmtDateTime(target.paidAt || target.createdAt)}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="font-medium text-[color:var(--color-text-muted)]">Status</dt>
+                <dt className="font-medium text-(--color-text-muted)">Status</dt>
                 <dd>
                   <StatusBadge
                     variant={statusToVariant(target.status)}
@@ -197,13 +197,13 @@ export function VerifyPaymentModal({
             {/* Screenshot preview */}
             {target.screenshotUrl && !imgFailed && (
               <div className="mt-3">
-                <p className="text-11 mb-1.5 font-semibold tracking-[0.01em] text-[color:var(--color-text-secondary)]">
+                <p className="text-11 mb-1.5 font-semibold tracking-[0.01em] text-(--color-text-secondary)">
                   Payment screenshot
                 </p>
                 <button
                   type="button"
                   onClick={() => setZoom(true)}
-                  className="block w-full overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--border-color)] transition-opacity hover:opacity-90"
+                  className="block w-full overflow-hidden rounded-[var(--radius-lg)] border border-(--border-color) transition-opacity hover:opacity-90"
                   aria-label="Open screenshot full size"
                 >
                   <Image
@@ -219,13 +219,13 @@ export function VerifyPaymentModal({
               </div>
             )}
             {target.screenshotUrl && imgFailed && (
-              <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3 text-xs font-medium text-[color:var(--color-text-muted)]">
+              <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-field-bg) p-3 text-xs font-medium text-(--color-text-muted)">
                 <ImageOff className="h-4 w-4" />
                 Screenshot unavailable — verify against your bank statement UTR.
               </div>
             )}
             {!target.screenshotUrl && (
-              <p className="mt-3 text-xs font-medium text-[color:var(--color-text-muted)]">
+              <p className="mt-3 text-xs font-medium text-(--color-text-muted)">
                 No screenshot attached. Cross-check the UTR against your bank statement before
                 approving.
               </p>
@@ -235,10 +235,10 @@ export function VerifyPaymentModal({
             <div className="mt-4">
               <label
                 htmlFor="verify-notes"
-                className="text-13 mb-1 block font-semibold text-[color:var(--color-text-primary)]"
+                className="text-13 mb-1 block font-semibold text-(--color-text-primary)"
               >
                 Verification note{' '}
-                <span className="font-normal text-[color:var(--color-text-muted)]">(optional)</span>
+                <span className="font-normal text-(--color-text-muted)">(optional)</span>
               </label>
               <input
                 id="verify-notes"
@@ -246,7 +246,7 @@ export function VerifyPaymentModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g. Bank statement matched"
-                className="w-full rounded-[var(--radius-md)] border border-[color:var(--color-field-border)] bg-[color:var(--color-field-bg)] px-3 py-2 text-sm font-medium text-[color:var(--color-text-primary)] transition-[background-color,border-color,box-shadow] outline-none placeholder:text-[color:var(--color-text-muted)] focus:border-[color:var(--border-color-focus)] focus:bg-[color:var(--color-card-bg)] focus:ring-2 focus:ring-[color:var(--focus-ring-color)]"
+                className="w-full rounded-[var(--radius-md)] border border-(--color-field-border) bg-(--color-field-bg) px-3 py-2 text-sm font-medium text-(--color-text-primary) transition-[background-color,border-color,box-shadow] outline-none placeholder:text-(--color-text-muted) focus:border-(--border-color-focus) focus:bg-(--color-card-bg) focus:ring-2 focus:ring-(--focus-ring-color)"
               />
             </div>
 

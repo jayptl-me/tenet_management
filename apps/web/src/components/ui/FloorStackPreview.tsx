@@ -86,34 +86,34 @@ export function FloorStackPreview({
 
   const rowStyles: Record<string, string> = {
     existing:
-      'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-secondary)] transition-colors hover:border-[color:var(--border-color-hover)]',
+      'border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) transition-colors hover:border-(--border-color-hover)',
     current:
-      'border-[color:var(--badge-info-border)] bg-[color:var(--badge-info-bg)] text-[color:var(--badge-info-text)] ring-1 ring-[color:var(--badge-info-border)] shadow-[var(--shadow-xs)] font-bold',
-    new: 'border-[color:var(--badge-success-border)] border-dashed bg-[color:var(--badge-success-bg)] text-[color:var(--badge-success-text)] font-bold',
+      'border-(--badge-info-border) bg-(--badge-info-bg) text-(--badge-info-text) ring-1 ring-(--badge-info-border) shadow-[var(--shadow-xs)] font-bold',
+    new: 'border-(--badge-success-border) border-dashed bg-(--badge-success-bg) text-(--badge-success-text) font-bold',
     conflict:
-      'border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-text)] font-bold',
+      'border-(--badge-danger-border) bg-(--badge-danger-bg) text-(--badge-danger-text) font-bold',
   };
 
   const badgeStyles: Record<string, string> = {
     existing:
-      'border border-[color:var(--badge-neutral-border)] bg-[color:var(--badge-neutral-bg)] text-[color:var(--badge-neutral-text)]',
-    current: 'bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]',
-    new: 'bg-[color:var(--color-success-500)] text-[color:var(--color-on-success)]',
-    conflict: 'bg-[color:var(--color-danger-500)] text-[color:var(--color-on-danger)]',
+      'border border-(--badge-neutral-border) bg-(--badge-neutral-bg) text-(--badge-neutral-text)',
+    current: 'bg-(--color-brand-500) text-(--color-on-brand)',
+    new: 'bg-(--color-success-500) text-(--color-on-success)',
+    conflict: 'bg-(--color-danger-500) text-(--color-on-danger)',
   };
 
   return (
     <div className={clsx('flex flex-col gap-1.5', className)}>
       <div className="flex items-center justify-between">
-        <p className="text-13 font-bold tracking-tight text-[color:var(--color-text-primary)]">
+        <p className="text-13 font-bold tracking-tight text-(--color-text-primary)">
           Building preview
         </p>
-        <span className="text-10 font-semibold tracking-wide text-[color:var(--color-text-muted)] uppercase">
+        <span className="text-10 font-semibold tracking-wide text-(--color-text-muted) uppercase">
           {mode === 'new' ? 'New floor' : 'This floor'} highlighted
         </span>
       </div>
 
-      <div className="flex flex-col-reverse gap-1.5 rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-2.5 shadow-[var(--shadow-xs)]">
+      <div className="flex flex-col-reverse gap-1.5 rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-2.5 shadow-[var(--shadow-xs)]">
         {stack.map((row) => (
           <motion.div
             key={row.key}
@@ -144,13 +144,13 @@ export function FloorStackPreview({
       </div>
 
       {conflict && (
-        <p className="text-11 flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--badge-danger-border)] bg-[color:var(--badge-danger-bg)] px-2.5 py-1.5 font-semibold text-[color:var(--badge-danger-text)]">
+        <p className="text-11 flex items-center gap-1.5 rounded-[var(--radius-md)] border border-(--badge-danger-border) bg-(--badge-danger-bg) px-2.5 py-1.5 font-semibold text-(--badge-danger-text)">
           <AlertTriangle className="h-3 w-3 shrink-0" />
           Floor number {current.floorNumber} already exists. Pick a different number.
         </p>
       )}
       {!conflict && (
-        <p className="text-11 flex items-center gap-1.5 px-1 font-medium text-[color:var(--color-text-muted)]">
+        <p className="text-11 flex items-center gap-1.5 px-1 font-medium text-(--color-text-muted)">
           <Building2 className="h-3 w-3" />
           Positioned at floor number {current.floorNumber}.
         </p>

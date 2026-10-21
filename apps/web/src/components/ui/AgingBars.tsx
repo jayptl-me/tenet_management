@@ -29,11 +29,11 @@ function fmt(amount: number): string {
 }
 
 const BUCKET_TONES: Record<string, string> = {
-  current: 'bg-[color:var(--color-brand-500)]',
-  days1_30: 'bg-[color:var(--color-warning-500)]',
-  days31_60: 'bg-[color:var(--color-warning-600)]',
-  days61_90: 'bg-[color:var(--color-danger-400)]',
-  days90Plus: 'bg-[color:var(--color-danger-600)]',
+  current: 'bg-(--color-brand-500)',
+  days1_30: 'bg-(--color-warning-500)',
+  days31_60: 'bg-(--color-warning-600)',
+  days61_90: 'bg-(--color-danger-400)',
+  days90Plus: 'bg-(--color-danger-600)',
 };
 
 // ── Component ──────────────────────────────────────────
@@ -52,20 +52,18 @@ export function AgingBars({
     <div className={clsx(surfaceCardClass, 'p-5', className)}>
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h3 className="font-display text-sm font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
             Receivables aging
           </h3>
-          <p className="mt-0.5 text-xs text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-xs text-(--color-text-muted)">
             Outstanding invoice balances by days past due
           </p>
         </div>
         <div className="text-right">
-          <p className="font-display text-lg font-bold text-[color:var(--color-text-primary)] tabular-nums">
+          <p className="font-display text-lg font-bold text-(--color-text-primary) tabular-nums">
             {isLoading ? '—' : fmt(totalOutstanding)}
           </p>
-          <p className="text-11 font-medium text-[color:var(--color-text-muted)]">
-            total outstanding
-          </p>
+          <p className="text-11 font-medium text-(--color-text-muted)">total outstanding</p>
         </div>
       </div>
 
@@ -81,33 +79,33 @@ export function AgingBars({
               onClick={() => interactive && onSelect?.(bucket)}
               className={clsx(
                 'group grid w-full grid-cols-[92px_1fr_auto] items-center gap-3 rounded-[var(--radius-md)] px-2 py-1.5 text-left transition-colors',
-                interactive && 'hover:bg-[color:var(--color-field-bg-hover)]',
+                interactive && 'hover:bg-(--color-field-bg-hover)',
                 !interactive && 'cursor-default',
               )}
             >
-              <span className="text-xs font-semibold text-[color:var(--color-text-secondary)]">
+              <span className="text-xs font-semibold text-(--color-text-secondary)">
                 {bucket.label}
               </span>
               <span className="flex items-center gap-2">
                 <span
-                  className="relative h-2 flex-1 overflow-hidden rounded-[var(--radius-full)] bg-[color:var(--chart-track)]"
+                  className="relative h-2 flex-1 overflow-hidden rounded-[var(--radius-full)] bg-(--chart-track)"
                   role="presentation"
                 >
                   <span
                     className={clsx(
                       'absolute inset-y-0 left-0 rounded-[var(--radius-full)] transition-[width] duration-500',
-                      BUCKET_TONES[bucket.key] ?? 'bg-[color:var(--color-surface-300)]',
+                      BUCKET_TONES[bucket.key] ?? 'bg-(--color-surface-300)',
                     )}
                     style={{
                       width: isLoading ? '0%' : `${Math.max(share, bucket.count > 0 ? 3 : 0)}%`,
                     }}
                   />
                 </span>
-                <span className="text-11 w-8 text-right font-semibold text-[color:var(--color-text-muted)] tabular-nums">
+                <span className="text-11 w-8 text-right font-semibold text-(--color-text-muted) tabular-nums">
                   {bucket.count}
                 </span>
               </span>
-              <span className="font-mono text-xs font-bold text-[color:var(--color-text-primary)] tabular-nums">
+              <span className="font-mono text-xs font-bold text-(--color-text-primary) tabular-nums">
                 {isLoading ? '—' : fmt(bucket.amount)}
               </span>
             </button>

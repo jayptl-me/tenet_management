@@ -683,8 +683,8 @@ export default function AssetDetailPage() {
                       Adjust the count
                     </p>
                     <p className="text-2xs mt-1 font-medium text-(--color-text-secondary)">
-                      The server writes the count and the threshold. The count is what the low
-                      stock set is built from: an item at or below its threshold shows there, and a
+                      The server writes the count and the threshold. The count is what the low stock
+                      set is built from: an item at or below its threshold shows there, and a
                       retired item is not taken out of that set. Nobody is told.
                     </p>
                     <div className="mt-2 space-y-2">
@@ -743,13 +743,19 @@ export default function AssetDetailPage() {
               {/* Who hears about this asset. The truth, not a promise. */}
               <DetailCard title="Who hears about it" icon={<TriangleAlert />}>
                 <p className="text-2xs font-medium text-(--color-text-secondary)">
-                  {'The asset model carries no owner, so there is nobody on the office side to notify. The ones affected are the residents of the room, or of the floor.'}
+                  {
+                    'The asset model carries no owner, so there is nobody on the office side to notify. The ones affected are the residents of the room, or of the floor.'
+                  }
                 </p>
                 <p className="text-2xs mt-2 font-medium text-(--color-text-secondary)">
-                  {'The server tells them once, and only once: when an edit moves the state into under maintenance or damaged, it pushes a service_update to the active residents of the room, or of the floor. A failed push never undoes the write.'}
+                  {
+                    'The server tells them once, and only once: when an edit moves the state into under maintenance or damaged, it pushes a service_update to the active residents of the room, or of the floor. A failed push never undoes the write.'
+                  }
                 </p>
                 <p className="text-2xs mt-2 font-medium text-(--color-text-secondary)">
-                  {'It tells nobody when the asset is registered in that state, when the state moves back to available or in use, when the asset is retired, moved to another room, recounted or serviced. An asset with neither a room nor a floor has nobody to tell: the server writes the reason in its log and sends nothing.'}
+                  {
+                    'It tells nobody when the asset is registered in that state, when the state moves back to available or in use, when the asset is retired, moved to another room, recounted or serviced. An asset with neither a room nor a floor has nobody to tell: the server writes the reason in its log and sends nothing.'
+                  }
                 </p>
               </DetailCard>
             </>
@@ -868,7 +874,9 @@ export default function AssetDetailPage() {
                 </>
               ) : (
                 <>
-                  {'This asset is attached to neither a room nor a floor, so there is no resident to tell when it goes out of service. Give it a room or a floor to close that.'}
+                  {
+                    'This asset is attached to neither a room nor a floor, so there is no resident to tell when it goes out of service. Give it a room or a floor to close that.'
+                  }
                 </>
               )}
             </p>
@@ -946,7 +954,9 @@ export default function AssetDetailPage() {
           >
             {!room?._id && !floor?._id ? (
               <p className="text-2xs font-medium text-(--color-text-secondary)">
-                {'This asset is attached to neither a room nor a floor, so it shares its place with nothing. Put it somewhere to see what else is there.'}
+                {
+                  'This asset is attached to neither a room nor a floor, so it shares its place with nothing. Put it somewhere to see what else is there.'
+                }
               </p>
             ) : neighbours.length === 0 ? (
               <p className="text-2xs font-medium text-(--color-text-secondary)">
@@ -994,7 +1004,9 @@ export default function AssetDetailPage() {
           >
             {!auditTrail || auditTrail.length === 0 ? (
               <p className="text-2xs font-medium text-(--color-text-secondary)">
-                {'The server holds no write entry for this asset in the entries it keeps (the entries expire after 90 days).'}
+                {
+                  'The server holds no write entry for this asset in the entries it keeps (the entries expire after 90 days).'
+                }
               </p>
             ) : (
               <ul className="space-y-2">

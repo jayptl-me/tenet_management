@@ -21,11 +21,11 @@ export interface StatusTabsProps {
 // ── Helpers ────────────────────────────────────────────
 
 const countTone: Record<NonNullable<StatusTab['tone']>, string> = {
-  default: 'text-[color:var(--color-text-muted)]',
-  success: 'text-[color:var(--color-success-600)]',
-  warning: 'text-[color:var(--color-warning-600)]',
-  danger: 'text-[color:var(--color-danger-600)]',
-  brand: 'text-[color:var(--color-brand-600)]',
+  default: 'text-(--color-text-muted)',
+  success: 'text-(--color-success-600)',
+  warning: 'text-(--color-warning-600)',
+  danger: 'text-(--color-danger-600)',
+  brand: 'text-(--color-brand-600)',
 };
 
 // ── Component ──────────────────────────────────────────
@@ -35,7 +35,7 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
   return (
     <div
       className={clsx(
-        'flex items-center gap-1 overflow-x-auto border-b border-[color:var(--border-color)]',
+        'flex items-center gap-1 overflow-x-auto border-b border-(--border-color)',
         className,
       )}
       role="tablist"
@@ -53,8 +53,8 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
             className={clsx(
               'text-13 relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 transition-colors',
               selected
-                ? 'font-bold text-[color:var(--color-text-primary)]'
-                : 'font-medium text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]',
+                ? 'font-bold text-(--color-text-primary)'
+                : 'font-medium text-(--color-text-secondary) hover:text-(--color-text-primary)',
             )}
           >
             {tab.label}
@@ -63,7 +63,7 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
                 className={clsx(
                   'text-10 rounded-[var(--radius-full)] px-1.5 py-0.5 font-bold tabular-nums',
                   selected
-                    ? 'bg-[color:var(--color-brand-100)] text-[color:var(--color-brand-700)]'
+                    ? 'bg-(--color-brand-100) text-(--color-brand-700)'
                     : countTone[tab.tone ?? 'default'],
                 )}
               >
@@ -73,7 +73,7 @@ export function StatusTabs({ tabs, active, onChange, className }: StatusTabsProp
             {selected && (
               <span
                 aria-hidden
-                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-[color:var(--color-brand-500)]"
+                className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-(--color-brand-500)"
               />
             )}
           </button>

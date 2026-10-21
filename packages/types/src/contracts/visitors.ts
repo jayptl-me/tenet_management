@@ -121,8 +121,7 @@ export const VISITORS_CONTRACT: ModuleContract = {
     },
     {
       action: 'Stamp the arrival of a visitor',
-      operatorBelieves:
-        'the gate log and the resident agree that the person is on site',
+      operatorBelieves: 'the gate log and the resident agree that the person is on site',
       serverCommits:
         'POST /visitors/:id/arrive refuses any pass that is not expected (INVALID_TRANSITION, apps/api/src/routes/visitors.ts:397-409), sets status=arrived with actualArrival stamped from the server clock and writes an update entry in the audit log with the transition (apps/api/src/routes/visitors.ts:411-426). It then pushes a service_update to the resident who registered the visit (apps/api/src/routes/visitors.ts:428-439); a failed push is logged and never undoes the arrival.',
       notification: {
@@ -183,13 +182,11 @@ export const VISITORS_CONTRACT: ModuleContract = {
       },
       stuckStateMeans:
         'the pass was cancelled but the resident still expects the visitor, and the gate has no record of why it was refused',
-      runbook3am:
-        'open /visitors?status=cancelled, read the update entry, and call the resident',
+      runbook3am: 'open /visitors?status=cancelled, read the update entry, and call the resident',
     },
     {
       action: 'Approve a refused visit again',
-      operatorBelieves:
-        'the resident who registered the visit knows that the gate allowed it in',
+      operatorBelieves: 'the resident who registered the visit knows that the gate allowed it in',
       serverCommits:
         'POST /visitors/:id/approve only works on a cancelled pass (INVALID_TRANSITION, apps/api/src/routes/visitors.ts:313-325): it sets status=expected with approvedBy and writes a visitor_approve entry in the audit log (apps/api/src/routes/visitors.ts:327-344). It then pushes a service_update to the tenant who registered the visit, resolved from the visitor record itself and never from a client supplied id (apps/api/src/routes/visitors.ts:351-356). A failed push is logged and never undoes the approval.',
       notification: {
@@ -211,7 +208,8 @@ export const VISITORS_CONTRACT: ModuleContract = {
     },
     {
       action: 'Change the details of a pass',
-      operatorBelieves: 'the pass carries the new name, the new phone and the new hour, and the resident knows it',
+      operatorBelieves:
+        'the pass carries the new name, the new phone and the new hour, and the resident knows it',
       serverCommits:
         'PUT /visitors/:id writes only the fields the body carries: the name, the phone, the purpose and the expected hour. It cannot write the state: the status field is deliberately omitted from the schema and from the write (apps/api/src/routes/visitors.ts:594-601), and the gate moves the pass with arrive, depart, cancel and approve. It writes an update entry in the audit log with the fields that moved (apps/api/src/routes/visitors.ts:610-616). It sends NO message to the resident.',
       notification: {

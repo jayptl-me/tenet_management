@@ -83,7 +83,7 @@ export function FormPage({
 
         {/* Content skeleton */}
         <div className="w-full min-w-0">
-          <div className="space-y-6 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+          <div className="space-y-6 rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
             <ShimmerBlock className="h-5 w-36" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormFieldSkeleton />
@@ -91,7 +91,7 @@ export function FormPage({
               <FormFieldSkeleton />
               <FormFieldSkeleton />
             </div>
-            <div className="flex justify-end gap-3 border-t border-[color:var(--border-color)] pt-4">
+            <div className="flex justify-end gap-3 border-t border-(--border-color) pt-4">
               <ShimmerBlock className="h-9 w-20 rounded-lg" />
               <ShimmerBlock className="h-9 w-28 rounded-lg" />
             </div>

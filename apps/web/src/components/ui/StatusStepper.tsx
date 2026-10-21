@@ -61,8 +61,8 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
                   className={clsx(
                     'inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border-[length:var(--bw-default)] px-2.5 py-1 text-xs font-semibold',
                     isCurrent
-                      ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-500)] text-[color:var(--color-on-brand)]'
-                      : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
+                      ? 'border-(--color-brand-500) bg-(--color-brand-500) text-(--color-on-brand)'
+                      : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-muted)',
                   )}
                 >
                   {isCurrent && <Check aria-hidden className="h-3 w-3" />}
@@ -104,8 +104,8 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
                   className={clsx(
                     'text-11 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-default)] font-bold',
                     reached
-                      ? 'border-[color:var(--color-success-500)] bg-[color:var(--color-success-500)] text-[color:var(--color-on-success)]'
-                      : 'border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] text-[color:var(--color-text-muted)]',
+                      ? 'border-(--color-success-500) bg-(--color-success-500) text-(--color-on-success)'
+                      : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-muted)',
                   )}
                 >
                   {reached && !isCurrent ? (
@@ -119,9 +119,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
                     aria-hidden
                     className={clsx(
                       'h-0.5 min-w-4 flex-1 rounded-full',
-                      index < anchorIndex
-                        ? 'bg-[color:var(--color-success-500)]'
-                        : 'bg-[color:var(--border-color)]',
+                      index < anchorIndex ? 'bg-(--color-success-500)' : 'bg-(--border-color)',
                     )}
                   />
                 )}
@@ -130,9 +128,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
                 className={clsx(
                   compact ? 'text-11 mt-1' : 'mt-1.5 text-xs',
                   'font-bold',
-                  reached
-                    ? 'text-[color:var(--color-text-primary)]'
-                    : 'text-[color:var(--color-text-muted)]',
+                  reached ? 'text-(--color-text-primary)' : 'text-(--color-text-muted)',
                 )}
               >
                 {step.label}
@@ -143,16 +139,16 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
       </ol>
 
       {branch !== undefined && anchor !== undefined && (
-        <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--color-danger-200)] bg-[color:var(--color-danger-50)] px-3 py-2">
+        <div className="mt-3 flex items-start gap-2 rounded-[var(--radius-md)] border border-(--color-danger-200) bg-(--color-danger-50) px-3 py-2">
           <span
             aria-hidden
-            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-danger-500)]"
+            className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-(--color-danger-500)"
           />
           <div>
-            <p className="text-xs font-bold text-[color:var(--color-danger-700)]">
+            <p className="text-xs font-bold text-(--color-danger-700)">
               {branch.label} - the record left the normal path at {anchor.label}.
             </p>
-            <p className="text-11 mt-0.5 font-semibold text-[color:var(--color-danger-700)]">
+            <p className="text-11 mt-0.5 font-semibold text-(--color-danger-700)">
               {branch.endpoint} ({branch.actor})
             </p>
           </div>
@@ -160,7 +156,7 @@ export function StatusStepper({ domain, current, size = 'full', className }: Sta
       )}
 
       {!isKnown && (
-        <p className="mt-3 text-xs font-semibold text-[color:var(--color-text-muted)]">
+        <p className="mt-3 text-xs font-semibold text-(--color-text-muted)">
           Status not in the {spec.label.toLowerCase()} vocabulary: {current}
         </p>
       )}

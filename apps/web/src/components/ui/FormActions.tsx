@@ -65,7 +65,7 @@ export function FormActions({
     <div
       className={clsx(
         'flex flex-col-reverse items-stretch justify-end gap-3 sm:flex-row sm:items-center',
-        divided && 'border-t border-[color:var(--border-color)] pt-5',
+        divided && 'border-t border-(--border-color) pt-5',
         className,
       )}
     >

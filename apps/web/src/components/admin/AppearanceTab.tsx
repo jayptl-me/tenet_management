@@ -120,13 +120,13 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
   return (
     <div className="space-y-8">
       {/* Theme Preset Selector */}
-      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
         <div>
-          <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
             <PaintBucket className="mr-2 inline h-5 w-5" />
             Theme Preset
           </h3>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Applies instantly for preview — Save settings to keep it
           </p>
         </div>
@@ -142,15 +142,15 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
                 aria-pressed={active}
                 className={`rounded-[var(--radius-md)] border-[length:var(--bw-default)] p-4 text-left transition-all duration-[var(--transition-duration)] ease-[var(--transition-easing)] ${
                   active
-                    ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-button)] ring-1 ring-[color:var(--color-brand-500)]'
-                    : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] hover:border-[color:var(--color-brand-500)]'
+                    ? 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) shadow-[var(--shadow-button)] ring-1 ring-(--color-brand-500)'
+                    : 'border-(--border-color) bg-(--color-card-bg) hover:border-(--color-brand-500)'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
+                  <div className="font-display text-sm font-bold text-(--color-text-primary)">
                     {preset.label}
                   </div>
-                  {active && <Check className="h-4 w-4 text-[color:var(--color-brand-600)]" />}
+                  {active && <Check className="h-4 w-4 text-(--color-brand-600)" />}
                 </div>
                 {/* Identity swatches + idiom sample */}
                 <div className="mt-2.5 flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
                     ))}
                   </span>
                 </div>
-                <div className="font-body mt-2 text-xs text-[color:var(--color-surface-500)]">
+                <div className="font-body mt-2 text-xs text-(--color-surface-500)">
                   {preset.description}
                 </div>
               </button>
@@ -184,13 +184,13 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
       </section>
 
       {/* Mode Toggle */}
-      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
         <div>
-          <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
             <Monitor className="mr-2 inline h-5 w-5" />
             Color Mode
           </h3>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Applies instantly for preview — Save settings to keep it
           </p>
         </div>
@@ -201,8 +201,8 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
             aria-pressed={theme.mode === 'light'}
             className={`font-display flex items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] px-5 py-3 text-sm font-bold transition-all ${
               theme.mode === 'light'
-                ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-button)] ring-1 ring-[color:var(--color-brand-500)]'
-                : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
+                ? 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) shadow-[var(--shadow-button)] ring-1 ring-(--color-brand-500)'
+                : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:text-(--color-text-primary)'
             }`}
           >
             <Sun className="h-4 w-4" /> Light
@@ -213,8 +213,8 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
             aria-pressed={theme.mode === 'dark'}
             className={`font-display flex items-center gap-2 rounded-[var(--radius-md)] border-[length:var(--bw-default)] px-5 py-3 text-sm font-bold transition-all ${
               theme.mode === 'dark'
-                ? 'border-[color:var(--color-brand-500)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)] shadow-[var(--shadow-button)] ring-1 ring-[color:var(--color-brand-500)]'
-                : 'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] text-[color:var(--color-text-secondary)] hover:text-[color:var(--color-text-primary)]'
+                ? 'border-(--color-brand-500) bg-(--color-brand-50) text-(--color-brand-700) shadow-[var(--shadow-button)] ring-1 ring-(--color-brand-500)'
+                : 'border-(--border-color) bg-(--color-card-bg) text-(--color-text-secondary) hover:text-(--color-text-primary)'
             }`}
           >
             <Moon className="h-4 w-4" /> Dark
@@ -223,12 +223,12 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
       </section>
 
       {/* Custom Brand Color */}
-      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
         <div>
-          <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
             Custom Brand Color
           </h3>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Override the theme&apos;s default brand color with your own
           </p>
         </div>
@@ -247,10 +247,10 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
             aria-label="Pick brand color"
             value={brandColorValid ? customBrandColor : '#f59e0b'}
             onChange={(e) => handleBrandColorChange(e.target.value)}
-            className="mt-6 h-10 w-12 cursor-pointer rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1"
+            className="mt-6 h-10 w-12 cursor-pointer rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-(--border-color) bg-(--color-card-bg) p-1"
           />
           <div
-            className="mt-6 h-12 w-12 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-[color:var(--border-color)]"
+            className="mt-6 h-12 w-12 rounded-[var(--radius-md)] border-[length:var(--bw-default)] border-(--border-color)"
             style={{ backgroundColor: customBrandColor }}
           />
         </div>
@@ -259,24 +259,22 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
           {SCALE_STEPS.map((step, i) => (
             <div
               key={step}
-              className="h-8 flex-1 rounded-sm border border-[color:var(--color-surface-200)]"
+              className="h-8 flex-1 rounded-sm border border-(--color-surface-200)"
               style={{ backgroundColor: liveScale[i] }}
               title={`brand-${step}`}
             />
           ))}
         </div>
-        <p className="text-xs text-[color:var(--color-surface-400)]">
+        <p className="text-xs text-(--color-surface-400)">
           Exact 11-step scale (50 to 950) generated live — this is what gets applied on save.
         </p>
       </section>
 
       {/* Font Selectors */}
-      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
         <div>
-          <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
-            Typography
-          </h3>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <h3 className="font-display text-lg font-bold text-(--color-text-primary)">Typography</h3>
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Override theme fonts (leave empty for theme defaults)
           </p>
         </div>
@@ -303,16 +301,16 @@ export default function AppearanceTab({ theme, onChange }: AppearanceTabProps) {
       </section>
 
       {/* Live Preview Panel — real components, live theme */}
-      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-6 shadow-[var(--shadow-card)]">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border-[length:var(--bw-strong)] border-(--border-color) bg-(--color-card-bg) p-6 shadow-[var(--shadow-card)]">
         <div>
-          <h3 className="font-display text-lg font-bold text-[color:var(--color-text-primary)]">
+          <h3 className="font-display text-lg font-bold text-(--color-text-primary)">
             Live Preview
           </h3>
-          <p className="mt-0.5 text-sm text-[color:var(--color-text-muted)]">
+          <p className="mt-0.5 text-sm text-(--color-text-muted)">
             Real components rendered in the currently applied theme
           </p>
         </div>
-        <div className="space-y-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface-50)] p-4">
+        <div className="space-y-4 rounded-[var(--radius-md)] bg-(--color-surface-50) p-4">
           <div className="flex flex-wrap gap-3">
             <Button type="button" variant="primary">
               Primary Button

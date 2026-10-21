@@ -4,16 +4,7 @@ import { useCallback, useMemo, useState, Suspense } from 'react';
 import { useQueries, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Ban,
-  CalendarClock,
-  Check,
-  Download,
-  Info,
-  Plus,
-  Search,
-  X,
-} from 'lucide-react';
+import { Ban, CalendarClock, Check, Download, Info, Plus, Search, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { errorMessage, queryJson } from '@/lib/query';
@@ -245,7 +236,7 @@ function LeaveQueueCard({ leave, onDecided }: QueueCardProps) {
               applied {formatDate(leave.createdAt)}
             </span>
           </div>
-          <h3 className="font-display mt-1.5 text-15 font-bold tracking-tight text-(--color-text-primary)">
+          <h3 className="font-display text-15 mt-1.5 font-bold tracking-tight text-(--color-text-primary)">
             {tenantId ? (
               <Link
                 href={`/tenants/${tenantId}`}
@@ -257,7 +248,9 @@ function LeaveQueueCard({ leave, onDecided }: QueueCardProps) {
               residentName(leave)
             )}
           </h3>
-          <p className="text-xs font-medium text-(--color-text-secondary)">{residentPlace(leave)}</p>
+          <p className="text-xs font-medium text-(--color-text-secondary)">
+            {residentPlace(leave)}
+          </p>
         </div>
         <div className="text-right">
           <p className="font-display text-15 font-bold text-(--color-text-primary)">
@@ -331,9 +324,7 @@ function LeaveQueueCard({ leave, onDecided }: QueueCardProps) {
         </div>
       )}
 
-      {error && (
-        <p className="mt-3 text-sm font-semibold text-(--color-danger-600)">{error}</p>
-      )}
+      {error && <p className="mt-3 text-sm font-semibold text-(--color-danger-600)">{error}</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-(--border-color) pt-3">
         <Button
@@ -473,7 +464,18 @@ function LeavesContent() {
     isPending: isLoading,
     error: queryError,
   } = useApiBodyQuery<LeavesListBody>(
-    [...LEAVES_KEY, 'list', isQueue ? 'queue' : 'ledger', page, perPage, search, tenantFilter, fromDate, toDate, statusFilter],
+    [
+      ...LEAVES_KEY,
+      'list',
+      isQueue ? 'queue' : 'ledger',
+      page,
+      perPage,
+      search,
+      tenantFilter,
+      fromDate,
+      toDate,
+      statusFilter,
+    ],
     `leaves?${listParams.toString()}`,
     { enabled: !isQueue },
   );
@@ -538,8 +540,7 @@ function LeavesContent() {
    * waiting for an answer.
    */
   const pendingDays = useMemo(
-    () =>
-      pendingRows.reduce((sum, row) => sum + inclusiveDays(fromOf(row), toOf(row)), 0),
+    () => pendingRows.reduce((sum, row) => sum + inclusiveDays(fromOf(row), toOf(row)), 0),
     [pendingRows],
   );
 
@@ -950,9 +951,7 @@ function LeavesContent() {
       {isQueue ? (
         <div className="space-y-3">
           {isPendingLoading ? (
-            <p className="text-xs font-semibold text-(--color-text-muted)">
-              Loading the queue...
-            </p>
+            <p className="text-xs font-semibold text-(--color-text-muted)">Loading the queue...</p>
           ) : rows.length === 0 ? (
             filtersActive ? (
               <EmptyState
@@ -1075,8 +1074,8 @@ function LeavesContent() {
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Leave days pending</strong> is the
-          number of days those requests cover, counted the way the server counts them: the first
-          day and the last day are both inside the window.
+          number of days those requests cover, counted the way the server counts them: the first day
+          and the last day are both inside the window.
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">Window</strong> narrows the requests to

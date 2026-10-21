@@ -109,10 +109,11 @@ export default function EditAssetPage() {
    * The record, read through the shared query stack, like every other record:
    * the load takes part in the cache and a write invalidates it.
    */
-  const {
-    data: fetchedAsset = null,
-    error: queryError,
-  } = useApiQuery<AssetDetail>(['assets', id], `assets/${id}`, { enabled: Boolean(id) });
+  const { data: fetchedAsset = null, error: queryError } = useApiQuery<AssetDetail>(
+    ['assets', id],
+    `assets/${id}`,
+    { enabled: Boolean(id) },
+  );
 
   const asset = fetchedAsset && !Array.isArray(fetchedAsset) ? fetchedAsset : null;
   // The skeleton is shown while the record is still on its way. It is derived
@@ -121,6 +122,7 @@ export default function EditAssetPage() {
   const isLoading = !asset && !queryError;
 
   const {
+    setValue,
     register,
     control,
     handleSubmit,
@@ -135,7 +137,9 @@ export default function EditAssetPage() {
       notes: '',
     },
   });
-
+  const watchedPurchasedDate = useWatch({ control, name: 'purchasedDate' }) ?? '';
+  const watchedLastServicedDate = useWatch({ control, name: 'lastServicedDate' }) ?? '';
+  const watchedNextServiceDate = useWatch({ control, name: 'nextServiceDate' }) ?? '';
   // The id whose values are already in the form. A refetch of the same record
   // must never wipe what the operator is typing.
   const loadedIdRef = useRef<string | null>(null);
@@ -380,17 +384,26 @@ export default function EditAssetPage() {
               <DatePicker
                 label="Purchase date"
                 error={err.purchasedDate?.message}
-                {...register('purchasedDate')}
+
+                name="purchasedDate"
+                value={watchedPurchasedDate}
+                onChange={(value) => setValue('purchasedDate', value, { shouldValidate: true })}
               />
               <DatePicker
                 label="Last serviced"
                 error={err.lastServicedDate?.message}
-                {...register('lastServicedDate')}
+
+                name="lastServicedDate"
+                value={watchedLastServicedDate}
+                onChange={(value) => setValue('lastServicedDate', value, { shouldValidate: true })}
               />
               <DatePicker
                 label="Next service due"
                 error={err.nextServiceDate?.message}
-                {...register('nextServiceDate')}
+
+                name="nextServiceDate"
+                value={watchedNextServiceDate}
+                onChange={(value) => setValue('nextServiceDate', value, { shouldValidate: true })}
               />
             </FormGrid>
           </FormSection>
@@ -471,16 +484,24 @@ export default function EditAssetPage() {
           <DetailCard title="What the save moves" icon={<FileText />}>
             <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
               <li>
-                {'The fields of the record, and an update entry in the audit log that names the fields that moved.'}
+                {
+                  'The fields of the record, and an update entry in the audit log that names the fields that moved.'
+                }
               </li>
               <li className="font-semibold text-(--color-text-primary)">
-                {'The residents of the room, or of the floor, hear about it once and only once: when the save moves the state into under maintenance or damaged, the server pushes a service_update to the active residents of that place.'}
+                {
+                  'The residents of the room, or of the floor, hear about it once and only once: when the save moves the state into under maintenance or damaged, the server pushes a service_update to the active residents of that place.'
+                }
               </li>
               <li>
-                {'Everything else is silent: a move to another room, a new count, a new service date and a move back to available or in use reach nobody.'}
+                {
+                  'Everything else is silent: a move to another room, a new count, a new service date and a move back to available or in use reach nobody.'
+                }
               </li>
               <li>
-                {'The save refuses a name under two characters, a category outside the five, an empty location, a count or a threshold below zero and a date the server cannot read.'}
+                {
+                  'The save refuses a name under two characters, a category outside the five, an empty location, a count or a threshold below zero and a date the server cannot read.'
+                }
               </li>
             </ul>
           </DetailCard>
@@ -488,7 +509,9 @@ export default function EditAssetPage() {
           {asset?.status !== 'retired' && (
             <DetailCard title="Danger zone" variant="danger" icon={<AlertTriangle />}>
               <p className="text-13 leading-relaxed font-medium text-(--color-danger-700)">
-                {'Retiring closes the service schedule. The record is kept, not deleted, and nobody is told that the item left the register.'}
+                {
+                  'Retiring closes the service schedule. The record is kept, not deleted, and nobody is told that the item left the register.'
+                }
               </p>
               <Button
                 type="button"

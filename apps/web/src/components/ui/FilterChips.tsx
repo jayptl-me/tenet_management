@@ -32,14 +32,14 @@ export function FilterChips({ chips, onClearAll, className }: FilterChipsProps) 
       {chips.map((chip) => (
         <span
           key={chip.key}
-          className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] py-1 pr-1.5 pl-2.5 text-xs font-semibold text-[color:var(--color-brand-800)]"
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-(--color-brand-200) bg-(--color-brand-50) py-1 pr-1.5 pl-2.5 text-xs font-semibold text-(--color-brand-800)"
         >
-          <span className="text-[color:var(--color-brand-600)]">{chip.label}:</span>
+          <span className="text-(--color-brand-600)">{chip.label}:</span>
           <span className="max-w-45 truncate">{chip.value}</span>
           <button
             type="button"
             onClick={chip.onRemove}
-            className="rounded-full p-0.5 transition-colors hover:bg-[color:var(--color-brand-100)]"
+            className="rounded-full p-0.5 transition-colors hover:bg-(--color-brand-100)"
             aria-label={`Remove filter ${chip.label}`}
           >
             <X className="h-3 w-3" />
@@ -50,7 +50,7 @@ export function FilterChips({ chips, onClearAll, className }: FilterChipsProps) 
         <button
           type="button"
           onClick={onClearAll}
-          className="text-xs font-semibold text-[color:var(--color-text-secondary)] underline-offset-2 hover:text-[color:var(--color-text-primary)] hover:underline"
+          className="text-xs font-semibold text-(--color-text-secondary) underline-offset-2 hover:text-(--color-text-primary) hover:underline"
         >
           Clear all
         </button>

@@ -61,17 +61,15 @@ export function AttendanceDayDetail({
   return (
     <div
       className={clsx(
-        'rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4',
+        'rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-4',
         className,
       )}
       role="region"
       aria-label={`Attendance details for ${date}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
-          {title}
-        </p>
-        <span className="text-xs font-semibold text-[color:var(--color-text-muted)]">
+        <p className="font-display text-sm font-bold text-(--color-text-primary)">{title}</p>
+        <span className="text-xs font-semibold text-(--color-text-muted)">
           {isLoading ? 'Loading...' : `${records.length} record${records.length === 1 ? '' : 's'}`}
         </span>
       </div>
@@ -81,14 +79,12 @@ export function AttendanceDayDetail({
           {[0, 1].map((i) => (
             <div
               key={i}
-              className="h-14 animate-pulse rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)]"
+              className="h-14 animate-pulse rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg)"
             />
           ))}
         </div>
       ) : records.length === 0 ? (
-        <p className="mt-2 text-sm text-[color:var(--color-text-muted)]">
-          No attendance records on this day.
-        </p>
+        <p className="mt-2 text-sm text-(--color-text-muted)">No attendance records on this day.</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {records.map((r) => {
@@ -103,17 +99,17 @@ export function AttendanceDayDetail({
             return (
               <li
                 key={r._id}
-                className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-field-bg)] p-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-field-bg) p-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-[color:var(--color-text-primary)]">
-                    <UserRound className="h-3.5 w-3.5 text-[color:var(--color-text-muted)]" />
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-(--color-text-primary)">
+                    <UserRound className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     <span className="truncate">{tenantName}</span>
-                    <span className="font-semibold text-[color:var(--color-text-muted)]">
+                    <span className="font-semibold text-(--color-text-muted)">
                       Room {roomNumber}
                     </span>
                   </p>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs text-[color:var(--color-text-muted)]">
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-(--color-text-muted)">
                     <Clock className="h-3.5 w-3.5" />
                     In {inTime} - Out {outTime}
                   </p>

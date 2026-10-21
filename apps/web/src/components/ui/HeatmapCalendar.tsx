@@ -111,17 +111,17 @@ export function HeatmapCalendar({
       aria-label={`Incident Heatmap for ${monthLabel}. ${totalActivity} total incidents.`}
     >
       {/* ── Top Header Bar ───────────────────────────────── */}
-      <div className="flex items-center justify-between border-b border-[color:var(--border-color)]/60 pb-2.5">
+      <div className="flex items-center justify-between border-b border-(--border-color)/60 pb-2.5">
         <div className="flex items-center gap-2">
-          <span className="font-display text-14 font-bold tracking-tight text-[color:var(--color-text-primary)]">
+          <span className="font-display text-14 font-bold tracking-tight text-(--color-text-primary)">
             {monthLabel}
           </span>
         </div>
-        <div className="text-11 flex items-center gap-1.5 rounded-full bg-[color:var(--color-surface-100)] px-2.5 py-0.5 font-semibold text-[color:var(--color-text-secondary)]">
-          <span className="font-bold text-[color:var(--color-text-primary)] tabular-nums">
+        <div className="text-11 flex items-center gap-1.5 rounded-full bg-(--color-surface-100) px-2.5 py-0.5 font-semibold text-(--color-text-secondary)">
+          <span className="font-bold text-(--color-text-primary) tabular-nums">
             {totalActivity}
           </span>
-          <span className="font-normal text-[color:var(--color-text-muted)]">
+          <span className="font-normal text-(--color-text-muted)">
             {totalActivity === 1 ? 'incident' : 'incidents'}
           </span>
         </div>
@@ -131,7 +131,7 @@ export function HeatmapCalendar({
       <div className="flex justify-center">
         <div className="flex items-start gap-2.5">
           {/* Day of Week Axis */}
-          <div className="text-10 flex flex-col gap-1.5 pt-0.5 font-semibold text-[color:var(--color-text-muted)]">
+          <div className="text-10 flex flex-col gap-1.5 pt-0.5 font-semibold text-(--color-text-muted)">
             {DAY_LABELS.map((label, idx) => (
               <span
                 key={label}
@@ -191,12 +191,12 @@ export function HeatmapCalendar({
                       className={clsx(
                         'text-10 relative flex h-6 w-6 items-center justify-center rounded-xs font-semibold transition-all duration-150',
                         isEmpty
-                          ? 'cursor-default border border-[color:var(--border-color)]/80 bg-[color:var(--color-surface-100)] text-[color:var(--color-text-muted)]'
+                          ? 'cursor-default border border-(--border-color)/80 bg-(--color-surface-100) text-(--color-text-muted)'
                           : clsx(
                               colorScale === 'danger'
-                                ? 'text-[color:var(--color-on-danger)]'
-                                : 'text-[color:var(--color-on-brand)]',
-                              'cursor-pointer shadow-[var(--shadow-xs)] hover:scale-110 hover:shadow-[var(--shadow-sm)] focus:ring-2 focus:ring-[color:var(--color-brand-400)] focus:outline-none',
+                                ? 'text-(--color-on-danger)'
+                                : 'text-(--color-on-brand)',
+                              'cursor-pointer shadow-[var(--shadow-xs)] hover:scale-110 hover:shadow-[var(--shadow-sm)] focus:ring-2 focus:ring-(--color-brand-400) focus:outline-none',
                             ),
                       )}
                       style={{ backgroundColor: fillColor }}
@@ -232,20 +232,16 @@ export function HeatmapCalendar({
           }}
           role="tooltip"
         >
-          <p className="font-bold text-[color:var(--color-text-primary)]">
-            {activeTooltip.formattedDate}
-          </p>
-          <p className="text-[color:var(--color-text-secondary)]">
-            <span className="font-semibold text-[color:var(--color-danger-600)]">
-              {activeTooltip.count}
-            </span>{' '}
+          <p className="font-bold text-(--color-text-primary)">{activeTooltip.formattedDate}</p>
+          <p className="text-(--color-text-secondary)">
+            <span className="font-semibold text-(--color-danger-600)">{activeTooltip.count}</span>{' '}
             {activeTooltip.count === 1 ? 'incident filed' : 'incidents filed'}
           </p>
         </div>
       )}
 
       {/* ── Bottom Legend ────────────────────────────────── */}
-      <div className="text-11 flex items-center justify-between pt-1 text-[color:var(--color-text-muted)]">
+      <div className="text-11 flex items-center justify-between pt-1 text-(--color-text-muted)">
         <span className="text-10">Click active dates to filter</span>
         <div className="flex items-center gap-1">
           <span className="text-10">0</span>

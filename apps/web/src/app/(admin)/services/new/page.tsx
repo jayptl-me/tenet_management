@@ -165,8 +165,7 @@ function NewServiceForm() {
           } catch (err) {
             const parsed = await parseApiError(err);
             const alreadyExists =
-              parsed.code === 'CONFLICT' ||
-              parsed.message.toLowerCase().includes('already exists');
+              parsed.code === 'CONFLICT' || parsed.message.toLowerCase().includes('already exists');
             rows.push({
               floor: floorName,
               outcome: alreadyExists
@@ -317,8 +316,8 @@ function NewServiceForm() {
                 and answers the second attempt with a conflict.
               </li>
               <li>
-                <strong className="text-(--color-text-primary)">It tells nobody.</strong> A row
-                that is created sends no message to the residents of the floor. A state change later
+                <strong className="text-(--color-text-primary)">It tells nobody.</strong> A row that
+                is created sends no message to the residents of the floor. A state change later
                 does, and the board says so when it happens.
               </li>
               <li>
@@ -328,8 +327,8 @@ function NewServiceForm() {
               </li>
             </ul>
             <p className="text-2xs mt-3 flex items-start gap-1.5 font-medium text-(--color-text-muted)">
-              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
-              A state of degraded or down written here does not reach the residents of the floor: the
+              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />A
+              state of degraded or down written here does not reach the residents of the floor: the
               server sends no message when a row is created. Set the state from the board afterwards
               and the server pushes the update to the residents of that floor.
             </p>

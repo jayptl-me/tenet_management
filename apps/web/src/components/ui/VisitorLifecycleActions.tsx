@@ -52,7 +52,7 @@ export function VisitorLifecycleActions({
 
   if (!hasActions) {
     return (
-      <p className="text-sm font-medium text-[color:var(--color-text-muted)]">
+      <p className="text-sm font-medium text-(--color-text-muted)">
         No further lifecycle actions for status &ldquo;{status.replace(/_/g, ' ')}&rdquo;.
       </p>
     );

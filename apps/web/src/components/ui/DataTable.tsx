@@ -59,7 +59,7 @@ function SkeletonRow({ columns }: { columns: number }) {
   return (
     <tr>
       {Array.from({ length: columns }).map((_, j) => (
-        <td key={j} className="border-b border-b-[color:var(--border-color)] px-4 py-3">
+        <td key={j} className="border-b border-b-(--border-color) px-4 py-3">
           <ShimmerBlock className="h-4 w-3/4" />
         </td>
       ))}
@@ -71,7 +71,7 @@ function SkeletonRow({ columns }: { columns: number }) {
 
 function MobileCardSkeleton() {
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-xs)]">
+    <div className="rounded-[var(--radius-lg)] border border-(--border-color) bg-(--color-card-bg) p-4 shadow-[var(--shadow-xs)]">
       <ShimmerBlock className="mb-2 h-4 w-3/4" />
       <ShimmerBlock className="h-3 w-1/2" />
     </div>
@@ -135,7 +135,7 @@ export function DataTable<T>({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {searchable && onSearchChange && (
             <div className="relative max-w-sm sm:w-72">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[color:var(--color-text-muted)]" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-(--color-text-muted)" />
               <Input
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
@@ -152,18 +152,18 @@ export function DataTable<T>({
       {/* Bulk action bar */}
       {selectable && selection.size > 0 && (
         <div
-          className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] px-4 py-2.5"
+          className="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] border border-(--color-brand-200) bg-(--color-brand-50) px-4 py-2.5"
           role="region"
           aria-label="Bulk actions"
         >
-          <span className="text-13 font-bold text-[color:var(--color-brand-800)] tabular-nums">
+          <span className="text-13 font-bold text-(--color-brand-800) tabular-nums">
             {selection.size} selected
           </span>
           <div className="flex flex-wrap items-center gap-2">{bulkActions}</div>
           <button
             type="button"
             onClick={clearSelection}
-            className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-[color:var(--color-brand-700)] hover:underline"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-(--color-brand-700) hover:underline"
           >
             <X className="h-3.5 w-3.5" />
             Clear selection
@@ -177,13 +177,11 @@ export function DataTable<T>({
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <MobileCardSkeleton key={`mobile-skel-${i}`} />)
           ) : data.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-6 py-12 text-center shadow-[var(--shadow-sm)]">
+            <div className="rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) px-6 py-12 text-center shadow-[var(--shadow-sm)]">
               {emptyState ?? (
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-15 font-semibold text-[color:var(--color-text-muted)]">
-                    No data found
-                  </p>
-                  <p className="text-13 text-[color:var(--color-text-muted)]">
+                  <p className="text-15 font-semibold text-(--color-text-muted)">No data found</p>
+                  <p className="text-13 text-(--color-text-muted)">
                     Try adjusting your search or filters
                   </p>
                 </div>
@@ -195,9 +193,9 @@ export function DataTable<T>({
                 key={keyExtractor(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={clsx(
-                  'rounded-lg border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
+                  'rounded-lg border border-(--border-color) bg-(--color-card-bg) p-4 shadow-[var(--shadow-xs)] transition-all duration-[var(--transition-duration)]',
                   onRowClick &&
-                    'cursor-pointer hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
+                    'cursor-pointer hover:border-(--color-brand-200) hover:shadow-[var(--shadow-sm)] active:scale-[var(--active-press-scale)]',
                 )}
               >
                 {mobileCardRenderer(row)}
@@ -210,15 +208,15 @@ export function DataTable<T>({
       {/* Desktop Table (hidden on mobile when card view is active) */}
       <div
         className={clsx(
-          'overflow-x-auto rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] shadow-[var(--shadow-card)]',
+          'overflow-x-auto rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) shadow-[var(--shadow-card)]',
           mobileCardRenderer && 'hidden md:block',
         )}
       >
-        <table className="w-full border-collapse bg-[color:var(--color-card-bg)]">
+        <table className="w-full border-collapse bg-(--color-card-bg)">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-[color:var(--color-field-bg)]">
+            <tr className="bg-(--color-field-bg)">
               {selectable && (
-                <th className="w-10 border-b border-b-[color:var(--border-color)] px-4 py-3">
+                <th className="w-10 border-b border-b-(--border-color) px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allPageSelected}
@@ -226,7 +224,7 @@ export function DataTable<T>({
                       if (el) el.indeterminate = somePageSelected;
                     }}
                     onChange={togglePage}
-                    className="h-4 w-4 cursor-pointer accent-[color:var(--color-brand-500)]"
+                    className="h-4 w-4 cursor-pointer accent-(--color-brand-500)"
                     aria-label="Select all rows on this page"
                   />
                 </th>
@@ -235,7 +233,7 @@ export function DataTable<T>({
                 <th
                   key={i}
                   className={clsx(
-                    'text-11 border-b border-b-[color:var(--border-color)] px-4 py-3 text-left font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase',
+                    'text-11 border-b border-b-(--border-color) px-4 py-3 text-left font-bold tracking-wider text-(--color-text-muted) uppercase',
                     col.className,
                   )}
                 >
@@ -257,10 +255,10 @@ export function DataTable<T>({
                 >
                   {emptyState ?? (
                     <div className="flex flex-col items-center gap-2">
-                      <p className="text-15 font-semibold text-[color:var(--color-text-muted)]">
+                      <p className="text-15 font-semibold text-(--color-text-muted)">
                         No data found
                       </p>
-                      <p className="text-13 text-[color:var(--color-text-muted)]">
+                      <p className="text-13 text-(--color-text-muted)">
                         Try adjusting your search or filters
                       </p>
                     </div>
@@ -276,10 +274,10 @@ export function DataTable<T>({
                     key={rowKey}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={clsx(
-                      'border-b border-b-[color:var(--border-color)] transition-colors duration-[var(--transition-duration)] last:border-b-0',
+                      'border-b border-b-(--border-color) transition-colors duration-[var(--transition-duration)] last:border-b-0',
                       isSelected
-                        ? 'bg-[color:var(--color-brand-50)]'
-                        : 'bg-[color:var(--color-card-bg)] hover:bg-[color:var(--color-field-bg-hover)]',
+                        ? 'bg-(--color-brand-50)'
+                        : 'bg-(--color-card-bg) hover:bg-(--color-field-bg-hover)',
                       onRowClick && 'cursor-pointer',
                     )}
                   >
@@ -289,7 +287,7 @@ export function DataTable<T>({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleRow(rowKey)}
-                          className="h-4 w-4 cursor-pointer accent-[color:var(--color-brand-500)]"
+                          className="h-4 w-4 cursor-pointer accent-(--color-brand-500)"
                           aria-label={`Select row ${rowKey}`}
                         />
                       </td>
@@ -298,7 +296,7 @@ export function DataTable<T>({
                       <td
                         key={colIdx}
                         className={clsx(
-                          'text-13 px-4 py-3 font-medium text-[color:var(--color-text-primary)]',
+                          'text-13 px-4 py-3 font-medium text-(--color-text-primary)',
                           col.className,
                         )}
                       >
@@ -319,9 +317,7 @@ export function DataTable<T>({
       {pagination && pages > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-13 font-medium text-[color:var(--color-text-muted)]">
-              Rows per page:
-            </span>
+            <span className="text-13 font-medium text-(--color-text-muted)">Rows per page:</span>
             <Select
               options={PER_PAGE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
               value={String(pagination.perPage)}
@@ -332,7 +328,7 @@ export function DataTable<T>({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-13 font-medium text-[color:var(--color-text-muted)]">
+            <span className="text-13 font-medium text-(--color-text-muted)">
               Page {pagination.page} of {pages} ({pagination.total} total)
             </span>
             <div className="flex gap-1">

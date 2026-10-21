@@ -140,6 +140,8 @@ export default function EditTenantPage() {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const watchedMoveInDate = useWatch({ control, name: 'moveInDate' }) ?? '';
+  const watchedDob = useWatch({ control, name: 'dob' }) ?? '';
 
   /**
    * The resident record, read through the shared query stack.
@@ -543,7 +545,9 @@ export default function EditTenantPage() {
               label="Move-in date"
               error={err.moveInDate?.message}
               leftIcon={<CalendarDays className="h-4 w-4" />}
-              {...register('moveInDate')}
+              name="moveInDate"
+              value={watchedMoveInDate}
+              onChange={(value) => setValue('moveInDate', value, { shouldValidate: true })}
             />
           </FormGrid>
         </FormSection>
@@ -591,7 +595,9 @@ export default function EditTenantPage() {
               label="Date of Birth"
               error={err.dob?.message}
               leftIcon={<CalendarDays className="h-4 w-4" />}
-              {...register('dob')}
+              name="dob"
+              value={watchedDob}
+              onChange={(value) => setValue('dob', value, { shouldValidate: true })}
             />
             <Select
               label="Gender"

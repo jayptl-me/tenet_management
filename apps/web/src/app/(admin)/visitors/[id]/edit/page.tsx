@@ -126,7 +126,11 @@ export default function EditVisitorPage() {
   /**
    * The record, read through the shared query stack.
    */
-  const { data: fetchedVisitor, isPending, error: queryError } = useApiQuery<VisitorRecord>(
+  const {
+    data: fetchedVisitor,
+    isPending,
+    error: queryError,
+  } = useApiQuery<VisitorRecord>(
     ['visitors', 'detail', id],
     `visitors/${id}`,
     // A background refetch must not wipe what the operator is typing.
@@ -412,16 +416,17 @@ export default function EditVisitorPage() {
               characters and a phone that is not an Indian mobile in the +91 form.
             </li>
             <li>
-              <strong className="text-(--color-text-primary)">The state of the pass does not
-              move.</strong> The save cannot change the state: the gate does that with Arrive,
-              Depart, Cancel and Re-approve, and the server refuses every other way in. The
-              resident this visit is pinned to cannot be changed here either.
+              <strong className="text-(--color-text-primary)">
+                The state of the pass does not move.
+              </strong>{' '}
+              The save cannot change the state: the gate does that with Arrive, Depart, Cancel and
+              Re-approve, and the server refuses every other way in. The resident this visit is
+              pinned to cannot be changed here either.
             </li>
             <li>
               <strong className="text-(--color-text-primary)">The resident is not told.</strong> A
-              changed hour, a changed name or a changed purpose sends no message. The resident
-              sees the new details the next time they open the app, and the gate tells them at the
-              desk.
+              changed hour, a changed name or a changed purpose sends no message. The resident sees
+              the new details the next time they open the app, and the gate tells them at the desk.
             </li>
           </ul>
         </FormSection>

@@ -261,10 +261,10 @@ function ServicesContent() {
 
   // The floors of the building and their service health, computed by the
   // server (apps/api/src/routes/floors.ts:97-172).
-  const {
-    data: floorRows = EMPTY_FLOORS,
-    error: floorsError,
-  } = useApiQuery<FloorOverview[]>(FLOORS_OVERVIEW_KEY, 'floors/overview');
+  const { data: floorRows = EMPTY_FLOORS, error: floorsError } = useApiQuery<FloorOverview[]>(
+    FLOORS_OVERVIEW_KEY,
+    'floors/overview',
+  );
 
   // The catalog of the services a floor carries. Only the per floor
   // definitions are floor services; a room only amenity never becomes a floor
@@ -334,8 +334,7 @@ function ServicesContent() {
    * the legend says so.
    */
   const scopedRows = useMemo(
-    () =>
-      serviceTypeFilter ? rows.filter((row) => row.serviceType === serviceTypeFilter) : rows,
+    () => (serviceTypeFilter ? rows.filter((row) => row.serviceType === serviceTypeFilter) : rows),
     [rows, serviceTypeFilter],
   );
 
@@ -515,9 +514,7 @@ function ServicesContent() {
    */
   const handleExportCsv = () => {
     const exportRows = visibleBoard.flatMap((entry) =>
-      entry.cells
-        .filter((cell) => cell.row !== null)
-        .map((cell) => ({ cell, floor: entry.floor })),
+      entry.cells.filter((cell) => cell.row !== null).map((cell) => ({ cell, floor: entry.floor })),
     );
     if (exportRows.length === 0) {
       setWriteResult('Nothing to export: the board shows no service for these filters.');
@@ -819,7 +816,7 @@ function ServicesContent() {
                       <StatusBadge variant="success" label="All working" />
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-2xs font-semibold text-(--color-text-muted)">
+                  <div className="text-2xs flex flex-wrap items-center gap-3 font-semibold text-(--color-text-muted)">
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
                       {floor.stats.occupiedBeds} resident
@@ -856,16 +853,16 @@ function ServicesContent() {
                           <span className="block truncate text-xs font-bold text-(--color-text-primary)">
                             {cell.label}
                           </span>
-                          <span className="mt-0.5 block text-2xs font-semibold text-(--color-text-secondary)">
+                          <span className="text-2xs mt-0.5 block font-semibold text-(--color-text-secondary)">
                             {cellState(status)}
                           </span>
                           {cell.row?.note ? (
-                            <span className="mt-1 block truncate text-2xs font-medium text-(--color-text-muted)">
+                            <span className="text-2xs mt-1 block truncate font-medium text-(--color-text-muted)">
                               {cell.row.note}
                             </span>
                           ) : null}
                           {cell.row?.openComplaintCount ? (
-                            <span className="mt-1 inline-flex items-center gap-1 text-2xs font-bold text-(--color-danger-700)">
+                            <span className="text-2xs mt-1 inline-flex items-center gap-1 font-bold text-(--color-danger-700)">
                               <TriangleAlert className="h-3 w-3" />
                               {cell.row.openComplaintCount} open complaint
                               {cell.row.openComplaintCount === 1 ? '' : 's'}
@@ -885,10 +882,11 @@ function ServicesContent() {
                           Set the status of {target.cell.label} on {floor.label}
                         </p>
                         <p className="text-2xs mt-1 font-medium text-(--color-text-secondary)">
-                          The server writes the status, stamps the record with your name and the time
-                          and writes an update entry in the audit log. When the status actually moves
-                          it pushes a service update to the active residents of {floor.label}. A note
-                          on its own does not reach them, and a failed push never undoes the write.
+                          The server writes the status, stamps the record with your name and the
+                          time and writes an update entry in the audit log. When the status actually
+                          moves it pushes a service update to the active residents of {floor.label}.
+                          A note on its own does not reach them, and a failed push never undoes the
+                          write.
                         </p>
                         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <Select
@@ -939,8 +937,8 @@ function ServicesContent() {
                         </p>
                         <p className="text-2xs mt-1 font-medium text-(--color-text-secondary)">
                           A service that is not tracked has no state and nobody to tell. The server
-                          refuses a second row for the same floor and the same service, so the row has
-                          to be created first.
+                          refuses a second row for the same floor and the same service, so the row
+                          has to be created first.
                         </p>
                         <div className="mt-3 flex flex-wrap items-center gap-3">
                           <Button
@@ -983,7 +981,7 @@ function ServicesContent() {
               <li key={floor._id}>
                 <Link
                   href={`/services/new?floorId=${floor._id}`}
-                  className="inline-flex items-center gap-1.5 rounded-(--radius-full) border border-(--color-warning-300) bg-(--color-card-bg) px-2.5 py-1 text-2xs font-semibold text-(--color-warning-800) hover:underline"
+                  className="text-2xs inline-flex items-center gap-1.5 rounded-(--radius-full) border border-(--color-warning-300) bg-(--color-card-bg) px-2.5 py-1 font-semibold text-(--color-warning-800) hover:underline"
                 >
                   <Plus className="h-3 w-3" />
                   Provision {floor.label}
@@ -997,10 +995,10 @@ function ServicesContent() {
       {/* What the tiles and the numbers mean. */}
       <div className="text-2xs space-y-1 font-medium text-(--color-text-muted)">
         <p>
-          <Info className="mr-1 inline h-3 w-3" />
-          A service belongs to a floor, not to a room: one tile is one service type on one floor, and
-          the residents it reaches are the residents of that floor. The floor, the service and the
-          state live in the address bar, so this view is a link.
+          <Info className="mr-1 inline h-3 w-3" />A service belongs to a floor, not to a room: one
+          tile is one service type on one floor, and the residents it reaches are the residents of
+          that floor. The floor, the service and the state live in the address bar, so this view is
+          a link.
         </p>
         <p>
           <strong className="text-(--color-text-secondary)">The band</strong> is the standing
@@ -1016,9 +1014,9 @@ function ServicesContent() {
           write result names what it did.
         </p>
         <p>
-          <strong className="text-(--color-text-secondary)">The service filter</strong> narrows
-          the tiles on the screen: the server cannot filter on a service type, so the whole set is
-          read in one pass and the filter is applied here. The set is walked over the pages the API
+          <strong className="text-(--color-text-secondary)">The service filter</strong> narrows the
+          tiles on the screen: the server cannot filter on a service type, so the whole set is read
+          in one pass and the filter is applied here. The set is walked over the pages the API
           clamps, so the board holds every row of every floor
           {serviceSet && serviceSet.pages > 1
             ? ` (${serviceSet.total} rows over ${serviceSet.pages} pages)`

@@ -45,47 +45,47 @@ function dominantStatus(counts: IAttendanceDayCounts): string {
 function dayCellClass(status: string, isSelected: boolean): string {
   const base =
     'flex min-h-11 flex-col items-center justify-start rounded-[var(--radius-md)] border px-1 pt-1 pb-1.5 transition-colors';
-  const selected = isSelected ? ' ring-2 ring-[color:var(--color-brand-500)] ring-offset-1' : '';
+  const selected = isSelected ? ' ring-2 ring-(--color-brand-500) ring-offset-1' : '';
   switch (status) {
     case 'present':
       return clsx(
         base,
-        'border-[color:var(--color-success-300)] bg-[color:var(--color-success-50)] hover:bg-[color:var(--color-success-100)]',
+        'border-(--color-success-300) bg-(--color-success-50) hover:bg-(--color-success-100)',
         selected,
       );
     case 'absent':
       return clsx(
         base,
-        'border-[color:var(--color-danger-300)] bg-[color:var(--color-danger-50)] hover:bg-[color:var(--color-danger-100)]',
+        'border-(--color-danger-300) bg-(--color-danger-50) hover:bg-(--color-danger-100)',
         selected,
       );
     case 'on_leave':
       return clsx(
         base,
-        'border-[color:var(--color-brand-300)] bg-[color:var(--color-brand-50)] hover:bg-[color:var(--color-brand-100)]',
+        'border-(--color-brand-300) bg-(--color-brand-50) hover:bg-(--color-brand-100)',
         selected,
       );
     case 'not_returned':
       return clsx(
         base,
-        'border-[color:var(--color-warning-300)] bg-[color:var(--color-warning-50)] hover:bg-[color:var(--color-warning-100)]',
+        'border-(--color-warning-300) bg-(--color-warning-50) hover:bg-(--color-warning-100)',
         selected,
       );
     default:
       return clsx(
         base,
-        'border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] hover:bg-[color:var(--color-field-bg)]',
+        'border-(--border-color) bg-(--color-card-bg) hover:bg-(--color-field-bg)',
         selected,
       );
   }
 }
 
 function statusDotClass(status: string): string {
-  if (status === 'present') return 'bg-[color:var(--color-success-500)]';
-  if (status === 'absent') return 'bg-[color:var(--color-danger-500)]';
-  if (status === 'on_leave') return 'bg-[color:var(--color-brand-500)]';
-  if (status === 'not_returned') return 'bg-[color:var(--color-warning-500)]';
-  return 'bg-[color:var(--color-surface-400)]';
+  if (status === 'present') return 'bg-(--color-success-500)';
+  if (status === 'absent') return 'bg-(--color-danger-500)';
+  if (status === 'on_leave') return 'bg-(--color-brand-500)';
+  if (status === 'not_returned') return 'bg-(--color-warning-500)';
+  return 'bg-(--color-surface-400)';
 }
 
 export function AttendanceMonthCalendar({
@@ -153,12 +153,10 @@ export function AttendanceMonthCalendar({
       aria-label={`Attendance calendar for ${monthLabel}`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="font-display text-sm font-bold text-[color:var(--color-text-primary)]">
+        <p className="font-display text-sm font-bold text-(--color-text-primary)">
           {monthLabel}
           {isLoading && (
-            <span className="ml-2 text-xs font-semibold text-[color:var(--color-text-muted)]">
-              Loading...
-            </span>
+            <span className="ml-2 text-xs font-semibold text-(--color-text-muted)">Loading...</span>
           )}
         </p>
         <div className="flex items-center gap-1.5">
@@ -166,14 +164,14 @@ export function AttendanceMonthCalendar({
             type="button"
             onClick={goPrev}
             aria-label="Previous month"
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={goToday}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             Today
           </button>
@@ -181,7 +179,7 @@ export function AttendanceMonthCalendar({
             type="button"
             onClick={goNext}
             aria-label="Next month"
-            className="rounded-[var(--radius-md)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-1.5 text-[color:var(--color-text-secondary)] transition-colors hover:bg-[color:var(--color-field-bg)] hover:text-[color:var(--color-text-primary)]"
+            className="rounded-[var(--radius-md)] border border-(--border-color) bg-(--color-card-bg) p-1.5 text-(--color-text-secondary) transition-colors hover:bg-(--color-field-bg) hover:text-(--color-text-primary)"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -192,7 +190,7 @@ export function AttendanceMonthCalendar({
         {DAY_NAMES.map((d) => (
           <p
             key={d}
-            className="text-10 pb-1 text-center font-bold tracking-wider text-[color:var(--color-text-muted)] uppercase"
+            className="text-10 pb-1 text-center font-bold tracking-wider text-(--color-text-muted) uppercase"
           >
             {d}
           </p>
@@ -231,8 +229,8 @@ export function AttendanceMonthCalendar({
                 className={clsx(
                   'text-11 flex h-5 w-5 items-center justify-center rounded-full font-bold',
                   isToday
-                    ? 'bg-[color:var(--color-brand-solid)] text-[color:var(--color-on-brand-solid)]'
-                    : 'text-[color:var(--color-text-primary)]',
+                    ? 'bg-(--color-brand-solid) text-(--color-on-brand-solid)'
+                    : 'text-(--color-text-primary)',
                 )}
               >
                 {cell.day}
@@ -243,7 +241,7 @@ export function AttendanceMonthCalendar({
                     <span key={s} className={clsx('h-1.5 w-1.5 rounded-full', statusDotClass(s))} />
                   ))}
                   {counts && counts.total > 1 && (
-                    <span className="text-10 font-bold text-[color:var(--color-text-muted)]">
+                    <span className="text-10 font-bold text-(--color-text-muted)">
                       {counts.total}
                     </span>
                   )}
@@ -254,25 +252,25 @@ export function AttendanceMonthCalendar({
         })}
       </div>
 
-      <div className="text-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-semibold text-[color:var(--color-text-muted)]">
+      <div className="text-10 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-semibold text-(--color-text-muted)">
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-success-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-success-500)" />
           Present
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-danger-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-danger-500)" />
           Absent
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-brand-500)" />
           On leave
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-warning-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-warning-500)" />
           Not returned
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-[color:var(--color-brand-500)]" />
+          <span className="h-2 w-2 rounded-full bg-(--color-brand-500)" />
           Today
         </span>
       </div>

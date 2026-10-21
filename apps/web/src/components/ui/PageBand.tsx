@@ -31,11 +31,11 @@ export interface PageBandProps {
 // ── Helpers ────────────────────────────────────────────
 
 const metricTone: Record<NonNullable<PageBandMetric['tone']>, string> = {
-  default: 'text-[color:var(--color-text-primary)]',
-  success: 'text-[color:var(--color-success-600)]',
-  warning: 'text-[color:var(--color-warning-600)]',
-  danger: 'text-[color:var(--color-danger-600)]',
-  brand: 'text-[color:var(--color-brand-600)]',
+  default: 'text-(--color-text-primary)',
+  success: 'text-(--color-success-600)',
+  warning: 'text-(--color-warning-600)',
+  danger: 'text-(--color-danger-600)',
+  brand: 'text-(--color-brand-600)',
 };
 
 // ── Component ──────────────────────────────────────────
@@ -57,12 +57,12 @@ export function PageBand({ metrics, children, className }: PageBandProps) {
           {metrics.map((metric) => {
             const body = (
               <>
-                <span className="tracking-label text-xs font-semibold text-[color:var(--color-text-muted)] uppercase">
+                <span className="tracking-label text-xs font-semibold text-(--color-text-muted) uppercase">
                   {metric.label}
                 </span>
                 <span className="flex items-baseline gap-2">
                   {metric.icon && (
-                    <span className="text-[color:var(--color-text-muted)] [&_svg]:h-3.5 [&_svg]:w-3.5">
+                    <span className="text-(--color-text-muted) [&_svg]:h-3.5 [&_svg]:w-3.5">
                       {metric.icon}
                     </span>
                   )}
@@ -75,7 +75,7 @@ export function PageBand({ metrics, children, className }: PageBandProps) {
                     {metric.value}
                   </span>
                   {metric.hint && (
-                    <span className="text-2xs font-medium text-[color:var(--color-text-muted)]">
+                    <span className="text-2xs font-medium text-(--color-text-muted)">
                       {metric.hint}
                     </span>
                   )}
@@ -106,9 +106,7 @@ export function PageBand({ metrics, children, className }: PageBandProps) {
       )}
 
       {children && (
-        <div
-          className={clsx(hasMetrics && 'border-t border-[color:var(--border-color)]', 'px-4 py-2')}
-        >
+        <div className={clsx(hasMetrics && 'border-t border-(--border-color)', 'px-4 py-2')}>
           {children}
         </div>
       )}

@@ -73,7 +73,7 @@ export function TableActions({
           }}
           title="Edit"
           aria-label="Edit"
-          className="text-[color:var(--color-brand-600)]"
+          className="text-(--color-brand-600)"
         >
           <Pencil className="h-3.5 w-3.5" />
           {!compact && <span className="text-xs">Edit</span>}
@@ -89,7 +89,7 @@ export function TableActions({
           }}
           title="Delete"
           aria-label="Delete"
-          className="text-[color:var(--color-danger-600)]"
+          className="text-(--color-danger-600)"
         >
           <Trash2 className="h-3.5 w-3.5" />
           {!compact && <span className="text-xs">Delete</span>}

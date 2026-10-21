@@ -24,7 +24,7 @@ export interface BedMiniGridProps {
 export function BedMiniGrid({ beds, size = 'sm', maxVisible = 10, className }: BedMiniGridProps) {
   if (beds.length === 0) {
     return (
-      <span className={clsx('text-11 font-medium text-[color:var(--color-text-muted)]', className)}>
+      <span className={clsx('text-11 font-medium text-(--color-text-muted)', className)}>
         No beds
       </span>
     );
@@ -48,13 +48,13 @@ export function BedMiniGrid({ beds, size = 'sm', maxVisible = 10, className }: B
             'rounded-[3px] border transition-colors duration-[var(--transition-duration)]',
             pipSize,
             bed.isOccupied
-              ? 'border-[color:var(--color-text-primary)] bg-[color:var(--color-text-primary)]'
-              : 'border-dashed border-[color:var(--color-surface-400)] bg-[color:var(--color-surface-100)]',
+              ? 'border-(--color-text-primary) bg-(--color-text-primary)'
+              : 'border-dashed border-(--color-surface-400) bg-(--color-surface-100)',
           )}
         />
       ))}
       {overflow > 0 && (
-        <span className="text-10 font-bold text-[color:var(--color-text-muted)]">+{overflow}</span>
+        <span className="text-10 font-bold text-(--color-text-muted)">+{overflow}</span>
       )}
     </div>
   );
@@ -73,20 +73,20 @@ export function OccupancyBar({
   const pct = total > 0 ? Math.round((occupied / total) * 100) : 0;
   const fillColor =
     pct >= 100
-      ? 'bg-[color:var(--color-danger-500)]'
+      ? 'bg-(--color-danger-500)'
       : pct >= 90
-        ? 'bg-[color:var(--color-warning-500)]'
-        : 'bg-[color:var(--color-success-500)]';
+        ? 'bg-(--color-warning-500)'
+        : 'bg-(--color-success-500)';
 
   return (
     <div className={clsx('flex min-w-[90px] items-center gap-2', className)}>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:var(--color-surface-200)]">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-(--color-surface-200)">
         <div
           className={clsx('h-full rounded-full transition-all duration-500', fillColor)}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-11 font-bold text-[color:var(--color-text-secondary)] tabular-nums">
+      <span className="text-11 font-bold text-(--color-text-secondary) tabular-nums">
         {occupied}/{total}
       </span>
     </div>

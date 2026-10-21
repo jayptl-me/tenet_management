@@ -4,16 +4,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Ban,
-  Building2,
-  Check,
-  DoorOpen,
-  ExternalLink,
-  Info,
-  UserRound,
-  X,
-} from 'lucide-react';
+import { Ban, Building2, Check, DoorOpen, ExternalLink, Info, UserRound, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Button } from '@/components/ui/Button';
@@ -193,7 +184,10 @@ function LeaveReview({ leave }: { leave: LeaveDetail }) {
               <DetailRow
                 label="Status"
                 value={
-                  <StatusBadge variant={statusToVariant(status)} label={status.replace(/_/g, ' ')} />
+                  <StatusBadge
+                    variant={statusToVariant(status)}
+                    label={status.replace(/_/g, ' ')}
+                  />
                 }
               />
               {leave.approvedByName && (
@@ -216,7 +210,12 @@ function LeaveReview({ leave }: { leave: LeaveDetail }) {
             </div>
 
             <div className="mt-4">
-              <LeaveAttendanceImpact tenantId={tenantId} fromDate={from} toDate={to} status={status} />
+              <LeaveAttendanceImpact
+                tenantId={tenantId}
+                fromDate={from}
+                toDate={to}
+                status={status}
+              />
             </div>
           </FormSection>
 
@@ -239,14 +238,14 @@ function LeaveReview({ leave }: { leave: LeaveDetail }) {
                   body on that route, so the resident reads the outcome alone.
                 </li>
                 <li>
-                  <strong className="text-(--color-text-primary)">Reject</strong> keeps the request on
-                  file with the reason of the office, writes the entry in the audit log and pushes a
-                  service_update notification that carries the reason in its body.
+                  <strong className="text-(--color-text-primary)">Reject</strong> keeps the request
+                  on file with the reason of the office, writes the entry in the audit log and
+                  pushes a service_update notification that carries the reason in its body.
                 </li>
                 <li>
                   <strong className="text-(--color-text-primary)">Cancel</strong> withdraws the
-                  request, writes the entry in the audit log and pushes a service_update notification
-                  that says the leave was cancelled by the PG office.
+                  request, writes the entry in the audit log and pushes a service_update
+                  notification that says the leave was cancelled by the PG office.
                 </li>
                 <li className="flex items-start gap-1.5">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-text-muted)" />
@@ -326,8 +325,8 @@ function LeaveReview({ leave }: { leave: LeaveDetail }) {
               <p className="text-sm leading-relaxed text-(--color-text-secondary)">
                 This request was {status.replace(/_/g, ' ')}
                 {leave.approvedByName ? ` by ${leave.approvedByName}` : ''}
-                {leave.approvedAt ? ` on ${formatDate(leave.approvedAt)}` : ''}. The server refuses to
-                move it again: only a pending request can be approved, rejected or cancelled.
+                {leave.approvedAt ? ` on ${formatDate(leave.approvedAt)}` : ''}. The server refuses
+                to move it again: only a pending request can be approved, rejected or cancelled.
               </p>
             </FormSection>
           )}

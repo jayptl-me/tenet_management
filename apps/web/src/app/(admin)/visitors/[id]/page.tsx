@@ -264,6 +264,8 @@ function residentLinesOf(trail: AuditEntry[]): ResidentLine[] {
 const VISITOR_KEY = (id: string) => ['visitors', 'detail', id] as const;
 const VISITOR_AUDIT_KEY = (id: string) => ['visitors', 'detail', id, 'audit'] as const;
 
+const EMPTY_TRAIL: AuditEntry[] = [];
+
 export default function VisitorDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -351,7 +353,7 @@ export default function VisitorDetailPage() {
   const hostBed = visitor?.tenant?.bedId;
   const hostFloor = visitor?.tenant?.room?.floor?.label;
   const hostStay = hostRoom ? `Room ${hostRoom}${hostBed ? ` · Bed ${hostBed}` : ''}` : 'No room';
-  const trail = auditTrail ?? [];
+  const trail = auditTrail ?? EMPTY_TRAIL;
   const residentLines = useMemo(() => residentLinesOf(trail), [trail]);
 
   if (!isLoading && (error || !visitor)) {
@@ -583,7 +585,9 @@ export default function VisitorDetailPage() {
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-2xs font-semibold text-(--color-text-muted) uppercase">Visit window</p>
+                <p className="text-2xs font-semibold text-(--color-text-muted) uppercase">
+                  Visit window
+                </p>
                 <p className="text-sm font-bold text-(--color-text-primary)">
                   {visitWindowState.label}
                 </p>
@@ -597,7 +601,9 @@ export default function VisitorDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-2xs font-semibold text-(--color-text-muted) uppercase">Host stay</p>
+                <p className="text-2xs font-semibold text-(--color-text-muted) uppercase">
+                  Host stay
+                </p>
                 <p className="text-sm font-bold text-(--color-text-primary)">{hostStay}</p>
               </div>
             </div>

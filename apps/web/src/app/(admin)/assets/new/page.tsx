@@ -64,6 +64,7 @@ export default function NewAssetPage() {
   const [submitError, setSubmitError] = useState('');
 
   const {
+    setValue,
     register,
     control,
     handleSubmit,
@@ -77,7 +78,9 @@ export default function NewAssetPage() {
       notes: '',
     },
   });
-
+  const watchedPurchasedDate = useWatch({ control, name: 'purchasedDate' }) ?? '';
+  const watchedLastServicedDate = useWatch({ control, name: 'lastServicedDate' }) ?? '';
+  const watchedNextServiceDate = useWatch({ control, name: 'nextServiceDate' }) ?? '';
   const watchedName = useWatch({ control, name: 'name' });
   const watchedCategory = useWatch({ control, name: 'category' });
   const watchedLocation = useWatch({ control, name: 'location' });
@@ -271,17 +274,26 @@ export default function NewAssetPage() {
               <DatePicker
                 label="Purchase date"
                 error={errors.purchasedDate?.message}
-                {...register('purchasedDate')}
+
+                name="purchasedDate"
+                value={watchedPurchasedDate}
+                onChange={(value) => setValue('purchasedDate', value, { shouldValidate: true })}
               />
               <DatePicker
                 label="Last serviced"
                 error={errors.lastServicedDate?.message}
-                {...register('lastServicedDate')}
+
+                name="lastServicedDate"
+                value={watchedLastServicedDate}
+                onChange={(value) => setValue('lastServicedDate', value, { shouldValidate: true })}
               />
               <DatePicker
                 label="Next service"
                 error={errors.nextServiceDate?.message}
-                {...register('nextServiceDate')}
+
+                name="nextServiceDate"
+                value={watchedNextServiceDate}
+                onChange={(value) => setValue('nextServiceDate', value, { shouldValidate: true })}
               />
             </FormGrid>
           </FormSection>
@@ -345,16 +357,22 @@ export default function NewAssetPage() {
           <DetailCard title="What the save commits" icon={<Package />}>
             <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
               <li>
-                {'The asset record, with the name, the category, the location, the floor and the room you picked, the count, the threshold, the state and the three dates.'}
+                {
+                  'The asset record, with the name, the category, the location, the floor and the room you picked, the count, the threshold, the state and the three dates.'
+                }
               </li>
               <li>
                 {'A create entry in the audit log with the name, the category and the count.'}
               </li>
               <li>
-                {'Nothing else: no bill, no message, no task. The count you give is what the low stock set is built from, and the next service date is what puts the asset on the service due list thirty days before it falls due.'}
+                {
+                  'Nothing else: no bill, no message, no task. The count you give is what the low stock set is built from, and the next service date is what puts the asset on the service due list thirty days before it falls due.'
+                }
               </li>
               <li className="font-semibold text-(--color-text-primary)">
-                {'Nobody is told. An asset registered already out of service does not reach the residents of its room: the server pushes that message only when an edit moves the state of an existing asset.'}
+                {
+                  'Nobody is told. An asset registered already out of service does not reach the residents of its room: the server pushes that message only when an edit moves the state of an existing asset.'
+                }
               </li>
             </ul>
           </DetailCard>
@@ -364,10 +382,14 @@ export default function NewAssetPage() {
             <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
               <li>{'A name under two characters or over 120, and a location that is empty.'}</li>
               <li>{'A category outside the five the register holds.'}</li>
-              <li>{'A count or a threshold below zero, and a count that is not a whole number.'}</li>
+              <li>
+                {'A count or a threshold below zero, and a count that is not a whole number.'}
+              </li>
               <li>{'A date the server cannot read.'}</li>
               <li>
-                {'A floor or a room id the server cannot resolve: it casts the id without checking it, so a bad id fails the write instead of naming the bad field.'}
+                {
+                  'A floor or a room id the server cannot resolve: it casts the id without checking it, so a bad id fails the write instead of naming the bad field.'
+                }
               </li>
             </ul>
           </DetailCard>

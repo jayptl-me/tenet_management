@@ -14,7 +14,7 @@ interface SkeletonProps {
 export function ShimmerBlock({ className, style }: SkeletonProps) {
   return (
     <div
-      className={clsx('animate-pulse rounded-md bg-[color:var(--shimmer-base)]', className)}
+      className={clsx('animate-pulse rounded-md bg-(--shimmer-base)', className)}
       style={style}
     />
   );
@@ -57,7 +57,7 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
   return (
     <div
       className={clsx(
-        'relative flex h-full min-h-37 flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'relative flex h-full min-h-37 flex-col justify-between overflow-hidden rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -69,7 +69,7 @@ export function StatCardSkeleton({ className, withIcon = true }: StatCardSkeleto
         </div>
         {withIcon && <ShimmerBlock className="h-8 w-8 rounded-[var(--radius-md)]" />}
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-color)]/60 pt-2.5">
+      <div className="mt-3 flex items-center justify-between border-t border-(--border-color)/60 pt-2.5">
         <ShimmerBlock className="h-4 w-20 rounded-full" />
         <ShimmerBlock className="h-3 w-12" />
       </div>
@@ -88,7 +88,7 @@ export function CardSkeleton({ className, lines = 4 }: CardSkeletonProps) {
   return (
     <div
       className={clsx(
-        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -109,12 +109,12 @@ export function TableSkeleton({ className, rows = 5, columns = 4 }: TableSkeleto
   return (
     <div
       className={clsx(
-        'overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)]',
+        'overflow-hidden rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg)',
         className,
       )}
     >
       {/* Table header */}
-      <div className="flex gap-4 border-b border-b-[color:var(--border-color)] bg-[color:var(--color-field-bg)] px-4 py-3">
+      <div className="flex gap-4 border-b border-b-(--border-color) bg-(--color-field-bg) px-4 py-3">
         {Array.from({ length: columns }).map((_, i) => (
           <ShimmerBlock key={`header-${i}`} className="h-4 flex-1" />
         ))}
@@ -126,7 +126,7 @@ export function TableSkeleton({ className, rows = 5, columns = 4 }: TableSkeleto
           key={rowIdx}
           className={clsx(
             'flex gap-4 px-4 py-3',
-            rowIdx < rows - 1 && 'border-b border-b-[color:var(--color-surface-200)]',
+            rowIdx < rows - 1 && 'border-b border-b-(--color-surface-200)',
           )}
         >
           {Array.from({ length: columns }).map((_, colIdx) => (
@@ -151,7 +151,7 @@ export function ChartSkeleton({ className, height = 240 }: ChartSkeletonProps) {
   return (
     <div
       className={clsx(
-        'rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5 shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-5 shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -189,7 +189,7 @@ export function DashboardSkeleton() {
       </div>
 
       {/* Room Bed Heatmap Section */}
-      <div className="space-y-3 rounded-[var(--radius-xl)] border border-[color:var(--border-color)] bg-[color:var(--color-card-bg)] p-5">
+      <div className="space-y-3 rounded-[var(--radius-xl)] border border-(--border-color) bg-(--color-card-bg) p-5">
         <ShimmerBlock className="h-5 w-44" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
