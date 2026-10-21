@@ -13,7 +13,16 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import { Hash, Banknote, Link as LinkIcon, Plus, X } from 'lucide-react';
+import {
+  Hash,
+  Banknote,
+  Link as LinkIcon,
+  Plus,
+  X,
+  Bed,
+  CheckCircle2,
+  TriangleAlert,
+} from 'lucide-react';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
@@ -35,6 +44,12 @@ const STATUS_OPTIONS = [
 ];
 
 type RoomAmenityDef = { key: string; label: string; icon: string; category: string };
+
+/** The bed letters the server creates for a sharing type. */
+function bedsFor(sharingType: number): string[] {
+  if (sharingType !== 2 && sharingType !== 3 && sharingType !== 4) return [];
+  return ['A', 'B', 'C', 'D'].slice(0, sharingType);
+}
 
 function NewRoomForm() {
   const router = useRouter();
@@ -100,6 +115,8 @@ function NewRoomForm() {
   });
 
   const watchedSharing = Number(useWatch({ control, name: 'sharingType' }));
+  const bedLetters = bedsFor(watchedSharing);
+  const bedCountText = `${bedLetters.length} bed${bedLetters.length === 1 ? '' : 's'}, all free and with no resident in them.`;
 
   const handleAddPhoto = () => {
     const trimmed = photoInput.trim();
@@ -185,7 +202,7 @@ function NewRoomForm() {
             : 'operational',
       }));
 
-      const photos = parsePhotoUrls(
+      const photoList = parsePhotoUrls(
         typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
       );
 
@@ -200,11 +217,11 @@ function NewRoomForm() {
               typeof data.description === 'string' && data.description.trim() !== ''
                 ? data.description
                 : undefined,
-            ...(photos.length > 0 ? { photos } : {}),
+            ...(photoList.length > 0 ? { photos: photoList } : {}),
             roomAmenities,
           },
         })
-        .json<{ success: boolean }>();
+        .json<{ success: boolean; data?: { _id?: string } }>();
 
       router.push('/rooms');
     } catch (err) {
@@ -217,7 +234,7 @@ function NewRoomForm() {
   return (
     <FormPage
       title="New Room"
-      description="Add a new room to the PG"
+      description="Add a room to the building: the server creates its beds from the sharing type"
       backHref="/rooms"
       error={submitError}
       isLoading={loadingDefs}
@@ -276,6 +293,42 @@ function NewRoomForm() {
               })}
             />
           </FormGrid>
+
+          {/* The bed count is not the office's to set: the server derives it
+              from the sharing type and refuses a room whose bed count does not
+              match it. So the form shows the beds the save will create. */}
+          <div className="mt-4 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-3">
+            <p className="text-xs font-bold text-(--color-text-primary)">
+              The beds this save creates
+            </p>
+            {bedLetters.length === 0 ? (
+              <p className="text-2xs mt-2 font-medium text-(--color-text-secondary)">
+                Pick a sharing type: the server builds the beds from it.
+              </p>
+            ) : (
+              <>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {bedLetters.map((letter) => (
+                    <span
+                      key={letter}
+                      className="text-2xs flex h-7 w-7 items-center justify-center rounded-(--radius-sm) border border-dashed border-(--color-success-300) bg-(--color-success-50) font-mono font-bold text-(--color-success-800)"
+                    >
+                      {letter}
+                    </span>
+                  ))}
+                  <span className="text-2xs font-medium text-(--color-text-secondary)">
+                    {bedCountText}
+                  </span>
+                </div>
+                <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                  The bed count cannot be typed here: the server builds the beds from the sharing
+                  type and refuses a room whose bed count does not match it. A resident is put into
+                  a bed afterwards, from the room page or from the resident page.
+                </p>
+              </>
+            )}
+          </div>
+
           <div className="mt-4">
             <Textarea
               label="Description"
@@ -338,7 +391,7 @@ function NewRoomForm() {
                           className="object-cover"
                           onError={(e) => {
                             e.currentTarget.src =
-                              'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                              'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                           }}
                         />
                         <button
@@ -385,6 +438,74 @@ function NewRoomForm() {
           </FormSection>
         )}
       </FormCard>
+
+      {/* What the save commits, and what it does not. The office has to know
+          before it commits, because a bed and a rent are not the same thing. */}
+      <div className="mt-4 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-5 shadow-(--shadow-card)">
+        <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+          What this save commits
+        </h3>
+        <ul className="mt-3 space-y-2.5">
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The server creates the room with one bed per letter of the sharing type:{' '}
+              {bedLetters.join(', ')}. Every bed starts free, with no resident in it and no rent
+              attached to it.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The floor counts the room as one of its active rooms, and the server writes a create
+              entry in the audit log with the number, the sharing type, the floor and the rent.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The rent on this form is the rent of the room, and it is the number the office starts
+              from when a resident is checked in. What a resident owes is raised from the rent on
+              their own record, so nothing is billed for this room here.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The amenity states you set here are the state the server holds for this room. When one
+              of them moves to degraded or down later, the server pushes that to the residents of
+              this room. Until a resident lives here, there is nobody to tell.
+            </span>
+          </li>
+        </ul>
+
+        <div className="mt-4 border-t border-(--border-color) pt-3">
+          <p className="tracking-label text-2xs font-bold text-(--color-text-muted) uppercase">
+            What this save refuses
+          </p>
+          <ul className="text-2xs mt-2 space-y-1.5 font-medium text-(--color-text-secondary)">
+            <li className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
+              <span>
+                A room number that already exists (ROOM_NUMBER_EXISTS) and a floor the server does
+                not know (FLOOR_NOT_FOUND).
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-warning-600)" />
+              <span>
+                A rent below ₹1,000 or above ₹50,000, and a sharing type that is not 2, 3 or 4. The
+                bed count is never a choice: the server builds it from the sharing type.
+              </span>
+            </li>
+          </ul>
+          <p className="text-2xs mt-2 flex items-start gap-2 font-medium text-(--color-text-muted)">
+            <Bed className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Nobody is told about a new room. A resident is moved into a bed from the room page, and
+            the server writes that move in the audit log.
+          </p>
+        </div>
+      </div>
     </FormPage>
   );
 }

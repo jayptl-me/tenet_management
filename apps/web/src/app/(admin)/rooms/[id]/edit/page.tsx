@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertTriangle, Hash, Banknote, Link as LinkIcon, Plus, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Hash,
+  Banknote,
+  Link as LinkIcon,
+  Plus,
+  X,
+  CheckCircle2,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { findInvalidPhotoLine, parsePhotoUrls } from '@/lib/photo-urls';
@@ -20,6 +29,8 @@ import { FormPage } from '@/components/ui/FormPage';
 import { FormCard } from '@/components/ui/FormCard';
 import { FormActions } from '@/components/ui/FormActions';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
+import { useApiQuery } from '@/hooks/useApiQuery';
+import { errorMessage } from '@/lib/query';
 import type { IAppConfig } from '@pg/types';
 import { floorLabel } from '@/lib/resource-select-presets';
 
@@ -38,6 +49,7 @@ const STATUS_OPTIONS = [
 type RoomAmenityDef = { key: string; label: string; icon: string; category: string };
 
 interface RoomData {
+  _id: string;
   roomNumber: string;
   floor?: { _id: string; label: string; floorNumber?: number };
   floorId?: string;
@@ -47,18 +59,63 @@ interface RoomData {
   description?: string;
   photos?: string[];
   roomAmenities?: Array<{ amenityKey: string; status: string }>;
-  beds?: Array<{ bedId: string; isOccupied: boolean; tenantId?: string }>;
+  beds?: Array<{
+    bedId: string;
+    isOccupied: boolean;
+    tenantId?: string | null;
+    tenantName?: string | null;
+  }>;
   occupancyCount?: number;
+}
+
+/** The bed letters the server uses, in the order it uses them. */
+const BED_IDS = ['A', 'B', 'C', 'D'] as const;
+
+/**
+ * The repack the server performs when the sharing type of a room changes.
+ *
+ * The rule is the server's own (apps/api/src/routes/rooms.ts:84-123): the
+ * occupied beds are sorted by their letter and packed into the first slots of
+ * the new sharing type. A resident in bed C of a 3-sharing room therefore
+ * moves to bed B of a 2-sharing room, and the server writes the new bed onto
+ * that resident's record (apps/api/src/routes/rooms.ts:544-553). It sends no
+ * message: the resident finds out from the portal.
+ */
+function repackPreview(
+  beds: RoomData['beds'],
+  newSharingType: number,
+): {
+  refused: boolean;
+  moves: Array<{ from: string; to: string; tenantName: string | null }>;
+  occupied: number;
+} {
+  const occupied = (beds ?? [])
+    .filter((bed) => bed.isOccupied)
+    .sort((left, right) => left.bedId.localeCompare(right.bedId));
+  if (occupied.length > newSharingType) {
+    return { refused: true, moves: [], occupied: occupied.length };
+  }
+  const slots = BED_IDS.slice(0, newSharingType);
+  const moves: Array<{ from: string; to: string; tenantName: string | null }> = [];
+  occupied.forEach((bed, index) => {
+    const slot = slots[index];
+    if (slot !== undefined && slot !== bed.bedId) {
+      moves.push({ from: bed.bedId, to: slot, tenantName: bed.tenantName ?? null });
+    }
+  });
+  return { refused: false, moves, occupied: occupied.length };
 }
 
 export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  // The skeleton is shown while the record is still on its way. It is derived
+  // from the query rather than pushed by an effect, so a record that never
+  // arrives cannot leave the page spinning for ever.
   const [submitError, setSubmitError] = useState('');
   const [roomAmenityDefs, setRoomAmenityDefs] = useState<RoomAmenityDef[]>([]);
-  const [currentOccupancy, setCurrentOccupancy] = useState(0);
 
   type FormValues = {
     roomNumber: string;
@@ -101,10 +158,54 @@ export default function EditRoomPage() {
     resolver: zodResolver(schema),
   });
 
+  /**
+   * The record, read through the shared query stack.
+   */
+  const { data: fetchedRoom, error: roomError } = useApiQuery<RoomData>(
+    ['rooms', roomId],
+    `rooms/${roomId}`,
+    { enabled: Boolean(roomId) },
+  );
+
+  // The record and the occupancy are only ever read, so they are derived from
+  // the query instead of being copied into state by an effect.
+  const roomRecord = fetchedRoom && !Array.isArray(fetchedRoom) ? fetchedRoom : null;
+  const currentOccupancy = roomRecord
+    ? (roomRecord.beds?.filter((b) => b.isOccupied).length ?? roomRecord.occupancyCount ?? 0)
+    : 0;
+
+  // The skeleton is shown while the record is still on its way. It is derived
+  // from the query, so a record that never arrives shows the error state
+  // instead of a page that spins for ever.
+  const isLoading = !roomRecord && !roomError;
+
+  const [photos, setPhotos] = useState<string[]>([]);
+  // The photos are the operator's to change, so they are state. They start
+  // from the record, and they are seeded during the render that sees a new
+  // record - React's documented way to adjust state when something changes.
+  const photoSeedKey = roomRecord
+    ? `${roomRecord._id}:${(roomRecord.photos ?? []).join(',')}`
+    : null;
+  const [photoSeed, setPhotoSeed] = useState<string | null>(null);
+  if (photoSeedKey !== null && photoSeed !== photoSeedKey) {
+    setPhotoSeed(photoSeedKey);
+    setPhotos(roomRecord?.photos ?? []);
+  }
+
   const watchedSharing = Number(useWatch({ control, name: 'sharingType' }));
   const isDownsizeBlocked = currentOccupancy > 0 && watchedSharing < currentOccupancy;
 
-  const [photos, setPhotos] = useState<string[]>([]);
+  /**
+   * What the sharing type change moves.
+   *
+   * The server packs the occupied beds into the first letters of the new
+   * sharing type, so a resident whose bed letter changes is moved.
+   */
+  const sharingMoves = useMemo(
+    () => repackPreview(roomRecord?.beds, watchedSharing),
+    [roomRecord, watchedSharing],
+  );
+
   const [photoInput, setPhotoInput] = useState('');
   const [photoError, setPhotoError] = useState('');
 
@@ -136,52 +237,59 @@ export default function EditRoomPage() {
     setValue('photoUrls', updated.join('\n'), { shouldValidate: true });
   };
 
+  /**
+   * The record, read through the shared query stack.
+   */
+
   useEffect(() => {
     if (!roomId) return;
 
-    Promise.all([
-      api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>(),
-      api.get('app-config').json<{ success: boolean; data: IAppConfig }>(),
-    ])
-      .then(([roomRes, configRes]) => {
+    api
+      .get('app-config')
+      .json<{ success: boolean; data: IAppConfig }>()
+      .then((configRes) => {
         const defs = (configRes.data.amenityDefinitions ?? [])
           .filter((d) => !d.isPerFloor)
           .map((d) => ({ key: d.key, label: d.label, icon: d.icon, category: d.category }));
         setRoomAmenityDefs(defs);
-
-        const d = roomRes.data;
-        const occ = d.beds?.filter((b) => b.isOccupied).length ?? d.occupancyCount ?? 0;
-        setCurrentOccupancy(occ);
-
-        setPhotos(d.photos ?? []);
-
-        const existingAmenities = d.roomAmenities ?? [];
-
-        const defaults: Record<string, string | number | boolean> = {
-          roomNumber: d.roomNumber,
-          floorId: d.floor?._id ?? d.floorId ?? '',
-          sharingType: d.sharingType ?? 2,
-          monthlyRent: d.monthlyRent ?? 0,
-          isActive: d.isActive ?? true,
-          description: d.description ?? '',
-          photoUrls: (d.photos ?? []).join('\n'),
-        };
-
-        for (const a of defs) {
-          const existing = existingAmenities.find(
-            (ea: { amenityKey: string; status: string }) => ea.amenityKey === a.key,
-          );
-          defaults[`amenity_${a.key}`] = existing?.status ?? 'operational';
-        }
-
-        reset(defaults);
-        setIsLoading(false);
       })
       .catch(() => {
-        setSubmitError('Failed to load room data');
-        setIsLoading(false);
+        setRoomAmenityDefs([
+          { key: 'fan', label: 'Fan', icon: 'fan', category: 'furnishing' },
+          { key: 'bed', label: 'Bed', icon: 'bed-single', category: 'furnishing' },
+          { key: 'bedsheet', label: 'Bedsheet', icon: 'scroll-text', category: 'furnishing' },
+          { key: 'pillow', label: 'Pillow', icon: 'moon-star', category: 'furnishing' },
+        ]);
       });
-  }, [roomId, reset]);
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!roomRecord) return;
+    const d = roomRecord;
+
+    const existingAmenities = d.roomAmenities ?? [];
+
+    const defaults: Record<string, string | number | boolean> = {
+      roomNumber: d.roomNumber,
+      floorId: d.floor?._id ?? d.floorId ?? '',
+      sharingType: d.sharingType ?? 2,
+      monthlyRent: d.monthlyRent ?? 0,
+      isActive: d.isActive ?? true,
+      description: d.description ?? '',
+      photoUrls: (d.photos ?? []).join('\n'),
+    };
+
+    for (const a of roomAmenityDefs) {
+      const existing = existingAmenities.find(
+        (ea: { amenityKey: string; status: string }) => ea.amenityKey === a.key,
+      );
+      defaults[`amenity_${a.key}`] = existing?.status ?? 'operational';
+    }
+
+    reset(defaults);
+    // The amenity definitions arrive after the record, so the form is filled
+    // again once they are known.
+  }, [roomRecord, roomAmenityDefs, reset]);
 
   const onSubmit = async (data: FormValues) => {
     setSubmitError('');
@@ -199,15 +307,27 @@ export default function EditRoomPage() {
       return;
     }
     try {
-      const roomAmenities = roomAmenityDefs.map((a) => ({
-        amenityKey: a.key,
-        status:
-          typeof data[`amenity_${a.key}`] === 'string'
-            ? (data[`amenity_${a.key}`] as string)
-            : 'operational',
+      /**
+       * The amenity list the save writes.
+       *
+       * The room may carry an amenity the app config no longer defines, and
+       * the save keeps it: dropping a status the office recorded would make
+       * the room lose a service without anybody deciding it.
+       */
+      const amenityStatus = new Map<string, string>();
+      for (const amenity of roomRecord?.roomAmenities ?? []) {
+        amenityStatus.set(amenity.amenityKey, amenity.status);
+      }
+      for (const a of roomAmenityDefs) {
+        const value = data[`amenity_${a.key}`];
+        amenityStatus.set(a.key, typeof value === 'string' ? value : 'operational');
+      }
+      const roomAmenities = [...amenityStatus.entries()].map(([amenityKey, status]) => ({
+        amenityKey,
+        status,
       }));
 
-      const photos = parsePhotoUrls(
+      const photoList = parsePhotoUrls(
         typeof data.photoUrls === 'string' ? data.photoUrls : undefined,
       );
 
@@ -223,12 +343,16 @@ export default function EditRoomPage() {
               typeof data.description === 'string' && data.description.trim() !== ''
                 ? data.description
                 : undefined,
-            photos,
+            photos: photoList,
             roomAmenities,
           },
         })
         .json<{ success: boolean }>();
 
+      // The room is re-read from the server, so the page the operator lands on
+      // shows the state the server committed and not a local claim about it.
+      // The bed map of that page is the proof that the residents moved.
+      await queryClient.invalidateQueries({ queryKey: ['rooms'] });
       router.push(`/rooms/${roomId}`);
     } catch (err) {
       const parsed = await parseApiError(err);
@@ -241,9 +365,9 @@ export default function EditRoomPage() {
   return (
     <FormPage
       title="Edit Room"
-      description="Update identity, rent, and amenity health for this room"
+      description="Identity, rent, sharing type and amenity health for this room"
       backHref={`/rooms/${roomId}`}
-      error={submitError}
+      error={submitError || errorMessage(roomError)}
       isLoading={isLoading}
       maxWidth="form"
     >
@@ -297,10 +421,26 @@ export default function EditRoomPage() {
                 <div className="mt-2 flex items-start gap-2 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-2.5 text-xs text-(--color-warning-800)">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-warning-600)" />
                   <div>
-                    <span className="font-bold">Downsize Conflict:</span> Room currently has{' '}
-                    {currentOccupancy} active occupant{currentOccupancy === 1 ? '' : 's'}. You
-                    cannot reduce sharing capacity to {watchedSharing} until active tenants are
-                    checked out or transferred.
+                    <span className="font-bold">The server refuses this:</span> the room holds{' '}
+                    {currentOccupancy} resident{currentOccupancy === 1 ? '' : 's'} and a{' '}
+                    {watchedSharing} sharing room has {watchedSharing} bed
+                    {watchedSharing === 1 ? '' : 's'}. Check a resident out or move one first.
+                  </div>
+                </div>
+              )}
+              {!isDownsizeBlocked && sharingMoves.moves.length > 0 && (
+                <div className="mt-2 flex items-start gap-2 rounded-(--radius-md) border border-(--color-warning-300) bg-(--color-warning-50) p-2.5 text-xs text-(--color-warning-800)">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-(--color-warning-600)" />
+                  <div>
+                    <span className="font-bold">This save moves residents:</span>{' '}
+                    {sharingMoves.moves
+                      .map(
+                        (move) =>
+                          `${move.tenantName ?? 'A resident'} from bed ${move.from} to bed ${move.to}`,
+                      )
+                      .join(', ')}
+                    . The server writes the new bed onto their record and sends no message, so they
+                    find out from the portal.
                   </div>
                 </div>
               )}
@@ -371,7 +511,7 @@ export default function EditRoomPage() {
                             className="object-cover"
                             onError={(e) => {
                               e.currentTarget.src =
-                                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="none" stroke="%2394a3b8" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
                             }}
                           />
                           <button
@@ -424,6 +564,67 @@ export default function EditRoomPage() {
           </FormSection>
         )}
       </FormCard>
+
+      {/* What the save moves, and what the server will not do. The office has
+          to know before it commits: a bed move changes where someone sleeps. */}
+      <div className="mt-4 rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-5 shadow-(--shadow-card)">
+        <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+          What this save does
+        </h3>
+        <ul className="mt-3 space-y-2.5">
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The sharing type rebuilds the beds: the taken beds are packed into the first letters
+              of the new sharing type. The server writes the new bed onto the record of every
+              resident it moves, and it tells nobody.
+              {sharingMoves.moves.length > 0
+                ? ` On this room that means: ${sharingMoves.moves
+                    .map(
+                      (move) =>
+                        `${move.tenantName ?? 'a resident'} from bed ${move.from} to bed ${move.to}`,
+                    )
+                    .join(', ')}.`
+                : ' On this room no resident moves.'}
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              An amenity that moves to degraded or down is pushed to the residents of this room as a
+              service update, and one that comes back to operational tells them it works again. A
+              room with nobody in it has nobody to tell.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              The rent of the room is the number the office starts from when a resident is checked
+              in. What every resident owes is raised from the rent on their own record, so this save
+              changes what nobody owes and raises no bill.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              Unchecking Active takes the room out of the lists a new resident is picked from, and
+              the server recounts the rooms on the floor. The residents of the room are not told.
+            </span>
+          </li>
+          <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+            <span>
+              Moving the room to another floor recounts the rooms on both floors. The residents stay
+              where they sleep and are not told.
+            </span>
+          </li>
+        </ul>
+        <p className="text-2xs mt-3 border-t border-(--border-color) pt-3 font-medium text-(--color-text-muted)">
+          The server writes one update entry in the audit log with the fields that moved, and the
+          record is the proof. No message reaches the residents of this room about a rent, a floor
+          or a sharing type.
+        </p>
+      </div>
     </FormPage>
   );
 }
