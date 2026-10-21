@@ -1,20 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { WashingMachine, Settings2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
-import { FormPage } from '@/components/ui/FormPage';
-import { FormCard } from '@/components/ui/FormCard';
-import { FormActions } from '@/components/ui/FormActions';
+import { CrudFormPage } from '@/components/ui/CrudFormPage';
 import { FormSection, FormGrid } from '@/components/ui/FormSection';
 import { floorLabel } from '@/lib/resource-select-presets';
 
@@ -42,124 +37,102 @@ const STATUS_OPTIONS = [
 ];
 
 export default function NewWashingMachinePage() {
-  const router = useRouter();
-  const [submitError, setSubmitError] = useState('');
-
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
+  const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { status: 'available', timerDuration: 50 },
   });
-
-  const onSubmit = async (data: FormData) => {
-    setSubmitError('');
-    try {
-      await api.post('washing-machines', { json: data }).json<{ success: boolean }>();
-      router.push('/washing-machines');
-    } catch (err) {
-      setSubmitError((await parseApiError(err)).message);
-    }
-  };
+  const { register, control, formState } = form;
+  const { errors } = formState;
 
   const err = errors as Record<string, { message?: string }>;
 
   return (
-    <FormPage
+    <CrudFormPage
       title="New Washing Machine"
       description="Add a washing machine to a floor"
       backHref="/washing-machines"
-      error={submitError}
+      redirectTo="/washing-machines"
+      submitLabel="Save Machine"
+      mode="create"
+      form={form}
+      submit={async ({ values }) => {
+        await api.post('washing-machines', { json: values }).json<{ success: boolean }>();
+      }}
     >
-      <FormCard
-        onSubmit={handleSubmit(onSubmit)}
-        footer={
-          <FormActions
-            loading={isSubmitting}
-            cancelHref="/washing-machines"
-            submitLabel="Save Machine"
-            divided={false}
-          />
-        }
+      <FormSection
+        title="Placement"
+        icon={<WashingMachine />}
+        description="Floor and machine number (unique per floor)"
       >
-        <FormSection
-          title="Placement"
-          icon={<WashingMachine />}
-          description="Floor and machine number (unique per floor)"
-        >
-          <FormGrid>
-            <Controller
-              name="floorId"
-              control={control}
-              render={({ field }) => (
-                <ResourceSelect
-                  label="Floor"
-                  endpoint="floors"
-                  value={field.value}
-                  onChange={field.onChange}
-                  placeholder="Select floor..."
-                  error={err.floorId?.message}
-                  labelKey={floorLabel}
-                />
-              )}
-            />
-            <Input
-              label="Machine Number"
-              type="number"
-              min={1}
-              error={err.machineNumber?.message}
-              {...register('machineNumber')}
-            />
-          </FormGrid>
-        </FormSection>
-        <FormSection
-          title="Configuration"
-          icon={<Settings2 />}
-          description="Label, cycle timer, initial status, and notes"
-          divided
-        >
-          <FormGrid>
-            <Input
-              label="Label (optional)"
-              placeholder="e.g. Washing Machine 1, Front Loader"
-              error={err.label?.message}
-              {...register('label')}
-            />
-            <Input
-              label="Timer Duration (minutes)"
-              type="number"
-              min={10}
-              max={180}
-              error={err.timerDuration?.message}
-              {...register('timerDuration')}
-            />
-          </FormGrid>
-          <div className="mt-4 space-y-4">
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  label="Status"
-                  options={STATUS_OPTIONS}
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={err.status?.message}
-                />
-              )}
-            />
-            <Textarea
-              label="Notes (optional)"
-              rows={3}
-              placeholder="Any additional notes..."
-              {...register('notes')}
-            />
-          </div>
-        </FormSection>
-      </FormCard>
-    </FormPage>
+        <FormGrid>
+          <Controller
+            name="floorId"
+            control={control}
+            render={({ field }) => (
+              <ResourceSelect
+                label="Floor"
+                endpoint="floors"
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Select floor..."
+                error={err.floorId?.message}
+                labelKey={floorLabel}
+              />
+            )}
+          />
+          <Input
+            label="Machine Number"
+            type="number"
+            min={1}
+            error={err.machineNumber?.message}
+            {...register('machineNumber')}
+          />
+        </FormGrid>
+      </FormSection>
+      <FormSection
+        title="Configuration"
+        icon={<Settings2 />}
+        description="Label, cycle timer, initial status, and notes"
+        divided
+      >
+        <FormGrid>
+          <Input
+            label="Label (optional)"
+            placeholder="e.g. Washing Machine 1, Front Loader"
+            error={err.label?.message}
+            {...register('label')}
+          />
+          <Input
+            label="Timer Duration (minutes)"
+            type="number"
+            min={10}
+            max={180}
+            error={err.timerDuration?.message}
+            {...register('timerDuration')}
+          />
+        </FormGrid>
+        <div className="mt-4 space-y-4">
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select
+                label="Status"
+                options={STATUS_OPTIONS}
+                value={field.value}
+                onChange={field.onChange}
+                error={err.status?.message}
+              />
+            )}
+          />
+          <Textarea
+            label="Notes (optional)"
+            rows={3}
+            placeholder="Any additional notes..."
+            {...register('notes')}
+          />
+        </div>
+      </FormSection>
+    </CrudFormPage>
   );
 }
