@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2, AlertTriangle, MapPin, CalendarClock } from 'lucide-react';
-import { toast } from 'sonner';
+import { AlertTriangle, CalendarClock, FileText, MapPin, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
@@ -37,21 +38,17 @@ const schema = z.object({
   category: z.enum(['furniture', 'appliance', 'electronics', 'cleaning', 'other']),
   location: z.string().min(1, 'Location is required').max(160),
   quantity: z.coerce.number().int().min(0, 'Quantity cannot be negative'),
-  lowStockThreshold: z.coerce.number().int().min(0, 'Threshold cannot be negative'),
+  lowStockThreshold: z.coerce.number().int().min(0, 'Must be >= 0'),
   status: z.enum(['available', 'in_use', 'under_maintenance', 'damaged', 'retired']),
   purchasedDate: z.string().optional(),
   lastServicedDate: z.string().optional(),
   nextServiceDate: z.string().optional(),
-  notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional(),
+  notes: z.string().max(500).optional(),
   floorId: z.string().optional(),
   roomId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
-
-// The assets list, the stat cards and the asset record live under the same
-// `['assets']` prefix, so one invalidation re-reads every asset view.
-const ASSETS_PREFIX = ['assets'] as const;
 
 const CATEGORY_OPTIONS = [
   { value: 'furniture', label: 'Furniture' },
@@ -63,11 +60,15 @@ const CATEGORY_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'available', label: 'Available' },
-  { value: 'in_use', label: 'In Use' },
-  { value: 'under_maintenance', label: 'Under Maintenance' },
+  { value: 'in_use', label: 'In use' },
+  { value: 'under_maintenance', label: 'Under maintenance' },
   { value: 'damaged', label: 'Damaged' },
   { value: 'retired', label: 'Retired (terminal)' },
 ];
+
+// The assets list, the band and the asset record live under the same
+// `['assets']` prefix, so one invalidation re-reads every asset view.
+const ASSETS_PREFIX = ['assets'] as const;
 
 interface AssetDetail {
   _id: string;
@@ -79,14 +80,20 @@ interface AssetDetail {
   quantity: number;
   lowStockThreshold: number;
   status: string;
-  purchasedDate?: string;
-  lastServicedDate?: string;
-  nextServiceDate?: string;
+  purchasedDate?: string | null;
+  lastServicedDate?: string | null;
+  nextServiceDate?: string | null;
   notes?: string;
 }
 
-function toDateInput(value?: string): string {
+function toDateInput(value?: string | null): string {
   return value ? String(value).slice(0, 10) : '';
+}
+
+/** The id of a floor or a room reference, populated or not. */
+function refId(value: { _id?: string } | string | null | undefined): string {
+  if (!value) return '';
+  return typeof value === 'string' ? value : (value._id ?? '');
 }
 
 export default function EditAssetPage() {
@@ -94,11 +101,24 @@ export default function EditAssetPage() {
   const params = useParams();
   const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [loaded, setLoaded] = useState<AssetDetail | null>(null);
   const [retireOpen, setRetireOpen] = useState(false);
   const [retiring, setRetiring] = useState(false);
+
+  /**
+   * The record, read through the shared query stack, like every other record:
+   * the load takes part in the cache and a write invalidates it.
+   */
+  const {
+    data: fetchedAsset = null,
+    error: queryError,
+  } = useApiQuery<AssetDetail>(['assets', id], `assets/${id}`, { enabled: Boolean(id) });
+
+  const asset = fetchedAsset && !Array.isArray(fetchedAsset) ? fetchedAsset : null;
+  // The skeleton is shown while the record is still on its way. It is derived
+  // from the query, so a record that never arrives shows the error state
+  // instead of a page that spins for ever.
+  const isLoading = !asset && !queryError;
 
   const {
     register,
@@ -116,6 +136,29 @@ export default function EditAssetPage() {
     },
   });
 
+  // The id whose values are already in the form. A refetch of the same record
+  // must never wipe what the operator is typing.
+  const loadedIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!asset || loadedIdRef.current === id) return;
+    loadedIdRef.current = id;
+    reset({
+      name: asset.name ?? '',
+      category: (asset.category as FormData['category']) ?? 'other',
+      location: asset.location ?? '',
+      quantity: asset.quantity ?? 1,
+      lowStockThreshold: asset.lowStockThreshold ?? 0,
+      status: (asset.status as FormData['status']) ?? 'available',
+      purchasedDate: toDateInput(asset.purchasedDate),
+      lastServicedDate: toDateInput(asset.lastServicedDate),
+      nextServiceDate: toDateInput(asset.nextServiceDate),
+      notes: asset.notes ?? '',
+      floorId: refId(asset.floorId),
+      roomId: refId(asset.roomId),
+    });
+  }, [asset, id, reset]);
+
   const watchedCategory = useWatch({ control, name: 'category' });
   const watchedQuantity = useWatch({ control, name: 'quantity' });
   const watchedThreshold = useWatch({ control, name: 'lowStockThreshold' });
@@ -124,46 +167,24 @@ export default function EditAssetPage() {
   const watchedLastService = useWatch({ control, name: 'lastServicedDate' });
   const watchedPurchased = useWatch({ control, name: 'purchasedDate' });
 
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get(`assets/${id}`)
-      .json<{ success: boolean; data: AssetDetail }>()
-      .then((res) => {
-        const d = res.data;
-        setLoaded(d);
-        reset({
-          name: d.name ?? '',
-          category: (d.category as FormData['category']) ?? 'other',
-          location: d.location ?? '',
-          quantity: d.quantity ?? 1,
-          lowStockThreshold: d.lowStockThreshold ?? 0,
-          status: (d.status as FormData['status']) ?? 'available',
-          purchasedDate: toDateInput(d.purchasedDate),
-          lastServicedDate: toDateInput(d.lastServicedDate),
-          nextServiceDate: toDateInput(d.nextServiceDate),
-          notes: d.notes ?? '',
-          floorId:
-            d.floorId == null
-              ? ''
-              : typeof d.floorId === 'string'
-                ? d.floorId
-                : (d.floorId._id ?? ''),
-          roomId:
-            d.roomId == null ? '' : typeof d.roomId === 'string' ? d.roomId : (d.roomId._id ?? ''),
-        });
-        setIsLoading(false);
-      })
-      .catch(async (err) => {
-        setSubmitError((await parseApiError(err)).message);
-        setIsLoading(false);
-      });
-  }, [id, reset]);
+  /** The category hint of the form, kept short so the field stays readable. */
+  const categoryHint = watchedCategory
+    ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
+    : undefined;
+
+  /** The truth of the state field: which move reaches the residents. */
+  const stateHint =
+    watchedStatus === 'retired'
+      ? 'Retired is terminal: the service schedule closes'
+      : watchedStatus === 'under_maintenance' || watchedStatus === 'damaged'
+        ? 'This state reaches the residents of the room, or of the floor'
+        : undefined;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     try {
-      // Always send date keys as strings. Empty string clears the date (API optionalDateString -> null).
+      // Always send date keys as strings. Empty string clears the date (the API
+      // turns an empty date into null).
       const payload: Record<string, unknown> = {
         name: data.name,
         category: data.category,
@@ -197,14 +218,13 @@ export default function EditAssetPage() {
 
   const handleRetire = async () => {
     setRetiring(true);
+    setSubmitError('');
     try {
       await api.delete(`assets/${id}`).json();
-      // Invalidate before the navigation: the destination list must show the
-      // server's state, and a navigation unmounts this page.
       await queryClient.invalidateQueries({ queryKey: ASSETS_PREFIX });
       router.push('/assets');
     } catch (err) {
-      toast.error((await parseApiError(err)).message);
+      setSubmitError((await parseApiError(err)).message);
     } finally {
       setRetiring(false);
       setRetireOpen(false);
@@ -212,21 +232,21 @@ export default function EditAssetPage() {
   };
 
   const err = errors as Record<string, { message?: string }>;
-  const isRetired = (watchedStatus ?? loaded?.status) === 'retired';
+  const retireMessage = `The server keeps the record of "${asset?.name ?? 'this asset'}" and sets its state to retired, so it leaves the service due list. It writes an update entry in the audit log and sends no message: nobody is told that the item left the register.`;
 
   return (
     <FormPage
-      title="Edit Asset"
-      description="Update asset details, inventory, and service schedule"
+      title="Edit asset"
+      description="What the PG owns: the thing, where it lives, how many there are and when it is due for service"
       backHref={`/assets/${id}`}
-      error={submitError}
+      error={submitError || errorMessage(queryError)}
       isLoading={isLoading}
-      maxWidth="full"
+      maxWidth="form"
       badge={
-        loaded ? (
+        asset ? (
           <StatusBadge
-            variant={statusToVariant(watchedStatus ?? loaded.status)}
-            label={(watchedStatus ?? loaded.status).replace(/_/g, ' ')}
+            variant={statusToVariant(watchedStatus ?? asset.status)}
+            label={(watchedStatus ?? asset.status).replace(/_/g, ' ')}
           />
         ) : undefined
       }
@@ -238,12 +258,16 @@ export default function EditAssetPage() {
             <FormActions
               loading={isSubmitting}
               cancelHref={`/assets/${id}`}
-              submitLabel="Save Changes"
+              submitLabel="Save the changes"
               divided={false}
             />
           }
         >
-          <FormSection title="Identification" description="Basic asset identity and categorization">
+          <FormSection
+            title="Identity"
+            icon={<AssetCategoryIcon category={watchedCategory} className="h-4 w-4" />}
+            description="What the asset is and where it lives"
+          >
             <FormGrid>
               <Input
                 label="Name"
@@ -261,63 +285,64 @@ export default function EditAssetPage() {
                     value={field.value ?? ''}
                     onChange={field.onChange}
                     error={err.category?.message}
-                    helperText={
-                      watchedCategory
-                        ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
-                        : undefined
-                    }
+                    helperText={categoryHint}
                   />
                 )}
               />
             </FormGrid>
-          </FormSection>
-
-          <FormSection
-            title="Inventory & location"
-            description="Where the asset is and how many are available"
-            divided
-          >
-            <FormGrid>
+            <div className="mt-4 space-y-4">
               <Input
                 label="Location"
                 placeholder="e.g. Floor 1, Common Area"
+                helperText="The free-text place. The floor and the room below are what decide who hears about this asset."
                 error={err.location?.message}
                 {...register('location')}
               />
-              <Controller
-                name="floorId"
-                control={control}
-                render={({ field }) => (
-                  <ResourceSelect
-                    label="Floor (optional)"
-                    endpoint="floors"
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    placeholder="Select floor..."
-                    labelKey={floorLabel}
-                    dataPath="data"
-                  />
-                )}
-              />
-              <Controller
-                name="roomId"
-                control={control}
-                render={({ field }) => (
-                  <ResourceSelect
-                    label="Room (optional)"
-                    endpoint="rooms?isActive=true"
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    placeholder="Select room..."
-                    valueKey="_id"
-                    labelKey={roomLabel}
-                    sublabelFn={roomSublabel}
-                    dataPath="data"
-                  />
-                )}
-              />
+              <FormGrid>
+                <Controller
+                  name="floorId"
+                  control={control}
+                  render={({ field }) => (
+                    <ResourceSelect
+                      label="Floor (optional)"
+                      endpoint="floors"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      placeholder="Select floor..."
+                      labelKey={floorLabel}
+                      dataPath="data"
+                    />
+                  )}
+                />
+                <Controller
+                  name="roomId"
+                  control={control}
+                  render={({ field }) => (
+                    <ResourceSelect
+                      label="Room (optional)"
+                      endpoint="rooms?isActive=true"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      placeholder="Select room..."
+                      valueKey="_id"
+                      labelKey={roomLabel}
+                      sublabelFn={roomSublabel}
+                      dataPath="data"
+                    />
+                  )}
+                />
+              </FormGrid>
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Inventory"
+            description="The count, the threshold and the state of the thing"
+            divided
+          >
+            <FormGrid cols={3}>
               <Input
-                label="Quantity"
+                label="Count on hand"
                 type="number"
                 min={0}
                 step={1}
@@ -330,7 +355,7 @@ export default function EditAssetPage() {
                 min={0}
                 step={1}
                 error={err.lowStockThreshold?.message}
-                helperText="Alert fires when quantity falls to this level (0 disables)"
+                helperText="The alert fires when the count reaches this level (0 disables it)"
                 {...register('lowStockThreshold')}
               />
               <Controller
@@ -338,21 +363,19 @@ export default function EditAssetPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    label="Status"
+                    label="State"
                     options={STATUS_OPTIONS}
                     value={field.value ?? ''}
                     onChange={field.onChange}
                     error={err.status?.message}
-                    helperText={
-                      isRetired ? 'Retired is terminal: service schedule closes' : undefined
-                    }
+                    helperText={stateHint}
                   />
                 )}
               />
             </FormGrid>
           </FormSection>
 
-          <FormSection title="Dates" description="Purchase and service schedule" divided>
+          <FormSection title="Service schedule" description="Purchase and service dates" divided>
             <FormGrid cols={3}>
               <DatePicker
                 label="Purchase date"
@@ -388,7 +411,7 @@ export default function EditAssetPage() {
             title="Live summary"
             icon={
               <AssetCategoryIcon
-                category={watchedCategory ?? loaded?.category}
+                category={watchedCategory ?? asset?.category}
                 className="h-4 w-4"
               />
             }
@@ -396,14 +419,14 @@ export default function EditAssetPage() {
             <DetailList>
               <DetailRow
                 label="Category"
-                value={assetCategoryLabel(watchedCategory ?? loaded?.category)}
+                value={assetCategoryLabel(watchedCategory ?? asset?.category)}
               />
               <DetailRow
                 label="Next service"
                 value={formatShortDate(
                   watchedNextService
                     ? new Date(`${watchedNextService}T00:00:00.000Z`).toISOString()
-                    : loaded?.nextServiceDate,
+                    : asset?.nextServiceDate,
                 )}
               />
               <DetailRow
@@ -411,14 +434,14 @@ export default function EditAssetPage() {
                 value={
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                    {loaded?.location ?? '—'}
+                    {asset?.location ?? '-'}
                   </span>
                 }
               />
             </DetailList>
             <AssetStockMeter
-              quantity={Number(watchedQuantity ?? loaded?.quantity ?? 0)}
-              threshold={Number(watchedThreshold ?? loaded?.lowStockThreshold ?? 0)}
+              quantity={Number(watchedQuantity ?? asset?.quantity ?? 0)}
+              threshold={Number(watchedThreshold ?? asset?.lowStockThreshold ?? 0)}
               className="mt-3"
             />
           </DetailCard>
@@ -428,26 +451,44 @@ export default function EditAssetPage() {
               purchasedDate={
                 watchedPurchased
                   ? new Date(`${watchedPurchased}T00:00:00.000Z`).toISOString()
-                  : loaded?.purchasedDate
+                  : asset?.purchasedDate
               }
               lastServicedDate={
                 watchedLastService
                   ? new Date(`${watchedLastService}T00:00:00.000Z`).toISOString()
-                  : loaded?.lastServicedDate
+                  : asset?.lastServicedDate
               }
               nextServiceDate={
                 watchedNextService
                   ? new Date(`${watchedNextService}T00:00:00.000Z`).toISOString()
-                  : loaded?.nextServiceDate
+                  : asset?.nextServiceDate
               }
-              status={watchedStatus ?? loaded?.status}
+              status={watchedStatus ?? asset?.status}
             />
           </DetailCard>
 
-          {loaded?.status !== 'retired' && (
+          {/* What the save moves, and who hears about it. */}
+          <DetailCard title="What the save moves" icon={<FileText />}>
+            <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
+              <li>
+                {'The fields of the record, and an update entry in the audit log that names the fields that moved.'}
+              </li>
+              <li className="font-semibold text-(--color-text-primary)">
+                {'The residents of the room, or of the floor, hear about it once and only once: when the save moves the state into under maintenance or damaged, the server pushes a service_update to the active residents of that place.'}
+              </li>
+              <li>
+                {'Everything else is silent: a move to another room, a new count, a new service date and a move back to available or in use reach nobody.'}
+              </li>
+              <li>
+                {'The save refuses a name under two characters, a category outside the five, an empty location, a count or a threshold below zero and a date the server cannot read.'}
+              </li>
+            </ul>
+          </DetailCard>
+
+          {asset?.status !== 'retired' && (
             <DetailCard title="Danger zone" variant="danger" icon={<AlertTriangle />}>
               <p className="text-13 leading-relaxed font-medium text-(--color-danger-700)">
-                Retiring closes the service schedule. The record is kept, not deleted.
+                {'Retiring closes the service schedule. The record is kept, not deleted, and nobody is told that the item left the register.'}
               </p>
               <Button
                 type="button"
@@ -466,8 +507,9 @@ export default function EditAssetPage() {
 
       <ConfirmModal
         open={retireOpen}
-        title="Retire asset"
-        message={`Retire "${loaded?.name ?? 'this asset'}"? The asset will be marked as retired (not permanently deleted).`}
+        title="Retire this asset"
+        message={retireMessage}
+        confirmLabel="Retire it"
         loading={retiring}
         onConfirm={handleRetire}
         onCancel={() => setRetireOpen(false)}

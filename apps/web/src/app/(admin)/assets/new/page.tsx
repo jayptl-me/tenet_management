@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Package, Boxes, CalendarClock, MapPin } from 'lucide-react';
+import { Boxes, CalendarClock, MapPin, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
 import { Input } from '@/components/ui/Input';
@@ -53,8 +53,8 @@ const CATEGORY_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'available', label: 'Available' },
-  { value: 'in_use', label: 'In Use' },
-  { value: 'under_maintenance', label: 'Under Maintenance' },
+  { value: 'in_use', label: 'In use' },
+  { value: 'under_maintenance', label: 'Under maintenance' },
   { value: 'damaged', label: 'Damaged' },
   { value: 'retired', label: 'Retired' },
 ];
@@ -70,7 +70,12 @@ export default function NewAssetPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { quantity: 1, lowStockThreshold: 0, notes: '' },
+    defaultValues: {
+      quantity: 1,
+      lowStockThreshold: 0,
+      status: 'available',
+      notes: '',
+    },
   });
 
   const watchedName = useWatch({ control, name: 'name' });
@@ -78,7 +83,19 @@ export default function NewAssetPage() {
   const watchedLocation = useWatch({ control, name: 'location' });
   const watchedQuantity = useWatch({ control, name: 'quantity' });
   const watchedThreshold = useWatch({ control, name: 'lowStockThreshold' });
+  const watchedStatus = useWatch({ control, name: 'status' });
   const watchedNextService = useWatch({ control, name: 'nextServiceDate' });
+
+  /** The category hint of the form, kept short so the field stays readable. */
+  const categoryHint = watchedCategory
+    ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
+    : undefined;
+
+  /** The truth of the state field: a new asset in an out of service state. */
+  const stateHint =
+    watchedStatus === 'under_maintenance' || watchedStatus === 'damaged'
+      ? 'A new asset in this state reaches nobody: the server pushes that message only on an edit.'
+      : undefined;
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -115,11 +132,11 @@ export default function NewAssetPage() {
 
   return (
     <FormPage
-      title="New Asset"
-      description="Add a new asset to inventory"
+      title="Register an asset"
+      description="What the PG owns: the thing, where it lives, how many there are and when it is due for service"
       backHref="/assets"
       error={submitError}
-      maxWidth="full"
+      maxWidth="form"
     >
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <FormCard
@@ -128,7 +145,7 @@ export default function NewAssetPage() {
             <FormActions
               loading={isSubmitting}
               cancelHref="/assets"
-              submitLabel="Save Asset"
+              submitLabel="Register it"
               divided={false}
             />
           }
@@ -155,11 +172,7 @@ export default function NewAssetPage() {
                     value={field.value ?? ''}
                     onChange={field.onChange}
                     error={errors.category?.message}
-                    helperText={
-                      watchedCategory
-                        ? `Grouped as ${assetCategoryLabel(watchedCategory)}`
-                        : undefined
-                    }
+                    helperText={categoryHint}
                   />
                 )}
               />
@@ -168,6 +181,7 @@ export default function NewAssetPage() {
               <Input
                 label="Location"
                 placeholder="e.g. Floor 1, Common Area"
+                helperText="The free-text place. The floor and the room below are what decide who hears about this asset."
                 error={errors.location?.message}
                 {...register('location')}
               />
@@ -210,19 +224,23 @@ export default function NewAssetPage() {
           <FormSection
             title="Inventory"
             icon={<Boxes />}
-            description="Stock levels and status"
+            description="Stock levels and the state of the thing"
             divided
           >
             <FormGrid cols={3}>
               <Input
-                label="Quantity"
+                label="Count on hand"
                 type="number"
+                min={0}
+                step={1}
                 error={errors.quantity?.message}
                 {...register('quantity')}
               />
               <Input
-                label="Low Stock Threshold"
+                label="Low stock threshold"
                 type="number"
+                min={0}
+                step={1}
                 error={errors.lowStockThreshold?.message}
                 helperText="0 disables the alert"
                 {...register('lowStockThreshold')}
@@ -232,11 +250,12 @@ export default function NewAssetPage() {
                 control={control}
                 render={({ field }) => (
                   <Select
-                    label="Status"
+                    label="State"
                     options={STATUS_OPTIONS}
                     value={field.value ?? ''}
                     onChange={field.onChange}
                     error={errors.status?.message}
+                    helperText={stateHint}
                   />
                 )}
               />
@@ -277,49 +296,82 @@ export default function NewAssetPage() {
           </FormSection>
         </FormCard>
 
-        <DetailCard
-          title="Preview"
-          icon={<AssetCategoryIcon category={watchedCategory} className="h-4 w-4" />}
-          className="lg:sticky lg:top-6"
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) [&_svg]:h-5 [&_svg]:w-5">
-              <AssetCategoryIcon category={watchedCategory} />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-(--color-text-primary)">
-                {watchedName?.trim() || 'Untitled asset'}
-              </p>
-              <p className="text-xs font-medium text-(--color-text-muted)">
-                {assetCategoryLabel(watchedCategory)}
-              </p>
+        <div className="space-y-6 lg:sticky lg:top-6">
+          <DetailCard
+            title="Preview"
+            icon={<AssetCategoryIcon category={watchedCategory} className="h-4 w-4" />}
+          >
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) text-(--color-text-secondary) [&_svg]:h-5 [&_svg]:w-5">
+                <AssetCategoryIcon category={watchedCategory} />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-(--color-text-primary)">
+                  {watchedName?.trim() || 'Untitled asset'}
+                </p>
+                <p className="text-xs font-medium text-(--color-text-muted)">
+                  {assetCategoryLabel(watchedCategory)}
+                </p>
+              </div>
             </div>
-          </div>
-          <DetailList className="mt-3">
-            <DetailRow
-              label="Placement"
-              value={
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                  {watchedLocation?.trim() || '—'}
-                </span>
-              }
+            <DetailList className="mt-3">
+              <DetailRow
+                label="Placement"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                    {watchedLocation?.trim() || '-'}
+                  </span>
+                }
+              />
+              <DetailRow
+                label="Next service"
+                value={formatShortDate(
+                  watchedNextService
+                    ? new Date(`${watchedNextService}T00:00:00.000Z`).toISOString()
+                    : undefined,
+                )}
+              />
+            </DetailList>
+            <AssetStockMeter
+              quantity={Number(watchedQuantity ?? 1)}
+              threshold={Number(watchedThreshold ?? 0)}
+              className="mt-3"
             />
-            <DetailRow
-              label="Next service"
-              value={formatShortDate(
-                watchedNextService
-                  ? new Date(`${watchedNextService}T00:00:00.000Z`).toISOString()
-                  : undefined,
-              )}
-            />
-          </DetailList>
-          <AssetStockMeter
-            quantity={Number(watchedQuantity ?? 1)}
-            threshold={Number(watchedThreshold ?? 0)}
-            className="mt-3"
-          />
-        </DetailCard>
+          </DetailCard>
+
+          {/* What the save commits. The rule of the house: the page says what
+              the server does, or it does not promise anything. */}
+          <DetailCard title="What the save commits" icon={<Package />}>
+            <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
+              <li>
+                {'The asset record, with the name, the category, the location, the floor and the room you picked, the count, the threshold, the state and the three dates.'}
+              </li>
+              <li>
+                {'A create entry in the audit log with the name, the category and the count.'}
+              </li>
+              <li>
+                {'Nothing else: no bill, no message, no task. The count you give is what the low stock set is built from, and the next service date is what puts the asset on the service due list thirty days before it falls due.'}
+              </li>
+              <li className="font-semibold text-(--color-text-primary)">
+                {'Nobody is told. An asset registered already out of service does not reach the residents of its room: the server pushes that message only when an edit moves the state of an existing asset.'}
+              </li>
+            </ul>
+          </DetailCard>
+
+          {/* What the save refuses. */}
+          <DetailCard title="What the save refuses" icon={<Boxes />}>
+            <ul className="text-2xs space-y-2 font-medium text-(--color-text-secondary)">
+              <li>{'A name under two characters or over 120, and a location that is empty.'}</li>
+              <li>{'A category outside the five the register holds.'}</li>
+              <li>{'A count or a threshold below zero, and a count that is not a whole number.'}</li>
+              <li>{'A date the server cannot read.'}</li>
+              <li>
+                {'A floor or a room id the server cannot resolve: it casts the id without checking it, so a bad id fails the write instead of naming the bad field.'}
+              </li>
+            </ul>
+          </DetailCard>
+        </div>
       </div>
     </FormPage>
   );
