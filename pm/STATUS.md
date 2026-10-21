@@ -49,10 +49,14 @@ deleted, and every module has a contract that the checker validates against the 
 | audit pipeline             | **TOTAL FAIL: 0**, reconcile **16/16**, field matrix **16/16**               |
 | `flutter analyze`          | **no issues**                                                                |
 
-**Still to do:** the type-scale sweep (wave 5: 278 arbitrary font sizes, 14 under 10px, two parallel
-scales in globals.css), the per-module depth rebuilds in money order (wave 6), the resident-facing
-receipt card (DR-11 option C), and Phase 4 leftovers (the Render env checklist for Jay, and the
-e2e suite running against a real API rather than stubs).
+**Still to do:** the per-module depth rebuilds in money order (the invoices module is in flight, then
+tenants, electricity, rooms, attendance, dashboard), the type-scale sweep for the admin pages (the
+shared components are done and guarded; the pages still carry the allowlisted exceptions), the
+resident-facing receipt card (DR-11 option C), the leftover audit gaps the contracts name (a visitor
+arriving or leaving is still silent, a room retirement and a bed move are still silent, the
+cron-secret route that marks invoices overdue still tells nobody, and tenant checkout cannot reach
+the resident because it deactivates the login), and Phase 4 leftovers (the Render env checklist for
+Jay, and the e2e suite running against a real API rather than stubs).
 
 **Watch-outs:**
 
@@ -77,6 +81,7 @@ e2e suite running against a real API rather than stubs).
 
 ## Log (append-only)
 
+- 2026-10-21 (wave 2: the type scale and the first module through the new standard): the shared components now render on one canonical type scale (the semantic names alias the numeric tokens, so nothing changed size), the four remaining sub-10px sizes were raised to the 10px floor, and a guard (`bun run check:type-scale`, wired into CI) fails on a new arbitrary size, a hardcoded pixel dimension, a size under the floor or a semantic name that does not render at its token's size. The payments module was then rebuilt end to end: its filters live in the address bar, its counts are read for the same filtered set the table shows, its export walks the pages the API clamps and reports both numbers, every payment links to its tenant, room and invoice, and a refused payment is no longer indistinguishable from one that was never submitted. It found two gaps in its own path - the office write sent no idempotency key and an edited payment told the resident nothing - and both were closed immediately after.
 - 2026-09-29: Gate P approved; Phase 1 landed as 6 commits (theme, api, web, lint, mobile, docs) pushed; CI verified (e2e red as predicted); plan updated with run `36581880412` findings; Phase 2 started (TanStack `useApiQuery`/`lib/query` infra + page migrations, 77 paths dirty, stopped ~20:41).
 - 2026-09-30 (morning): Resumed; measured lint 98 -> 10, typecheck green; found 9 new exhaustive-deps warnings from the Phase 2 migration (owned, reported). DR-5..DR-8 picked by Jay. Workers: (a) last 10 warnings -> fixed, root cause `?? []` fresh-array-per-render + watch() -> useWatch; main thread re-verified lint 0 / typecheck green; (b) audit pipeline -> 66/66 docs, verified with own script runs + severity cross-check (33 open = 10 P2 + 23 P3, zero P0/P1) + one row spot-checked against live code.
 - 2026-09-30 (Phase 2 close): First-ever repo sync to compute-mini. Box test saga: 10/18 files failed -> diagnosed vitest running under Bun (no Node on box) breaking zod interop; installed Node v24.21.0 user-space on box; 78/79 -> last failure was a 30s timeout from 18-way Mongo contention (passes alone: 2.6s); final `--maxWorkers=2` run: 79/79 exit 0. Two of my ssh inline-quoting bugs (premature `$(ls .env)` expansion; `bunx --cwd`) caused false alarms -- no damage, lesson: scp script files, never inline substitutions. Phase 2 committed + pushed (DR-7), CI verified at boundary.
