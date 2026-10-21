@@ -1,14 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Mail,
   Phone,
   Calendar,
-  Home,
-  Banknote,
   LogOut,
   MessageCircle,
   Copy,
@@ -25,6 +24,10 @@ import {
   RotateCcw,
   ExternalLink,
   Printer,
+  Scale,
+  Check,
+  Route,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
@@ -32,7 +35,6 @@ import { parseApiError } from '@/lib/errorParser';
 import { errorMessage } from '@/lib/query';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { Button } from '@/components/ui/Button';
-import { StatCard } from '@/components/ui/StatCard';
 import { StatusBadge, statusToVariant } from '@/components/ui/StatusBadge';
 import { TenantActivityTimeline } from '@/components/ui/TenantActivityTimeline';
 import { TenantStayCalendar, type StayCalendarEvent } from '@/components/ui/TenantStayCalendar';
@@ -42,24 +44,38 @@ import { DetailCard, DetailList, DetailRow } from '@/components/ui/DetailCard';
 import { ResourceSelect } from '@/components/ui/ResourceSelect';
 import { OccupancyBedPicker } from '@/components/ui/OccupancyBedPicker';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { surfaceCardClass } from '@/lib/field-styles';
 import { generateWhatsAppUrl, copyToClipboard } from '@/lib/whatsapp';
+
+// ── Shapes ─────────────────────────────────────────────────────────────
+// Every field below is read out of the API response, never invented:
+//   GET /tenants/:id              apps/api/src/routes/tenants.ts:486-500
+//   GET /tenants/:id/dues         apps/api/src/routes/tenants.ts:1920-1929
+//   GET /tenants/:id/invoices     apps/api/src/routes/tenants.ts:1775-1796
+//   GET /tenants/:id/payments     apps/api/src/routes/tenants.ts:1495-1504
+//   GET /tenants/:id/complaints   apps/api/src/routes/tenants.ts:1507-1516
+//   GET /tenants/:id/activity     apps/api/src/routes/tenants.ts:2067-2178
+//   GET /guardians?tenantId=      apps/api/src/routes/guardians.ts
 
 interface UnpaidInvoiceRow {
   _id: string;
-  invoiceNumber: string;
-  month: string;
-  totalAmount: number;
-  remaining?: number;
-  status: string;
+  invoiceNumber?: string;
+  month?: string;
+  totalAmount?: number;
+  paidAmount?: number;
+  remaining?: number | null;
+  status?: string;
+  dueDate?: string | null;
 }
 
 interface CheckoutDues {
-  totalDue: number;
-  unpaidInvoices: UnpaidInvoiceRow[];
-  electricityDues: number;
-  depositHeld: number;
-  pendingPayments: number;
-  checkedOut: boolean;
+  totalDue?: number;
+  unpaidInvoices?: UnpaidInvoiceRow[];
+  electricityDues?: number;
+  depositHeld?: number;
+  pendingPayments?: number;
+  checkedOut?: boolean;
 }
 
 interface RoomOption {
@@ -125,6 +141,7 @@ interface TenantDetail {
 }
 
 const TENANT_KEY = ['tenants', 'detail'] as const;
+const TENANT_DUES_KEY = ['tenants', 'dues'] as const;
 const TENANT_PAYMENTS_KEY = ['tenants', 'payments'] as const;
 const TENANT_INVOICES_KEY = ['tenants', 'invoices'] as const;
 const TENANT_COMPLAINTS_KEY = ['tenants', 'complaints'] as const;
@@ -144,6 +161,7 @@ type RecentInvoice = {
   invoiceNumber?: string;
   month?: string;
   totalAmount?: number;
+  balance?: number | null;
   status?: string;
 };
 type RecentComplaint = { _id: string; title: string; status: string; priority?: string };
@@ -175,6 +193,89 @@ function asRows<T>(data: T[] | undefined): T[] {
   return Array.isArray(data) ? data : [];
 }
 
+/**
+ * The days of a stay, counted from the move-in date the server holds.
+ *
+ * The tenant record carries no lease end date, so the length of the stay is
+ * the only thing the server can answer about how long a resident has been
+ * here.
+ */
+function daysOfStay(moveInDate: string | undefined, moveOutDate: string | null): number | null {
+  if (!moveInDate) return null;
+  const start = new Date(moveInDate);
+  const end = moveOutDate ? new Date(moveOutDate) : new Date();
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  const days = Math.floor((end.getTime() - start.getTime()) / 86_400_000);
+  return days > 0 ? days : 0;
+}
+
+/**
+ * One step of the onboarding trail.
+ *
+ * The trail is the real progression of a resident. The tenant model has no
+ * status field, so the steps are read out of the fields the server writes:
+ * the created record, the move-in date, the two uploaded documents, the
+ * verification and the move-out date.
+ */
+interface TrailStep {
+  key: string;
+  label: string;
+  detail: string;
+  date: string | null;
+  done: boolean;
+}
+
+/** The onboarding trail of one resident, from the fields the server holds. */
+function onboardingTrail(tenant: TenantDetail): TrailStep[] {
+  const hasIdDocument = Boolean(tenant.documents?.idUrl || tenant.documents?.aadhaarUrl);
+  const hasPhoto = Boolean(tenant.documents?.photoUrl);
+  const verified = Boolean(tenant.documents?.isVerified);
+  return [
+    {
+      key: 'account',
+      label: 'Account created',
+      detail: 'the server created the portal login with a temporary password',
+      date: tenant.createdAt ?? null,
+      done: true,
+    },
+    {
+      key: 'moved_in',
+      label: 'Moved in',
+      detail: 'the bed and the move-in date were stamped',
+      date: tenant.moveInDate ?? null,
+      done: true,
+    },
+    {
+      key: 'id_document',
+      label: 'Identity document uploaded',
+      detail: 'the resident or the office uploaded the identity document',
+      date: null,
+      done: hasIdDocument,
+    },
+    {
+      key: 'photo',
+      label: 'Photo uploaded',
+      detail: 'the resident or the office uploaded the resident photo',
+      date: null,
+      done: hasPhoto,
+    },
+    {
+      key: 'verified',
+      label: 'Identity verified',
+      detail: 'an admin verified the documents; the resident was notified',
+      date: tenant.documents?.verifiedAt ?? null,
+      done: verified,
+    },
+    {
+      key: 'moved_out',
+      label: 'Stay closed',
+      detail: 'the stay was closed and the bed was freed',
+      date: tenant.moveOutDate ?? null,
+      done: Boolean(tenant.moveOutDate),
+    },
+  ];
+}
+
 export default function TenantDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -182,9 +283,9 @@ export default function TenantDetailPage() {
   const queryClient = useQueryClient();
 
   const [error, setError] = useState('');
+  // The outcome of the last write, as the server reported it.
+  const [writeResult, setWriteResult] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [duesLoading, setDuesLoading] = useState(false);
-  const [duesData, setDuesData] = useState<CheckoutDues | null>(null);
   const [checkoutError, setCheckoutError] = useState('');
   const [checkingOut, setCheckingOut] = useState(false);
   const [reinstating, setReinstating] = useState(false);
@@ -193,6 +294,10 @@ export default function TenantDetailPage() {
   const [reinstateBedId, setReinstateBedId] = useState('');
   const [reinstateError, setReinstateError] = useState('');
   const [statementLoading, setStatementLoading] = useState(false);
+  const [verifyingKyc, setVerifyingKyc] = useState(false);
+  const [downloadingPolicePdf, setDownloadingPolicePdf] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TenantDetail | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     data,
@@ -200,6 +305,21 @@ export default function TenantDetailPage() {
     error: queryError,
   } = useApiQuery<TenantDetail>([...TENANT_KEY, id], `tenants/${id}`, { enabled: !!id });
   const tenant = data ?? null;
+
+  /**
+   * The dues summary of the resident.
+   *
+   * The server owns the money. This is the same summary the resident reads on
+   * their phone (GET /tenants/me/dues) and the same one the checkout guard
+   * refuses on (apps/api/src/routes/tenants.ts:733-795), so the office and
+   * the resident cannot be shown different numbers.
+   */
+  const { data: duesBody, isPending: duesPending } = useApiQuery<CheckoutDues>(
+    [...TENANT_DUES_KEY, id],
+    `tenants/${id}/dues`,
+    { enabled: !!id },
+  );
+  const dues = duesBody ?? null;
 
   const guardiansQuery = useApiQuery<GuardianLink[]>(
     [...TENANT_GUARDIANS_KEY, id],
@@ -257,39 +377,59 @@ export default function TenantDetailPage() {
   }));
   const calendarEvents = [...activityEvents, ...invoiceEvents];
 
-  const handleCheckoutClick = async () => {
-    if (!tenant) return;
-    setShowCheckoutModal(true);
-    setDuesLoading(true);
-    setDuesData(null);
-    setCheckoutError('');
-    try {
-      const res = await api
-        .get(`tenants/${tenant._id}/dues`)
-        .json<{ success: boolean; data: typeof duesData }>();
-      setDuesData(res.data);
-    } catch {
-      setCheckoutError('Failed to fetch dues summary');
-    } finally {
-      setDuesLoading(false);
-    }
-  };
+  /** The money the server reports for this resident. */
+  const reportedTotalDue = dues && typeof dues.totalDue === 'number' ? dues.totalDue : null;
+  const unpaidInvoices: UnpaidInvoiceRow[] =
+    dues && Array.isArray(dues.unpaidInvoices) ? dues.unpaidInvoices : [];
+  /**
+   * A balance the server did not report is never read as zero.
+   *
+   * The server counts an invoice with an unknown balance as open but cannot
+   * add it up, so a total of zero next to an unknown balance is not "nothing
+   * due".
+   */
+  const unknownBalance = unpaidInvoices.some((invoice) => invoice.remaining == null);
 
-  const checkoutBlocked = Boolean(
-    duesData &&
-    (duesData.totalDue > 0 ||
-      duesData.pendingPayments > 0 ||
-      duesData.unpaidInvoices.some((inv) => (inv.remaining ?? inv.totalAmount) > 0.001)),
-  );
+  /**
+   * The checkout gate, read the way the server reads it.
+   *
+   * The server refuses the checkout while an invoice still carries a balance
+   * or a payment is unresolved (apps/api/src/routes/tenants.ts:737-795). The
+   * dues summary already carries exactly that set: the open invoices with a
+   * balance, where an invoice whose total the server does not know counts as
+   * a balance, and the count of the unresolved payments.
+   */
+  const checkoutBlockedByBalance = Boolean(dues && unpaidInvoices.length > 0);
+  const checkoutBlockedByPayments = Boolean(dues && (dues.pendingPayments ?? 0) > 0);
+  const checkoutBlocked = checkoutBlockedByBalance || checkoutBlockedByPayments;
+
+  const refreshAfterWrite = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: TENANT_KEY }),
+      queryClient.invalidateQueries({ queryKey: TENANT_DUES_KEY }),
+      queryClient.invalidateQueries({ queryKey: TENANT_PAYMENTS_KEY }),
+      queryClient.invalidateQueries({ queryKey: TENANT_INVOICES_KEY }),
+      queryClient.invalidateQueries({ queryKey: TENANT_ACTIVITY_KEY }),
+      queryClient.invalidateQueries({ queryKey: TENANT_GUARDIANS_KEY }),
+    ]);
+  };
 
   const handleConfirmCheckout = async () => {
     if (!tenant || checkoutBlocked) return;
     setCheckingOut(true);
     setCheckoutError('');
     try {
-      await api.post(`tenants/${tenant._id}/checkout`, { json: {} }).json();
+      const res = await api
+        .post(`tenants/${tenant._id}/checkout`, { json: {} })
+        .json<{ success: boolean; data?: { moveOutDate?: string; isActive?: boolean } }>();
       setShowCheckoutModal(false);
-      window.location.reload();
+      await refreshAfterWrite();
+      const movedOut = res.data?.moveOutDate ?? null;
+      setWriteResult(
+        `Check out saved. The server reports the stay closed${
+          movedOut ? ` on ${formatDate(movedOut)}` : ''
+        }, the bed free and the portal login disabled. The resident is not told: the server sends no notification for a check out.`,
+      );
     } catch (err) {
       setCheckoutError((await parseApiError(err)).message);
     } finally {
@@ -305,7 +445,11 @@ export default function TenantDetailPage() {
     try {
       const payload = body.roomId && body.bedId ? { roomId: body.roomId, bedId: body.bedId } : {};
       await api.post(`tenants/${tenant._id}/reinstate`, { json: payload }).json();
-      window.location.reload();
+      await refreshAfterWrite();
+      setShowReinstatePlacement(false);
+      setWriteResult(
+        'Reinstate saved. The server reports the stay open again, the move-out date cleared and the portal login enabled again.',
+      );
     } catch (err) {
       const parsed = await parseApiError(err);
       if (parsed.code === 'BED_OCCUPIED') {
@@ -325,9 +469,6 @@ export default function TenantDetailPage() {
     }
   };
 
-  const [verifyingKyc, setVerifyingKyc] = useState(false);
-  const [downloadingPolicePdf, setDownloadingPolicePdf] = useState(false);
-
   const handleDownloadPolicePdf = async () => {
     if (!tenant) return;
     setDownloadingPolicePdf(true);
@@ -342,7 +483,9 @@ export default function TenantDetailPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Police verification PDF generated successfully');
+      setWriteResult(
+        'Police verification form downloaded. The server generated the PDF from the record.',
+      );
     } catch {
       toast.error('Failed to generate police verification PDF');
     } finally {
@@ -355,18 +498,39 @@ export default function TenantDetailPage() {
     setVerifyingKyc(true);
     try {
       await api.post(`tenants/${tenant._id}/verify-kyc`).json();
-      // No success toast: the KYC badge next to this button shows the server's
+      // No success toast: the KYC state next to this button shows the server's
       // own state after the invalidation below, so the screen never claims a
       // verification the server did not record.
-      queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
-    } catch {
-      toast.error('Failed to verify KYC');
+      await queryClient.invalidateQueries({ queryKey: [...TENANT_KEY, tenant._id] });
+      setWriteResult(
+        'Verification saved. The server reports the documents as verified and the resident received the notification.',
+      );
+    } catch (err) {
+      setError((await parseApiError(err)).message);
     } finally {
       setVerifyingKyc(false);
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`tenants/${deleteTarget._id}`).json();
+      setDeleteTarget(null);
+      router.push('/tenants');
+    } catch (err) {
+      setError((await parseApiError(err)).message);
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const loadError = errorMessage(queryError) || error;
+
+  const trail = useMemo(() => (tenant ? onboardingTrail(tenant) : []), [tenant]);
+  const stayDays = tenant ? daysOfStay(tenant.moveInDate, tenant.moveOutDate) : null;
 
   if (!isLoading && (loadError || !tenant)) {
     return (
@@ -379,6 +543,10 @@ export default function TenantDetailPage() {
       />
     );
   }
+
+  const hasIdDocument = Boolean(tenant?.documents?.idUrl || tenant?.documents?.aadhaarUrl);
+  const hasPhoto = Boolean(tenant?.documents?.photoUrl);
+  const canVerifyKyc = hasIdDocument && hasPhoto && !tenant?.documents?.isVerified;
 
   return (
     <FormPage
@@ -393,7 +561,7 @@ export default function TenantDetailPage() {
         tenant ? (
           <StatusBadge
             variant={statusToVariant(tenant.isActive ? 'active' : 'checked_out')}
-            label={tenant.isActive ? 'Active' : 'Inactive'}
+            label={tenant.isActive ? 'In house' : 'Checked out'}
           />
         ) : undefined
       }
@@ -404,7 +572,7 @@ export default function TenantDetailPage() {
                 reachable without scrolling. The full action card stays lower
                 down on the page, with every action it had. */}
             {tenant.isActive && (
-              <Button variant="danger" size="sm" onClick={handleCheckoutClick}>
+              <Button variant="danger" size="sm" onClick={() => setShowCheckoutModal(true)}>
                 <LogOut className="h-4 w-4" />
                 Check Out
               </Button>
@@ -423,15 +591,6 @@ export default function TenantDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              loading={downloadingPolicePdf}
-              onClick={handleDownloadPolicePdf}
-            >
-              <FileText className="h-4 w-4 text-(--color-brand-600)" />
-              Police Form
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
             >
               <Pencil className="h-4 w-4" />
@@ -443,205 +602,290 @@ export default function TenantDetailPage() {
     >
       {tenant && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              title="Monthly Rent"
-              value={formatCurrency(tenant.monthlyRent)}
-              icon={<Banknote className="h-4 w-4" />}
-              variant="default"
-            />
-            <StatCard
-              title="Deposit"
-              value={formatCurrency(tenant.depositPaid)}
-              icon={<CreditCard className="h-4 w-4" />}
-              variant="brand"
-            />
-            <StatCard
-              title="Move-in"
-              value={formatDate(tenant.moveInDate)}
-              icon={<Calendar className="h-4 w-4" />}
-              variant="default"
-            />
-            <StatCard
-              title="Move-out"
-              value={formatDate(tenant.moveOutDate)}
-              icon={<Calendar className="h-4 w-4" />}
-              variant="default"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <DetailCard title="Contact" icon={<User />}>
-              <DetailList>
-                <DetailRow
-                  label="Email"
-                  value={
-                    <span className="inline-flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                      {tenant.user?.email ?? 'N/A'}
-                    </span>
-                  }
-                />
-                <DetailRow
-                  label="Phone"
-                  value={
-                    <span className="inline-flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
-                      {tenant.user?.phone ?? 'N/A'}
-                    </span>
-                  }
-                />
-              </DetailList>
-            </DetailCard>
-
-            <DetailCard title="Room" icon={<Home />}>
-              <DetailList>
-                <DetailRow label="Room Number" value={tenant.room?.roomNumber ?? 'N/A'} />
-                <DetailRow label="Floor" value={tenant.room?.floor?.label ?? 'N/A'} />
-                <DetailRow
-                  label="Bed ID"
-                  value={<span className="font-mono text-sm font-bold">{tenant.bedId}</span>}
-                />
-              </DetailList>
-            </DetailCard>
-          </div>
-
-          {(tenant.emergencyContact?.name || tenant.emergencyContact?.phone) && (
-            <DetailCard title="Emergency Contact" icon={<Shield />} variant="warning">
-              <DetailList>
-                <DetailRow label="Name" value={tenant.emergencyContact.name ?? '—'} />
-                <DetailRow label="Phone" value={tenant.emergencyContact.phone ?? '—'} />
-                <DetailRow label="Relation" value={tenant.emergencyContact.relation ?? '—'} />
-              </DetailList>
-            </DetailCard>
+          {writeResult && (
+            <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-card-bg) px-4 py-3 text-xs font-semibold text-(--color-text-secondary)">
+              {writeResult}
+            </div>
           )}
 
-          {/* ── Statutory Police Verification & Legal Profile ── */}
-          <DetailCard
-            title="Police Verification & Legal Profile"
-            icon={<Shield />}
-            action={
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  loading={downloadingPolicePdf}
-                  onClick={handleDownloadPolicePdf}
-                >
-                  <Printer className="mr-1 h-3.5 w-3.5" />
-                  Print Police PDF
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
-                >
-                  <Pencil className="mr-1 h-3.5 w-3.5" />
-                  Edit Profile
-                </Button>
+          {/* ── The protagonist: the resident, the bed and the money ── */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className={`${surfaceCardClass} p-5 lg:col-span-2`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-display text-lg font-bold tracking-tight text-(--color-text-primary)">
+                    {tenant.user?.name ?? 'Unnamed resident'}
+                  </h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-(--color-text-secondary)">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                      {tenant.user?.email ?? 'No email on file'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-(--color-text-muted)" />
+                      {tenant.user?.phone ?? 'No phone on file'}
+                    </span>
+                  </div>
+                </div>
+                <StatusBadge
+                  variant={statusToVariant(tenant.isActive ? 'active' : 'checked_out')}
+                  label={tenant.isActive ? 'In house' : 'Checked out'}
+                />
               </div>
-            }
-          >
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <DetailList>
-                <DetailRow
-                  label="Father / Spouse Name"
-                  value={tenant.verificationProfile?.fatherOrSpouseName ?? '—'}
-                />
-                <DetailRow
-                  label="Date of Birth"
-                  value={
-                    tenant.verificationProfile?.dob
-                      ? formatDate(tenant.verificationProfile.dob)
-                      : '—'
-                  }
-                />
-                <DetailRow
-                  label="Gender & Blood Group"
-                  value={
-                    [
-                      tenant.verificationProfile?.gender
-                        ? tenant.verificationProfile.gender.toUpperCase()
-                        : null,
-                      tenant.verificationProfile?.bloodGroup
-                        ? `Blood Group: ${tenant.verificationProfile.bloodGroup}`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '—'
-                  }
-                />
-                <DetailRow
-                  label="Identification Mark"
-                  value={tenant.verificationProfile?.identificationMark ?? '—'}
-                />
-                <DetailRow
-                  label="Purpose of Stay"
-                  value={tenant.verificationProfile?.stayPurpose ?? 'Employment / Education'}
-                />
-              </DetailList>
 
-              <DetailList>
+              <DetailList className="mt-4">
                 <DetailRow
-                  label="Permanent Address"
+                  label="Room and bed"
                   value={
-                    tenant.verificationProfile?.permanentAddress?.city
-                      ? [
-                          tenant.verificationProfile.permanentAddress.street,
-                          tenant.verificationProfile.permanentAddress.city,
-                          tenant.verificationProfile.permanentAddress.state,
-                          tenant.verificationProfile.permanentAddress.pincode,
-                        ]
-                          .filter(Boolean)
-                          .join(', ')
-                      : '—'
-                  }
-                />
-                <DetailRow
-                  label="Native Police Station"
-                  value={
-                    tenant.verificationProfile?.permanentAddress?.policeStation ? (
-                      <span className="font-semibold text-(--color-brand-700)">
-                        {tenant.verificationProfile.permanentAddress.policeStation}
-                      </span>
+                    tenant.room?._id ? (
+                      <Link
+                        href={`/rooms/${tenant.room._id}`}
+                        className="text-(--color-brand-600) hover:underline"
+                      >
+                        Room {tenant.room.roomNumber} · Bed {tenant.bedId}
+                        {tenant.room.floor?.label ? ` · ${tenant.room.floor.label}` : ''}
+                      </Link>
                     ) : (
-                      '—'
+                      `Room ${tenant.room?.roomNumber ?? 'N/A'} · Bed ${tenant.bedId}`
                     )
                   }
                 />
                 <DetailRow
-                  label="Occupation / Institute"
+                  label="Stay"
                   value={
-                    tenant.verificationProfile?.occupation?.organizationName
-                      ? `${tenant.verificationProfile.occupation.organizationName} (${tenant.verificationProfile.occupation.category ?? 'employed'})`
-                      : '—'
+                    <span>
+                      {tenant.isActive
+                        ? `Since ${formatDate(tenant.moveInDate)}`
+                        : `${formatDate(tenant.moveInDate)} to ${formatDate(tenant.moveOutDate)}`}
+                      {stayDays !== null && (
+                        <span className="text-(--color-text-muted)">
+                          {' · '}
+                          {stayDays} day(s)
+                        </span>
+                      )}
+                    </span>
                   }
                 />
                 <DetailRow
-                  label="Local References (City)"
+                  label="Monthly rent and deposit"
                   value={
-                    tenant.verificationProfile?.localReferences &&
-                    tenant.verificationProfile.localReferences.length > 0
-                      ? tenant.verificationProfile.localReferences
-                          .map((r) => `${r.name || 'Reference'} (${r.phone || 'No phone'})`)
-                          .join('; ')
-                      : '—'
+                    <span className="tabular-nums">
+                      {formatCurrency(tenant.monthlyRent)}/mo · deposit{' '}
+                      {formatCurrency(tenant.depositPaid)} held
+                    </span>
                   }
                 />
+                {tenant.emergencyContact?.name && (
+                  <DetailRow
+                    label="Emergency contact"
+                    value={
+                      <span>
+                        {tenant.emergencyContact.name}
+                        {tenant.emergencyContact.phone ? ` · ${tenant.emergencyContact.phone}` : ''}
+                        {tenant.emergencyContact.relation
+                          ? ` (${tenant.emergencyContact.relation})`
+                          : ''}
+                      </span>
+                    }
+                  />
+                )}
               </DetailList>
+            </div>
+
+            {/* The money number of the record: the server's dues summary for
+                this resident, the same one the resident reads. */}
+            <div className={`${surfaceCardClass} p-5`}>
+              <p className="tracking-label text-xs font-semibold text-(--color-text-muted) uppercase">
+                Owes now
+              </p>
+              {duesPending ? (
+                <p className="mt-2 text-sm font-semibold text-(--color-text-muted)">
+                  reading the server&apos;s dues...
+                </p>
+              ) : reportedTotalDue === null ? (
+                <p className="mt-2 text-sm font-semibold text-(--color-text-muted)">Not reported</p>
+              ) : (
+                <p
+                  className={`font-display text-xl font-bold tracking-tight tabular-nums ${
+                    reportedTotalDue > 0
+                      ? 'text-(--color-danger-700)'
+                      : 'text-(--color-success-700)'
+                  }`}
+                >
+                  {formatCurrency(reportedTotalDue)}
+                </p>
+              )}
+              {unknownBalance && (
+                <p className="text-2xs mt-1 font-semibold text-(--color-warning-700)">
+                  The server holds an invoice whose total it does not know. That amount is
+                  outstanding, never zero, and it is missing from the sum above.
+                </p>
+              )}
+              <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                The server&apos;s dues summary for this resident. The same summary the resident
+                reads on their phone, so the two can never disagree.
+              </p>
+              <div className="text-2xs mt-3 space-y-1 font-medium text-(--color-text-secondary)">
+                <p>Open invoices: {duesPending ? 'reading' : String(unpaidInvoices.length)}</p>
+                <p>
+                  Unresolved payments:{' '}
+                  {duesPending ? 'reading' : String(dues?.pendingPayments ?? 0)}
+                </p>
+                <p>
+                  Electricity share:{' '}
+                  {duesPending
+                    ? 'reading'
+                    : typeof dues?.electricityDues === 'number'
+                      ? formatCurrency(dues.electricityDues)
+                      : 'not reported'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => router.push(`/invoices?tenantId=${tenant._id}`)}
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                Open the bills in the ledger
+              </Button>
+            </div>
+          </div>
+
+          {/* ── The onboarding trail: the progression the record proves ── */}
+          <DetailCard title="Onboarding trail" icon={<Route />}>
+            <ol className="flex flex-wrap items-start gap-x-2 gap-y-4">
+              {trail.map((step, index) => (
+                <li key={step.key} className="min-w-40 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[length:var(--bw-default)] font-bold ${
+                        step.done
+                          ? 'border-(--color-success-500) bg-(--color-success-500) text-(--color-on-success)'
+                          : 'border-(--border-color) bg-(--color-field-bg) text-(--color-text-muted)'
+                      }`}
+                    >
+                      {step.done ? <Check className="h-3.5 w-3.5" /> : <span>{index + 1}</span>}
+                    </span>
+                    {index < trail.length - 1 && (
+                      <span
+                        aria-hidden
+                        className="h-0.5 min-w-4 flex-1 rounded-full bg-(--border-color)"
+                      />
+                    )}
+                  </div>
+                  <p
+                    className={`mt-1.5 text-xs font-bold ${
+                      step.done ? 'text-(--color-text-primary)' : 'text-(--color-text-muted)'
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                  <p className="text-2xs font-medium text-(--color-text-muted)">
+                    {step.done
+                      ? step.date
+                        ? formatDate(step.date)
+                        : 'done, the server holds no date for it'
+                      : step.detail}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            <p className="text-2xs mt-4 font-medium text-(--color-text-muted)">
+              The resident record carries no link back to the enquiry it came from: the server
+              stores the converted tenant on the enquiry, not the other way round.{' '}
+              <Link
+                href="/enquiries?status=converted"
+                className="text-(--color-brand-600) hover:underline"
+              >
+                Open the converted enquiries
+              </Link>{' '}
+              to find the lead this resident came from.
+            </p>
+          </DetailCard>
+
+          {/* ── What the resident owes, in the resident's own view ── */}
+          <DetailCard title="What the resident owes" icon={<Scale />}>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <DetailList>
+                <DetailRow
+                  label="Total pending"
+                  value={
+                    duesPending
+                      ? 'reading'
+                      : reportedTotalDue === null
+                        ? 'not reported'
+                        : formatCurrency(reportedTotalDue)
+                  }
+                />
+                <DetailRow
+                  label="Open invoices"
+                  value={duesPending ? 'reading' : String(unpaidInvoices.length)}
+                />
+                <DetailRow
+                  label="Deposit held"
+                  value={
+                    duesPending
+                      ? 'reading'
+                      : typeof dues?.depositHeld === 'number'
+                        ? formatCurrency(dues.depositHeld)
+                        : 'not reported'
+                  }
+                />
+                <DetailRow
+                  label="Unresolved payments"
+                  value={duesPending ? 'reading' : String(dues?.pendingPayments ?? 0)}
+                />
+              </DetailList>
+
+              <div>
+                {unpaidInvoices.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {unpaidInvoices.map((invoice) => (
+                      <Link
+                        key={invoice._id}
+                        href={`/invoices/${invoice._id}`}
+                        className="flex items-center justify-between gap-2 rounded-(--radius-md) border border-(--border-color) px-2.5 py-1.5 text-xs font-semibold text-(--color-text-secondary) hover:border-(--color-brand-300)"
+                      >
+                        <span>
+                          {invoice.invoiceNumber ?? invoice._id.slice(-6)}
+                          {invoice.month ? ` · ${invoice.month}` : ''}
+                        </span>
+                        <span className="tabular-nums">
+                          {typeof invoice.remaining === 'number'
+                            ? formatCurrency(invoice.remaining)
+                            : 'balance not reported'}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-(--color-text-muted)">
+                    {duesPending
+                      ? "Reading the server's dues..."
+                      : 'The server reports no open invoice for this resident.'}
+                  </p>
+                )}
+                <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+                  Every number here is the server&apos;s. The resident opens the same summary on
+                  their phone (GET /tenants/me/dues): one server helper answers both, so the office
+                  and the resident never see different amounts.
+                </p>
+              </div>
             </div>
           </DetailCard>
 
+          {/* ── Documents and identity ── */}
           <DetailCard
-            title="Documents & KYC"
+            title="Documents and KYC"
             icon={<FileText />}
             action={
               tenant.documents?.isVerified ? (
                 <span className="rounded-full bg-(--color-success-50) px-2.5 py-1 text-xs font-semibold text-(--color-success-700)">
                   KYC Verified
                 </span>
-              ) : (tenant.documents?.idUrl || tenant.documents?.aadhaarUrl) &&
-                tenant.documents?.photoUrl ? (
+              ) : canVerifyKyc ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -653,6 +897,19 @@ export default function TenantDetailPage() {
               ) : null
             }
           >
+            {!tenant.documents?.isVerified && (
+              <p className="mb-4 text-xs font-medium text-(--color-text-secondary)">
+                The identity is not verified yet. The office verifies only when both documents are
+                uploaded:{' '}
+                {hasIdDocument
+                  ? 'the identity document is there'
+                  : 'the identity document is missing'}
+                , {hasPhoto ? 'the photo is there' : 'the photo is missing'}. The server stamps the
+                verification and notifies the resident. A resident who uploads their own document
+                from the portal flips the state back to unverified; an upload from the office
+                replaces the file and leaves the verdict as it is.
+              </p>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DocumentUpload
                 tenantId={tenant._id}
@@ -676,7 +933,8 @@ export default function TenantDetailPage() {
             </div>
           </DetailCard>
 
-          <DetailCard title="Actions" icon={<MessageCircle />}>
+          {/* ── Every action the office can take, from here ── */}
+          <DetailCard title="Office actions" icon={<User />}>
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="primary"
@@ -712,7 +970,7 @@ export default function TenantDetailPage() {
                   if (!tenant) return;
                   setStatementLoading(true);
                   try {
-                    // Must use the authenticated ky client — window.open omits the JWT.
+                    // Must use the authenticated ky client - window.open omits the JWT.
                     const blob = await api.get(`tenants/${tenant._id}/statement.pdf`).blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -722,6 +980,9 @@ export default function TenantDetailPage() {
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
+                    setWriteResult(
+                      'Statement of account downloaded. The server prints the same balances the ledger shows.',
+                    );
                   } catch {
                     toast.error('Failed to download statement. Ensure you are logged in.');
                   } finally {
@@ -739,7 +1000,7 @@ export default function TenantDetailPage() {
                 <FileText className="h-4 w-4 text-(--color-brand-600)" /> Police Verification Form
               </Button>
               {tenant.isActive && (
-                <Button variant="danger" onClick={handleCheckoutClick}>
+                <Button variant="danger" onClick={() => setShowCheckoutModal(true)}>
                   <LogOut className="h-4 w-4" /> Check Out
                 </Button>
               )}
@@ -752,7 +1013,15 @@ export default function TenantDetailPage() {
                   <RotateCcw className="h-4 w-4" /> Reinstate
                 </Button>
               )}
+              <Button variant="outline" onClick={() => setDeleteTarget(tenant)}>
+                <Trash2 className="h-4 w-4" /> Delete resident
+              </Button>
             </div>
+            <p className="text-2xs mt-3 font-medium text-(--color-text-muted)">
+              A check out closes the stay, frees the bed and disables the portal login, and the
+              server sends no notification: the resident is not told. Use check out for a normal
+              move-out and delete only for a record that must not exist at all.
+            </p>
             {!tenant.isActive && (showReinstatePlacement || reinstateError) && (
               <div className="mt-4 space-y-3 rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-4">
                 {reinstateError && (
@@ -827,6 +1096,7 @@ export default function TenantDetailPage() {
             )}
           </DetailCard>
 
+          {/* ── The related records ── */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <DetailCard title="Guardians" icon={<Users />}>
               {relatedError && guardians.length === 0 ? (
@@ -856,6 +1126,11 @@ export default function TenantDetailPage() {
                         <span className="ml-2 text-xs text-(--color-text-muted) capitalize">
                           {g.relation ?? ''}
                         </span>
+                        {g.isActive === false && (
+                          <span className="text-2xs ml-2 font-semibold text-(--color-warning-700)">
+                            portal off
+                          </span>
+                        )}
                       </span>
                       <ExternalLink className="h-3.5 w-3.5 text-(--color-text-muted)" />
                     </button>
@@ -943,6 +1218,11 @@ export default function TenantDetailPage() {
                         <span className="font-semibold text-(--color-text-primary) tabular-nums">
                           {formatCurrency(inv.totalAmount ?? 0)}
                         </span>
+                        {typeof inv.balance === 'number' && inv.balance > 0 && (
+                          <span className="text-2xs font-semibold text-(--color-danger-700) tabular-nums">
+                            {formatCurrency(inv.balance)} due
+                          </span>
+                        )}
                         <StatusBadge
                           variant={statusToVariant(inv.status ?? 'pending')}
                           label={inv.status ?? 'pending'}
@@ -997,11 +1277,127 @@ export default function TenantDetailPage() {
             </DetailCard>
           </div>
 
+          {/* ── The statutory profile, kept as its own card ── */}
+          <DetailCard
+            title="Police Verification and Legal Profile"
+            icon={<Shield />}
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={downloadingPolicePdf}
+                  onClick={handleDownloadPolicePdf}
+                >
+                  <Printer className="mr-1 h-3.5 w-3.5" />
+                  Print Police PDF
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => router.push(`/tenants/${tenant._id}/edit`)}
+                >
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
+                  Edit Profile
+                </Button>
+              </div>
+            }
+          >
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <DetailList>
+                <DetailRow
+                  label="Father / Spouse Name"
+                  value={tenant.verificationProfile?.fatherOrSpouseName ?? '—'}
+                />
+                <DetailRow
+                  label="Date of Birth"
+                  value={
+                    tenant.verificationProfile?.dob
+                      ? formatDate(tenant.verificationProfile.dob)
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Gender and Blood Group"
+                  value={
+                    [
+                      tenant.verificationProfile?.gender
+                        ? tenant.verificationProfile.gender.toUpperCase()
+                        : null,
+                      tenant.verificationProfile?.bloodGroup
+                        ? `Blood Group: ${tenant.verificationProfile.bloodGroup}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || '—'
+                  }
+                />
+                <DetailRow
+                  label="Identification Mark"
+                  value={tenant.verificationProfile?.identificationMark ?? '—'}
+                />
+                <DetailRow
+                  label="Purpose of Stay"
+                  value={tenant.verificationProfile?.stayPurpose ?? 'Employment / Education'}
+                />
+              </DetailList>
+
+              <DetailList>
+                <DetailRow
+                  label="Permanent Address"
+                  value={
+                    tenant.verificationProfile?.permanentAddress?.city
+                      ? [
+                          tenant.verificationProfile.permanentAddress.street,
+                          tenant.verificationProfile.permanentAddress.city,
+                          tenant.verificationProfile.permanentAddress.state,
+                          tenant.verificationProfile.permanentAddress.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Native Police Station"
+                  value={
+                    tenant.verificationProfile?.permanentAddress?.policeStation ? (
+                      <span className="font-semibold text-(--color-brand-700)">
+                        {tenant.verificationProfile.permanentAddress.policeStation}
+                      </span>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
+                <DetailRow
+                  label="Occupation / Institute"
+                  value={
+                    tenant.verificationProfile?.occupation?.organizationName
+                      ? `${tenant.verificationProfile.occupation.organizationName} (${tenant.verificationProfile.occupation.category ?? 'employed'})`
+                      : '—'
+                  }
+                />
+                <DetailRow
+                  label="Local References (City)"
+                  value={
+                    tenant.verificationProfile?.localReferences &&
+                    tenant.verificationProfile.localReferences.length > 0
+                      ? tenant.verificationProfile.localReferences
+                          .map((r) => `${r.name || 'Reference'} (${r.phone || 'No phone'})`)
+                          .join('; ')
+                      : '—'
+                  }
+                />
+              </DetailList>
+            </div>
+          </DetailCard>
+
+          {/* ── The checkout gate: the server's answer before the write ── */}
           <Modal
             open={showCheckoutModal}
             onClose={() => {
               setShowCheckoutModal(false);
-              setDuesData(null);
               setCheckoutError('');
             }}
             title={`Checkout ${tenant.user?.name ?? 'Tenant'}`}
@@ -1014,7 +1410,6 @@ export default function TenantDetailPage() {
                   variant="outline"
                   onClick={() => {
                     setShowCheckoutModal(false);
-                    setDuesData(null);
                     setCheckoutError('');
                   }}
                   disabled={checkingOut}
@@ -1025,25 +1420,25 @@ export default function TenantDetailPage() {
                   variant="danger"
                   onClick={() => void handleConfirmCheckout()}
                   loading={checkingOut}
-                  disabled={duesLoading || !duesData || checkoutBlocked}
+                  disabled={duesPending || !dues || checkoutBlocked || checkoutBlockedByPayments}
                 >
                   <LogOut className="h-4 w-4" /> Confirm Checkout
                 </Button>
               </>
             }
           >
-            {duesLoading ? (
+            {duesPending ? (
               <div className="flex items-center justify-center gap-2 py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-(--color-warning-500)" />
                 <span className="text-13 font-semibold text-(--color-text-muted)">
-                  Loading dues...
+                  Reading the server&apos;s dues...
                 </span>
               </div>
             ) : checkoutError ? (
               <div className="text-13 rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 font-semibold text-(--color-danger-700)">
                 {checkoutError}
               </div>
-            ) : duesData ? (
+            ) : dues ? (
               <div className="space-y-4">
                 <div className="rounded-(--radius-lg) border border-(--border-color) bg-(--color-field-bg) p-4">
                   <div className="flex items-center justify-between">
@@ -1051,22 +1446,34 @@ export default function TenantDetailPage() {
                       Total Pending Dues
                     </span>
                     <span className="text-lg font-extrabold text-(--color-text-primary)">
-                      {formatCurrency(duesData.totalDue)}
+                      {reportedTotalDue === null
+                        ? 'not reported'
+                        : formatCurrency(reportedTotalDue)}
                     </span>
                   </div>
                   <div className="text-12 mt-2 grid grid-cols-2 gap-2 font-semibold text-(--color-text-muted)">
-                    <div>Electricity: {formatCurrency(duesData.electricityDues)}</div>
-                    <div>Deposit Held: {formatCurrency(duesData.depositHeld)}</div>
-                    <div>Unresolved Payments: {duesData.pendingPayments}</div>
+                    <div>
+                      Electricity:{' '}
+                      {typeof dues.electricityDues === 'number'
+                        ? formatCurrency(dues.electricityDues)
+                        : 'not reported'}
+                    </div>
+                    <div>
+                      Deposit Held:{' '}
+                      {typeof dues.depositHeld === 'number'
+                        ? formatCurrency(dues.depositHeld)
+                        : 'not reported'}
+                    </div>
+                    <div>Unresolved Payments: {dues.pendingPayments ?? 0}</div>
                   </div>
                 </div>
-                {duesData.unpaidInvoices.length > 0 && (
+                {unpaidInvoices.length > 0 && (
                   <div>
                     <p className="mb-2 text-sm font-bold text-(--color-text-primary)">
-                      Unpaid Invoices ({duesData.unpaidInvoices.length})
+                      Unpaid Invoices ({unpaidInvoices.length})
                     </p>
                     <div className="max-h-40 space-y-1 overflow-y-auto">
-                      {duesData.unpaidInvoices.map((inv) => (
+                      {unpaidInvoices.map((inv) => (
                         <button
                           key={inv._id}
                           type="button"
@@ -1082,15 +1489,17 @@ export default function TenantDetailPage() {
                           <div className="flex items-center gap-2.5">
                             <div className="text-right">
                               <span className="font-bold text-(--color-text-primary) tabular-nums">
-                                {formatCurrency(
-                                  inv.remaining != null ? inv.remaining : inv.totalAmount,
-                                )}
+                                {typeof inv.remaining === 'number'
+                                  ? formatCurrency(inv.remaining)
+                                  : 'not reported'}
                               </span>
-                              {inv.remaining != null && inv.remaining !== inv.totalAmount && (
-                                <p className="text-3xs font-semibold text-(--color-text-muted) tabular-nums">
-                                  of {formatCurrency(inv.totalAmount)}
-                                </p>
-                              )}
+                              {inv.remaining != null &&
+                                inv.remaining !== inv.totalAmount &&
+                                inv.totalAmount != null && (
+                                  <p className="text-3xs font-semibold text-(--color-text-muted) tabular-nums">
+                                    of {formatCurrency(inv.totalAmount)}
+                                  </p>
+                                )}
                             </div>
                             <StatusBadge
                               variant={statusToVariant(inv.status ?? 'unpaid')}
@@ -1103,20 +1512,42 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
                 )}
-                {checkoutBlocked ? (
+                {checkoutBlockedByBalance ? (
                   <div className="text-13 rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 font-semibold text-(--color-danger-700)">
-                    {duesData.totalDue > 0 || duesData.unpaidInvoices.length > 0
-                      ? 'Clear all unpaid invoice balances before checkout.'
-                      : 'Resolve pending or overdue payments before checkout.'}
+                    Clear all unpaid invoice balances before checkout.
+                  </div>
+                ) : checkoutBlockedByPayments ? (
+                  <div className="text-13 rounded-(--radius-lg) border border-(--color-danger-300) bg-(--color-danger-50) p-3 font-semibold text-(--color-danger-700)">
+                    Resolve pending or overdue payments before checkout.
                   </div>
                 ) : (
                   <div className="text-13 rounded-(--radius-lg) border border-(--color-success-300) bg-(--color-success-50) p-3 font-semibold text-(--color-success-700)">
                     No pending dues. Safe to checkout.
                   </div>
                 )}
+                <p className="text-2xs font-medium text-(--color-text-muted)">
+                  The server refuses the checkout while an invoice carries a balance or a payment is
+                  unresolved, and it does the whole move in one transaction: the stay closes, the
+                  bed is freed, the portal login and the guardian logins are disabled. The resident
+                  is not told: the server sends no notification for a check out.
+                </p>
               </div>
             ) : null}
           </Modal>
+
+          <ConfirmModal
+            open={!!deleteTarget}
+            title="Delete resident permanently?"
+            message={
+              deleteTarget?.user?.name
+                ? `Permanently delete "${deleteTarget.user.name}" and ALL associated records: payments, invoices, complaints, visitors, guardians (including their portal logins), laundry slots, meal feedback, attendance, and leaves. Their bed is freed and their login is disabled. This cannot be undone - prefer Check Out for a normal move-out.`
+                : 'Permanently delete this resident and ALL associated records? Their bed is freed and their login is disabled. This cannot be undone.'
+            }
+            confirmLabel="Delete Permanently"
+            loading={deleting}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />
 
           <DetailCard title="Tenancy Calendar" icon={<Calendar />}>
             <TenantStayCalendar

@@ -14,6 +14,8 @@ import {
   CalendarDays,
   Banknote,
   Building,
+  Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
@@ -340,6 +342,15 @@ function TenantForm() {
                     {...register('phone')}
                   />
                 </FormGrid>
+                {/* The reachability rule, in one line. The portal login, the
+                    temporary password and every message the office sends use
+                    this number, so a resident without one cannot be reached. */}
+                <p className="text-2xs flex items-start gap-1.5 font-medium text-(--color-text-secondary)">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0 text-(--color-brand-500)" />
+                  {phoneWatch
+                    ? `The resident is reached on ${phoneWatch}. The server refuses an email or a phone another account already uses, and it sends no message: the office hands over the temporary password by hand.`
+                    : 'A mobile number is required: the portal login, the temporary password and every message the office sends use this number. A resident the office cannot reach is a resident it cannot settle in.'}
+                </p>
               </FormSection>
 
               {/* Section 2: Room & Bed Assignment */}
@@ -534,7 +545,7 @@ function TenantForm() {
           </div>
 
           {/* ── Right Column: Sticky Room & Lease Passport ──────── */}
-          <div className="lg:col-span-5 xl:col-span-4">
+          <div className="space-y-4 lg:col-span-5 xl:col-span-4">
             <TenantLeasePassport
               room={selectedRoom}
               selectedBedId={bedIdWatch}
@@ -544,6 +555,72 @@ function TenantForm() {
               tenantName={nameWatch}
               tenantPhone={phoneWatch}
             />
+
+            {/* What this save does. The office has to know what the server
+                will commit before it commits it, and what it will not do. */}
+            <div className="rounded-(--radius-xl) border border-(--border-color) bg-(--color-card-bg) p-5 shadow-(--shadow-card)">
+              <h3 className="font-display text-sm font-bold tracking-tight text-(--color-text-primary)">
+                What this save does
+              </h3>
+              <ul className="mt-3 space-y-2.5">
+                <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                  <span>
+                    The server creates the portal login for the resident with a temporary password.
+                    The password is shown once, on this screen, and the server sends no message: the
+                    office hands it over.
+                  </span>
+                </li>
+                <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                  <span>
+                    The bed you pick is marked occupied in that room and the room&apos;s occupancy
+                    count is updated. The server refuses a bed that is already taken (BED_OCCUPIED),
+                    and it refuses a room that is not active.
+                  </span>
+                </li>
+                <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                  <span>
+                    The resident record starts in house, with the move-in date you type and no
+                    move-out date. The bed is taken for the stay, not held on probation: it is freed
+                    by a check out, by a transfer from the resident&apos;s page, or by a delete.
+                  </span>
+                </li>
+                <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                  <span>
+                    Nothing is billed. The first invoice is raised by the office from the monthly
+                    rent on this form, and the deposit is a record of what was taken, not a payment.
+                  </span>
+                </li>
+                {enquiryId ? (
+                  <li className="text-2xs flex items-start gap-2 font-medium text-(--color-text-secondary)">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-(--color-success-600)" />
+                    <span>
+                      This resident came from an enquiry, so the server marks that enquiry converted
+                      and points it at the new resident.
+                    </span>
+                  </li>
+                ) : null}
+              </ul>
+
+              <div className="mt-4 border-t border-(--border-color) pt-3">
+                <p className="tracking-label text-2xs font-bold text-(--color-text-muted) uppercase">
+                  Still open before the resident is settled in
+                </p>
+                <ul className="text-2xs mt-2 space-y-1.5 font-medium text-(--color-text-secondary)">
+                  <li>The identity document and the photo are uploaded and verified.</li>
+                  <li>The office handed the temporary password over and the resident signed in.</li>
+                  <li>A guardian is linked, so there is somebody to call in an emergency.</li>
+                  <li>The first invoice of the month of arrival is raised.</li>
+                </ul>
+                <p className="text-2xs mt-2 font-medium text-(--color-text-muted)">
+                  The server holds the office back on none of these: they are the office&apos;s own
+                  steps, and the resident page shows the identity ones.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </form>

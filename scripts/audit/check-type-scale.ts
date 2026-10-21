@@ -183,8 +183,6 @@ const ALLOWLIST: readonly AllowlistEntry[] = [
   ['app/(admin)/rooms/page.tsx', 'PX_DIM', 'w-[200px]', 1, R_PAGE],
   ['app/(admin)/services/page.tsx', 'PX_DIM', 'max-w-[200px]', 3, R_PAGE],
   ['app/(admin)/services/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
-  ['app/(admin)/tenants/page.tsx', 'PX_DIM', 'max-w-[180px]', 1, R_PAGE],
-  ['app/(admin)/tenants/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
   ['app/(admin)/tenants/page.tsx', 'PX_DIM', 'w-[130px]', 1, R_PAGE],
   ['app/(admin)/visitors/page.tsx', 'PX_DIM', 'max-w-[200px]', 1, R_PAGE],
   ['app/(admin)/visitors/page.tsx', 'PX_DIM', 'max-w-[240px]', 1, R_PAGE],

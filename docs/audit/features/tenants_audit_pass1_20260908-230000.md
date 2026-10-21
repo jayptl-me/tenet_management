@@ -95,3 +95,82 @@ No open gap findings recorded in this file.
 | Guardian ward lacked floor, move-in date, and call action (P2) | CLOSED - fixed this pass                                                        |
 | No tenant-side document upload (P3)                            | CLOSED - API endpoint plus image_picker integration (fixed this pass)           |
 | No PDF Aadhaar upload from the portal (P4)                     | CLOSED - file_picker integration (fixed this pass)                              |
+
+## Depth pass (2026-10-21): the four admin screens rebuilt to the depth standard
+
+Pass: depth (wave 6 of the depth program).
+Method: the three gates and the per-module contract of
+`docs/audit/FLOW_AND_LAYOUT_AUDIT_20261021.md` (gate A truth, gate B flow, gate C layout),
+applied to the admin screens of this module. Every claim below was read out of source on
+2026-10-21 and is cited as `file:line`.
+Precedent: `docs/audit/features/payments_depth_pass1_20260930.md`,
+`docs/audit/features/invoices_audit_pass1_20260908-003801.md`.
+Nothing above this section was changed: the findings of pass 1 stand as they were written.
+
+### 1. Inventory
+
+| Artifact          | Path                                                | Lines | Notes                                                                        |
+| ----------------- | --------------------------------------------------- | ----- | ---------------------------------------------------------------------------- |
+| Roster (list)     | apps/web/src/app/(admin)/tenants/page.tsx           | 934   | URL filters, status tabs, band metrics, per resident dues, CSV export        |
+| Resident (detail) | apps/web/src/app/(admin)/tenants/[id]/page.tsx      | 1573  | Protagonist, onboarding trail, dues, KYC, office actions, calendar, timeline |
+| Check in (create) | apps/web/src/app/(admin)/tenants/new/page.tsx       | 655   | Intake form, lease passport rail, consequence panel                          |
+| Check in (edit)   | apps/web/src/app/(admin)/tenants/[id]/edit/page.tsx | 765   | Read through the query stack, transfer, consequence panel                    |
+| API route         | apps/api/src/routes/tenants.ts                      | 2180  | 20 endpoints, 6 of them resident readable                                    |
+| Model             | apps/api/src/models/tenant.ts                       | 214   | No status field, two booleans and the document flags                         |
+| Shared types      | packages/types/src/tenant.ts                        | 98    | No importer anywhere in the repository                                       |
+| Contract          | packages/types/src/contracts/tenants.ts             | -     | State machine, truth contract, layout, next best action                      |
+
+### 2. What the operator is doing here
+
+The operator puts a resident in a bed, proves who the resident is, collects what the resident
+owes and closes the stay when the resident leaves. The money belongs to the invoice module and
+the payments module; what this module owns is the resident, the bed, the identity state and the
+stay. Done looks like: every bed is either taken by a named resident or marked free, every
+checked-in resident has a verified identity and a reachable phone number, and a checked-out
+resident has no open dues and no portal access.
+
+### 3. The findings of this pass
+
+| ID        | Severity | Finding                                                                                                                                                                                                                                                 | How it ended                                                                                                                                    |
+| --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| TEN-D2-1  | P2       | The roster had no money column. The audit already flagged it (FLOW_AND_LAYOUT_AUDIT_20261021.md, F3: "The admin tenants list has no balance column"), and the office had to open a resident to learn that the resident owed anything.                   | Closed by the rebuild: the column reads the server's dues summary for that resident.                                                            |
+| TEN-D2-2  | P2       | The identity column said "Verified", "Pending" or "No Docs" and never said what the state meant, so an upload waiting for a verdict and a record with no upload at all looked like the same queue entry.                                                | Closed by the rebuild: the state and what it means are both on the row.                                                                         |
+| TEN-D2-3  | P2       | The list did not say what its columns meant. The search matches the resident name only (apps/api/src/routes/tenants.ts:437-460), and the rent and the deposit were bare numbers.                                                                        | Closed by the rebuild: a legend under the table names the scope of the search, of the dues, of the stay and of the money columns.               |
+| TEN-D2-4  | P2       | The CSV export wrote the page in view and said nothing about the rest of the set (the old list page walked one request).                                                                                                                                | Closed by the rebuild: the export walks the pages of the filtered set and reports the rows the server holds against the rows the file carries.  |
+| TEN-D2-5  | P2       | The resident page never showed what the resident owes. The dues were read only when the office opened the checkout modal, so the money was one click and one modal away from the record.                                                                | Closed by the rebuild: the dues summary is read on the page and rendered as the money number of the record and as the resident's own view.      |
+| TEN-D2-6  | P2       | The onboarding of a resident was scattered over four cards and no progression was drawn anywhere. The tenant model has no status field, so the progression was the six states the record actually proves.                                               | Closed by the rebuild: the onboarding trail renders them in order.                                                                              |
+| TEN-D2-7  | P2       | The office could only delete a resident from the roster, and the resident page did not carry every action the office takes on a resident.                                                                                                               | Closed by the rebuild: one card carries every action and each write renders the server's answer.                                                |
+| TEN-D2-8  | P2       | The check out and the reinstate reloaded the whole page with `window.location.reload()`, which threw the view away and left the operator with no record of what the server committed.                                                                   | Closed by the rebuild: both writes invalidate the queries and the page reports the state the server committed.                                  |
+| TEN-D2-9  | P2       | The edit page did not say that an edit moves what the resident owes. The rent on the record is what the next invoice is raised from (apps/api/src/services/invoice.service.ts:97), and the resident is not told about either the old or the new number. | Closed by the rebuild: the panel on the edit page names the four consequences and the silence of the server.                                    |
+| TEN-D2-10 | P2       | The create page did not say what creating the tenant does, and nothing on the form stopped a resident the office could not reach.                                                                                                                       | Closed by the rebuild: the rail panel names what the server commits and what is still open, and the phone field carries the reachability rule.  |
+| TEN-D2-11 | P3       | The edit page was the only screen of the module outside the shared query stack: a hand written fetch, no cache and no invalidation after the write.                                                                                                     | Closed by the rebuild: the record is read with `useApiQuery` and the write invalidates the tenant queries.                                      |
+| TEN-D2-12 | P3       | The resident page opened with four statistic tiles (monthly rent, deposit, move-in, move-out) and no protagonist, so it read like every other record page of the app.                                                                                   | Closed by the rebuild: the tiles are gone and the page opens with the resident, the bed, the stay and the money number.                         |
+| TEN-D2-13 | P3       | The status filter was a select and the size of the set was never on the screen, so the office could not tell an empty filter from an empty roster.                                                                                                      | Closed by the rebuild: the status is a tab strip with the server counts of the same filtered set, and the band names the scope of every number. |
+| TEN-D3-1  | P2       | The tenant model holds no lease end date (apps/api/src/models/tenant.ts:8-9, :84-91), so a stay that is about to end cannot be computed from the server's numbers.                                                                                      | Still open: it needs a field on the model, the routes and the portal. The roster shows the length of the stay instead and says why.             |
+| TEN-D3-2  | P2       | GET /tenants has no money filter and no dues aggregate (apps/api/src/routes/tenants.ts:391-483), so the roster reads the dues of one resident at a time.                                                                                                | Still open: it needs an aggregate or a filter on the list route. The band says that the owing number covers the page.                           |
+| TEN-D3-3  | P2       | The tenant model has no status field, so the domain carries no lifecycle vocabulary and the shared stepper cannot render it (packages/types/src/lifecycle.json).                                                                                        | Still open: the vocabulary and the generated Dart need a domain and a status union that the model does not have.                                |
+| TEN-D3-4  | P2       | A check out deactivates the portal login of the resident and of the guardians (apps/api/src/routes/tenants.ts:820-843) and sends no notification, so the resident is never told.                                                                        | Still open: it is an API change. The office page says so before the write.                                                                      |
+| TEN-D3-5  | P3       | PUT /tenants/:id writes an audit entry only when the room or the bed moved (apps/api/src/routes/tenants.ts:681-702), so a change of the rent leaves no trail.                                                                                           | Still open: it is an API change. The edit page says that no audit entry is written.                                                             |
+| TEN-D3-6  | P3       | The resident record carries no link back to the enquiry it came from: the server stores convertedTenantId on the enquiry (apps/api/src/routes/tenants.ts:313-323).                                                                                      | Still open: it needs a reverse read on the enquiries route. The resident page points at the converted enquiries list.                           |
+| TEN-D3-7  | P3       | The shared tenant DTOs of packages/types/src/tenant.ts have no importer in the repository.                                                                                                                                                              | Still open: the four screens declare their own interfaces, as in the invoices and the payments module.                                          |
+| TEN-D3-8  | P3       | The KYC queue has no list of its own: the only queue is the notification bell (apps/api/src/routes/tenants.ts:1097-1131) and GET /tenants cannot filter on the identity state.                                                                          | Still open: it needs a filter on the list route. The roster names the state of every row instead.                                               |
+
+The rows that are still open are carried in `docs/audit/features/tenants.md` with their severity and
+their paths; the rows that the rebuild closed are carried in the Closed section of the same file.
+
+### 4. The contract
+
+`packages/types/src/contracts/tenants.ts` now holds the grid of the domain (the tenant model has
+no status field, so the grid is `isActive` times `documents.isVerified`), one truth entry per
+action the admin can take (check in, check out, reinstate, edit, verify the documents, read the
+dues, delete), the layout archetype with the grammar tokens and the module's own number, and the
+next best action per grid cell and per empty state.
+
+### 5. What was NOT done
+
+- No API route, model or shared type was changed. Every gap that needs one is listed above as
+  still open.
+- The mobile portal was not touched. The resident half of this module (the profile, the ward view)
+  was not re-audited in this pass; pass 1 above still stands.
+- No screenshot and no browser run: every layout claim is read out of the component geometry and
+  the width rule, not measured.

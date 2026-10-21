@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,9 +15,12 @@ import {
   CalendarDays,
   Banknote,
   AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { parseApiError } from '@/lib/errorParser';
+import { errorMessage } from '@/lib/query';
+import { useApiQuery } from '@/hooks/useApiQuery';
 import { normalizeInPhone, isValidInPhone } from '@/lib/phone';
 import { Input } from '@/components/ui/Input';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -98,16 +102,35 @@ interface RoomOption {
   beds?: Array<{ bedId: string; isOccupied: boolean; tenantId?: string | null }>;
 }
 
+/** The resident record the server holds, read by the edit page. */
+interface TenantRecord {
+  _id: string;
+  user?: Record<string, unknown>;
+  room?: { _id?: string; roomNumber?: string };
+  roomId?: string;
+  bedId?: string;
+  monthlyRent?: number;
+  depositPaid?: number;
+  moveInDate?: string;
+  isActive?: boolean;
+  documents?: {
+    idType?: string;
+    idNumberMasked?: string;
+    idUrl?: string;
+    aadhaarUrl?: string;
+    photoUrl?: string;
+    isVerified?: boolean;
+  };
+  emergencyContact?: Record<string, string>;
+  verificationProfile?: Record<string, unknown>;
+}
+
 export default function EditTenantPage() {
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
   const id = params.id as string;
-  const [isLoading, setIsLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
-  const [tenantData, setTenantData] = useState<Record<string, unknown> | null>(null);
-  const [isActive, setIsActive] = useState(true);
-  const [currentBedId, setCurrentBedId] = useState('');
-  const [originalRoomId, setOriginalRoomId] = useState('');
 
   const {
     register,
@@ -118,94 +141,96 @@ export default function EditTenantPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  /**
+   * The resident record, read through the shared query stack.
+   *
+   * The page used to fetch the record with a hand written effect outside
+   * React Query, so the cache never knew what it held and the write could not
+   * invalidate anything. The record is now read once and the form is filled
+   * from it.
+   */
+  const {
+    data: tenantData,
+    isPending: isLoading,
+    error: loadError,
+  } = useApiQuery<TenantRecord>(['tenants', 'detail', id], `tenants/${id}`, { enabled: !!id });
+
+  // The room, the bed and the stay state come from the record, never from a
+  // second copy of the truth.
+  const isActive = tenantData ? tenantData.isActive !== false : true;
+  const currentBedId = tenantData?.bedId ?? '';
+  const originalRoomId = tenantData?.room?._id ?? tenantData?.roomId ?? '';
+
   const roomIdWatch = useWatch({ control, name: 'roomId' });
 
+  // The form is filled once per record: a re-read of the same record must not
+  // wipe what the operator has typed.
+  const hydratedId = useRef('');
   useEffect(() => {
-    if (!id) return;
-    api
-      .get(`tenants/${id}`)
-      .json<{ success: boolean; data: Record<string, unknown> }>()
-      .then((res) => {
-        const d = res.data;
-        setTenantData(d);
-        const user = (d.user ?? {}) as Record<string, unknown>;
-        const room = (d.room ?? {}) as Record<string, unknown>;
-        const ec = (d.emergencyContact ?? {}) as Record<string, string>;
-        const roomId = (room._id as string) ?? (d.roomId as string) ?? '';
-        const bedId = (d.bedId as string) ?? '';
-        const active = d.isActive !== false;
-        setIsActive(active);
-        setCurrentBedId(bedId);
-        setOriginalRoomId(roomId);
-        const vp = (d.verificationProfile ?? {}) as Record<string, unknown>;
-        const perm = (vp.permanentAddress ?? {}) as Record<string, string>;
-        const occ = (vp.occupation ?? {}) as Record<string, string>;
-        const refs = (vp.localReferences ?? []) as Array<Record<string, string>>;
-        const ref1 = refs[0] ?? {};
-        const ref2 = refs[1] ?? {};
+    if (!tenantData) return;
+    if (hydratedId.current === tenantData._id) return;
+    hydratedId.current = tenantData._id;
 
-        reset({
-          name: (user.name as string) ?? '',
-          phone: (user.phone as string) ?? '',
-          email: (user.email as string) ?? '',
-          roomId,
-          bedId,
-          monthlyRent: (d.monthlyRent as number) ?? 0,
-          depositPaid: (d.depositPaid as number) ?? 0,
-          moveInDate: (d.moveInDate as string) ? String(d.moveInDate).slice(0, 10) : '',
-          emergencyName: ec.name ?? '',
-          emergencyPhone: (ec.phone as string)?.replace('+91', '') ?? '',
-          emergencyRelation: ec.relation ?? '',
-          fatherOrSpouseName: (vp.fatherOrSpouseName as string) ?? '',
-          dob: (vp.dob as string) ? String(vp.dob).slice(0, 10) : '',
-          gender: ((vp.gender as string) || '') as '' | 'male' | 'female' | 'other',
-          bloodGroup: (vp.bloodGroup as string) ?? '',
-          identificationMark: (vp.identificationMark as string) ?? '',
-          permanentStreet: perm.street ?? '',
-          permanentCity: perm.city ?? '',
-          permanentDistrict: perm.district ?? '',
-          permanentState: perm.state ?? '',
-          permanentPincode: perm.pincode ?? '',
-          permanentPoliceStation: perm.policeStation ?? '',
-          occupationCategory: ((occ.category as string) || '') as
-            '' | 'salaried' | 'student' | 'business' | 'other',
-          organizationName: occ.organizationName ?? '',
-          officeAddress: occ.officeAddress ?? '',
-          officePhone: occ.contactPhone ?? '',
-          stayPurpose: (vp.stayPurpose as string) ?? '',
-          ref1Name: ref1.name ?? '',
-          ref1Phone: (ref1.phone as string)?.replace('+91', '') ?? '',
-          ref1Relation: ref1.relation ?? '',
-          ref1Address: ref1.address ?? '',
-          ref2Name: ref2.name ?? '',
-          ref2Phone: (ref2.phone as string)?.replace('+91', '') ?? '',
-          ref2Relation: ref2.relation ?? '',
-          ref2Address: ref2.address ?? '',
-        });
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setSubmitError('Failed to load tenant');
-        setIsLoading(false);
-      });
-  }, [id, reset]);
+    const user = (tenantData.user ?? {}) as Record<string, unknown>;
+    const ec = (tenantData.emergencyContact ?? {}) as Record<string, string>;
+    const vp = (tenantData.verificationProfile ?? {}) as Record<string, unknown>;
+    const perm = (vp.permanentAddress ?? {}) as Record<string, string>;
+    const occ = (vp.occupation ?? {}) as Record<string, string>;
+    const refs = (vp.localReferences ?? []) as Array<Record<string, string>>;
+    const ref1 = refs[0] ?? {};
+    const ref2 = refs[1] ?? {};
 
-  const onRoomChange = useCallback(
-    async (roomId: string) => {
-      setValue('roomId', roomId);
-      const originalRoomId = ((tenantData?.room as { _id?: string } | undefined)?._id ??
-        tenantData?.roomId) as string | undefined;
-      const keepBed = roomId === originalRoomId ? currentBedId : '';
-      if (!keepBed) setValue('bedId', '');
-      try {
-        const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
-        if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
-      } catch {
-        /* ignore */
-      }
-    },
-    [tenantData, currentBedId, setValue],
-  );
+    reset({
+      name: (user.name as string) ?? '',
+      phone: (user.phone as string) ?? '',
+      email: (user.email as string) ?? '',
+      roomId: originalRoomId,
+      bedId: currentBedId,
+      monthlyRent: tenantData.monthlyRent ?? 0,
+      depositPaid: tenantData.depositPaid ?? 0,
+      moveInDate: tenantData.moveInDate ? String(tenantData.moveInDate).slice(0, 10) : '',
+      emergencyName: ec.name ?? '',
+      emergencyPhone: (ec.phone ?? '').replace('+91', ''),
+      emergencyRelation: ec.relation ?? '',
+      fatherOrSpouseName: (vp.fatherOrSpouseName as string) ?? '',
+      dob: vp.dob ? String(vp.dob).slice(0, 10) : '',
+      gender: ((vp.gender as string) || '') as '' | 'male' | 'female' | 'other',
+      bloodGroup: (vp.bloodGroup as string) ?? '',
+      identificationMark: (vp.identificationMark as string) ?? '',
+      permanentStreet: perm.street ?? '',
+      permanentCity: perm.city ?? '',
+      permanentDistrict: perm.district ?? '',
+      permanentState: perm.state ?? '',
+      permanentPincode: perm.pincode ?? '',
+      permanentPoliceStation: perm.policeStation ?? '',
+      occupationCategory: ((occ.category as string) || '') as
+        '' | 'salaried' | 'student' | 'business' | 'other',
+      organizationName: occ.organizationName ?? '',
+      officeAddress: occ.officeAddress ?? '',
+      officePhone: occ.contactPhone ?? '',
+      stayPurpose: (vp.stayPurpose as string) ?? '',
+      ref1Name: ref1.name ?? '',
+      ref1Phone: (ref1.phone ?? '').replace('+91', ''),
+      ref1Relation: ref1.relation ?? '',
+      ref1Address: ref1.address ?? '',
+      ref2Name: ref2.name ?? '',
+      ref2Phone: (ref2.phone ?? '').replace('+91', ''),
+      ref2Relation: ref2.relation ?? '',
+      ref2Address: ref2.address ?? '',
+    });
+  }, [tenantData, originalRoomId, currentBedId, reset]);
+
+  const onRoomChange = async (roomId: string) => {
+    setValue('roomId', roomId);
+    const keepBed = roomId === originalRoomId ? currentBedId : '';
+    if (!keepBed) setValue('bedId', '');
+    try {
+      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomOption }>();
+      if (res.data.monthlyRent) setValue('monthlyRent', res.data.monthlyRent);
+    } catch {
+      /* the room could not be read: the operator keeps the rent they typed */
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
@@ -299,6 +324,8 @@ export default function EditTenantPage() {
         payload.roomId = data.roomId;
       }
       await api.put(`tenants/${id}`, { json: payload }).json();
+      // The record, its dues and the roster are re-read from the server.
+      await queryClient.invalidateQueries({ queryKey: ['tenants'] });
       router.push(`/tenants/${id}`);
     } catch (err) {
       setSubmitError((await parseApiError(err)).message);
@@ -312,7 +339,7 @@ export default function EditTenantPage() {
       title="Edit Tenant"
       description="Update contact info, room assignment, rent, and documents"
       backHref={`/tenants/${id}`}
-      error={submitError}
+      error={submitError || errorMessage(loadError)}
       isLoading={isLoading}
       maxWidth="form"
     >
@@ -345,6 +372,54 @@ export default function EditTenantPage() {
             </div>
           </div>
         )}
+
+        {/* What this save does to the resident. An edit moves what they owe
+            and what they are told, and the office has to know both. */}
+        <div className="mb-6 rounded-(--radius-lg) border border-(--color-info-200) bg-(--color-info-50) p-4">
+          <p className="tracking-label text-2xs font-bold text-(--color-info-800) uppercase">
+            What this save does
+          </p>
+          <ul className="text-2xs mt-2 space-y-1.5 font-medium text-(--color-info-800)">
+            <li className="flex items-start gap-1.5">
+              <Info className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>
+                The monthly rent is what the server raises every new invoice from. Changing it moves
+                what the resident owes from the NEXT invoice; the invoices already issued keep the
+                amounts they carry.
+              </span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <Info className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>
+                The deposit is what the office recorded as taken. It is not a payment and it does
+                not reduce the dues the server reports.
+              </span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <Info className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>
+                The phone, the email and the emergency contact are what the resident reads on their
+                profile and what the office calls.
+              </span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <Info className="mt-0.5 h-3 w-3 shrink-0" />
+              <span>
+                Moving the resident to another room or bed frees the old bed and takes the new one
+                in one transaction. The server refuses a bed that is taken, and it refuses a
+                transfer while the resident is checked out.
+              </span>
+            </li>
+            <li className="flex items-start gap-1.5">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-(--color-warning-600)" />
+              <span>
+                The resident is not told. The server sends no notification for an edit, and it
+                writes no audit entry for a rent or a contact change: only a room or a bed transfer
+                is written down, as a tenant_transfer entry.
+              </span>
+            </li>
+          </ul>
+        </div>
 
         <FormSection
           title="Personal information"
@@ -553,7 +628,7 @@ export default function EditTenantPage() {
               placeholder="House #, Street name"
               {...register('permanentStreet')}
             />
-            <Input label="City / Town" placeholder="Native city" {...register('permanentCity')} />
+            <Input label="City / Town" placeholder="City" {...register('permanentCity')} />
             <Input label="District" placeholder="District" {...register('permanentDistrict')} />
           </FormGrid>
           <FormGrid cols={3}>
@@ -648,51 +723,29 @@ export default function EditTenantPage() {
             description="Official identity document (OVD) and resident photo stored with authenticated encryption"
             divided
           >
+            <p className="text-2xs font-medium text-(--color-text-muted)">
+              Uploading a file from the office replaces it and leaves the verdict as it is. A
+              resident who uploads their own document from the portal flips the verification back to
+              pending, and the office has to verify them again.
+            </p>
             <FormGrid>
               <DocumentUpload
                 tenantId={id}
-                docType={(tenantData.documents as Record<string, string>)?.idType || 'aadhaar'}
-                currentUrl={
-                  (tenantData.documents as Record<string, string>)?.idUrl ||
-                  (tenantData.documents as Record<string, string>)?.aadhaarUrl
-                }
-                idNumberMasked={(tenantData.documents as Record<string, string>)?.idNumberMasked}
-                isVerified={Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)}
-                onUploaded={({ url, docType, idNumberMasked }) =>
-                  setTenantData((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          documents: {
-                            ...(prev.documents as Record<string, unknown>),
-                            idUrl: url,
-                            idType: docType,
-                            idNumberMasked,
-                            isVerified: false,
-                          },
-                        }
-                      : prev,
-                  )
+                docType={tenantData.documents?.idType || 'aadhaar'}
+                currentUrl={tenantData.documents?.idUrl || tenantData.documents?.aadhaarUrl}
+                idNumberMasked={tenantData.documents?.idNumberMasked}
+                isVerified={Boolean(tenantData.documents?.isVerified)}
+                onUploaded={() =>
+                  queryClient.invalidateQueries({ queryKey: ['tenants', 'detail', id] })
                 }
               />
               <DocumentUpload
                 tenantId={id}
                 docType="photo"
-                currentUrl={(tenantData.documents as Record<string, string>)?.photoUrl}
-                isVerified={Boolean((tenantData.documents as Record<string, boolean>)?.isVerified)}
-                onUploaded={({ url }) =>
-                  setTenantData((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          documents: {
-                            ...(prev.documents as Record<string, unknown>),
-                            photoUrl: url,
-                            isVerified: false,
-                          },
-                        }
-                      : prev,
-                  )
+                currentUrl={tenantData.documents?.photoUrl}
+                isVerified={Boolean(tenantData.documents?.isVerified)}
+                onUploaded={() =>
+                  queryClient.invalidateQueries({ queryKey: ['tenants', 'detail', id] })
                 }
               />
             </FormGrid>
