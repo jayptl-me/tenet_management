@@ -16,5 +16,21 @@
   },
   "devDependencies": {
     "typescript": "^7.0.0"
+  },
+  "overrides": {
+    "source-map-js": "^1.2.2",
+    "follow-redirects": "^1.16.1",
+    "fast-copy": "^2.2.0",
+    "sharp": "^0.35.5",
+    "baseline-browser-mapping": "^2.11.0",
+    "tinypool": "^2.1.2",
+    "nanoid": "^5.1.16",
+    "postcss": "^8.5.23",
+    "@vitest/mocker": "^5.0.3",
+    "vite": "^8.2.4",
+    "hono": "^4.13.14",
+    "esbuild": "^0.28.1",
+    "next": "^16.4.3",
+    "mongoose": "^9.11.4"
   }
 }
