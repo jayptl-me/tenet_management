@@ -43,3 +43,6 @@ test-results/
 .claude/skills/monster-mode/
 .claude.json
 .claude/skills/monster-mode/
+
+# Credentials live in the vault, never in the repo
+docs/CREDENTIALS.md
