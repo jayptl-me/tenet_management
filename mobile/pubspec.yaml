@@ -17,7 +17,11 @@ dependencies:
   shared_preferences: ^2.5.3
   intl: ^0.20.2
   equatable: ^2.0.7
-  google_fonts: ^8.2.1
+  # google_fonts 9: *TextTheme helpers return the material_ui fork's TextTheme
+  # (foreign to flutter/material ThemeData), so the app builds its SDK TextTheme
+  # manually from per-style GoogleFonts.inter(textStyle:) tear-offs (app_theme);
+  # TextStyle itself is shared, so the tear-offs assign cleanly.
+  google_fonts: ^9.0.0
   url_launcher: ^6.3.2
   path_provider: ^2.1.6
   image_picker: ^1.1.2
