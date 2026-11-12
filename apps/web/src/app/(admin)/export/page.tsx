@@ -192,6 +192,13 @@ function sanitizeCSVValue(val: unknown): string {
   return `"${escaped}"`;
 }
 
+// Today's date stamp for export filenames. Module scope keeps the clock read
+// out of the component (react/purity flags impure calls in async closures;
+// the handler below calls this at click time, same program point as before).
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function ExportPage() {
   const [exporting, setExporting] = useState<ExportResource | null>(null);
   const [success, setSuccess] = useState<ExportResource | null>(null);
@@ -249,7 +256,7 @@ export default function ExportPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const date = new Date().toISOString().slice(0, 10);
+      const date = todayIsoDate();
       link.download = `${resource}_export_${date}.csv`;
       document.body.appendChild(link);
       link.click();

@@ -98,10 +98,12 @@ export function AttendanceMonthCalendar({
   isLoading = false,
   className,
 }: AttendanceMonthCalendarProps) {
-  const now = useMemo(() => new Date(), []);
+  // Mount-stable clock reads (react/purity): useMemo factories run during render,
+  // so impure calls move to state initializers, which the rule blesses.
+  const [now] = useState(() => new Date());
   const [year, setYear] = useState(initialYear ?? now.getFullYear());
   const [month, setMonth] = useState(initialMonth ?? now.getMonth());
-  const todayYmd = useMemo(() => toLocalYmd(new Date()), []);
+  const [todayYmd] = useState(() => toLocalYmd(new Date()));
 
   const cells = useMemo(() => {
     const first = new Date(year, month, 1);

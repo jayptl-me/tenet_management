@@ -1409,6 +1409,7 @@ router.get('/:id/police-verification.pdf', authGuard, async (c) => {
   }
 
   const pdfProps = {
+    generatedOnLabel: new Date().toLocaleDateString('en-IN'),
     tenant: {
       name: tenantUser?.name || 'Resident',
       phone: tenantUser?.phone || '',

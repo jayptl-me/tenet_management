@@ -468,7 +468,9 @@ export default function DashboardPage() {
         second: '2-digit',
       })
     : '';
-  const todayLabel = new Date().toLocaleDateString('en-IN', {
+  // Mount-stable clock read (react/purity): the label must not recompute per render.
+  const [mountNow] = useState(() => new Date());
+  const todayLabel = mountNow.toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -1144,8 +1146,8 @@ export default function DashboardPage() {
             <div className="flex justify-center py-2">
               <HeatmapCalendar
                 data={stats.complaintHeatmap}
-                year={new Date().getFullYear()}
-                month={new Date().getMonth()}
+                year={mountNow.getFullYear()}
+                month={mountNow.getMonth()}
                 colorScale="danger"
                 size={15}
                 onDayClick={(date, count) => {

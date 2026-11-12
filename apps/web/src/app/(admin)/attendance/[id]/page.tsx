@@ -278,7 +278,9 @@ export default function AttendanceDetailPage() {
 
   const tenantId = record ? tenantIdOfRecord(record) : '';
   const recordYmd = record ? record.date.slice(0, 10) : '';
-  const recordMonth = record ? new Date(`${recordYmd}T00:00:00`) : new Date();
+  // Mount-stable clock read (react/purity): the loading fallback must not recompute per render.
+  const [fallbackNow] = useState(() => new Date());
+  const recordMonth = record ? new Date(`${recordYmd}T00:00:00`) : fallbackNow;
 
   const activeMonth =
     summaryNav && record && summaryNav.id === record._id

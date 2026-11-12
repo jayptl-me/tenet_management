@@ -158,6 +158,8 @@ export default function LandingPage() {
   const [messageText, setMessageText] = useState('');
   const [config, setConfig] = useState<IAppConfigPublic | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  // Mount-stable clock read (react/purity): the footer year must not recompute per render.
+  const [copyrightYear] = useState(() => new Date().getFullYear());
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'}/app-config`)
@@ -890,7 +892,7 @@ export default function LandingPage() {
               ))}
             </nav>
             <p className="text-12">
-              &copy; {new Date().getFullYear()} {pgName}. All rights reserved.
+              &copy; {copyrightYear} {pgName}. All rights reserved.
             </p>
           </div>
           {social && (

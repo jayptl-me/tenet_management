@@ -231,6 +231,8 @@ export interface PoliceVerificationPdfProps {
     numberMasked: string;
     isVerified: boolean;
   };
+  /** Pre-formatted generation date for the signature blocks (computed by the caller). */
+  generatedOnLabel: string;
 }
 
 export function PoliceVerificationPdf({
@@ -239,6 +241,7 @@ export function PoliceVerificationPdf({
   profile,
   emergencyContact,
   documentInfo,
+  generatedOnLabel,
 }: PoliceVerificationPdfProps) {
   const perm = profile?.permanentAddress;
   const occ = profile?.occupation;
@@ -504,13 +507,13 @@ export function PoliceVerificationPdf({
           <View style={styles.signBlock}>
             <View style={styles.signLine} />
             <Text style={styles.signLabel}>Signature of Tenant</Text>
-            <Text style={styles.signSub}>Date: {new Date().toLocaleDateString('en-IN')}</Text>
+            <Text style={styles.signSub}>Date: {generatedOnLabel}</Text>
           </View>
 
           <View style={styles.signBlock}>
             <View style={styles.signLine} />
             <Text style={styles.signLabel}>Landlord / PG Manager Signature & Seal</Text>
-            <Text style={styles.signSub}>Date: {new Date().toLocaleDateString('en-IN')}</Text>
+            <Text style={styles.signSub}>Date: {generatedOnLabel}</Text>
           </View>
 
           <View style={styles.policeStampBox}>

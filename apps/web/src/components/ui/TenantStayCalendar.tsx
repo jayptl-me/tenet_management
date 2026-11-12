@@ -54,12 +54,15 @@ export function TenantStayCalendar({
   events = [],
   className,
 }: TenantStayCalendarProps) {
-  const todayYmd = useMemo(() => toLocalYmd(new Date()), []);
+  // Mount-stable clock reads (react/purity): useMemo factories run during render,
+  // so impure calls move to a state initializer, which the rule blesses.
+  const [fallbackNow] = useState(() => new Date());
+  const todayYmd = useMemo(() => toLocalYmd(fallbackNow), [fallbackNow]);
   const initial = useMemo(() => {
-    const base = moveInDate ? new Date(parseToLocalYmd(moveInDate) + 'T00:00:00') : new Date();
-    const safe = Number.isNaN(base.getTime()) ? new Date() : base;
+    const base = moveInDate ? new Date(parseToLocalYmd(moveInDate) + 'T00:00:00') : fallbackNow;
+    const safe = Number.isNaN(base.getTime()) ? fallbackNow : base;
     return { year: safe.getFullYear(), month: safe.getMonth() };
-  }, [moveInDate]);
+  }, [moveInDate, fallbackNow]);
 
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);

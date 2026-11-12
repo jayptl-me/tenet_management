@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { BedDouble } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Select, type SelectOption } from '@/components/ui/Select';
@@ -25,6 +25,32 @@ interface OccupancyBedPickerProps {
   currentBedId?: string;
   error?: string;
   label?: string;
+}
+
+// Pure data loader (no setState): room occupancy → picker options. Lives at
+// module scope so the effect below only updates state in promise continuations.
+async function fetchBedOptions(
+  roomId: string,
+  currentBedId: string | undefined,
+): Promise<SelectOption[]> {
+  const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>();
+  const room = res.data;
+  const roomBeds = Array.isArray(room.beds) && room.beds.length > 0 ? room.beds : null;
+  const standardCount = Math.max(room.sharingType ?? 0, roomBeds?.length ?? 0, 1);
+  const standardSlots = ['A', 'B', 'C', 'D'].slice(0, standardCount);
+  const bedIdSet = new Set([...standardSlots, ...(roomBeds?.map((b) => b.bedId) ?? [])]);
+  const bedIds = Array.from(bedIdSet).sort();
+  // Keep occupied beds visible but disabled so the admin sees occupancy state
+  return bedIds.map((bedId) => {
+    const bedMeta = roomBeds?.find((b) => b.bedId === bedId);
+    const isCurrent = currentBedId != null && bedId === currentBedId;
+    const occupiedByOther = !!bedMeta?.isOccupied && !isCurrent;
+    return {
+      value: bedId,
+      label: occupiedByOther ? `Bed ${bedId} (Occupied)` : `Bed ${bedId}`,
+      disabled: occupiedByOther,
+    };
+  });
 }
 
 // ── Component ──────────────────────────────────────────
@@ -53,42 +79,30 @@ export function OccupancyBedPicker({
     }
   }
 
-  const loadBeds = useCallback(async () => {
+  // Fetch-on-room-change (react/set-state-in-effect): state updates live only in
+  // promise continuations, never synchronously in the effect. The ignore flag
+  // drops stale flights when the room changes mid-fetch (fetch race guard).
+  useEffect(() => {
     if (!roomId) return;
-    let next: SelectOption[] = [];
-    try {
-      const res = await api.get(`rooms/${roomId}`).json<{ success: boolean; data: RoomData }>();
-      const room = res.data;
-      const roomBeds = Array.isArray(room.beds) && room.beds.length > 0 ? room.beds : null;
-      const standardCount = Math.max(room.sharingType ?? 0, roomBeds?.length ?? 0, 1);
-      const standardSlots = ['A', 'B', 'C', 'D'].slice(0, standardCount);
-      const bedIdSet = new Set([...standardSlots, ...(roomBeds?.map((b) => b.bedId) ?? [])]);
-      const bedIds = Array.from(bedIdSet).sort();
-      const beds = bedIds.map((bedId) => {
-        const bedMeta = roomBeds?.find((b) => b.bedId === bedId);
-        const isCurrent = currentBedId != null && bedId === currentBedId;
-        const occupiedByOther = !!bedMeta?.isOccupied && !isCurrent;
-        return {
-          value: bedId,
-          label: occupiedByOther ? `Bed ${bedId} (Occupied)` : `Bed ${bedId}`,
-          disabled: occupiedByOther,
-        };
-      });
-      // Keep occupied beds visible but disabled so the admin sees occupancy state
-      next = beds;
-    } catch {
-      next = [];
-    } finally {
-      setOptions(next);
-      setLoading(false);
-    }
+    let cancelled = false;
+    fetchBedOptions(roomId, currentBedId).then(
+      (beds) => {
+        if (cancelled) return;
+        setOptions(beds);
+        setLoading(false);
+      },
+      () => {
+        if (cancelled) return;
+        setOptions([]);
+        setLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [roomId, currentBedId]);
 
-  useEffect(() => {
-    void loadBeds();
-  }, [loadBeds]);
-
-  // Ensure value is never dropped while async loadBeds is in flight
+  // Ensure value is never dropped while the async fetch is in flight
   const displayOptions =
     options.length > 0 ? options : value ? [{ value, label: `Bed ${value}` }] : [];
 

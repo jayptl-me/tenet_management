@@ -67,6 +67,22 @@ function formatDayLabel(dateStr: string): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 }
 
+// Pure data loader (no setState): week dates → day menus keyed by date.
+// Throws on fetch failure; callers map that to the error state.
+async function loadWeekMap(weekDates: string[]): Promise<Record<string, MenuDay | null>> {
+  const fromDate = weekDates[0];
+  const toDate = weekDates[6];
+  const res = await api
+    .get(`menus?fromDate=${fromDate}&toDate=${toDate}&limit=50`)
+    .json<{ success: boolean; data: MenuDay[] }>();
+  const built: Record<string, MenuDay | null> = {};
+  for (const date of weekDates) built[date] = null;
+  for (const menu of res.data ?? []) {
+    if (menu.date) built[menu.date] = menu;
+  }
+  return built;
+}
+
 /**
  * 7-day grid (Mon-Sun) showing menu items per day.
  * Each cell summarises breakfast / lunch / dinner items.
@@ -93,31 +109,36 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
   }
 
   const fetchWeek = useCallback(async () => {
-    let map: Record<string, MenuDay | null> | null = null;
     try {
-      const fromDate = weekDates[0];
-      const toDate = weekDates[6];
-      const res = await api
-        .get(`menus?fromDate=${fromDate}&toDate=${toDate}&limit=50`)
-        .json<{ success: boolean; data: MenuDay[] }>();
-      const built: Record<string, MenuDay | null> = {};
-      for (const date of weekDates) built[date] = null;
-      for (const menu of res.data ?? []) {
-        if (menu.date) built[menu.date] = menu;
-      }
-      map = built;
+      setMenus(await loadWeekMap(weekDates));
     } catch {
-      map = null;
+      setError('Failed to load weekly menus');
     } finally {
-      if (map) setMenus(map);
-      else setError('Failed to load weekly menus');
       setIsLoading(false);
     }
   }, [weekDates]);
 
+  // Fetch-on-week-change (react/set-state-in-effect): state updates live only in
+  // promise continuations, never synchronously in the effect. The ignore flag
+  // drops stale flights when the week changes mid-fetch (fetch race guard).
   useEffect(() => {
-    fetchWeek();
-  }, [fetchWeek]);
+    let cancelled = false;
+    loadWeekMap(weekDates).then(
+      (map) => {
+        if (cancelled) return;
+        setMenus(map);
+        setIsLoading(false);
+      },
+      () => {
+        if (cancelled) return;
+        setError('Failed to load weekly menus');
+        setIsLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [weekDates]);
 
   const handleCopy = async (targetDate: string) => {
     if (!copySource || copySource === targetDate) return;
@@ -148,7 +169,8 @@ export function WeekMenuPlanner({ weekStart, onDayClick }: WeekMenuPlannerProps)
     }
   };
 
-  const todayStr = toLocalYmd(new Date());
+  // Mount-stable clock read (react/purity): the highlight must not recompute per render.
+  const [todayStr] = useState(() => toLocalYmd(new Date()));
 
   return (
     <div className={clsx(surfaceCardClass, 'p-5')}>

@@ -541,6 +541,8 @@ function ComplaintsContent() {
     return counts;
   }, [complaints]);
 
+  // Mount-stable clock read (react/purity): the fallback must not recompute per render.
+  const [fallbackNow] = useState(() => new Date());
   const { heatmapYear, heatmapMonth } = useMemo(() => {
     const focus = /^\d{4}-\d{2}-\d{2}$/.test(fromDate)
       ? fromDate
@@ -554,9 +556,8 @@ function ComplaintsContent() {
         return { heatmapYear: parsedYear, heatmapMonth: parsedMonth };
       }
     }
-    const now = new Date();
-    return { heatmapYear: now.getFullYear(), heatmapMonth: now.getMonth() };
-  }, [fromDate, toDate]);
+    return { heatmapYear: fallbackNow.getFullYear(), heatmapMonth: fallbackNow.getMonth() };
+  }, [fromDate, toDate, fallbackNow]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(String(event.active.id));
