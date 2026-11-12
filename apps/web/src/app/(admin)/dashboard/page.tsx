@@ -355,6 +355,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // Mount-stable clock read (react/purity): above the early return with the other hooks.
+  const [mountNow] = useState(() => new Date());
 
   const {
     data: stats,
@@ -468,8 +470,6 @@ export default function DashboardPage() {
         second: '2-digit',
       })
     : '';
-  // Mount-stable clock read (react/purity): the label must not recompute per render.
-  const [mountNow] = useState(() => new Date());
   const todayLabel = mountNow.toLocaleDateString('en-IN', {
     weekday: 'long',
     day: 'numeric',
