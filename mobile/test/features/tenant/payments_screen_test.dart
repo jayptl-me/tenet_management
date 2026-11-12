@@ -259,7 +259,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final utrField = find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration.labelText == 'UTR / reference',
+      (w) => w is TextField && w.decoration?.labelText == 'UTR / reference',
     );
     await tester.enterText(utrField, 'UTR123456');
     await tester.tap(find.text('Submit for verification'));
