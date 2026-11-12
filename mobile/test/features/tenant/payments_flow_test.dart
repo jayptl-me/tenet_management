@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:tenet_pg_portal/core/models/user.dart';
 import 'package:tenet_pg_portal/features/auth/providers/auth_provider.dart';
+import 'package:tenet_pg_portal/features/shared/widgets/portal_widgets.dart';
 import 'package:tenet_pg_portal/features/tenant/data/tenant_repository.dart';
 import 'package:tenet_pg_portal/features/tenant/presentation/invoices_screen.dart';
 
@@ -84,6 +85,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('INV-2026-001'), findsOneWidget);
-    expect(find.text('paid'), findsOneWidget);
+    // The status filter row also carries a 'paid' chip; scope to the row.
+    expect(
+      find.descendant(
+        of: find.byType(StatusChip),
+        matching: find.text('paid'),
+      ),
+      findsOneWidget,
+    );
   });
 }

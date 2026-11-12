@@ -102,7 +102,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('INV-2026-002'), findsOneWidget);
-    expect(find.text('partial'), findsOneWidget);
+    // The status filter row also carries a 'partial' chip; scope to the row.
+    expect(
+      find.descendant(
+        of: find.byType(StatusChip),
+        matching: find.text('partial'),
+      ),
+      findsOneWidget,
+    );
 
     final line = tester.widget<Text>(find.textContaining('6,000')).data!;
     expect(line, contains('due'));
