@@ -155,7 +155,7 @@ jobs:
       # the constraints in mobile/pubspec.lock (flutter >= 3.44.0).
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.47.7
+          flutter-version: 3.47.9
           channel: stable
           cache: true
       - name: Show the pinned Flutter SDK
