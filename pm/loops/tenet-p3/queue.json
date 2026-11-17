@@ -1,139 +1,139 @@
 {
- "loop": "tenet-p3",
- "finish_line": "CrudFormPage is extracted and queue steps 3.2 to 3.9 (notifications/new, payments, invoices, tenants, electricity, rooms, attendance, dashboard) are rebuilt to the depth standard with no regression on the deepest pages; every docs/audit/features/*.md pipeline run reports TOTAL FAIL: 0 and reconcile PASS; bun run lint is 0 warnings and 0 errors; typecheck, the API tests and flutter analyze are green.",
- "units": [
-  {
-   "id": "T00",
-   "title": "Audit pipeline restored (Step 4.1): every docs/audit/features/*.md has real Open gaps and Closed sections; 66 of 66 docs, 33 open and 232 closed rows, lint TOTAL FAIL: 0 with canary proof, reconcile 16 of 16 PASS, idempotent",
-   "status": "passing",
-   "priority": 1,
-   "source": "pm/STATUS.md:14 (verified 2026-09-30 by the main thread)",
-   "notes": "Re-run the four commands once before any rebuild; a regression here blocks every module.",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T01",
-   "title": "Books are stale: pm/STATUS.md (updated 2026-09-30) says CrudFormPage is the next step, but the tree already holds apps/web/src/components/ui/CrudFormPage.tsx (274 lines, untracked), PageShell.tsx deleted, three pilot pages migrated (laundry/new, laundry/[id]/edit, washing-machines/new) and docs/audit/features/payments_depth_pass1_20260930.md written. Record the true state in the loop books and verify it by gates",
-   "status": "todo",
-   "priority": 1,
-   "source": "pm/STATUS.md:14,37-38; git status of the baseline",
-   "notes": "Do not trust the tree's work until T02 verifies it (pm/STATUS.md:45).",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T02",
-   "title": "Step 3.1: verify and finish CrudFormPage: review docs/plans/crud-form-page-design.md (worker-written, unreviewed, STATUS:48), verify its cohort claims against the tree, verify the three migrated pilot pages, then migrate the remaining proven clone pages in slices. Only the 14 proven clones; hand-rolled pages (invoices/new, electricity, payments new and edit) stay hand-rolled",
-   "status": "todo",
-   "priority": 2,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:231,328 (row 3.1 and risk row); pm/STATUS.md:37-38,48",
-   "notes": "One slice per run; lint and typecheck after each slice.",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T03",
-   "title": "Step 3.2: notifications/new is a deliberate redirect per DR-5 (apps/web/src/app/(admin)/notifications/new/page.tsx:7-15). Record it as intentional in the audit doc so the pipeline stops flagging it; no code change",
-   "status": "todo",
-   "priority": 3,
-   "source": "pm/DECISIONS.md DR-5; docs/plans/2026-09-29-depth-implementation-plan.md:232",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T04",
-   "title": "Step 3.3: payments (rank 1, money 1,250): rebuild to the depth standard from docs/audit/features/payments_depth_pass1_20260930.md. payments/new and payments/[id]/edit stay outside CrudFormPage (money path, paid lock, hand-rolled dirty guard). Verify no real provider exists: payments are admin ledger records, so no live money moves; never touch data outside the test database",
-   "status": "todo",
-   "priority": 4,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:233; docs/audit/features/payments_depth_pass1_20260930.md:1-12",
-   "notes": "Never delete or rewrite financial records (OWNER 21).",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T05",
-   "title": "Step 3.4: invoices (rank 2) including the hand-rolled invoices/new (about 756 lines): depth audit, then rebuild",
-   "status": "todo",
-   "priority": 5,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:234",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T06",
-   "title": "Step 3.5: tenants (rank 3). tenants/[id] (about 1,172 lines, 12 API calls) is among the deepest pages: do not regress it",
-   "status": "todo",
-   "priority": 6,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:235,225",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T07",
-   "title": "Step 3.6: electricity (rank 4)",
-   "status": "todo",
-   "priority": 7,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:236",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T08",
-   "title": "Step 3.7: rooms (rank 5)",
-   "status": "todo",
-   "priority": 8,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:237",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T09",
-   "title": "Step 3.8: attendance (rank 6)",
-   "status": "todo",
-   "priority": 9,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:238",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T10",
-   "title": "Step 3.9: dashboard (rank 7): a legitimate widget surface, not a defect; improve only what the audit proves (real states, cross-links)",
-   "status": "todo",
-   "priority": 10,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:239,219",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  },
-  {
-   "id": "T11",
-   "title": "Phase 3 close: rerun all gates (lint 0 warnings and 0 errors, typecheck, API tests 79 or more on the box, flutter analyze, the four-command audit pipeline) and write the phase report into the loop books. Commit and push at phase end (DR-7) is NOT done by the loop: it is Jay's (see NOTES)",
-   "status": "todo",
-   "priority": 30,
-   "source": "docs/plans/2026-09-29-depth-implementation-plan.md:315,317,318; pm/STATUS.md:40",
-   "notes": "",
-   "contract": null,
-   "builds": 0,
-   "history": []
-  }
- ],
- "questions": []
+  "loop": "tenet-p3",
+  "finish_line": "CrudFormPage is extracted and queue steps 3.2 to 3.9 (notifications/new, payments, invoices, tenants, electricity, rooms, attendance, dashboard) are rebuilt to the depth standard with no regression on the deepest pages; every docs/audit/features/*.md pipeline run reports TOTAL FAIL: 0 and reconcile PASS; bun run lint is 0 warnings and 0 errors; typecheck, the API tests and flutter analyze are green.",
+  "units": [
+    {
+      "id": "T00",
+      "title": "Audit pipeline restored (Step 4.1): every docs/audit/features/*.md has real Open gaps and Closed sections; 66 of 66 docs, 33 open and 232 closed rows, lint TOTAL FAIL: 0 with canary proof, reconcile 16 of 16 PASS, idempotent",
+      "status": "passing",
+      "priority": 1,
+      "source": "pm/STATUS.md:14 (verified 2026-09-30 by the main thread)",
+      "notes": "Re-run the four commands once before any rebuild; a regression here blocks every module.",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T01",
+      "title": "Books are stale: pm/STATUS.md (updated 2026-09-30) says CrudFormPage is the next step, but the tree already holds apps/web/src/components/ui/CrudFormPage.tsx (274 lines, untracked), PageShell.tsx deleted, three pilot pages migrated (laundry/new, laundry/[id]/edit, washing-machines/new) and docs/audit/features/payments_depth_pass1_20260930.md written. Record the true state in the loop books and verify it by gates",
+      "status": "todo",
+      "priority": 1,
+      "source": "pm/STATUS.md:14,37-38; git status of the baseline",
+      "notes": "Do not trust the tree's work until T02 verifies it (pm/STATUS.md:45).",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T02",
+      "title": "Step 3.1: verify and finish CrudFormPage: review docs/plans/crud-form-page-design.md (worker-written, unreviewed, STATUS:48), verify its cohort claims against the tree, verify the three migrated pilot pages, then migrate the remaining proven clone pages in slices. Only the 14 proven clones; hand-rolled pages (invoices/new, electricity, payments new and edit) stay hand-rolled",
+      "status": "todo",
+      "priority": 2,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:231,328 (row 3.1 and risk row); pm/STATUS.md:37-38,48",
+      "notes": "One slice per run; lint and typecheck after each slice.",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T03",
+      "title": "Step 3.2: notifications/new is a deliberate redirect per DR-5 (apps/web/src/app/(admin)/notifications/new/page.tsx:7-15). Record it as intentional in the audit doc so the pipeline stops flagging it; no code change",
+      "status": "todo",
+      "priority": 3,
+      "source": "pm/DECISIONS.md DR-5; docs/plans/2026-09-29-depth-implementation-plan.md:232",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T04",
+      "title": "Step 3.3: payments (rank 1, money 1,250): rebuild to the depth standard from docs/audit/features/payments_depth_pass1_20260930.md. payments/new and payments/[id]/edit stay outside CrudFormPage (money path, paid lock, hand-rolled dirty guard). Verify no real provider exists: payments are admin ledger records, so no live money moves; never touch data outside the test database",
+      "status": "todo",
+      "priority": 4,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:233; docs/audit/features/payments_depth_pass1_20260930.md:1-12",
+      "notes": "Never delete or rewrite financial records (OWNER 21).",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T05",
+      "title": "Step 3.4: invoices (rank 2) including the hand-rolled invoices/new (about 756 lines): depth audit, then rebuild",
+      "status": "todo",
+      "priority": 5,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:234",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T06",
+      "title": "Step 3.5: tenants (rank 3). tenants/[id] (about 1,172 lines, 12 API calls) is among the deepest pages: do not regress it",
+      "status": "todo",
+      "priority": 6,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:235,225",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T07",
+      "title": "Step 3.6: electricity (rank 4)",
+      "status": "todo",
+      "priority": 7,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:236",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T08",
+      "title": "Step 3.7: rooms (rank 5)",
+      "status": "todo",
+      "priority": 8,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:237",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T09",
+      "title": "Step 3.8: attendance (rank 6)",
+      "status": "todo",
+      "priority": 9,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:238",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T10",
+      "title": "Step 3.9: dashboard (rank 7): a legitimate widget surface, not a defect; improve only what the audit proves (real states, cross-links)",
+      "status": "todo",
+      "priority": 10,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:239,219",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    },
+    {
+      "id": "T11",
+      "title": "Phase 3 close: rerun all gates (lint 0 warnings and 0 errors, typecheck, API tests 79 or more on the box, flutter analyze, the four-command audit pipeline) and write the phase report into the loop books. Commit and push at phase end (DR-7) is NOT done by the loop: it is Jay's (see NOTES)",
+      "status": "todo",
+      "priority": 30,
+      "source": "docs/plans/2026-09-29-depth-implementation-plan.md:315,317,318; pm/STATUS.md:40",
+      "notes": "",
+      "contract": null,
+      "builds": 0,
+      "history": []
+    }
+  ],
+  "questions": []
 }
