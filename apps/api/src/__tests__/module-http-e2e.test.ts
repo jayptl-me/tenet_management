@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import { User } from '../models/user.js';
 import { AppConfig } from '../models/appConfig.js';
 import { signAccessToken } from '../lib/jwt.js';
+import { todayInTZ } from '../lib/dates.js';
 import { globalErrorHandler } from '../middleware/errorHandler.js';
 
 import authRoutes from '../routes/auth.js';
@@ -654,7 +655,7 @@ describe('Module HTTP e2e matrix (real routes)', () => {
 
     // ── Menus + Meals ────────────────────────────────────
     {
-      const date = new Date().toISOString().slice(0, 10);
+      const date = todayInTZ();
       const created = await req('POST', '/api/v1/menus', {
         token: adminToken,
         body: {
