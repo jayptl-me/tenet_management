@@ -10,6 +10,7 @@ import { Tenant } from '../models/tenant.js';
 import { User } from '../models/user.js';
 import { requireFeature } from '../middleware/featureFlags.js';
 import { writeAuditLog } from '../lib/write-audit-log.js';
+import { todayInTZ } from '../lib/dates.js';
 import { createNotification } from '../services/notification.service.js';
 import { logger } from '../lib/logger.js';
 import type { INotificationType } from '@pg/types';
@@ -141,7 +142,7 @@ const adminCreateFeedbackSchema = z.strictObject({
 meals.post('/', authGuard, adminOnly, zValidator('json', adminCreateFeedbackSchema), async (c) => {
   const body = c.req.valid('json');
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayInTZ();
   if (body.date > todayStr) {
     return badRequest(c, 'Cannot submit feedback for a future date', 'FUTURE_DATE_INVALID');
   }
@@ -196,7 +197,7 @@ meals.post(
   async (c) => {
     const body = c.req.valid('json');
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = todayInTZ();
     if (body.date > todayStr) {
       return badRequest(c, 'Cannot submit feedback for a future date', 'FUTURE_DATE_INVALID');
     }
